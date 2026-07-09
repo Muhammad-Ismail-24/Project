@@ -150,6 +150,10 @@ async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> 
                         image_url = val
                         break
 
+            # If it has no price and no year, it's a navbar/footer link!
+            if price == '0' and year == '0':
+                continue
+            
             cars.append(CarListing(
                 title=title,
                 price=price,
