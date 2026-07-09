@@ -11,3 +11,4 @@ sqlmodel
 python-dotenv
 playwright
 aiohttp
+playwright-stealth
