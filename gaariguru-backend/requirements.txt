@@ -9,7 +9,4 @@ google-generativeai
 openai
 sqlmodel
 python-dotenv
-playwright
-aiohttp
-playwright-stealth
 curl-cffi

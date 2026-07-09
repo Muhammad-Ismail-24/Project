@@ -1,19 +1,11 @@
 """
 scrapers/pakwheels.py
 
-Patches applied:
-- Bug 1 Fix: Boundary-isolated price extraction — only pulls digit blocks
-  from the text node that contains a currency token (PKR/Rs/Lacs/Lakh/Crore),
-  preventing year/mileage digits from concatenating into 20-digit overflow strings.
-- Bug 2 Fix: Lazy-load resilient image extraction — checks data-src / data-original
-  first, falls back to src. Passes extracted URL into CarListing.image_url.
-- Existing DOM Scope Restriction (MAX_ORGANIC_CARDS slice) is preserved.
-- City / Year / Mileage / Title extraction logic is unchanged.
+Migrated from Playwright to curl_cffi.
+Accepts a curl_cffi AsyncSession and fetches HTML directly.
 """
-
 from bs4 import BeautifulSoup
 import re
-from scrapers.http_client import fetch_page_content
 from models.car_schema import CarListing
 
 MAX_ORGANIC_CARDS = 40
@@ -21,9 +13,8 @@ MAX_ORGANIC_CARDS = 40
 
 def _extract_price(item) -> str:
     """
-    Task 1 Fix: Strict DOM Element Targeting.
-    Never extracts text from the parent card. Targets the specific 
-    div.price-details node first.
+    Strict DOM Element Targeting.
+    Targets the specific div.price-details node first.
     Returns the FULL raw text so the Normalizer can detect Lacs/Crore.
     """
     price_el = item.find('div', class_=re.compile(r'price-details|generic-green', re.I))
@@ -31,13 +22,12 @@ def _extract_price(item) -> str:
         raw = price_el.get_text(separator=' ', strip=True)
         if raw:
             return raw
-
     return '0'
 
 
 def _extract_image(item) -> str:
     """
-    Bug 2 Fix: Lazy-load resilient image extraction.
+    Lazy-load resilient image extraction.
     Checks data-src / data-original first; falls back to src.
     """
     img = item.find('img')
@@ -49,11 +39,19 @@ def _extract_image(item) -> str:
     return ''
 
 
-async def scrape_pakwheels(url: str, context) -> list[CarListing]:
-    html = await fetch_page_content(
-        context, url, ".classified-listing, .search-page-new"
-    )
-    if not html:
+async def scrape_pakwheels(url: str, session) -> list[CarListing]:
+    """Scrapes PakWheels using a shared curl_cffi AsyncSession."""
+    try:
+        response = await session.get(url, timeout=20)
+        if response.status_code != 200:
+            print(f"[PakWheels Scraper] HTTP {response.status_code} for {url}")
+            return []
+        html = response.text
+    except Exception as e:
+        print(f"[PakWheels Scraper] Request failed: {e}")
+        return []
+
+    if not html or len(html) < 500:
         return []
 
     soup = BeautifulSoup(html, 'html.parser')
@@ -87,7 +85,7 @@ async def scrape_pakwheels(url: str, context) -> list[CarListing]:
             if link and not link.startswith('http'):
                 link = 'https://www.pakwheels.com' + link
 
-            # --- Price (Bug 1 Fix) ---
+            # --- Price ---
             price = _extract_price(item)
 
             # --- Year & Mileage ---
@@ -113,7 +111,7 @@ async def scrape_pakwheels(url: str, context) -> list[CarListing]:
                         if not re.search(r'(km|cc|petrol|diesel|hybrid|automatic|manual)', extracted_text, re.I):
                             city_text = extracted_text
 
-            # --- Image (Bug 2 Fix) ---
+            # --- Image ---
             image_url = _extract_image(item)
 
             cars.append(CarListing(
@@ -130,6 +128,4 @@ async def scrape_pakwheels(url: str, context) -> list[CarListing]:
             continue
 
     print(f"[PakWheels Scraper] Extracted {len(cars)} listings")
-    if len(cars) > 40:
-        print(f"[PakWheels Scraper] WARNING: {len(cars)} listings exceeds expected page maximum (~35-40). Possible DOM Bleed.")
     return cars

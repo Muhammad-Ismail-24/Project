@@ -1,27 +1,37 @@
 """
 scrapers/auto_deals.py
-Fixed: Added strict title validation to ignore SEO footer links and dummy cards.
+
+Migrated from Playwright to curl_cffi.
+Accepts a curl_cffi AsyncSession and fetches HTML directly.
 """
 from bs4 import BeautifulSoup
 import re
-from scrapers.http_client import fetch_page_content, fetch_html
 from models.car_schema import CarListing
 
 MAX_ORGANIC_CARDS = 35
 CARD_SELECTOR_CLASS = re.compile(r'(car-card|listing|col-md-4|ad-container|search-item)', re.I)
 
-async def scrape_auto_deals(url: str, context, search_filters: dict = None) -> list[CarListing]:
-    if context:
-        html = await fetch_page_content(context, url, ".car-card, .listing, .col-md-4, .ad-container, .search-item, h2")
-    else:
-        html = await fetch_html(url)
-    if not html: return []
+
+async def scrape_auto_deals(url: str, session, search_filters: dict = None) -> list[CarListing]:
+    """Scrapes AutoDeals using a shared curl_cffi AsyncSession."""
+    try:
+        response = await session.get(url, timeout=20)
+        if response.status_code != 200:
+            print(f"[AutoDeals Scraper] HTTP {response.status_code} for {url}")
+            return []
+        html = response.text
+    except Exception as e:
+        print(f"[AutoDeals Scraper] Request failed: {e}")
+        return []
+
+    if not html or len(html) < 500:
+        return []
 
     soup = BeautifulSoup(html, 'html.parser')
     cars = []
 
     main_container = soup.find('div', class_=re.compile(r'(search-results|listing-grid|row)', re.I))
-    
+
     if main_container:
         items = main_container.find_all(['div', 'article'], class_=CARD_SELECTOR_CLASS)
     else:
@@ -36,11 +46,10 @@ async def scrape_auto_deals(url: str, context, search_filters: dict = None) -> l
             title_el = item.find(['h2', 'h3', 'h4'])
             if not title_el:
                 title_el = item.find('a', string=re.compile(r'[A-Za-z]+'))
-                
+
             title = title_el.get_text(strip=True) if title_el else ""
-            
-            # --- THE GHOST CARD SLAYER ---
-            # If the card is just a generic SEO link, skip it immediately.
+
+            # Ghost Card Slayer
             if not title or len(title) < 4 or "used car for sale" in title.lower():
                 continue
 
@@ -62,11 +71,13 @@ async def scrape_auto_deals(url: str, context, search_filters: dict = None) -> l
             text_content = item.get_text(separator=' ')
             year = '0'
             year_match = re.search(r'\b(19[89]\d|20[0-2]\d)\b', text_content)
-            if year_match: year = year_match.group(1)
+            if year_match:
+                year = year_match.group(1)
 
             mileage = '0'
             mileage_match = re.search(r'\b([\d,]+)\s*km\b', text_content, re.I)
-            if mileage_match: mileage = mileage_match.group(1).replace(',', '')
+            if mileage_match:
+                mileage = mileage_match.group(1).replace(',', '')
 
             city = 'Unknown'
             city_node = item.find(class_=re.compile(r'location|city', re.I))

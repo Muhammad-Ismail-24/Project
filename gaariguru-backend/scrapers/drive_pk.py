@@ -1,20 +1,31 @@
 """
 scrapers/drive_pk.py
-Fixed: Routed through fetch_html (curl_cffi) instead of Playwright.
-Drive.pk serves Server-Side Rendered HTML, so we don't need a browser to read it.
+
+Migrated from Playwright to curl_cffi.
+Drive.pk serves Server-Side Rendered HTML, so curl_cffi is perfect for it.
 """
 from bs4 import BeautifulSoup
 import re
-from scrapers.http_client import fetch_html
 from models.car_schema import CarListing
 
 MAX_ORGANIC_CARDS = 35
 CARD_SELECTOR_CLASS = re.compile(r'(car-card|listing|col-md-4|ad-container)', re.I)
 
-async def scrape_drive_pk(url: str, context, search_filters: dict = None) -> list[CarListing]:
-    # THE FIX: Use fetch_html to trigger the curl_cffi TLS spoofer
-    html = await fetch_html(url)
-    if not html: return []
+
+async def scrape_drive_pk(url: str, session, search_filters: dict = None) -> list[CarListing]:
+    """Scrapes Drive.pk using a shared curl_cffi AsyncSession."""
+    try:
+        response = await session.get(url, timeout=20)
+        if response.status_code != 200:
+            print(f"[Drive.pk Scraper] HTTP {response.status_code} for {url}")
+            return []
+        html = response.text
+    except Exception as e:
+        print(f"[Drive.pk Scraper] Request failed: {e}")
+        return []
+
+    if not html or len(html) < 500:
+        return []
 
     soup = BeautifulSoup(html, 'html.parser')
     cars = []
@@ -30,7 +41,7 @@ async def scrape_drive_pk(url: str, context, search_filters: dict = None) -> lis
             title_el = item.find(['h2', 'h3', 'h4'])
             if not title_el:
                 title_el = item.find('a', string=re.compile(r'[A-Za-z]+'))
-            
+
             title = title_el.get_text(strip=True) if title_el else ""
             if not title or len(title) < 4 or "used car for sale" in title.lower():
                 continue
@@ -42,15 +53,15 @@ async def scrape_drive_pk(url: str, context, search_filters: dict = None) -> lis
                 if len(href) > 15 and not href.startswith('?'):
                     link = href
                     break
-            
+
             if link and not link.startswith('http'):
                 link = 'https://www.drivepk.com' + (link if link.startswith('/') else '/' + link)
 
             price_el = item.find(['div', 'span', 'p'], string=re.compile(r'(PKR|Rs\.?|Lacs|Lakh|Crore)', re.I))
             price = price_el.get_text(separator=' ', strip=True) if price_el else '0'
-            
+
             text_content = item.get_text(separator=' ')
-            
+
             year_match = re.search(r'\b(19[89]\d|20[0-2]\d)\b', text_content)
             year = year_match.group(1) if year_match else '0'
 
@@ -61,7 +72,7 @@ async def scrape_drive_pk(url: str, context, search_filters: dict = None) -> lis
             city = city_match.group(1).capitalize() if city_match else 'Unknown'
 
             cars.append(CarListing(
-                title=title, price=price, mileage=mileage, city=city, 
+                title=title, price=price, mileage=mileage, city=city,
                 year=year, listing_url=link, platform='Drive.pk'
             ))
         except Exception:
