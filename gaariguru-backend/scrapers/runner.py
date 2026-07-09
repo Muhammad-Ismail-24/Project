@@ -21,6 +21,7 @@ from scrapers.olx import scrape_olx
 from scrapers.drive_pk import scrape_drive_pk
 from scrapers.auto_deals import scrape_auto_deals
 from scrapers.famewheels import scrape_famewheels
+from scrapers.gari_pk import scrape_gari_pk
 from scrapers.wise_wheels import scrape_wise_wheels
 from scrapers.normalizer import normalize_listings
 from models.car_schema import CarListing
@@ -45,6 +46,16 @@ OLX_CITY_MAP = {
     "gujranwala":   "gujranwala_g4060679",    # ✅ Verified
     "sialkot":      "sialkot_g4060680",       # ✅ Added
     "quetta":       "quetta_g4060699",        # ✅ Added
+}
+
+# ------------------------------------------------------------------ #
+# WISEWHEELS CITY ID MAP
+# Format: "city_name_lowercase": "wisewheels_city_id"
+# ------------------------------------------------------------------ #
+WISEWHEELS_CITY_MAP = {
+    "islamabad": "257",
+    "rawalpindi": "86",
+    "lahore": "176",
 }
 
 
@@ -79,6 +90,7 @@ async def execute_search_pipeline(
     pw_urls = []
     olx_tasks = []
     drive_tasks = []
+    gari_tasks = []
     wisewheels_tasks = []
     auto_deals_tasks = []
     famewheels_urls = []
@@ -113,7 +125,7 @@ async def execute_search_pipeline(
         else:
             gari_url = f"https://www.gari.pk/used-cars/{gari_make}/"
 
-        wisewheels_tasks.append((gari_url, search_filters))
+        gari_tasks.append((gari_url, search_filters))
         famewheels_urls.append(
             f"https://www.famewheels.com/used-cars?make={safe_make_lower}&model={safe_model_lower}&city={c}"
         )
@@ -200,6 +212,22 @@ async def execute_search_pipeline(
             ad_url = "/".join(ad_parts) + f"?page={page}"
             auto_deals_tasks.append((ad_url, search_filters))
 
+            # ------------------------------------------------------------------ #
+            # WISEWHEELS — query-parameter routing
+            # URL: https://wisewheels.com.pk/used-cars?city_id=257&make=toyota&model=corolla&price_from=0&price_to=5000000
+            # ------------------------------------------------------------------ #
+            ww_url = f"https://wisewheels.com.pk/used-cars?price_from=0&page={page}"
+            ww_city_id = WISEWHEELS_CITY_MAP.get(c, "")
+            if ww_city_id:
+                ww_url += f"&city_id={ww_city_id}"
+            if safe_make_lower:
+                ww_url += f"&make={safe_make_lower}"
+            if safe_model_lower:
+                ww_url += f"&model={safe_model_lower}"
+            if safe_budget > 0:
+                ww_url += f"&price_to={safe_budget}"
+            wisewheels_tasks.append((ww_url, search_filters))
+
     # --- Log constructed search queries ---
     print(
         f"[Pipeline] Search → Make={safe_make}, Model={safe_model}, "
@@ -220,6 +248,9 @@ async def execute_search_pipeline(
         for url, filters in drive_tasks:
             futures.append(scrape_drive_pk(url, session, filters))
 
+        for url, filters in gari_tasks:
+            futures.append(scrape_gari_pk(url, session, filters))
+
         for url, filters in wisewheels_tasks:
             futures.append(scrape_wise_wheels(url, session, filters))
 
@@ -235,7 +266,8 @@ async def execute_search_pipeline(
     pw_count            = len(pw_urls)
     olx_count           = len(olx_tasks)
     drive_count         = len(drive_tasks)
-    gari_count          = len(wisewheels_tasks)
+    gari_count          = len(gari_tasks)
+    ww_count            = len(wisewheels_tasks)
     auto_deals_count    = len(auto_deals_tasks)
     famewheels_count    = len(famewheels_urls)
 
@@ -247,6 +279,7 @@ async def execute_search_pipeline(
     olx_total         = sum(_safe_len(r) for r in all_results[idx : idx + olx_count]);         idx += olx_count
     drive_total       = sum(_safe_len(r) for r in all_results[idx : idx + drive_count]);       idx += drive_count
     gari_total        = sum(_safe_len(r) for r in all_results[idx : idx + gari_count]);        idx += gari_count
+    ww_total          = sum(_safe_len(r) for r in all_results[idx : idx + ww_count]);          idx += ww_count
     auto_deals_total  = sum(_safe_len(r) for r in all_results[idx : idx + auto_deals_count]); idx += auto_deals_count
     famewheels_total  = sum(_safe_len(r) for r in all_results[idx : idx + famewheels_count]); idx += famewheels_count
 
@@ -254,6 +287,7 @@ async def execute_search_pipeline(
     print(f"[Pipeline] OLX returned         {olx_total} raw listings ({olx_count} pages)")
     print(f"[Pipeline] Drive.pk returned    {drive_total} raw listings ({drive_count} pages)")
     print(f"[Pipeline] Gari.pk returned     {gari_total} raw listings")
+    print(f"[Pipeline] WiseWheels returned  {ww_total} raw listings ({ww_count} pages)")
     print(f"[Pipeline] AutoDeals returned   {auto_deals_total} raw listings")
     print(f"[Pipeline] FameWheels returned  {famewheels_total} raw listings")
 
