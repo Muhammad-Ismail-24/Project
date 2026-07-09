@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+// 1. Define the base URL dynamically. 
+// It uses Vercel's environment variable in production, but falls back to localhost when you are coding on your machine.
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api',
+  baseURL: API_BASE,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -13,7 +17,8 @@ export const searchCars = async (query) => {
 };
 
 export const searchCarsStream = async (query, onMessage) => {
-  const response = await fetch('http://localhost:8000/api/search/stream', {
+  // 2. We also apply API_BASE here so your streaming fetch call doesn't break in production!
+  const response = await fetch(`${API_BASE}/search/stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query })
