@@ -1,0 +1,41 @@
+  0           RESUME                   0
+
+  1           LOAD_SMALL_INT           0
+              LOAD_CONST               1 (None)
+              IMPORT_NAME              0 (bs4)
+              STORE_NAME               0 (bs4)
+
+  2           LOAD_SMALL_INT           0
+              LOAD_CONST               2 (('BeautifulSoup',))
+              IMPORT_NAME              0 (bs4)
+              IMPORT_FROM              1 (BeautifulSoup)
+              STORE_NAME               1 (BeautifulSoup)
+              POP_TOP
+
+  3           LOAD_SMALL_INT           0
+              LOAD_CONST               3 (('fetch_html',))
+              IMPORT_NAME              2 (scrapers.http_client)
+              IMPORT_FROM              3 (fetch_html)
+              STORE_NAME               3 (fetch_html)
+              POP_TOP
+
+  4           LOAD_SMALL_INT           0
+              LOAD_CONST               4 (('CarListing',))
+              IMPORT_NAME              4 (models.car_schema)
+              IMPORT_FROM              5 (CarListing)
+              STORE_NAME               5 (CarListing)
+              POP_TOP
+
+  5           LOAD_SMALL_INT           0
+              LOAD_CONST               1 (None)
+              IMPORT_NAME              6 (re)
+              STORE_NAME               6 (re)
+
+  7           LOAD_CONST               5 (<code object __annotate__ at 0x000001D750055B30, file "D:\Old Assignments and Projects\CarFinder System\gaariguru_project\gaariguru-backend\scrapers\olx.py", line 7>)
+              MAKE_FUNCTION
+              LOAD_CONST               6 (<code object scrape_olx at 0x000001D7501ECE20, file "D:\Old Assignments and Projects\CarFinder System\gaariguru_project\gaariguru-backend\scrapers\olx.py", line 7>)
+              MAKE_FUNCTION
+              SET_FUNCTION_ATTRIBUTE  16 (annotate)
+              STORE_NAME               7 (scrape_olx)
+              LOAD_CONST               1 (None)
+              RETURN_VALUE
