@@ -10,10 +10,10 @@ from api.search_routes import router as search_router
 # Initialize the core FastAPI app
 app = FastAPI(title="CarFinder API")
 
-# Add CORS middleware to support local frontend React/Vite development
+# Add CORS middleware to support local frontend and Vercel production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
