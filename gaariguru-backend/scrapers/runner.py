@@ -1,10 +1,11 @@
 """
 scrapers/runner.py
-Fixed: Reverted to headless=True. Playwright now runs fully in the background again.
+Fixed: Migrated to Browserless.io to bypass Render's 512MB memory limit.
 """
 import asyncio
 import json
 import re
+import os
 from concurrent.futures import ThreadPoolExecutor
 from playwright.async_api import async_playwright
 from scrapers.pakwheels import scrape_pakwheels
@@ -134,14 +135,14 @@ async def execute_search_pipeline(make: str, model: str, city: str, max_budget: 
     futures = []
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=True,  # <--- Reverted entirely to background headless mode
-            args=[
-                "--disable-blink-features=AutomationControlled",
-                "--no-sandbox",
-                "--disable-dev-shm-usage"
-            ]
-        )
+        # 1. Grab the key from the environment
+        BROWSERLESS_KEY = os.getenv("BROWSERLESS_API_KEY")
+        
+        # 2. Build the connection string
+        browserless_url = f"wss://chrome.browserless.io?token={BROWSERLESS_KEY}"
+
+        # 3. Connect to the remote Browserless server instead of opening Chrome locally
+        browser = await p.chromium.connect_over_cdp(browserless_url)
         
         context = await browser.new_context(
             viewport={"width": 1920, "height": 1080},
