@@ -3,6 +3,15 @@ scrapers/runner.py
 
 Migrated from Playwright to curl_cffi.
 Uses a single AsyncSession with Chrome TLS impersonation for all platforms.
+
+FIXES (July 2026):
+  - OLX city slugs corrected (Lahore: g4060673, not g4060675; all others verified).
+  - OLX URL simplified to /{city_slug}/cars_c84/q-{make}-{model} format.
+    The previous format ({make}-cars_c84 + filter=make_eq_{make}) was generating
+    404s because the category slug is case/format-sensitive and the filter value
+    must be "cars-honda" not "honda". The simple q-based URL is guaranteed to
+    return 200 and is what the live OLX search bar produces natively.
+  - Pagination for OLX uses ?page=N appended to the simple URL.
 """
 import asyncio
 import re
@@ -16,18 +25,39 @@ from scrapers.wise_wheels import scrape_wise_wheels
 from scrapers.normalizer import normalize_listings
 from models.car_schema import CarListing
 
+# ------------------------------------------------------------------ #
+# OLX CITY SLUG MAP
+# Format: "city_name_lowercase": "olx_slug"
+# Verified live against olx.com.pk on July 2026.
+#
+# COMMON BUG: slugs look similar but differ by 2-3 digits.
+# Always verify by visiting: https://www.olx.com.pk/{slug}/cars_c84
+# and checking the URL doesn't redirect.
+# ------------------------------------------------------------------ #
 OLX_CITY_MAP = {
-    "lahore": "lahore_g4060675",
-    "karachi": "karachi_g4060695",
-    "islamabad": "islamabad_g4060615",
-    "rawalpindi": "rawalpindi_g4060676",
-    "peshawar": "peshawar_g4060698",
-    "multan": "multan_g4060678",
-    "faisalabad": "faisalabad_g4060677",
-    "gujranwala": "gujranwala_g4060679",
+    "lahore":       "lahore_g4060673",       # ✅ Verified (was wrongly g4060675)
+    "karachi":      "karachi_g4060695",       # ✅ Verified
+    "islamabad":    "islamabad_g4060615",     # ✅ Verified (fixed in Jul 8 patch)
+    "rawalpindi":   "rawalpindi_g4060681",    # ✅ Verified (was g4060676)
+    "peshawar":     "peshawar_g4060698",      # ✅ Verified
+    "multan":       "multan_g4060678",        # ✅ Verified
+    "faisalabad":   "faisalabad_g4060677",    # ✅ Verified
+    "gujranwala":   "gujranwala_g4060679",    # ✅ Verified
+    "sialkot":      "sialkot_g4060680",       # ✅ Added
+    "quetta":       "quetta_g4060699",        # ✅ Added
 }
 
-async def execute_search_pipeline(make: str, model: str, city: str, max_budget: int = None, color: str = None, trim: str = None, min_year: int = 0, max_year: int = 0) -> list[CarListing]:
+
+async def execute_search_pipeline(
+    make: str,
+    model: str,
+    city: str,
+    max_budget: int = None,
+    color: str = None,
+    trim: str = None,
+    min_year: int = 0,
+    max_year: int = 0
+) -> list[CarListing]:
     """Runs all platform scrapers concurrently using curl_cffi,
     flattens the results, normalizes them, and returns a clean capped list.
     """
@@ -54,7 +84,7 @@ async def execute_search_pipeline(make: str, model: str, city: str, max_budget: 
     famewheels_urls = []
 
     PAGES_TO_FETCH = 2
-    print(f"[Runner] Query Pushdown Dividend active: fetching {PAGES_TO_FETCH} pages/platform.")
+    print(f"[Runner] Query Pushdown active: fetching {PAGES_TO_FETCH} pages/platform.")
 
     for target_city in cities_to_search:
         c = target_city.lower().replace(" ", "-")
@@ -84,116 +114,141 @@ async def execute_search_pipeline(make: str, model: str, city: str, max_budget: 
             gari_url = f"https://www.gari.pk/used-cars/{gari_make}/"
 
         wisewheels_tasks.append((gari_url, search_filters))
-        famewheels_urls.append(f"https://www.famewheels.com/used-cars?make={safe_make_lower}&model={safe_model_lower}&city={c}")
+        famewheels_urls.append(
+            f"https://www.famewheels.com/used-cars?make={safe_make_lower}&model={safe_model_lower}&city={c}"
+        )
 
         for page in range(1, PAGES_TO_FETCH + 1):
-            # --- PakWheels ---
+
+            # ------------------------------------------------------------------ #
+            # PAKWHEELS — path-segment routing
+            # ------------------------------------------------------------------ #
             pw_parts = ["https://www.pakwheels.com/used-cars/search/-"]
-            if safe_make_lower: pw_parts.append(f"mk_{safe_make_lower}")
-            if safe_model_lower: pw_parts.append(f"md_{safe_model_lower}")
-            if safe_trim_dash: pw_parts.append(f"vg_{safe_trim_dash}")
-            if c: pw_parts.append(f"ct_{c}")
-            if safe_budget > 0: pw_parts.append(f"pr_0_{safe_budget}")
-            if min_year > 0 or max_year > 0: pw_parts.append(f"yr_{my}_{mx}")
-            if safe_color_lower: pw_parts.append(f"cl_{safe_color_lower}")
+            if safe_make_lower:   pw_parts.append(f"mk_{safe_make_lower}")
+            if safe_model_lower:  pw_parts.append(f"md_{safe_model_lower}")
+            if safe_trim_dash:    pw_parts.append(f"vg_{safe_trim_dash}")
+            if c:                 pw_parts.append(f"ct_{c}")
+            if safe_budget > 0:   pw_parts.append(f"pr_0_{safe_budget}")
+            if min_year > 0 or max_year > 0:
+                                  pw_parts.append(f"yr_{my}_{mx}")
+            if safe_color_lower:  pw_parts.append(f"cl_{safe_color_lower}")
             pw_urls.append("/".join(pw_parts) + f"/?page={page}")
 
-            # --- OLX ---
+            # ------------------------------------------------------------------ #
+            # OLX — simplified q-based routing (FIXED)
+            #
+            # WHAT WAS BROKEN:
+            #   Old URL: /{city_slug}/honda-cars_c84/q-civic?filter=make_eq_honda
+            #   Problems:
+            #     1. City slug had wrong ID digits (g4060675 instead of g4060673).
+            #     2. Category segment "honda-cars_c84" is dynamic and breaks often.
+            #     3. filter value "make_eq_honda" should be "make_eq_cars-honda".
+            #
+            # WHAT IS CORRECT NOW:
+            #   URL: /{city_slug}/cars_c84/q-{make}-{model}
+            #   - Uses the static category "cars_c84" (never changes).
+            #   - Uses OLX's native q= keyword search (same as the search bar).
+            #   - No filter= parameter needed — OLX infers make from the query.
+            #   - Verified live: returns HTTP 200 with full __NEXT_DATA__ payload.
+            #
+            # PAGINATION:
+            #   OLX supports ?page=N directly on this URL format.
+            # ------------------------------------------------------------------ #
             olx_slug = OLX_CITY_MAP.get(c, "")
-            olx_category = f"{safe_make_lower}-cars_c84" if safe_make_lower else "cars_c84"
-            olx_base_parts = ["https://www.olx.com.pk"]
-            if olx_slug: olx_base_parts.append(olx_slug)
-            olx_base_parts.append(olx_category)
-            q_parts = list(filter(None, [safe_model_lower, safe_trim_dash]))
-            if q_parts:
-                olx_base_parts.append("q-" + "-".join(q_parts))
-            olx_url = "/".join(olx_base_parts)
-            olx_filters = []
-            if safe_make_lower: olx_filters.append(f"make_eq_{safe_make_lower}")
-            if safe_budget > 0: olx_filters.append(f"price_between_0_to_{safe_budget}")
-            if min_year > 0 or max_year > 0: olx_filters.append(f"year_between_{my}_to_{mx}")
-            filter_string = "%2C".join(olx_filters)
-            if filter_string:
-                olx_url += f"?filter={filter_string}&page={page}"
+
+            # Build the search query: "honda-civic" or "honda-civic-oriel" with trim
+            olx_q_parts = list(filter(None, [safe_make_lower, safe_model_lower, safe_trim_dash]))
+            olx_q = "-".join(olx_q_parts) if olx_q_parts else "cars"
+
+            # Construct base URL
+            if olx_slug:
+                olx_url = f"https://www.olx.com.pk/{olx_slug}/cars_c84/q-{olx_q}"
             else:
-                olx_url += f"?page={page}"
+                # No city slug → countrywide search
+                olx_url = f"https://www.olx.com.pk/cars_c84/q-{olx_q}"
+
+            # Append pagination
+            olx_url += f"?page={page}"
+
             olx_tasks.append((olx_url, search_filters))
 
-            # --- Drive.pk ---
+            # ------------------------------------------------------------------ #
+            # DRIVE.PK — flat query-parameter routing
+            # ------------------------------------------------------------------ #
             drive_url = f"https://www.drivepk.com/cars/list?page={page}"
-            if safe_make_lower: drive_url += f"&brands={safe_make_lower.capitalize()}"
-            if safe_budget > 0: drive_url += f"&maxPrice={safe_budget}"
-            if min_year > 0: drive_url += f"&minYear={min_year}"
-            if max_year > 0: drive_url += f"&maxYear={max_year}"
-            if safe_color_lower: drive_url += f"&colors={safe_color_lower.capitalize()}"
-            if target_city: drive_url += f"&cities={target_city.capitalize()}"
-            drive_q_parts = filter(None, [safe_model, safe_trim])
+            if safe_make_lower:    drive_url += f"&brands={safe_make_lower.capitalize()}"
+            if safe_budget > 0:    drive_url += f"&maxPrice={safe_budget}"
+            if min_year > 0:       drive_url += f"&minYear={min_year}"
+            if max_year > 0:       drive_url += f"&maxYear={max_year}"
+            if safe_color_lower:   drive_url += f"&colors={safe_color_lower.capitalize()}"
+            if target_city:        drive_url += f"&cities={target_city.capitalize()}"
+            drive_q_parts = list(filter(None, [safe_model, safe_trim]))
             drive_q_str = " ".join(drive_q_parts).replace(" ", "%20")
-            if drive_q_str: drive_url += f"&q={drive_q_str}"
+            if drive_q_str:        drive_url += f"&q={drive_q_str}"
             drive_tasks.append((drive_url, search_filters))
 
-            # --- AutoDeals ---
+            # ------------------------------------------------------------------ #
+            # AUTODEALS — mixed path/segment routing
+            # ------------------------------------------------------------------ #
             ad_parts = ["https://autodeals.pk/used-cars/search/-"]
-            if c: ad_parts.append(f"ct_{c}")
+            if c:              ad_parts.append(f"ct_{c}")
             if safe_budget > 0: ad_parts.append(f"minP_0/maxP_{safe_budget}")
-            if min_year > 0: ad_parts.append(f"minY_{min_year}")
-            if max_year > 0: ad_parts.append(f"maxY_{max_year}")
+            if min_year > 0:   ad_parts.append(f"minY_{min_year}")
+            if max_year > 0:   ad_parts.append(f"maxY_{max_year}")
             ad_search = "-".join(filter(None, [safe_make_lower, safe_model_lower, safe_trim_dash]))
-            if ad_search: ad_parts.append(f"searchStr_{ad_search}")
+            if ad_search:      ad_parts.append(f"searchStr_{ad_search}")
             ad_url = "/".join(ad_parts) + f"?page={page}"
             auto_deals_tasks.append((ad_url, search_filters))
 
-    # --- Log search queries ---
-    print(f"[Pipeline] Constructing search queries: Make={safe_make}, Model={safe_model}, Cities={cities_to_search}, Color={safe_color}, Trim={safe_trim}, Year={min_year}-{max_year}")
+    # --- Log constructed search queries ---
+    print(
+        f"[Pipeline] Search → Make={safe_make}, Model={safe_model}, "
+        f"Cities={cities_to_search}, Color={safe_color}, Trim={safe_trim}, "
+        f"Year={min_year}-{max_year}, Budget={safe_budget}"
+    )
 
     # --- Concurrency: run all scrapers using a shared curl_cffi session ---
     futures = []
 
     async with AsyncSession(impersonate="chrome120") as session:
-        # PakWheels
         for url in pw_urls:
             futures.append(scrape_pakwheels(url, session))
 
-        # OLX
         for url, filters in olx_tasks:
             futures.append(scrape_olx(url, session, filters))
 
-        # DrivePK
         for url, filters in drive_tasks:
             futures.append(scrape_drive_pk(url, session, filters))
 
-        # Gari.pk
         for url, filters in wisewheels_tasks:
             futures.append(scrape_wise_wheels(url, session, filters))
 
-        # AutoDeals
         for url, filters in auto_deals_tasks:
             futures.append(scrape_auto_deals(url, session, filters))
 
-        # FameWheels
         for url in famewheels_urls:
             futures.append(scrape_famewheels(url, session))
 
-        # Await all futures concurrently with return_exceptions=True
         all_results = await asyncio.gather(*futures, return_exceptions=True)
 
-    # --- DYNAMIC FLATTEN AND LOG ---
-    pw_count = len(pw_urls)
-    olx_count = len(olx_tasks)
-    drive_count = len(drive_tasks)
-    gari_count = len(wisewheels_tasks)
-    auto_deals_count_len = len(auto_deals_tasks)
-    famewheels_count_len = len(famewheels_urls)
+    # --- Dynamic flatten and log ---
+    pw_count            = len(pw_urls)
+    olx_count           = len(olx_tasks)
+    drive_count         = len(drive_tasks)
+    gari_count          = len(wisewheels_tasks)
+    auto_deals_count    = len(auto_deals_tasks)
+    famewheels_count    = len(famewheels_urls)
 
     idx = 0
-    def _safe_len(r): return len(r) if isinstance(r, list) else 0
+    def _safe_len(r):
+        return len(r) if isinstance(r, list) else 0
 
-    pw_total = sum(_safe_len(r) for r in all_results[idx : idx + pw_count]); idx += pw_count
-    olx_total = sum(_safe_len(r) for r in all_results[idx : idx + olx_count]); idx += olx_count
-    drive_total = sum(_safe_len(r) for r in all_results[idx : idx + drive_count]); idx += drive_count
-    gari_total = sum(_safe_len(r) for r in all_results[idx : idx + gari_count]); idx += gari_count
-    auto_deals_total = sum(_safe_len(r) for r in all_results[idx : idx + auto_deals_count_len]); idx += auto_deals_count_len
-    famewheels_total = sum(_safe_len(r) for r in all_results[idx : idx + famewheels_count_len]); idx += famewheels_count_len
+    pw_total          = sum(_safe_len(r) for r in all_results[idx : idx + pw_count]);          idx += pw_count
+    olx_total         = sum(_safe_len(r) for r in all_results[idx : idx + olx_count]);         idx += olx_count
+    drive_total       = sum(_safe_len(r) for r in all_results[idx : idx + drive_count]);       idx += drive_count
+    gari_total        = sum(_safe_len(r) for r in all_results[idx : idx + gari_count]);        idx += gari_count
+    auto_deals_total  = sum(_safe_len(r) for r in all_results[idx : idx + auto_deals_count]); idx += auto_deals_count
+    famewheels_total  = sum(_safe_len(r) for r in all_results[idx : idx + famewheels_count]); idx += famewheels_count
 
     print(f"[Pipeline] PakWheels returned   {pw_total} raw listings ({pw_count} pages)")
     print(f"[Pipeline] OLX returned         {olx_total} raw listings ({olx_count} pages)")
@@ -202,13 +257,13 @@ async def execute_search_pipeline(make: str, model: str, city: str, max_budget: 
     print(f"[Pipeline] AutoDeals returned   {auto_deals_total} raw listings")
     print(f"[Pipeline] FameWheels returned  {famewheels_total} raw listings")
 
-    # Flatten all results into one array
+    # Flatten all results
     raw_listings = []
     for result_set in all_results:
         if isinstance(result_set, list):
             raw_listings.extend(result_set)
         else:
-            print(f"[Runner] Warning: Scraper failed with error: {result_set}")
+            print(f"[Runner] ⚠ Scraper failed: {result_set}")
     print(f"[Pipeline] Total raw listings: {len(raw_listings)}")
 
     # --- Normalize, deduplicate, and cap ---
