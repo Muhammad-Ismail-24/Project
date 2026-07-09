@@ -12,3 +12,4 @@ python-dotenv
 playwright
 aiohttp
 playwright-stealth
+curl-cffi
