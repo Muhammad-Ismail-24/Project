@@ -1,6 +1,7 @@
 """
 scrapers/runner.py
 Fixed: Migrated to Browserless.io to bypass Render's 512MB memory limit.
+Updated: Enabled Stealth Mode to bypass Cloudflare/403 blocks.
 """
 import asyncio
 import json
@@ -138,10 +139,10 @@ async def execute_search_pipeline(make: str, model: str, city: str, max_budget: 
         # 1. Grab the key from the environment
         BROWSERLESS_KEY = os.getenv("BROWSERLESS_API_KEY")
         
-        # 2. Build the connection string
-        browserless_url = f"wss://chrome.browserless.io?token={BROWSERLESS_KEY}"
+        # 2. Build the connection string with stealth mode enabled to bypass Cloudflare
+        browserless_url = f"wss://chrome.browserless.io?token={BROWSERLESS_KEY}&stealth=true"
 
-        # 3. Connect to the remote Browserless server instead of opening Chrome locally
+        # 3. Connect to the remote Browserless server
         browser = await p.chromium.connect_over_cdp(browserless_url)
         
         context = await browser.new_context(
