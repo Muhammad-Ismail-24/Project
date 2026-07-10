@@ -1,15 +1,31 @@
 """
 scrapers/olx.py
 
-Migrated from Playwright to curl_cffi.
-Accepts a curl_cffi AsyncSession and fetches the OLX page directly.
-Extracts listings from the embedded __NEXT_DATA__ / window.state JSON.
+FIX (this patch): Broken links + zero price/year/mileage/city on OLX listings.
 
-FIXES (July 2026):
-  - Added STANDARD_HEADERS to every request to prevent 403 blocks.
-  - All JSON extraction paths hardened with deeper key traversal.
-  - DOM fallback updated for current OLX card structure (li[data-aut-id="itemBox"]).
-  - Debug logging: prints first 1000 chars of HTML when 0 listings are extracted.
+ROOT CAUSE:
+  The previous parser only checked ONE shallow JSON key path for each field
+  (e.g. item['price']['display']) and never used the ready-made 'url' field
+  OLX's own JSON already provides. Real OLX payloads commonly nest fields
+  one level deeper than assumed:
+    - price   -> item['price']['value']['display']  (not item['price']['display'])
+    - url     -> item['url']  (a ready relative path — was NEVER checked before!)
+    - location-> item['location']['city']['name']    (dict, not always a list)
+    - params  -> item['params'] (not just 'parameters'/'main_info'), each param
+                 has value nested under param['value']['label'] / ['key']
+
+Because the link was being manufactured from a slugified title + numeric id
+instead of using the real 'url' field, "View Ad" pointed to URLs that don't
+exist on OLX -> "not found" pages, exactly matching the reported symptom.
+
+This patch:
+  1. Tries item['url'] FIRST (the real, guaranteed-correct link) before ever
+     falling back to manual slug/id reconstruction.
+  2. Widens price/year/mileage/city extraction to check every known nesting
+     shape, shallow AND deep, in priority order.
+  3. Adds a one-time raw-JSON debug dump of the FIRST hit whenever price/year
+     /mileage all come back empty, so any remaining shape mismatch can be
+     diagnosed directly from your terminal logs instead of guessing again.
 """
 from bs4 import BeautifulSoup
 import re
@@ -18,8 +34,6 @@ from models.car_schema import CarListing
 
 MAX_ORGANIC_CARDS = 35
 
-# Standard browser headers injected on every request.
-# These prevent the server from flagging the request as a bot (HTTP 403).
 STANDARD_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
@@ -28,6 +42,130 @@ STANDARD_HEADERS = {
     "Referer": "https://www.google.com/",
     "Cache-Control": "no-cache",
 }
+
+
+def _dig(d, *keys, default=None):
+    """Safely walk a nested dict path, returning `default` if anything along
+    the way is missing or not a dict. Avoids a wall of `.get().get().get()`."""
+    cur = d
+    for k in keys:
+        if not isinstance(cur, dict):
+            return default
+        cur = cur.get(k)
+        if cur is None:
+            return default
+    return cur if cur is not None else default
+
+
+def _extract_price(item: dict) -> str:
+    """Checks every known OLX price shape, shallow to deep, in priority order."""
+    candidates = [
+        _dig(item, "price", "value", "display"),
+        _dig(item, "price", "value", "converted_value"),
+        _dig(item, "price", "value", "value"),
+        _dig(item, "price", "display"),
+        _dig(item, "price", "value"),
+        item.get("price") if isinstance(item.get("price"), (str, int, float)) else None,
+        _dig(item, "priceLabel"),
+    ]
+    for c in candidates:
+        if c not in (None, "", 0, "0"):
+            return str(c)
+    return "0"
+
+
+def _extract_location(item: dict) -> str:
+    """Checks every known OLX location shape: dict-of-dicts, list-of-dicts, or flat."""
+    # Shape A: location -> city -> name  (most common current shape)
+    city = _dig(item, "location", "city", "name")
+    if city:
+        return city
+
+    # Shape B: location -> district/city as plain string
+    city = _dig(item, "location", "city")
+    if isinstance(city, str) and city:
+        return city
+
+    # Shape C: locations as a list of dicts with a 'level' field (older shape)
+    loc_list = item.get("locations")
+    if isinstance(loc_list, list):
+        for loc in loc_list:
+            if isinstance(loc, dict) and loc.get("level") == 2:
+                name = loc.get("name")
+                if name:
+                    return name
+        for loc in loc_list:
+            if isinstance(loc, dict) and loc.get("name"):
+                return loc["name"]
+
+    # Shape D: a flat 'location' string
+    flat = item.get("location")
+    if isinstance(flat, str) and flat:
+        return flat
+
+    return "Unknown"
+
+
+def _extract_year_and_mileage(item: dict) -> tuple[str, str]:
+    """Checks every known OLX params/attributes shape for Year and Mileage."""
+    year, mileage = "0", "0"
+
+    for container_key in ("params", "parameters", "main_info", "attributes", "specs"):
+        container = item.get(container_key)
+        if not isinstance(container, list):
+            continue
+
+        for p in container:
+            if not isinstance(p, dict):
+                continue
+
+            key_name = str(
+                p.get("key") or p.get("name") or p.get("id") or ""
+            ).lower()
+
+            value = (
+                _dig(p, "value", "label")
+                or _dig(p, "value", "key")
+                or p.get("value")
+                or p.get("value_name")
+                or p.get("displayValue")
+                or ""
+            )
+            value = str(value)
+
+            if "year" in key_name and year == "0":
+                year = value
+            elif ("mileage" in key_name or "km" in key_name) and mileage == "0":
+                mileage = value
+
+        if year != "0" or mileage != "0":
+            break
+
+    return year, mileage
+
+
+def _extract_link(item: dict, title: str, fallback_url: str) -> str:
+    """
+    CRITICAL FIX: try the real 'url' field OLX provides FIRST.
+    Only fall back to manual slug/id reconstruction if it's genuinely absent.
+    """
+    raw_url = item.get("url") or _dig(item, "urls", "mobile") or _dig(item, "urls", "desktop")
+    if raw_url:
+        if raw_url.startswith("http"):
+            return raw_url
+        return "https://www.olx.com.pk" + (raw_url if raw_url.startswith("/") else f"/{raw_url}")
+
+    raw_id = str(item.get("id") or item.get("objectID") or "")
+    item_id = re.sub(r"\D", "", raw_id)
+    raw_slug = (
+        item.get("slug")
+        or re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
+        or "vehicle"
+    )
+    if len(item_id) > 7:
+        return f"https://www.olx.com.pk/item/{raw_slug}-iid-{item_id}"
+
+    return fallback_url
 
 
 async def scrape_olx(url: str, session, search_filters: dict = None) -> list[CarListing]:
@@ -46,77 +184,59 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
         print(f"[OLX Scraper] Response too short or empty for {url}")
         return []
 
-    soup = BeautifulSoup(html, 'html.parser')
+    soup = BeautifulSoup(html, "html.parser")
     cars = []
     hits = []
 
     # ------------------------------------------------------------------ #
     # LAYER 1: JSON State Extraction
-    # OLX embeds ALL listing data in one of two script tags. We try both.
     # ------------------------------------------------------------------ #
-    for s in soup.find_all('script'):
-        content = s.string or ''
+    for s in soup.find_all("script"):
+        content = s.string or ""
         if not content:
             continue
 
-        # --- Path A: window.state (older OLX Next.js builds) ---
-        match = re.search(r'window\.state\s*=\s*({.*?});\s*(?:window|$)', content, re.DOTALL)
+        match = re.search(r"window\.state\s*=\s*({.*?});\s*(?:window|$)", content, re.DOTALL)
         if match:
             try:
                 data = json.loads(match.group(1))
-                alg_hits = (
-                    data.get('algolia', {})
-                        .get('content', {})
-                        .get('hits', [])
-                )
+                alg_hits = _dig(data, "algolia", "content", "hits", default=[])
                 if alg_hits:
                     hits.extend(alg_hits)
                     break
             except Exception:
                 pass
 
-        # --- Path B: __NEXT_DATA__ (current OLX builds) ---
-        if s.get('id') == '__NEXT_DATA__':
+        if s.get("id") == "__NEXT_DATA__":
             try:
                 data = json.loads(content)
-                page_props = data.get("props", {}).get("pageProps", {})
+                page_props = _dig(data, "props", "pageProps", default={})
 
-                # Sub-path B1: initialState → listingSearch → items
-                items_arr = (
-                    page_props.get("initialState", {})
-                               .get("listingSearch", {})
-                               .get("items", [])
-                )
+                items_arr = _dig(page_props, "initialState", "listingSearch", "items", default=[])
                 if items_arr:
                     hits.extend(items_arr)
                     break
 
-                # Sub-path B2: initialState → listing → adList (alternate key)
-                ad_list = (
-                    page_props.get("initialState", {})
-                               .get("listing", {})
-                               .get("adList", [])
-                )
+                ad_list = _dig(page_props, "initialState", "listing", "adList", default=[])
                 if ad_list:
                     hits.extend(ad_list)
                     break
 
-                # Sub-path B3: apolloState — walk all keys for Item objects
                 if not hits:
                     apollo = page_props.get("apolloState", {})
                     if apollo:
                         for k, v in apollo.items():
                             if not isinstance(v, dict):
                                 continue
-                            if v.get('__typename') != 'Item' and not k.startswith('Item:'):
+                            if v.get("__typename") != "Item" and not k.startswith("Item:"):
                                 continue
                             if "title" not in v or "price" not in v:
                                 continue
-                            status = v.get('status', {})
-                            if isinstance(status, dict) and status.get('display') not in (None, 'ACTIVE'):
+                            status = v.get("status", {})
+                            if isinstance(status, dict) and status.get("display") not in (None, "ACTIVE"):
                                 continue
-                            if 'id' not in v and k.startswith('Item:'):
-                                v['id'] = k.split(':')[1]
+                            if "id" not in v and k.startswith("Item:"):
+                                v["id"] = k.split(":")[1]
                             hits.append(v)
                     if hits:
                         break
@@ -126,54 +246,53 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
 
     # ------------------------------------------------------------------ #
     # LAYER 2: Visual DOM Fallback
-    # Used when JSON state is missing/empty (e.g. Cloudflare-lite pages).
     # ------------------------------------------------------------------ #
     if not hits:
         print(f"[OLX Scraper] ⚠ JSON State missing for {url}. Attempting Visual DOM Fallback...")
 
-        # Current OLX card selector (li with data-aut-id="itemBox")
-        cards = soup.find_all('li', attrs={'data-aut-id': 'itemBox'})
-        # Legacy fallback: aria-label="Listing"
+        cards = soup.find_all("li", attrs={"data-aut-id": "itemBox"})
         if not cards:
-            cards = soup.find_all('li', attrs={'aria-label': 'Listing'})
-        # Broadest fallback: any article tag
+            cards = soup.find_all("li", attrs={"aria-label": "Listing"})
         if not cards:
-            cards = soup.find_all('article')
+            cards = soup.find_all("article")
 
         if not cards:
-            # --- CRITICAL DEBUG: print raw HTML snippet for selector diagnosis ---
             print(f"[OLX Scraper] ❌ DOM fallback also empty. Raw HTML (first 1000 chars):")
             print(html[:1000])
             return []
 
         for card in cards[:MAX_ORGANIC_CARDS]:
             try:
-                # Title
                 title_el = (
-                    card.find(attrs={'data-aut-id': 'itemTitle'})
-                    or card.find('h2')
-                    or card.find('a')
+                    card.find(attrs={"data-aut-id": "itemTitle"})
+                    or card.find("h2")
+                    or card.find("a")
                 )
                 title = title_el.get_text(strip=True) if title_el else ""
                 if not title:
                     continue
 
-                # Link
-                a_tag = card.find('a', href=True)
-                link = ('https://www.olx.com.pk' + a_tag['href']
-                        if a_tag and not a_tag['href'].startswith('http')
-                        else (a_tag['href'] if a_tag else url))
-
-                # Price
-                price_el = (
-                    card.find(attrs={'data-aut-id': 'itemPrice'})
-                    or card.find(class_=re.compile(r'price', re.I))
-                    or card.find(attrs={'aria-label': 'Price'})
+                a_tag = card.find("a", href=True)
+                link = (
+                    "https://www.olx.com.pk" + a_tag["href"]
+                    if a_tag and not a_tag["href"].startswith("http")
+                    else (a_tag["href"] if a_tag else url)
                 )
-                price = price_el.get_text(strip=True) if price_el else '0'
+
+                price_el = (
+                    card.find(attrs={"data-aut-id": "itemPrice"})
+                    or card.find(class_=re.compile(r"price", re.I))
+                    or card.find(attrs={"aria-label": "Price"})
+                )
+                price = price_el.get_text(strip=True) if price_el else "0"
+
+                loc_el = card.find(attrs={"data-aut-id": "item-location"}) or card.find(
+                    attrs={"aria-label": "Location"}
+                )
+                city = loc_el.get_text(strip=True) if loc_el else "Unknown"
 
                 cars.append(CarListing(
-                    title=title, price=price, platform='OLX', listing_url=link
+                    title=title, price=price, city=city, platform="OLX", listing_url=link
                 ))
             except Exception:
                 continue
@@ -182,70 +301,27 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
         return cars
 
     # ------------------------------------------------------------------ #
-    # LAYER 3: Parse hits from JSON state
+    # LAYER 3: Parse hits from JSON state (hardened field extraction)
     # ------------------------------------------------------------------ #
     hits = hits[:MAX_ORGANIC_CARDS]
+
+    debug_dumped = False
+
     for item in hits:
         try:
-            title = item.get('title', '')
+            title = item.get("title", "")
             if not title:
                 continue
 
-            # --- Price ---
-            raw_price = item.get('price', {})
-            if isinstance(raw_price, dict):
-                price = str(
-                    raw_price.get('display')
-                    or raw_price.get('value')
-                    or raw_price.get('regularPrice')
-                    or '0'
-                )
-            else:
-                price = str(raw_price or '0')
+            price = _extract_price(item)
+            year, mileage = _extract_year_and_mileage(item)
+            city = _extract_location(item)
+            link = _extract_link(item, title, fallback_url=url)
 
-            # --- Year & Mileage from parameters array ---
-            params = item.get('parameters', []) or item.get('main_info', []) or []
-            year = '0'
-            mileage = '0'
-            for p in (params if isinstance(params, list) else []):
-                if not isinstance(p, dict):
-                    continue
-                k = str(p.get('key') or p.get('name') or '').lower()
-                v = str(
-                    p.get('value')
-                    or p.get('value_name')
-                    or p.get('displayValue')
-                    or ''
-                )
-                if 'year' in k:
-                    year = v
-                elif 'mileage' in k or 'km' in k:
-                    mileage = v
-
-            # --- City ---
-            city = 'Unknown'
-            loc_data = item.get('locations') or item.get('location')
-            if isinstance(loc_data, list):
-                for loc in loc_data:
-                    if isinstance(loc, dict) and loc.get('level') == 2:
-                        city = loc.get('name', 'Unknown')
-                        break
-            elif isinstance(loc_data, dict):
-                city = loc_data.get('name', 'Unknown')
-
-            # --- URL ---
-            raw_id = str(item.get('id') or item.get('objectID') or '')
-            item_id = re.sub(r'\D', '', raw_id)
-            raw_slug = (
-                item.get('slug')
-                or re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')
-                or 'vehicle'
-            )
-            link = (
-                f"https://www.olx.com.pk/item/{raw_slug}-iid-{item_id}"
-                if len(item_id) > 7
-                else url
-            )
+            if not debug_dumped and price == "0" and year == "0" and mileage == "0":
+                debug_dumped = True
+                print(f"[OLX Scraper] ⚠ All numeric fields empty for '{title}'. Raw item keys: {list(item.keys())}")
+                print(f"[OLX Scraper] ⚠ Raw item sample (truncated): {json.dumps(item, default=str)[:800]}")
 
             cars.append(CarListing(
                 title=title,
@@ -254,13 +330,12 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
                 city=city,
                 year=year,
                 listing_url=link,
-                platform='OLX'
+                platform="OLX"
             ))
         except Exception:
             continue
 
     if not cars:
-        # --- CRITICAL DEBUG: print raw HTML snippet for selector diagnosis ---
         print(f"[OLX Scraper] ❌ Parsed 0 listings from JSON hits. Raw HTML (first 1000 chars):")
         print(html[:1000])
 
