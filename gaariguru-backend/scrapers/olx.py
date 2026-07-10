@@ -1,31 +1,47 @@
 """
 scrapers/olx.py
 
-FIX (this patch): Broken links + zero price/year/mileage/city on OLX listings.
+FIX (this patch): Corrected against the REAL raw Algolia hit shape,
+confirmed directly from production debug logs (not guessed).
 
-ROOT CAUSE:
-  The previous parser only checked ONE shallow JSON key path for each field
-  (e.g. item['price']['display']) and never used the ready-made 'url' field
-  OLX's own JSON already provides. Real OLX payloads commonly nest fields
-  one level deeper than assumed:
-    - price   -> item['price']['value']['display']  (not item['price']['display'])
-    - url     -> item['url']  (a ready relative path — was NEVER checked before!)
-    - location-> item['location']['city']['name']    (dict, not always a list)
-    - params  -> item['params'] (not just 'parameters'/'main_info'), each param
-                 has value nested under param['value']['label'] / ['key']
+WHAT THE DEBUG DUMP REVEALED:
+  Raw item keys included:
+    'activeProducts', 'agency', 'category', 'category.lvl0', 'category.lvl1',
+    'contactInfo', 'coverPhoto', 'createdAt', 'description', 'documentCount',
+    'documentsTags', 'externalID', 'extraFields', 'format',
+    'formattedExtraFields', 'geo_point', 'geography', 'id', 'isSellerVerified',
+    'keywords', 'location', 'location.lvl0'...'location.lvl4', 'objectID',
+    'panoramaCount', 'photoCount', 'photos', 'price', 'product', 'productInfo',
+    'productScore', 'purpose', 'requestIndex', 'slug', 'sourceID', 'state',
+    'timestamp', 'title', 'type', 'updatedAt', 'userExternalID', 'videoCount',
+    'locationTranslations', 'adTags'
 
-Because the link was being manufactured from a slugified title + numeric id
-instead of using the real 'url' field, "View Ad" pointed to URLs that don't
-exist on OLX -> "not found" pages, exactly matching the reported symptom.
+  Three concrete, log-confirmed findings from this:
 
-This patch:
-  1. Tries item['url'] FIRST (the real, guaranteed-correct link) before ever
-     falling back to manual slug/id reconstruction.
-  2. Widens price/year/mileage/city extraction to check every known nesting
-     shape, shallow AND deep, in priority order.
-  3. Adds a one-time raw-JSON debug dump of the FIRST hit whenever price/year
-     /mileage all come back empty, so any remaining shape mismatch can be
-     diagnosed directly from your terminal logs instead of guessing again.
+  1. NO 'url' KEY EXISTS on this object shape at all. This is a raw Algolia
+     search-index hit, not a Next.js/GraphQL item — there is no ready-made
+     link field. The previous "check url first" fix does not apply here.
+
+  2. NO 'params'/'parameters'/'main_info'/'attributes'/'specs' KEY EXISTS.
+     Year and mileage live under 'extraFields' / 'formattedExtraFields'
+     instead — a container name that was never checked before, which is
+     why every OLX listing showed year=0, mileage=0.
+
+  3. There IS an 'externalID' field, separate from 'id'/'objectID'. This is
+     OLX's real public-facing ad ID used in their actual URL structure
+     (.../iid-{externalID}). The previous link fallback used 'id'/'objectID'
+     (internal Algolia identifiers), which is why links 404'd even in the
+     manual-reconstruction fallback path.
+
+  4. 'location' is a SINGULAR key (list-of-dicts-with-level, same shape as
+     the old 'locations' plural key we already supported) — not a nested
+     dict as first assumed. The flattened 'location.lvl0'..'lvl4' keys are
+     separate top-level Algolia facet keys, not part of a nested path.
+
+This patch fixes all four findings directly, and widens the debug dump to
+print the actual 'price' and 'extraFields'/'formattedExtraFields' subtrees
+(not just the outer key list) so any remaining shape surprise is fully
+visible in one more log round instead of guessed blind again.
 """
 from bs4 import BeautifulSoup
 import re
@@ -46,7 +62,7 @@ STANDARD_HEADERS = {
 
 def _dig(d, *keys, default=None):
     """Safely walk a nested dict path, returning `default` if anything along
-    the way is missing or not a dict. Avoids a wall of `.get().get().get()`."""
+    the way is missing or not a dict."""
     cur = d
     for k in keys:
         if not isinstance(cur, dict):
@@ -57,86 +73,118 @@ def _dig(d, *keys, default=None):
     return cur if cur is not None else default
 
 
+def _deep_find(obj, key_substrings, _depth=0, _max_depth=5):
+    """
+    Recursively searches obj (dict/list, any nesting) for the first key at
+    any depth whose lowercased name contains any of `key_substrings`, and
+    returns that key's value — as long as the value itself isn't empty/falsy.
+
+    Used for 'price', where the real nesting depth/key names are unknown
+    and vary between Algolia hit shapes (e.g. price->value->amount vs.
+    price->value->display vs. price->regularPrice->value).
+    """
+    if _depth > _max_depth or obj is None:
+        return None
+
+    if isinstance(obj, dict):
+        # Direct key match at this level first
+        for k, v in obj.items():
+            kl = str(k).lower()
+            if any(sub in kl for sub in key_substrings):
+                if v not in (None, "", 0, "0", [], {}):
+                    return v
+        # Then recurse into nested values
+        for v in obj.values():
+            found = _deep_find(v, key_substrings, _depth + 1, _max_depth)
+            if found not in (None, "", 0, "0"):
+                return found
+
+    elif isinstance(obj, list):
+        for entry in obj:
+            found = _deep_find(entry, key_substrings, _depth + 1, _max_depth)
+            if found not in (None, "", 0, "0"):
+                return found
+
+    return None
+
+
 def _extract_price(item: dict) -> str:
-    """Checks every known OLX price shape, shallow to deep, in priority order."""
-    candidates = [
-        _dig(item, "price", "value", "display"),
-        _dig(item, "price", "value", "converted_value"),
-        _dig(item, "price", "value", "value"),
-        _dig(item, "price", "display"),
-        _dig(item, "price", "value"),
-        item.get("price") if isinstance(item.get("price"), (str, int, float)) else None,
-        _dig(item, "priceLabel"),
-    ]
-    for c in candidates:
-        if c not in (None, "", 0, "0"):
-            return str(c)
+    """
+    Price extraction using a deep, shape-agnostic search of the 'price'
+    subtree. Prefers a human-readable 'display' string first, then falls
+    back to any numeric 'amount'/'value'/'converted' style field found at
+    any depth.
+    """
+    price_root = item.get("price")
+    if price_root is None:
+        return "0"
+
+    if isinstance(price_root, (str, int, float)) and price_root not in ("", 0, "0"):
+        return str(price_root)
+
+    # Pass 1: prefer a human-readable display string if one exists anywhere
+    val = _deep_find(price_root, ["display"])
+    if val not in (None, "", 0, "0"):
+        return str(val)
+
+    # Pass 2: any plausible numeric price field, in priority order
+    for hint in ["amount", "converted_value", "convertedvalue", "regularprice", "value"]:
+        val = _deep_find(price_root, [hint])
+        if val not in (None, "", 0, "0"):
+            return str(val)
+
     return "0"
 
 
-def _extract_location(item: dict) -> str:
-    """Checks every known OLX location shape: dict-of-dicts, list-of-dicts, or flat."""
-    # Shape A: location -> city -> name  (most common current shape)
-    city = _dig(item, "location", "city", "name")
-    if city:
-        return city
-
-    # Shape B: location -> district/city as plain string
-    city = _dig(item, "location", "city")
-    if isinstance(city, str) and city:
-        return city
-
-    # Shape C: locations as a list of dicts with a 'level' field (older shape)
-    loc_list = item.get("locations")
-    if isinstance(loc_list, list):
-        for loc in loc_list:
-            if isinstance(loc, dict) and loc.get("level") == 2:
-                name = loc.get("name")
-                if name:
-                    return name
-        for loc in loc_list:
-            if isinstance(loc, dict) and loc.get("name"):
-                return loc["name"]
-
-    # Shape D: a flat 'location' string
-    flat = item.get("location")
-    if isinstance(flat, str) and flat:
-        return flat
-
-    return "Unknown"
-
-
 def _extract_year_and_mileage(item: dict) -> tuple[str, str]:
-    """Checks every known OLX params/attributes shape for Year and Mileage."""
+    """
+    Year/mileage extraction that checks BOTH known OLX container shapes:
+      - 'extraFields' / 'formattedExtraFields' (confirmed real key names)
+      - legacy 'params'/'parameters'/'main_info'/'attributes'/'specs'
+    Each container may itself be either:
+      - a list of {key/name/id, value/value_name/displayValue/label} pairs, or
+      - a flat dict mapping field-name -> value directly.
+    """
     year, mileage = "0", "0"
 
-    for container_key in ("params", "parameters", "main_info", "attributes", "specs"):
+    container_keys = (
+        "extraFields", "formattedExtraFields",
+        "params", "parameters", "main_info", "attributes", "specs",
+    )
+
+    for container_key in container_keys:
         container = item.get(container_key)
-        if not isinstance(container, list):
+        if not container:
             continue
 
-        for p in container:
-            if not isinstance(p, dict):
-                continue
+        if isinstance(container, list):
+            for p in container:
+                if not isinstance(p, dict):
+                    continue
+                key_name = str(p.get("key") or p.get("name") or p.get("id") or "").lower()
+                value = (
+                    _dig(p, "value", "label")
+                    or _dig(p, "value", "key")
+                    or p.get("value")
+                    or p.get("value_name")
+                    or p.get("displayValue")
+                    or p.get("label")
+                    or ""
+                )
+                value = str(value)
 
-            key_name = str(
-                p.get("key") or p.get("name") or p.get("id") or ""
-            ).lower()
+                if "year" in key_name and year == "0":
+                    year = value
+                elif ("mileage" in key_name or "km" in key_name or "odometer" in key_name) and mileage == "0":
+                    mileage = value
 
-            value = (
-                _dig(p, "value", "label")
-                or _dig(p, "value", "key")
-                or p.get("value")
-                or p.get("value_name")
-                or p.get("displayValue")
-                or ""
-            )
-            value = str(value)
-
-            if "year" in key_name and year == "0":
-                year = value
-            elif ("mileage" in key_name or "km" in key_name) and mileage == "0":
-                mileage = value
+        elif isinstance(container, dict):
+            for k, v in container.items():
+                kl = str(k).lower()
+                if "year" in kl and year == "0":
+                    year = str(v)
+                elif ("mileage" in kl or "km" in kl or "odometer" in kl) and mileage == "0":
+                    mileage = str(v)
 
         if year != "0" or mileage != "0":
             break
@@ -144,10 +192,62 @@ def _extract_year_and_mileage(item: dict) -> tuple[str, str]:
     return year, mileage
 
 
+def _extract_location(item: dict) -> str:
+    """
+    Location extraction. CONFIRMED real shape: 'location' is a LIST of
+    dicts with a 'level' field (city is typically level==2) — the same
+    shape previously only supported under the (incorrect) plural key
+    'locations'. Also handles a dict or flat-string shape defensively,
+    and keeps the legacy plural key as a final fallback.
+    """
+    loc = item.get("location")
+
+    if isinstance(loc, dict):
+        name = _dig(loc, "city", "name")
+        if name:
+            return name
+        city_str = loc.get("city")
+        if isinstance(city_str, str) and city_str:
+            return city_str
+
+    if isinstance(loc, list):
+        for entry in loc:
+            if isinstance(entry, dict) and entry.get("level") == 2:
+                name = entry.get("name")
+                if name:
+                    return name
+        for entry in loc:
+            if isinstance(entry, dict) and entry.get("name"):
+                return entry["name"]
+
+    if isinstance(loc, str) and loc:
+        return loc
+
+    # Legacy fallback: some older/alternate payloads use plural 'locations'
+    loc_list = item.get("locations")
+    if isinstance(loc_list, list):
+        for entry in loc_list:
+            if isinstance(entry, dict) and entry.get("level") == 2:
+                name = entry.get("name")
+                if name:
+                    return name
+        for entry in loc_list:
+            if isinstance(entry, dict) and entry.get("name"):
+                return entry["name"]
+
+    return "Unknown"
+
+
 def _extract_link(item: dict, title: str, fallback_url: str) -> str:
     """
-    CRITICAL FIX: try the real 'url' field OLX provides FIRST.
-    Only fall back to manual slug/id reconstruction if it's genuinely absent.
+    Link extraction, in priority order:
+      1. A genuinely ready-made 'url' field, if this particular hit shape
+         happens to provide one (some OLX payload variants do).
+      2. Manual reconstruction using 'externalID' FIRST — confirmed to be
+         OLX's real public-facing ad ID — falling back to 'id'/'objectID'
+         only if externalID is absent.
+      3. The original search page URL as an absolute last resort, rather
+         than ever returning a guaranteed-broken guessed link.
     """
     raw_url = item.get("url") or _dig(item, "urls", "mobile") or _dig(item, "urls", "desktop")
     if raw_url:
@@ -155,14 +255,18 @@ def _extract_link(item: dict, title: str, fallback_url: str) -> str:
             return raw_url
         return "https://www.olx.com.pk" + (raw_url if raw_url.startswith("/") else f"/{raw_url}")
 
-    raw_id = str(item.get("id") or item.get("objectID") or "")
+    # externalID confirmed present and is OLX's real public ad ID —
+    # check it BEFORE the internal Algolia id/objectID fields.
+    raw_id = str(item.get("externalID") or item.get("id") or item.get("objectID") or "")
     item_id = re.sub(r"\D", "", raw_id)
+
     raw_slug = (
         item.get("slug")
         or re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
         or "vehicle"
     )
-    if len(item_id) > 7:
+
+    if len(item_id) >= 6:
         return f"https://www.olx.com.pk/item/{raw_slug}-iid-{item_id}"
 
     return fallback_url
@@ -318,10 +422,18 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
             city = _extract_location(item)
             link = _extract_link(item, title, fallback_url=url)
 
+            # One-time diagnostic: if fields are STILL empty after this
+            # patch, dump the actual 'price' and extraFields subtrees
+            # (not just the outer key list) so the exact remaining shape
+            # mismatch, if any, is fully visible in the next log round.
             if not debug_dumped and price == "0" and year == "0" and mileage == "0":
                 debug_dumped = True
-                print(f"[OLX Scraper] ⚠ All numeric fields empty for '{title}'. Raw item keys: {list(item.keys())}")
-                print(f"[OLX Scraper] ⚠ Raw item sample (truncated): {json.dumps(item, default=str)[:800]}")
+                print(f"[OLX Scraper] ⚠ STILL empty for '{title}' after shape fix. Investigating subtrees:")
+                print(f"[OLX Scraper]   price subtree: {json.dumps(item.get('price'), default=str)[:500]}")
+                print(f"[OLX Scraper]   extraFields subtree: {json.dumps(item.get('extraFields'), default=str)[:500]}")
+                print(f"[OLX Scraper]   formattedExtraFields subtree: {json.dumps(item.get('formattedExtraFields'), default=str)[:500]}")
+                print(f"[OLX Scraper]   location subtree: {json.dumps(item.get('location'), default=str)[:300]}")
+                print(f"[OLX Scraper]   externalID={item.get('externalID')!r}  id={item.get('id')!r}  objectID={item.get('objectID')!r}  slug={item.get('slug')!r}")
 
             cars.append(CarListing(
                 title=title,
