@@ -1,47 +1,35 @@
 """
 scrapers/olx.py
 
-FIX (this patch): Corrected against the REAL raw Algolia hit shape,
-confirmed directly from production debug logs (not guessed).
+FIX (this patch): Price still returning 0 while year/mileage/city/link now
+all work correctly (confirmed via live screenshot — real OLX ad opened
+successfully showing "Rs 40 Lacs", 2015, correct city, but frontend showed
+"PKR 0").
 
-WHAT THE DEBUG DUMP REVEALED:
-  Raw item keys included:
-    'activeProducts', 'agency', 'category', 'category.lvl0', 'category.lvl1',
-    'contactInfo', 'coverPhoto', 'createdAt', 'description', 'documentCount',
-    'documentsTags', 'externalID', 'extraFields', 'format',
-    'formattedExtraFields', 'geo_point', 'geography', 'id', 'isSellerVerified',
-    'keywords', 'location', 'location.lvl0'...'location.lvl4', 'objectID',
-    'panoramaCount', 'photoCount', 'photos', 'price', 'product', 'productInfo',
-    'productScore', 'purpose', 'requestIndex', 'slug', 'sourceID', 'state',
-    'timestamp', 'title', 'type', 'updatedAt', 'userExternalID', 'videoCount',
-    'locationTranslations', 'adTags'
+TWO ROOT CAUSES FOUND:
 
-  Three concrete, log-confirmed findings from this:
+1. THE DEBUG DUMP NEVER FIRED FOR THIS CASE.
+   The previous debug trigger only fired when price, year, AND mileage were
+   ALL three simultaneously "0". Since year/mileage/city were fixed last
+   patch, that three-way condition stopped being true — so the diagnostic
+   dump silently never printed for the remaining price-only failure. This
+   patch decouples the price debug trigger so it fires independently.
 
-  1. NO 'url' KEY EXISTS on this object shape at all. This is a raw Algolia
-     search-index hit, not a Next.js/GraphQL item — there is no ready-made
-     link field. The previous "check url first" fix does not apply here.
+2. A REAL BUG IN `_deep_find()`.
+   When `_deep_find` found a key whose name matched (e.g. a key literally
+   named "value"), but that key's VALUE was itself another nested dict
+   (not the final number), the old code returned that nested dict object
+   directly — instead of continuing to recurse INTO it for the actual
+   scalar leaf value. This meant a shape like:
+     "price": {"value": {"value": 4000000, "currency": "PKR"}}
+   would match the outer "value" key, see its value is a non-empty dict,
+   and incorrectly treat the dict itself as "found" rather than digging
+   one level deeper for the real number 4000000.
 
-  2. NO 'params'/'parameters'/'main_info'/'attributes'/'specs' KEY EXISTS.
-     Year and mileage live under 'extraFields' / 'formattedExtraFields'
-     instead — a container name that was never checked before, which is
-     why every OLX listing showed year=0, mileage=0.
-
-  3. There IS an 'externalID' field, separate from 'id'/'objectID'. This is
-     OLX's real public-facing ad ID used in their actual URL structure
-     (.../iid-{externalID}). The previous link fallback used 'id'/'objectID'
-     (internal Algolia identifiers), which is why links 404'd even in the
-     manual-reconstruction fallback path.
-
-  4. 'location' is a SINGULAR key (list-of-dicts-with-level, same shape as
-     the old 'locations' plural key we already supported) — not a nested
-     dict as first assumed. The flattened 'location.lvl0'..'lvl4' keys are
-     separate top-level Algolia facet keys, not part of a nested path.
-
-This patch fixes all four findings directly, and widens the debug dump to
-print the actual 'price' and 'extraFields'/'formattedExtraFields' subtrees
-(not just the outer key list) so any remaining shape surprise is fully
-visible in one more log round instead of guessed blind again.
+   Fixed: `_deep_find` now only accepts a match if the value at that key
+   is a scalar (str/int/float). If the matching key's value is itself a
+   dict/list, it explicitly recurses into THAT substructure next before
+   falling back to a generic full-tree scan.
 """
 from bs4 import BeautifulSoup
 import re
@@ -61,8 +49,6 @@ STANDARD_HEADERS = {
 
 
 def _dig(d, *keys, default=None):
-    """Safely walk a nested dict path, returning `default` if anything along
-    the way is missing or not a dict."""
     cur = d
     for k in keys:
         if not isinstance(cur, dict):
@@ -73,27 +59,39 @@ def _dig(d, *keys, default=None):
     return cur if cur is not None else default
 
 
-def _deep_find(obj, key_substrings, _depth=0, _max_depth=5):
+def _deep_find(obj, key_substrings, _depth=0, _max_depth=6):
     """
-    Recursively searches obj (dict/list, any nesting) for the first key at
-    any depth whose lowercased name contains any of `key_substrings`, and
-    returns that key's value — as long as the value itself isn't empty/falsy.
+    Recursively searches obj (dict/list, any nesting) for a key at any depth
+    whose lowercased name contains any of `key_substrings`.
 
-    Used for 'price', where the real nesting depth/key names are unknown
-    and vary between Algolia hit shapes (e.g. price->value->amount vs.
-    price->value->display vs. price->regularPrice->value).
+    FIXED BEHAVIOR: a match only counts if that key's value is itself a
+    scalar (str/int/float). If the matching key's value is a nested
+    dict/list instead, we recurse INTO that specific substructure next
+    (higher priority than unrelated sibling keys), rather than incorrectly
+    returning the container object itself as if it were the answer.
     """
     if _depth > _max_depth or obj is None:
         return None
 
     if isinstance(obj, dict):
-        # Direct key match at this level first
+        # Priority 1: a matching key whose value is already a scalar leaf.
         for k, v in obj.items():
             kl = str(k).lower()
             if any(sub in kl for sub in key_substrings):
-                if v not in (None, "", 0, "0", [], {}):
+                if isinstance(v, (str, int, float)) and v not in ("", 0, "0"):
                     return v
-        # Then recurse into nested values
+
+        # Priority 2: a matching key whose value is a nested dict/list —
+        # recurse specifically into it before scanning unrelated siblings.
+        for k, v in obj.items():
+            kl = str(k).lower()
+            if any(sub in kl for sub in key_substrings) and isinstance(v, (dict, list)):
+                found = _deep_find(v, key_substrings, _depth + 1, _max_depth)
+                if found not in (None, "", 0, "0"):
+                    return found
+
+        # Priority 3: generic recursive scan through every value regardless
+        # of key name, as a final fallback.
         for v in obj.values():
             found = _deep_find(v, key_substrings, _depth + 1, _max_depth)
             if found not in (None, "", 0, "0"):
@@ -110,10 +108,9 @@ def _deep_find(obj, key_substrings, _depth=0, _max_depth=5):
 
 def _extract_price(item: dict) -> str:
     """
-    Price extraction using a deep, shape-agnostic search of the 'price'
-    subtree. Prefers a human-readable 'display' string first, then falls
-    back to any numeric 'amount'/'value'/'converted' style field found at
-    any depth.
+    Price extraction using the fixed, shape-agnostic deep search.
+    Tries human-readable display/formatted text first, then falls back to
+    any plausible numeric field, at any nesting depth.
     """
     price_root = item.get("price")
     if price_root is None:
@@ -122,13 +119,14 @@ def _extract_price(item: dict) -> str:
     if isinstance(price_root, (str, int, float)) and price_root not in ("", 0, "0"):
         return str(price_root)
 
-    # Pass 1: prefer a human-readable display string if one exists anywhere
-    val = _deep_find(price_root, ["display"])
-    if val not in (None, "", 0, "0"):
-        return str(val)
+    # Pass 1: prefer a human-readable display/formatted string
+    for hint in ["display", "formatted", "label", "text"]:
+        val = _deep_find(price_root, [hint])
+        if val not in (None, "", 0, "0"):
+            return str(val)
 
     # Pass 2: any plausible numeric price field, in priority order
-    for hint in ["amount", "converted_value", "convertedvalue", "regularprice", "value"]:
+    for hint in ["amount", "raw", "converted_value", "convertedvalue", "regularprice", "value"]:
         val = _deep_find(price_root, [hint])
         if val not in (None, "", 0, "0"):
             return str(val)
@@ -137,21 +135,11 @@ def _extract_price(item: dict) -> str:
 
 
 def _extract_year_and_mileage(item: dict) -> tuple[str, str]:
-    """
-    Year/mileage extraction that checks BOTH known OLX container shapes:
-      - 'extraFields' / 'formattedExtraFields' (confirmed real key names)
-      - legacy 'params'/'parameters'/'main_info'/'attributes'/'specs'
-    Each container may itself be either:
-      - a list of {key/name/id, value/value_name/displayValue/label} pairs, or
-      - a flat dict mapping field-name -> value directly.
-    """
     year, mileage = "0", "0"
-
     container_keys = (
         "extraFields", "formattedExtraFields",
         "params", "parameters", "main_info", "attributes", "specs",
     )
-
     for container_key in container_keys:
         container = item.get(container_key)
         if not container:
@@ -172,7 +160,6 @@ def _extract_year_and_mileage(item: dict) -> tuple[str, str]:
                     or ""
                 )
                 value = str(value)
-
                 if "year" in key_name and year == "0":
                     year = value
                 elif ("mileage" in key_name or "km" in key_name or "odometer" in key_name) and mileage == "0":
@@ -193,13 +180,6 @@ def _extract_year_and_mileage(item: dict) -> tuple[str, str]:
 
 
 def _extract_location(item: dict) -> str:
-    """
-    Location extraction. CONFIRMED real shape: 'location' is a LIST of
-    dicts with a 'level' field (city is typically level==2) — the same
-    shape previously only supported under the (incorrect) plural key
-    'locations'. Also handles a dict or flat-string shape defensively,
-    and keeps the legacy plural key as a final fallback.
-    """
     loc = item.get("location")
 
     if isinstance(loc, dict):
@@ -223,7 +203,6 @@ def _extract_location(item: dict) -> str:
     if isinstance(loc, str) and loc:
         return loc
 
-    # Legacy fallback: some older/alternate payloads use plural 'locations'
     loc_list = item.get("locations")
     if isinstance(loc_list, list):
         for entry in loc_list:
@@ -239,24 +218,12 @@ def _extract_location(item: dict) -> str:
 
 
 def _extract_link(item: dict, title: str, fallback_url: str) -> str:
-    """
-    Link extraction, in priority order:
-      1. A genuinely ready-made 'url' field, if this particular hit shape
-         happens to provide one (some OLX payload variants do).
-      2. Manual reconstruction using 'externalID' FIRST — confirmed to be
-         OLX's real public-facing ad ID — falling back to 'id'/'objectID'
-         only if externalID is absent.
-      3. The original search page URL as an absolute last resort, rather
-         than ever returning a guaranteed-broken guessed link.
-    """
     raw_url = item.get("url") or _dig(item, "urls", "mobile") or _dig(item, "urls", "desktop")
     if raw_url:
         if raw_url.startswith("http"):
             return raw_url
         return "https://www.olx.com.pk" + (raw_url if raw_url.startswith("/") else f"/{raw_url}")
 
-    # externalID confirmed present and is OLX's real public ad ID —
-    # check it BEFORE the internal Algolia id/objectID fields.
     raw_id = str(item.get("externalID") or item.get("id") or item.get("objectID") or "")
     item_id = re.sub(r"\D", "", raw_id)
 
@@ -292,9 +259,6 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
     cars = []
     hits = []
 
-    # ------------------------------------------------------------------ #
-    # LAYER 1: JSON State Extraction
-    # ------------------------------------------------------------------ #
     for s in soup.find_all("script"):
         content = s.string or ""
         if not content:
@@ -348,9 +312,6 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
             except Exception:
                 pass
 
-    # ------------------------------------------------------------------ #
-    # LAYER 2: Visual DOM Fallback
-    # ------------------------------------------------------------------ #
     if not hits:
         print(f"[OLX Scraper] ⚠ JSON State missing for {url}. Attempting Visual DOM Fallback...")
 
@@ -404,12 +365,12 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
         print(f"[OLX Scraper] DOM fallback extracted {len(cars)} listings")
         return cars
 
-    # ------------------------------------------------------------------ #
-    # LAYER 3: Parse hits from JSON state (hardened field extraction)
-    # ------------------------------------------------------------------ #
     hits = hits[:MAX_ORGANIC_CARDS]
 
-    debug_dumped = False
+    # Separate, INDEPENDENT one-time debug triggers per field — this is the
+    # key fix so a price-only failure is no longer masked by year/mileage
+    # having already succeeded.
+    price_debug_dumped = False
 
     for item in hits:
         try:
@@ -422,18 +383,10 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
             city = _extract_location(item)
             link = _extract_link(item, title, fallback_url=url)
 
-            # One-time diagnostic: if fields are STILL empty after this
-            # patch, dump the actual 'price' and extraFields subtrees
-            # (not just the outer key list) so the exact remaining shape
-            # mismatch, if any, is fully visible in the next log round.
-            if not debug_dumped and price == "0" and year == "0" and mileage == "0":
-                debug_dumped = True
-                print(f"[OLX Scraper] ⚠ STILL empty for '{title}' after shape fix. Investigating subtrees:")
-                print(f"[OLX Scraper]   price subtree: {json.dumps(item.get('price'), default=str)[:500]}")
-                print(f"[OLX Scraper]   extraFields subtree: {json.dumps(item.get('extraFields'), default=str)[:500]}")
-                print(f"[OLX Scraper]   formattedExtraFields subtree: {json.dumps(item.get('formattedExtraFields'), default=str)[:500]}")
-                print(f"[OLX Scraper]   location subtree: {json.dumps(item.get('location'), default=str)[:300]}")
-                print(f"[OLX Scraper]   externalID={item.get('externalID')!r}  id={item.get('id')!r}  objectID={item.get('objectID')!r}  slug={item.get('slug')!r}")
+            if not price_debug_dumped and price == "0":
+                price_debug_dumped = True
+                print(f"[OLX Scraper] ⚠ Price STILL '0' for '{title}'. Raw price subtree:")
+                print(f"[OLX Scraper]   {json.dumps(item.get('price'), default=str)[:1200]}")
 
             cars.append(CarListing(
                 title=title,

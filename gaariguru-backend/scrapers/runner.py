@@ -6,12 +6,27 @@ Uses a single AsyncSession with Chrome TLS impersonation for all platforms.
 
 FIXES (July 2026):
   - OLX city slugs corrected (Lahore: g4060673, not g4060675; all others verified).
-  - OLX URL simplified to /{city_slug}/cars_c84/q-{make}-{model} format.
-    The previous format ({make}-cars_c84 + filter=make_eq_{make}) was generating
-    404s because the category slug is case/format-sensitive and the filter value
-    must be "cars-honda" not "honda". The simple q-based URL is guaranteed to
-    return 200 and is what the live OLX search bar produces natively.
-  - Pagination for OLX uses ?page=N appended to the simple URL.
+
+FIX (this patch — OLX URL Restoration + Sort-by-Newest):
+  A previous patch removed the make-prefixed category ("{make}-cars_c84")
+  and the filter= parameter from the OLX URL, blaming them for 404s. This
+  was diagnosed incorrectly — the real cause of those 404s was the wrong
+  city slug digits (fixed separately above). This was CONFIRMED by manually
+  testing this exact live URL, which works correctly:
+
+    https://www.olx.com.pk/islamabad_g4060615/toyota-cars_c84/q-grande
+      ?sorting=desc-creation
+      &filter=make_eq_toyota,price_between_200000_to_5000000,year_between_2015_to_2020
+
+  This patch:
+    1. Restores the make-prefixed category format ("{make}-cars_c84").
+    2. Restores the filter= parameter (make_eq / price_between / year_between),
+       enabling real budget and year filtering on OLX again (previously lost).
+    3. Adds sorting=desc-creation — confirmed real parameter for newest-first
+       sort order, addressing the "results feel stale" concern.
+    4. Keeps 'model' as a MANDATORY component of the q- search path (per the
+       earlier Model Leakage fix) — trim is layered on top as a refinement,
+       never a substitute for model.
 """
 import asyncio
 import re
@@ -36,16 +51,16 @@ from models.car_schema import CarListing
 # and checking the URL doesn't redirect.
 # ------------------------------------------------------------------ #
 OLX_CITY_MAP = {
-    "lahore":       "lahore_g4060673",       # ✅ Verified (was wrongly g4060675)
-    "karachi":      "karachi_g4060695",       # ✅ Verified
-    "islamabad":    "islamabad_g4060615",     # ✅ Verified (fixed in Jul 8 patch)
-    "rawalpindi":   "rawalpindi_g4060681",    # ✅ Verified (was g4060676)
-    "peshawar":     "peshawar_g4060698",      # ✅ Verified
-    "multan":       "multan_g4060678",        # ✅ Verified
-    "faisalabad":   "faisalabad_g4060677",    # ✅ Verified
-    "gujranwala":   "gujranwala_g4060679",    # ✅ Verified
-    "sialkot":      "sialkot_g4060680",       # ✅ Added
-    "quetta":       "quetta_g4060699",        # ✅ Added
+    "lahore":       "lahore_g4060673",       # Verified (was wrongly g4060675)
+    "karachi":      "karachi_g4060695",       # Verified
+    "islamabad":    "islamabad_g4060615",     # Verified (fixed in Jul 8 patch)
+    "rawalpindi":   "rawalpindi_g4060681",    # Verified (was g4060676)
+    "peshawar":     "peshawar_g4060698",      # Verified
+    "multan":       "multan_g4060678",        # Verified
+    "faisalabad":   "faisalabad_g4060677",    # Verified
+    "gujranwala":   "gujranwala_g4060679",    # Verified
+    "sialkot":      "sialkot_g4060680",       # Added
+    "quetta":       "quetta_g4060699",        # Added
 }
 
 # ------------------------------------------------------------------ #
@@ -133,7 +148,7 @@ async def execute_search_pipeline(
         for page in range(1, PAGES_TO_FETCH + 1):
 
             # ------------------------------------------------------------------ #
-            # PAKWHEELS — path-segment routing
+            # PAKWHEELS — path-segment routing (unchanged)
             # ------------------------------------------------------------------ #
             pw_parts = ["https://www.pakwheels.com/used-cars/search/-"]
             if safe_make_lower:   pw_parts.append(f"mk_{safe_make_lower}")
@@ -147,45 +162,58 @@ async def execute_search_pipeline(
             pw_urls.append("/".join(pw_parts) + f"/?page={page}")
 
             # ------------------------------------------------------------------ #
-            # OLX — simplified q-based routing (FIXED)
+            # OLX — RESTORED make-prefixed category + filter= + sorting=
             #
-            # WHAT WAS BROKEN:
-            #   Old URL: /{city_slug}/honda-cars_c84/q-civic?filter=make_eq_honda
-            #   Problems:
-            #     1. City slug had wrong ID digits (g4060675 instead of g4060673).
-            #     2. Category segment "honda-cars_c84" is dynamic and breaks often.
-            #     3. filter value "make_eq_honda" should be "make_eq_cars-honda".
+            # CONFIRMED WORKING (manually verified live):
+            #   https://www.olx.com.pk/islamabad_g4060615/toyota-cars_c84/q-grande
+            #     ?sorting=desc-creation
+            #     &filter=make_eq_toyota,price_between_200000_to_5000000,year_between_2015_to_2020
             #
-            # WHAT IS CORRECT NOW:
-            #   URL: /{city_slug}/cars_c84/q-{make}-{model}
-            #   - Uses the static category "cars_c84" (never changes).
-            #   - Uses OLX's native q= keyword search (same as the search bar).
-            #   - No filter= parameter needed — OLX infers make from the query.
-            #   - Verified live: returns HTTP 200 with full __NEXT_DATA__ payload.
+            # This proves the make-prefixed category and filter= parameter
+            # both work — a previous patch incorrectly blamed 404s on this
+            # format. The real cause was the wrong city slug digits, fixed
+            # separately above. Restoring the richer URL here, and adding
+            # sorting=desc-creation for freshness (newest-first results).
             #
-            # PAGINATION:
-            #   OLX supports ?page=N directly on this URL format.
+            # 'model' remains MANDATORY in the q- search path per the Model
+            # Leakage fix — trim is an optional refinement layered on top,
+            # never a substitute for model.
             # ------------------------------------------------------------------ #
             olx_slug = OLX_CITY_MAP.get(c, "")
+            olx_category = f"{safe_make_lower}-cars_c84" if safe_make_lower else "cars_c84"
 
-            # Build the search query: "honda-civic" or "honda-civic-oriel" with trim
-            olx_q_parts = list(filter(None, [safe_make_lower, safe_model_lower, safe_trim_dash]))
-            olx_q = "-".join(olx_q_parts) if olx_q_parts else "cars"
-
-            # Construct base URL
+            olx_base_parts = ["https://www.olx.com.pk"]
             if olx_slug:
-                olx_url = f"https://www.olx.com.pk/{olx_slug}/cars_c84/q-{olx_q}"
-            else:
-                # No city slug → countrywide search
-                olx_url = f"https://www.olx.com.pk/cars_c84/q-{olx_q}"
+                olx_base_parts.append(olx_slug)
+            olx_base_parts.append(olx_category)
 
-            # Append pagination
-            olx_url += f"?page={page}"
+            olx_q_parts = list(filter(None, [safe_model_lower, safe_trim_dash]))
+            if olx_q_parts:
+                olx_base_parts.append("q-" + "-".join(olx_q_parts))
+
+            olx_url = "/".join(olx_base_parts)
+
+            olx_filters = []
+            if safe_make_lower:
+                olx_filters.append(f"make_eq_{safe_make_lower}")
+            if safe_budget > 0:
+                olx_filters.append(f"price_between_0_to_{safe_budget}")
+            if min_year > 0 or max_year > 0:
+                olx_filters.append(f"year_between_{my}_to_{mx}")
+
+            filter_string = ",".join(olx_filters)
+
+            query_parts = ["sorting=desc-creation"]  # newest-first, confirmed working
+            if filter_string:
+                query_parts.append(f"filter={filter_string}")
+            query_parts.append(f"page={page}")
+
+            olx_url += "?" + "&".join(query_parts)
 
             olx_tasks.append((olx_url, search_filters))
 
             # ------------------------------------------------------------------ #
-            # DRIVE.PK — flat query-parameter routing
+            # DRIVE.PK — flat query-parameter routing (unchanged)
             # ------------------------------------------------------------------ #
             drive_url = f"https://www.drivepk.com/cars/list?page={page}"
             if safe_make_lower:    drive_url += f"&brands={safe_make_lower.capitalize()}"
@@ -200,7 +228,7 @@ async def execute_search_pipeline(
             drive_tasks.append((drive_url, search_filters))
 
             # ------------------------------------------------------------------ #
-            # AUTODEALS — mixed path/segment routing
+            # AUTODEALS — mixed path/segment routing (unchanged)
             # ------------------------------------------------------------------ #
             ad_parts = ["https://autodeals.pk/used-cars/search/-"]
             if c:              ad_parts.append(f"ct_{c}")
@@ -213,7 +241,7 @@ async def execute_search_pipeline(
             auto_deals_tasks.append((ad_url, search_filters))
 
             # ------------------------------------------------------------------ #
-            # WISEWHEELS — query-parameter routing
+            # WISEWHEELS — query-parameter routing (unchanged)
             # URL: https://wisewheels.com.pk/used-cars?city_id=257&make=toyota&model=corolla&price_from=0&price_to=5000000
             # ------------------------------------------------------------------ #
             ww_url = f"https://wisewheels.com.pk/used-cars?price_from=0&page={page}"
