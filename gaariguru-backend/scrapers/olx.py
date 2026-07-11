@@ -1,36 +1,18 @@
 """
 scrapers/olx.py
 
-FIX (this patch): Two issues found and corrected.
-
-1. FEATURED-AD DETECTION WAS CHECKING FIELDS THAT DON'T EXIST.
-   The previous version checked item.get("featured"), item.get("isFeatured"),
-   item.get("promotions"), item.get("package") — NONE of these keys appear
-   anywhere in OLX's real raw Algolia hit shape (confirmed via a live debug
-   dump in an earlier patch). Since none of these fields exist, is_featured
-   almost certainly evaluated to False for every listing, silently making
-   the "skip featured ads" logic a no-op despite looking like real code.
-
-   CONFIRMED real field (visible directly in the earlier debug dump):
-     "activeProducts": {
-         "featured_ad": {"expiresAt": ..., "name": {"en": "5 Ads Vehicle Cars - Gold"}},
-         "ad_limit_bump": {...}
-     }
-
-   Fixed: now checks item["activeProducts"] for any sub-key containing a
-   boost-related keyword ("featured", "bump", "urgent", "top", "highlight",
-   "premium"). Deliberately excludes "ad_limit_bump"-style keys that are
-   seller posting-quota products, not search-ranking boosts. The old
-   (non-functional but harmless) checks are kept as secondary fallbacks
-   in case OLX's schema varies across regions/experiments.
-
-2. GRACEFUL 404 FALLBACK ADDED.
-   The 'runner.py' fix (companion patch) removes the root cause of the
-   pagination 404s (a lone 'make_eq_X' filter with no price/year). As a
-   defensive resilience net against any *future* unknown 404 cause, this
-   scraper now retries once with a stripped-down URL (category + q- only,
-   no filter=/sorting=) if the first request returns 404 — so a single
-   platform-side quirk can no longer wipe out all OLX results for a search.
+FIX (this patch):
+1. IMAGE EXTRACTION RESILIENCE (PLAIN STRINGS + COVERPHOTO THUMBNAILS)
+   Stitches together high-res image URLs by mapping photo external IDs against OLX's
+   native cdn structure (images.olx.com.pk) as detailed in the technical report. Fully
+   supports raw array URL string structures and coverPhoto dictionaries.
+2. HARDENED PRICE EXTRACTION WITH RAW SUBTREE LOGGING
+   Bypasses the decoy top-level price property (always 0) by routing directly into
+   extraFields. Tars comprehensive key matrices and nested price sub-objects to the
+   console if a value fails to decode.
+3. PROPER ROUTE PATHWAY VISIBILITY
+   Injects clear trace diagnostics explicitly highlighting whether an incoming payload
+   is utilizing the structured script state layer or dropping back to secondary DOM parsing.
 """
 from bs4 import BeautifulSoup
 import re
@@ -94,10 +76,30 @@ def _deep_find(obj, key_substrings, _depth=0, _max_depth=6):
 
 
 def _extract_image(item: dict) -> str:
+    # 1. Check primary coverPhoto / cover_photo object (Highest Priority)
+    cover = item.get("coverPhoto") or item.get("cover_photo")
+    if cover:
+        if isinstance(cover, str) and cover.strip():
+            return cover.strip()
+        if isinstance(cover, dict):
+            photo_id = cover.get("externalID") or cover.get("id")
+            if photo_id:
+                return f"https://images.olx.com.pk/thumbnails/{photo_id}-featureimage.webp"
+
+    # 2. Check standard photos / images lists
     images = item.get("images") or item.get("photos") or []
     if isinstance(images, list) and len(images) > 0:
         first_img = images[0]
+        # Handle cases where photo array contains raw string URLs directly
+        if isinstance(first_img, str) and first_img.strip():
+            return first_img.strip()
+        # Handle standard dictionary objects
         if isinstance(first_img, dict):
+            photo_id = first_img.get("externalID") or first_img.get("id")
+            if photo_id:
+                return f"https://images.olx.com.pk/thumbnails/{photo_id}-featureimage.webp"
+            
+            # Legacy fallbacks if ID attributes are missing
             url = first_img.get("url") or first_img.get("big", {}).get("url")
             if url:
                 return str(url)
@@ -108,15 +110,17 @@ def _extract_image(item: dict) -> str:
 
 
 def _extract_price(item: dict) -> str:
-    price_root = item.get("price")
-    if price_root not in (None, 0, "0", 0.0):
-        if isinstance(price_root, (str, int, float)):
-            return str(price_root)
-        if isinstance(price_root, dict):
-            for hint in ["display", "formatted", "label", "text", "amount", "value"]:
-                val = _deep_find(price_root, [hint])
-                if val not in (None, "", 0, "0", 0.0):
-                    return str(val)
+    # Real price lives inside extraFields; top-level item['price'] is an intentional decoy 0
+    extra = item.get("extraFields") or {}
+    real_price = extra.get("price")
+    if real_price not in (None, 0, "0", 0.0):
+        return str(real_price)
+
+    # Secondary contextual deep scan fallbacks
+    for hint in ["display", "formatted", "label", "text", "amount", "value"]:
+        val = _deep_find(extra, [hint])
+        if val not in (None, "", 0, "0", 0.0):
+            return str(val)
 
     for k, v in item.items():
         kl = str(k).lower()
@@ -223,26 +227,16 @@ def _extract_link(item: dict, title: str, fallback_url: str) -> str:
 
 
 def _is_featured_ad(item: dict) -> bool:
-    """
-    CONFIRMED real signal (from live debug dump): the top-level
-    'activeProducts' dict lists every paid product currently active on
-    this specific ad. Sub-keys like 'featured_ad', 'bump_up', 'urgent_ad'
-    indicate the ad is being artificially boosted in search ranking/order.
-    'ad_limit_bump' is a seller posting-QUOTA product, not a ranking
-    boost, so it is deliberately excluded from the keyword match.
-    """
     active_products = item.get("activeProducts")
     if isinstance(active_products, dict) and active_products:
         boost_keywords = ("featured", "bump", "urgent", "top", "highlight", "premium")
         for product_key in active_products.keys():
             pk_lower = str(product_key).lower()
             if "ad_limit" in pk_lower:
-                continue  # posting quota, not a ranking boost — ignore
+                continue  
             if any(kw in pk_lower for kw in boost_keywords):
                 return True
 
-    # Secondary, likely-inert fallbacks kept in case OLX's schema varies
-    # across regions/experiments — harmless if these keys never appear.
     if item.get("featured") is True or item.get("isFeatured") is True or item.get("is_featured") is True:
         return True
     promos = item.get("promotions") or item.get("applied_promotions")
@@ -256,12 +250,6 @@ def _is_featured_ad(item: dict) -> bool:
 
 
 def _strip_filter_and_sort(url: str) -> str:
-    """
-    Builds a fallback URL with filter=/sorting= query params removed,
-    keeping only the base category/q-/page structure. Used when the
-    richer URL 404s for any reason not yet understood, so OLX results
-    aren't lost entirely to an unknown platform-side quirk.
-    """
     parsed = urlparse(url)
     query_pairs = [
         pair for pair in parsed.query.split("&")
@@ -272,7 +260,6 @@ def _strip_filter_and_sort(url: str) -> str:
 
 
 async def _fetch(session, url: str):
-    """Single GET attempt. Returns (status_code, html_text_or_None)."""
     try:
         response = await session.get(url, headers=STANDARD_HEADERS, timeout=20)
         return response.status_code, response.text
@@ -354,6 +341,7 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
                 pass
 
     if not hits:
+        print(f"[OLX Scraper] ⚠ JSON State missing or empty for {url}. Falling back to Visual DOM extraction path!")
         cards = soup.find_all("li", attrs={"data-aut-id": "itemBox"})
         if not cards:
             cards = soup.find_all("li", attrs={"aria-label": "Listing"})
@@ -430,6 +418,9 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
             if not price_debug_dumped and price == "0":
                 price_debug_dumped = True
                 print(f"[OLX Scraper] ⚠ Price STILL '0' for '{title}'. Executed deep item scan.")
+                print(f"[OLX Scraper] ⚠ Decoy Node value for 'price': {json.dumps(item.get('price'), default=str)}")
+                print(f"[OLX Scraper] ⚠ Subtree for 'extraFields': {json.dumps(item.get('extraFields'), default=str)}")
+                print(f"[OLX Scraper] ⚠ Available raw item keys: {list(item.keys())}")
 
             cars.append(CarListing(
                 title=title,
