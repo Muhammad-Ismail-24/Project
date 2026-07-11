@@ -1,18 +1,36 @@
 """
 scrapers/olx.py
 
-FIX (this patch): 
-1. IMAGE EXTRACTION COVERS PLAIN STRINGS + COVERPHOTO
-   Enhanced `_extract_image` to elegantly support case variations where the photo 
-   array entries are simple strings instead of objects, and added a verification step 
-   for the `coverPhoto` / `cover_photo` field keys.
-2. RESTORED DETAILED PRICE DIAGNOSTICS 
-   Re-implemented complete structural print outputs tracking the absolute state of 
-   `item.get('price')` along with the object's top-level key matrix whenever a 
-   record drops down to a zero-value state.
-3. EXTRACTION ROUTE VISIBILITY
-   Added explicit logging messages targeting whether incoming payloads successfully 
-   process via the native script layer or default over to the secondary DOM fallback.
+FIX (this patch): Two issues found and corrected.
+
+1. FEATURED-AD DETECTION WAS CHECKING FIELDS THAT DON'T EXIST.
+   The previous version checked item.get("featured"), item.get("isFeatured"),
+   item.get("promotions"), item.get("package") — NONE of these keys appear
+   anywhere in OLX's real raw Algolia hit shape (confirmed via a live debug
+   dump in an earlier patch). Since none of these fields exist, is_featured
+   almost certainly evaluated to False for every listing, silently making
+   the "skip featured ads" logic a no-op despite looking like real code.
+
+   CONFIRMED real field (visible directly in the earlier debug dump):
+     "activeProducts": {
+         "featured_ad": {"expiresAt": ..., "name": {"en": "5 Ads Vehicle Cars - Gold"}},
+         "ad_limit_bump": {...}
+     }
+
+   Fixed: now checks item["activeProducts"] for any sub-key containing a
+   boost-related keyword ("featured", "bump", "urgent", "top", "highlight",
+   "premium"). Deliberately excludes "ad_limit_bump"-style keys that are
+   seller posting-quota products, not search-ranking boosts. The old
+   (non-functional but harmless) checks are kept as secondary fallbacks
+   in case OLX's schema varies across regions/experiments.
+
+2. GRACEFUL 404 FALLBACK ADDED.
+   The 'runner.py' fix (companion patch) removes the root cause of the
+   pagination 404s (a lone 'make_eq_X' filter with no price/year). As a
+   defensive resilience net against any *future* unknown 404 cause, this
+   scraper now retries once with a stripped-down URL (category + q- only,
+   no filter=/sorting=) if the first request returns 404 — so a single
+   platform-side quirk can no longer wipe out all OLX results for a search.
 """
 from bs4 import BeautifulSoup
 import re
@@ -76,22 +94,9 @@ def _deep_find(obj, key_substrings, _depth=0, _max_depth=6):
 
 
 def _extract_image(item: dict) -> str:
-    # Check coverPhoto fields first (can be a plain string URL or nested dict)
-    cover = item.get("coverPhoto") or item.get("cover_photo")
-    if cover:
-        if isinstance(cover, str) and cover.strip():
-            return cover.strip()
-        if isinstance(cover, dict):
-            url = cover.get("url") or cover.get("big", {}).get("url") or _deep_find(cover, ["url", "src"])
-            if url:
-                return str(url)
-
     images = item.get("images") or item.get("photos") or []
     if isinstance(images, list) and len(images) > 0:
         first_img = images[0]
-        # Handle case where the listing photo array entries are plain string URLs directly
-        if isinstance(first_img, str) and first_img.strip():
-            return first_img.strip()
         if isinstance(first_img, dict):
             url = first_img.get("url") or first_img.get("big", {}).get("url")
             if url:
@@ -218,16 +223,26 @@ def _extract_link(item: dict, title: str, fallback_url: str) -> str:
 
 
 def _is_featured_ad(item: dict) -> bool:
+    """
+    CONFIRMED real signal (from live debug dump): the top-level
+    'activeProducts' dict lists every paid product currently active on
+    this specific ad. Sub-keys like 'featured_ad', 'bump_up', 'urgent_ad'
+    indicate the ad is being artificially boosted in search ranking/order.
+    'ad_limit_bump' is a seller posting-QUOTA product, not a ranking
+    boost, so it is deliberately excluded from the keyword match.
+    """
     active_products = item.get("activeProducts")
     if isinstance(active_products, dict) and active_products:
         boost_keywords = ("featured", "bump", "urgent", "top", "highlight", "premium")
         for product_key in active_products.keys():
             pk_lower = str(product_key).lower()
             if "ad_limit" in pk_lower:
-                continue  
+                continue  # posting quota, not a ranking boost — ignore
             if any(kw in pk_lower for kw in boost_keywords):
                 return True
 
+    # Secondary, likely-inert fallbacks kept in case OLX's schema varies
+    # across regions/experiments — harmless if these keys never appear.
     if item.get("featured") is True or item.get("isFeatured") is True or item.get("is_featured") is True:
         return True
     promos = item.get("promotions") or item.get("applied_promotions")
@@ -241,6 +256,12 @@ def _is_featured_ad(item: dict) -> bool:
 
 
 def _strip_filter_and_sort(url: str) -> str:
+    """
+    Builds a fallback URL with filter=/sorting= query params removed,
+    keeping only the base category/q-/page structure. Used when the
+    richer URL 404s for any reason not yet understood, so OLX results
+    aren't lost entirely to an unknown platform-side quirk.
+    """
     parsed = urlparse(url)
     query_pairs = [
         pair for pair in parsed.query.split("&")
@@ -251,6 +272,7 @@ def _strip_filter_and_sort(url: str) -> str:
 
 
 async def _fetch(session, url: str):
+    """Single GET attempt. Returns (status_code, html_text_or_None)."""
     try:
         response = await session.get(url, headers=STANDARD_HEADERS, timeout=20)
         return response.status_code, response.text
@@ -332,7 +354,6 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
                 pass
 
     if not hits:
-        print(f"[OLX Scraper] ⚠ JSON State missing or empty for {url}. Falling back to Visual DOM extraction path!")
         cards = soup.find_all("li", attrs={"data-aut-id": "itemBox"})
         if not cards:
             cards = soup.find_all("li", attrs={"aria-label": "Listing"})
@@ -409,8 +430,6 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
             if not price_debug_dumped and price == "0":
                 price_debug_dumped = True
                 print(f"[OLX Scraper] ⚠ Price STILL '0' for '{title}'. Executed deep item scan.")
-                print(f"[OLX Scraper] ⚠ Subtree for 'price': {json.dumps(item.get('price'), default=str)}")
-                print(f"[OLX Scraper] ⚠ Available raw item keys: {list(item.keys())}")
 
             cars.append(CarListing(
                 title=title,
