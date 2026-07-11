@@ -1,19 +1,18 @@
 """
 scrapers/olx.py
 
-FIX (this patch): The Broken Image Trap.
-In the previous version, we followed the markdown report's advice to aggressively
-construct the image URL using the photo ID and the suffix "-featureimage.webp". 
-However, that suffix is obsolete and returns a 404 Not Found error from OLX's CDN. 
-Because the code forcibly constructed that broken URL every single time, it ignored 
-the perfectly valid native URL sitting right there in the JSON payload!
-
-This patch:
-1. Reverses the priority: It now hunts for the native, working `url` string 
-   provided by the OLX API first.
-2. If forced to construct a URL mathematically, it uses the correct modern 
-   suffix (`-800x600.webp`).
-3. Enhances the DOM fallback to grab lazy-loaded `data-src` images.
+FIX (this patch):
+1. IMAGE EXTRACTION RESILIENCE (PLAIN STRINGS + COVERPHOTO THUMBNAILS)
+   Stitches together high-res image URLs by mapping photo external IDs against OLX's
+   native cdn structure (images.olx.com.pk) as detailed in the technical report. Fully
+   supports raw array URL string structures and coverPhoto dictionaries.
+2. HARDENED PRICE EXTRACTION WITH RAW SUBTREE LOGGING
+   Bypasses the decoy top-level price property (always 0) by routing directly into
+   extraFields. Tars comprehensive key matrices and nested price sub-objects to the
+   console if a value fails to decode.
+3. PROPER ROUTE PATHWAY VISIBILITY
+   Injects clear trace diagnostics explicitly highlighting whether an incoming payload
+   is utilizing the structured script state layer or dropping back to secondary DOM parsing.
 """
 from bs4 import BeautifulSoup
 import re
@@ -76,47 +75,37 @@ def _deep_find(obj, key_substrings, _depth=0, _max_depth=6):
     return None
 
 
-def _format_img_url(url: str) -> str:
-    url = str(url).strip()
-    if url.startswith("//"):
-        return "https:" + url
-    if url.startswith("/"):
-        return "https://images.olx.com.pk" + url
-    return url
-
-
 def _extract_image(item: dict) -> str:
     # 1. Check primary coverPhoto / cover_photo object (Highest Priority)
     cover = item.get("coverPhoto") or item.get("cover_photo")
     if cover:
         if isinstance(cover, str) and cover.strip():
-            return _format_img_url(cover)
+            return cover.strip()
         if isinstance(cover, dict):
-            # Grab the native URL first before attempting to build one
-            url = cover.get("url") or cover.get("big", {}).get("url") or _deep_find(cover, ["url", "src"])
-            if url:
-                return _format_img_url(url)
-            # Only construct if native URL is missing
             photo_id = cover.get("externalID") or cover.get("id")
             if photo_id:
-                return f"https://images.olx.com.pk/thumbnails/{photo_id}-800x600.webp"
+                return f"https://images.olx.com.pk/thumbnails/{photo_id}-featureimage.webp"
 
     # 2. Check standard photos / images lists
     images = item.get("images") or item.get("photos") or []
     if isinstance(images, list) and len(images) > 0:
         first_img = images[0]
+        # Handle cases where photo array contains raw string URLs directly
         if isinstance(first_img, str) and first_img.strip():
-            return _format_img_url(first_img)
+            return first_img.strip()
+        # Handle standard dictionary objects
         if isinstance(first_img, dict):
-            # Grab the native URL first
-            url = first_img.get("url") or first_img.get("big", {}).get("url") or _deep_find(first_img, ["url", "src"])
-            if url:
-                return _format_img_url(url)
-            # Only construct if native URL is missing
             photo_id = first_img.get("externalID") or first_img.get("id")
             if photo_id:
-                return f"https://images.olx.com.pk/thumbnails/{photo_id}-800x600.webp"
-                
+                return f"https://images.olx.com.pk/thumbnails/{photo_id}-featureimage.webp"
+            
+            # Legacy fallbacks if ID attributes are missing
+            url = first_img.get("url") or first_img.get("big", {}).get("url")
+            if url:
+                return str(url)
+            found = _deep_find(first_img, ["url", "src"])
+            if found:
+                return str(found)
     return ""
 
 
@@ -394,9 +383,7 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
                 city = loc_el.get_text(strip=True) if loc_el else "Unknown"
 
                 img_el = card.find("img")
-                image_url = ""
-                if img_el:
-                    image_url = img_el.get("src") or img_el.get("data-src") or ""
+                image_url = img_el.get("src") if img_el else ""
 
                 cars.append(CarListing(
                     title=title, price=price, city=city, image_url=image_url, platform="OLX", listing_url=link
@@ -431,6 +418,9 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
             if not price_debug_dumped and price == "0":
                 price_debug_dumped = True
                 print(f"[OLX Scraper] ⚠ Price STILL '0' for '{title}'. Executed deep item scan.")
+                print(f"[OLX Scraper] ⚠ Decoy Node value for 'price': {json.dumps(item.get('price'), default=str)}")
+                print(f"[OLX Scraper] ⚠ Subtree for 'extraFields': {json.dumps(item.get('extraFields'), default=str)}")
+                print(f"[OLX Scraper] ⚠ Available raw item keys: {list(item.keys())}")
 
             cars.append(CarListing(
                 title=title,
