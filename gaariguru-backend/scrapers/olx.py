@@ -1,18 +1,41 @@
 """
 scrapers/olx.py
 
-FIX: The "2 Weeks Old" Bug (The Featured Ad Trap). 
-Even with sorting=desc-creation, OLX forces paid "Featured" ads to the 
-very top of the JSON payload. These ads can be up to 30 days old.
-The previous scraper was taking the first 35 items unconditionally, meaning
-it filled its entire quota with stale featured ads and never reached the 
-fresh organic ads below them.
-This patch detects and skips all Featured/Promoted ads, guaranteeing that 
-the 35 cars extracted are the absolute newest organic listings.
+FIX (this patch): Two issues found and corrected.
+
+1. FEATURED-AD DETECTION WAS CHECKING FIELDS THAT DON'T EXIST.
+   The previous version checked item.get("featured"), item.get("isFeatured"),
+   item.get("promotions"), item.get("package") — NONE of these keys appear
+   anywhere in OLX's real raw Algolia hit shape (confirmed via a live debug
+   dump in an earlier patch). Since none of these fields exist, is_featured
+   almost certainly evaluated to False for every listing, silently making
+   the "skip featured ads" logic a no-op despite looking like real code.
+
+   CONFIRMED real field (visible directly in the earlier debug dump):
+     "activeProducts": {
+         "featured_ad": {"expiresAt": ..., "name": {"en": "5 Ads Vehicle Cars - Gold"}},
+         "ad_limit_bump": {...}
+     }
+
+   Fixed: now checks item["activeProducts"] for any sub-key containing a
+   boost-related keyword ("featured", "bump", "urgent", "top", "highlight",
+   "premium"). Deliberately excludes "ad_limit_bump"-style keys that are
+   seller posting-quota products, not search-ranking boosts. The old
+   (non-functional but harmless) checks are kept as secondary fallbacks
+   in case OLX's schema varies across regions/experiments.
+
+2. GRACEFUL 404 FALLBACK ADDED.
+   The 'runner.py' fix (companion patch) removes the root cause of the
+   pagination 404s (a lone 'make_eq_X' filter with no price/year). As a
+   defensive resilience net against any *future* unknown 404 cause, this
+   scraper now retries once with a stripped-down URL (category + q- only,
+   no filter=/sorting=) if the first request returns 404 — so a single
+   platform-side quirk can no longer wipe out all OLX results for a search.
 """
 from bs4 import BeautifulSoup
 import re
 import json
+from urllib.parse import urlparse, urlunparse
 from models.car_schema import CarListing
 
 MAX_ORGANIC_CARDS = 35
@@ -26,6 +49,7 @@ STANDARD_HEADERS = {
     "Cache-Control": "no-cache",
 }
 
+
 def _dig(d, *keys, default=None):
     cur = d
     for k in keys:
@@ -35,6 +59,7 @@ def _dig(d, *keys, default=None):
         if cur is None:
             return default
     return cur if cur is not None else default
+
 
 def _deep_find(obj, key_substrings, _depth=0, _max_depth=6):
     if _depth > _max_depth or obj is None:
@@ -67,6 +92,7 @@ def _deep_find(obj, key_substrings, _depth=0, _max_depth=6):
 
     return None
 
+
 def _extract_image(item: dict) -> str:
     images = item.get("images") or item.get("photos") or []
     if isinstance(images, list) and len(images) > 0:
@@ -79,6 +105,7 @@ def _extract_image(item: dict) -> str:
             if found:
                 return str(found)
     return ""
+
 
 def _extract_price(item: dict) -> str:
     price_root = item.get("price")
@@ -101,6 +128,7 @@ def _extract_price(item: dict) -> str:
                 if found not in (None, "", 0, "0", 0.0):
                     return str(found)
     return "0"
+
 
 def _extract_year_and_mileage(item: dict) -> tuple[str, str]:
     year, mileage = "0", "0"
@@ -142,6 +170,7 @@ def _extract_year_and_mileage(item: dict) -> tuple[str, str]:
             break
     return year, mileage
 
+
 def _extract_location(item: dict) -> str:
     loc = item.get("location")
     if isinstance(loc, dict):
@@ -174,6 +203,7 @@ def _extract_location(item: dict) -> str:
                 return entry["name"]
     return "Unknown"
 
+
 def _extract_link(item: dict, title: str, fallback_url: str) -> str:
     raw_url = item.get("url") or _dig(item, "urls", "mobile") or _dig(item, "urls", "desktop")
     if raw_url:
@@ -191,15 +221,77 @@ def _extract_link(item: dict, title: str, fallback_url: str) -> str:
         return f"https://www.olx.com.pk/item/{raw_slug}-iid-{item_id}"
     return fallback_url
 
-async def scrape_olx(url: str, session, search_filters: dict = None) -> list[CarListing]:
+
+def _is_featured_ad(item: dict) -> bool:
+    """
+    CONFIRMED real signal (from live debug dump): the top-level
+    'activeProducts' dict lists every paid product currently active on
+    this specific ad. Sub-keys like 'featured_ad', 'bump_up', 'urgent_ad'
+    indicate the ad is being artificially boosted in search ranking/order.
+    'ad_limit_bump' is a seller posting-QUOTA product, not a ranking
+    boost, so it is deliberately excluded from the keyword match.
+    """
+    active_products = item.get("activeProducts")
+    if isinstance(active_products, dict) and active_products:
+        boost_keywords = ("featured", "bump", "urgent", "top", "highlight", "premium")
+        for product_key in active_products.keys():
+            pk_lower = str(product_key).lower()
+            if "ad_limit" in pk_lower:
+                continue  # posting quota, not a ranking boost — ignore
+            if any(kw in pk_lower for kw in boost_keywords):
+                return True
+
+    # Secondary, likely-inert fallbacks kept in case OLX's schema varies
+    # across regions/experiments — harmless if these keys never appear.
+    if item.get("featured") is True or item.get("isFeatured") is True or item.get("is_featured") is True:
+        return True
+    promos = item.get("promotions") or item.get("applied_promotions")
+    if isinstance(promos, list) and len(promos) > 0:
+        return True
+    pkg = item.get("package")
+    if isinstance(pkg, dict) and (str(pkg.get("name", "")).lower() == "featured" or pkg.get("featured")):
+        return True
+
+    return False
+
+
+def _strip_filter_and_sort(url: str) -> str:
+    """
+    Builds a fallback URL with filter=/sorting= query params removed,
+    keeping only the base category/q-/page structure. Used when the
+    richer URL 404s for any reason not yet understood, so OLX results
+    aren't lost entirely to an unknown platform-side quirk.
+    """
+    parsed = urlparse(url)
+    query_pairs = [
+        pair for pair in parsed.query.split("&")
+        if pair and not pair.startswith("filter=") and not pair.startswith("sorting=")
+    ]
+    stripped_query = "&".join(query_pairs)
+    return urlunparse(parsed._replace(query=stripped_query))
+
+
+async def _fetch(session, url: str):
+    """Single GET attempt. Returns (status_code, html_text_or_None)."""
     try:
         response = await session.get(url, headers=STANDARD_HEADERS, timeout=20)
-        if response.status_code != 200:
-            print(f"[OLX Scraper] HTTP {response.status_code} for {url}")
-            return []
-        html = response.text
+        return response.status_code, response.text
     except Exception as e:
         print(f"[OLX Scraper] Request failed: {e}")
+        return None, None
+
+
+async def scrape_olx(url: str, session, search_filters: dict = None) -> list[CarListing]:
+    status_code, html = await _fetch(session, url)
+
+    if status_code == 404:
+        fallback_url = _strip_filter_and_sort(url)
+        if fallback_url != url:
+            print(f"[OLX Scraper] ⚠ 404 on rich URL. Retrying stripped fallback: {fallback_url}")
+            status_code, html = await _fetch(session, fallback_url)
+
+    if status_code != 200:
+        print(f"[OLX Scraper] HTTP {status_code} for {url}")
         return []
 
     if not html or len(html) < 500:
@@ -272,21 +364,31 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
             if len(cars) >= MAX_ORGANIC_CARDS:
                 break
             try:
-                # Skip Featured Ads in DOM
-                badge = card.find(attrs={"aria-label": "Featured"}) or \
-                        card.find(attrs={"data-aut-id": "featured"}) or \
-                        card.find(string=re.compile(r'Featured', re.I))
+                badge = (
+                    card.find(attrs={"aria-label": "Featured"})
+                    or card.find(attrs={"data-aut-id": "featured"})
+                    or card.find(string=re.compile(r"Featured", re.I))
+                )
                 if badge:
                     continue
 
                 title_el = card.find(attrs={"data-aut-id": "itemTitle"}) or card.find("h2") or card.find("a")
                 title = title_el.get_text(strip=True) if title_el else ""
-                if not title: continue
+                if not title:
+                    continue
 
                 a_tag = card.find("a", href=True)
-                link = ("https://www.olx.com.pk" + a_tag["href"] if a_tag and not a_tag["href"].startswith("http") else (a_tag["href"] if a_tag else url))
+                link = (
+                    "https://www.olx.com.pk" + a_tag["href"]
+                    if a_tag and not a_tag["href"].startswith("http")
+                    else (a_tag["href"] if a_tag else url)
+                )
 
-                price_el = card.find(attrs={"data-aut-id": "itemPrice"}) or card.find(class_=re.compile(r"price", re.I)) or card.find(attrs={"aria-label": "Price"})
+                price_el = (
+                    card.find(attrs={"data-aut-id": "itemPrice"})
+                    or card.find(class_=re.compile(r"price", re.I))
+                    or card.find(attrs={"aria-label": "Price"})
+                )
                 price = price_el.get_text(strip=True) if price_el else "0"
 
                 loc_el = card.find(attrs={"data-aut-id": "item-location"}) or card.find(attrs={"aria-label": "Location"})
@@ -302,33 +404,17 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
                 continue
         return cars
 
-    # NEW LOGIC: Filter out featured ads to guarantee true newest listings
     price_debug_dumped = False
+    featured_skip_count = 0
     organic_count = 0
 
     for item in hits:
         if organic_count >= MAX_ORGANIC_CARDS:
             break
-            
-        try:
-            # 1. Detect and Skip "Featured" / "Bumped" ads
-            is_featured = (
-                item.get("featured") is True or
-                item.get("isFeatured") is True or
-                item.get("is_featured") is True
-            )
-            
-            # 2. Sometimes OLX hides the flag in a promotions array
-            promos = item.get("promotions") or item.get("applied_promotions")
-            if isinstance(promos, list) and len(promos) > 0:
-                is_featured = True
-                
-            # 3. Check for package dict flags
-            pkg = item.get("package")
-            if isinstance(pkg, dict) and (pkg.get("name", "").lower() == "featured" or pkg.get("featured")):
-                is_featured = True
 
-            if is_featured:
+        try:
+            if _is_featured_ad(item):
+                featured_skip_count += 1
                 continue
 
             title = item.get("title", "")
@@ -355,11 +441,14 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
                 listing_url=link,
                 platform="OLX"
             ))
-            
+
             organic_count += 1
-            
+
         except Exception:
             continue
+
+    if featured_skip_count > 0:
+        print(f"[OLX Scraper] Skipped {featured_skip_count} featured/boosted ads (confirmed via activeProducts).")
 
     print(f"[OLX Scraper] Extracted {len(cars)} true organic listings via Next.js JSON")
     return cars
