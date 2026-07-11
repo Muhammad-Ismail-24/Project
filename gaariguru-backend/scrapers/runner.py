@@ -46,22 +46,77 @@ from models.car_schema import CarListing
 # Format: "city_name_lowercase": "olx_slug"
 # Verified live against olx.com.pk on July 2026.
 #
+# ⚠️ SOURCE CONFLICT WARNING:
+# Two reference documents (ids.md and report.md) were provided for this
+# project, and they DISAGREE on the slug digits for 6 cities: Peshawar,
+# Multan, Faisalabad, Gujranwala, Sialkot, and Quetta. report.md's table
+# matches what was already deployed and tested here, so those values are
+# KEPT AS-IS below. ids.md's conflicting digits for those 6 cities were
+# NOT applied — do not swap them in without manually verifying first by
+# visiting https://www.olx.com.pk/{slug}/cars_c84 and confirming no
+# redirect occurs. Wrong slug digits have already caused a silent 404
+# regression once in this project (Islamabad, fixed Jul 8) — don't
+# reintroduce that bug via an unverified second source.
+#
+# The additional cities below (Sargodha through Abbottabad, and the
+# Tier 3 list) come ONLY from ids.md and have NOT been independently
+# cross-checked against a second source. Spot-check any of these before
+# relying on them heavily, using the same redirect-check method above.
+#
 # COMMON BUG: slugs look similar but differ by 2-3 digits.
 # Always verify by visiting: https://www.olx.com.pk/{slug}/cars_c84
 # and checking the URL doesn't redirect.
 # ------------------------------------------------------------------ #
 OLX_CITY_MAP = {
-    "lahore":       "lahore_g4060673",       # Verified (was wrongly g4060675)
-    "karachi":      "karachi_g4060695",       # Verified
-    "islamabad":    "islamabad_g4060615",     # Verified (fixed in Jul 8 patch)
-    "rawalpindi":   "rawalpindi_g4060681",    # Verified (was g4060676)
-    "peshawar":     "peshawar_g4060698",      # Verified
-    "multan":       "multan_g4060678",        # Verified
-    "faisalabad":   "faisalabad_g4060677",    # Verified
-    "gujranwala":   "gujranwala_g4060679",    # Verified
-    "sialkot":      "sialkot_g4060680",       # Added
-    "quetta":       "quetta_g4060699",        # Added
+    # --- Tier 1: confirmed consistent across all sources ---
+    "lahore":       "lahore_g4060673",
+    "karachi":      "karachi_g4060695",
+    "islamabad":    "islamabad_g4060615",
+    "rawalpindi":   "rawalpindi_g4060681",
+
+    # --- These 6 have a source conflict (see warning above). Keeping
+    #     the already-deployed / report.md values, NOT ids.md's. ---
+    "peshawar":     "peshawar_g4060698",
+    "multan":       "multan_g4060678",
+    "faisalabad":   "faisalabad_g4060677",
+    "gujranwala":   "gujranwala_g4060679",
+    "sialkot":      "sialkot_g4060680",
+    "quetta":       "quetta_g4060699",
+
+    # --- New additions from ids.md — UNVERIFIED, spot-check before relying on these ---
+    "sargodha":         "sargodha_g4060684",
+    "hyderabad":        "hyderabad_g4060693",
+    "bahawalpur":       "bahawalpur_g4060653",
+    "gujrat":           "gujrat_g4060663",
+    "sahiwal":          "sahiwal_g4060683",
+    "rahim yar khan":   "rahimyar-khan_g4060680",   # NOTE: same numeric ID as our sialkot value above — verify this isn't a typo in ids.md before trusting it
+    "sheikhupura":      "sheikhupura_g4060685",
+    "okara":            "okara_g4060678",           # NOTE: same numeric ID as our multan value above — verify before trusting
+    "jhelum":           "jhelum_g4060668",
+    "mardan":           "mardan_g4060623",
+    "abbottabad":       "abbottabad_g4060640",
+    "attock":           "attock_g4060651",
+    "mandi bahauddin":  "mandi-bahauddin_g4065538",
+    "dera ghazi khan":  "dera-ghazi-khan_g4060658",
+    "taxila":           "taxila_g4065567",
+    "burewala":         "burewala_g4060654",
+    "chakwal":          "chakwal_g4065543",
+    "jhang":            "jhang_g1142",
+    "bahawalnagar":     "bahawalnagar_g4060652",
+    "kasur":            "kasur_g4060687",
+    "toba tek singh":   "toba-tek-singh_g4060689",
+    "layyah":           "layyah_g4065537",
+    "mianwali":         "mianwali_g4060674",
+    "khanewal":         "khanewal_g4060671",
+    "daska":            "daska_g4060657",
+    "chichawatni":      "chichawatni_g4065540",
+    "muzaffargarh":     "muzaffargarh_g4060677",    # NOTE: same numeric ID as our faisalabad value above — verify before trusting
+    "sadiqabad":        "sadiqabad_g4060682",
+    "chiniot":          "chiniot_g4060655",
+    "wah cantt":        "wah_g4060692",
+    "pakpattan":        "pakpattan_g4060679",        # NOTE: same numeric ID as our gujranwala value above — verify before trusting
 }
+
 
 # ------------------------------------------------------------------ #
 # WISEWHEELS CITY ID MAP
@@ -193,13 +248,24 @@ async def execute_search_pipeline(
 
             olx_url = "/".join(olx_base_parts)
 
+            # FIX (404 regression): OLX 404s on a LONE 'make_eq_X' filter
+            # with no price/year alongside it — confirmed via live logs
+            # (Bolan/Cultus searches with no budget/year both 404'd on
+            # every page). The only manually-verified working example
+            # always paired make_eq WITH price_between AND year_between
+            # together. Since make is already expressed via the category
+            # prefix ("{make}-cars_c84") and the q- search term, make_eq
+            # is redundant on its own — only add it when there's at least
+            # one other real constraint to pair it with. Otherwise skip
+            # filter= entirely, matching the previously-confirmed-working
+            # plain format.
             olx_filters = []
-            if safe_make_lower:
-                olx_filters.append(f"make_eq_{safe_make_lower}")
             if safe_budget > 0:
                 olx_filters.append(f"price_between_0_to_{safe_budget}")
             if min_year > 0 or max_year > 0:
                 olx_filters.append(f"year_between_{my}_to_{mx}")
+            if safe_make_lower and olx_filters:
+                olx_filters.insert(0, f"make_eq_{safe_make_lower}")
 
             filter_string = ",".join(olx_filters)
 
