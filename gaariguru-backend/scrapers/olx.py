@@ -354,6 +354,7 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
         skipped_count = 0
 
     image_missing_debug_dumped = False
+    image_url_sample_logged = False
 
     for item in ordered_items:
         if len(cars) >= MAX_ORGANIC_CARDS:
@@ -363,6 +364,28 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
             listing = _extract_from_hit(item, fallback_url=url)
             if listing is None:
                 continue
+
+            # UNCONDITIONAL one-time log of the actual constructed image
+            # URL, whether it looks "successful" or not. The previous
+            # debug only fired when image_url was EMPTY — but logs show
+            # it's never empty, meaning we ARE constructing a URL, it's
+            # just possibly pointing somewhere that doesn't actually
+            # serve an image. This line lets you paste the exact URL
+            # into a browser tab to check directly, the same way the
+            # search URL itself was manually verified earlier.
+            if not image_url_sample_logged:
+                image_url_sample_logged = True
+                print(
+                    f"[OLX Scraper] 🔍 Image URL sample for '{listing.title}': "
+                    f"'{listing.image_url}' — paste this into a browser to verify it actually loads."
+                )
+                print(
+                    f"[OLX Scraper] 🔍 Raw coverPhoto: {json.dumps(item.get('coverPhoto'), default=str)[:400]}"
+                )
+                photos_raw = item.get("photos") or []
+                print(
+                    f"[OLX Scraper] 🔍 Raw photos[0]: {json.dumps(photos_raw[0] if photos_raw else None, default=str)[:400]}"
+                )
 
             if not image_missing_debug_dumped and not listing.image_url:
                 image_missing_debug_dumped = True
