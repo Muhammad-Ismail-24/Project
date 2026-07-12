@@ -87,6 +87,74 @@ def _normalize_price_prefix(price: str) -> str:
     return re.sub(r'^Rs\.?\s*', 'PKR ', price.strip(), flags=re.I)
 
 
+def _parse_age_days(item) -> int:
+    """
+    Extracts listing age in days from a Gari.pk card.
+
+    Gari.pk displays relative time like "2 days ago", "1 week ago".
+    After Google Translate (auto→en), Urdu time strings become English equivalents:
+      "2 دن پہلے" → "2 days ago"
+      "3 ہفتے پہلے" → "3 weeks ago"
+
+    Extraction strategy:
+      1. Look for an element with a time/date-related class ('ago', 'date', 'time',
+         'posted', 'fresh', 'new', 'listing-date') — fastest and most precise.
+      2. Scan the full card text for any recognisable relative-time pattern —
+         broadest fallback, catches any structure.
+
+    Returns:
+      0   — posted today (minutes/hours ago, or "just now")
+      N   — posted N days ago
+      999 — could not detect age (treated as old/unknown by the scorer,
+             which gives age_score = max(0, 15 - 999*0.5) = 0 pts)
+    """
+    # Strategy 1: class-based element lookup
+    time_el = item.find(
+        class_=re.compile(r'(ago|date|time|posted|fresh|listing.?date|new)', re.I)
+    )
+    # Also try <time> HTML tag (some sites use it correctly)
+    if not time_el:
+        time_el = item.find('time')
+    
+    time_text = time_el.get_text(strip=True) if time_el else ''
+
+    # Strategy 2: full text scan if element not found
+    if not time_text:
+        time_text = item.get_text(separator=' ')
+
+    return _time_str_to_days(time_text)
+
+
+def _time_str_to_days(text: str) -> int:
+    """Converts a relative time string to an integer day count."""
+    t = text.lower()
+
+    # Same-day signals
+    if re.search(r'\b(minute|min|hour|hr|just now|today|moments?)\b', t):
+        return 0
+
+    if 'yesterday' in t:
+        return 1
+
+    m = re.search(r'(\d+)\s*day', t)
+    if m:
+        return int(m.group(1))
+
+    m = re.search(r'(\d+)\s*week', t)
+    if m:
+        return int(m.group(1)) * 7
+
+    m = re.search(r'(\d+)\s*month', t)
+    if m:
+        return int(m.group(1)) * 30
+
+    m = re.search(r'(\d+)\s*year', t)
+    if m:
+        return int(m.group(1)) * 365
+
+    return 999  # unparseable → treated as stale by scorer
+
+
 def _extract_city(item, fallback_city: str) -> str:
     """
     Multi-strategy city extraction. Falls back to searched city (never 'Unknown').
@@ -241,6 +309,7 @@ async def scrape_gari_pk(
     price_class_hits = 0
     price_regex_hits = 0
     image_hits = 0
+    age_found = 0       # how many cards had a parseable date
 
     for item in items[:MAX_CARDS]:
         try:
@@ -306,6 +375,11 @@ async def scrape_gari_pk(
             if image_url:
                 image_hits += 1
 
+            # --- Age (days since posted) ---
+            age_days = _parse_age_days(item)
+            if age_days != 999:
+                age_found += 1
+
             cars.append(CarListing(
                 title=title,
                 price=price,
@@ -315,6 +389,7 @@ async def scrape_gari_pk(
                 listing_url=link,
                 image_url=image_url,
                 platform='Gari.pk',
+                age_days=age_days,
             ))
         except Exception:
             continue
@@ -324,6 +399,7 @@ async def scrape_gari_pk(
         f"Price: {price_class_hits} class / {price_regex_hits} regex / "
         f"{len(cars) - price_class_hits - price_regex_hits} missing. "
         f"Images: {image_hits}/{len(cars)}. "
-        f"City: {city_dom_hits} DOM / {len(cars) - city_dom_hits} fallback."
+        f"City: {city_dom_hits} DOM / {len(cars) - city_dom_hits} fallback. "
+        f"Age: {age_found}/{len(cars)} parsed."
     )
     return cars

@@ -39,6 +39,76 @@ def _extract_image(item) -> str:
     return ''
 
 
+def _time_str_to_days(text: str) -> int:
+    """Converts a relative time string to an integer day count."""
+    t = text.lower()
+
+    if re.search(r"\b(minute|min|hour|hr|just now|today|moments?)\b", t):
+        return 0
+    if "yesterday" in t:
+        return 1
+
+    m = re.search(r"(\d+)\s*day", t)
+    if m:
+        return int(m.group(1))
+
+    m = re.search(r"(\d+)\s*week", t)
+    if m:
+        return int(m.group(1)) * 7
+
+    m = re.search(r"(\d+)\s*month", t)
+    if m:
+        return int(m.group(1)) * 30
+
+    m = re.search(r"(\d+)\s*year", t)
+    if m:
+        return int(m.group(1)) * 365
+
+    return 999  # unparseable → treated as stale by normalizer scorer
+
+
+def _parse_age_days(item) -> int:
+    """
+    Extracts listing age in days from a PakWheels DOM card.
+
+    PakWheels displays relative time like "2 days ago", "3 weeks ago".
+    Strategy:
+      1. Look for an element with a time/date-related class.
+      2. Check the HTML <time> tag with datetime attribute (ISO format).
+      3. Scan the full card text as broadest fallback.
+
+    Returns:
+      0   — posted today (minutes/hours/just now)
+      N   — posted N days ago
+      999 — could not detect age (normalizer scores this as stale = 0 pts)
+    """
+    # Strategy 1: class-name match
+    time_el = item.find(class_=re.compile(r"(ago|date|time|posted|fresh|listing.?date)", re.I))
+
+    # Strategy 2: <time> tag — prefer datetime attribute (ISO)
+    if not time_el:
+        time_el = item.find("time")
+
+    time_text = ""
+    if time_el:
+        dt_attr = time_el.get("datetime", "")
+        if dt_attr:
+            from datetime import datetime, timezone
+            try:
+                posted = datetime.fromisoformat(dt_attr.replace("Z", "+00:00"))
+                delta = datetime.now(timezone.utc) - posted
+                return max(0, delta.days)
+            except Exception:
+                pass
+        time_text = time_el.get_text(strip=True)
+
+    # Strategy 3: full card text scan
+    if not time_text:
+        time_text = item.get_text(separator=" ")
+
+    return _time_str_to_days(time_text)
+
+
 async def scrape_pakwheels(url: str, session) -> list[CarListing]:
     """Scrapes PakWheels using a shared curl_cffi AsyncSession."""
     try:
@@ -122,10 +192,12 @@ async def scrape_pakwheels(url: str, session) -> list[CarListing]:
                 year=year,
                 listing_url=link,
                 image_url=image_url,
-                platform='PakWheels'
+                platform='PakWheels',
+                age_days=_parse_age_days(item),
             ))
         except Exception:
             continue
 
-    print(f"[PakWheels Scraper] Extracted {len(cars)} listings")
+    age_found = sum(1 for c in cars if c.age_days != 999)
+    print(f"[PakWheels Scraper] Extracted {len(cars)} listings (Age: {age_found}/{len(cars)} parsed)")
     return cars

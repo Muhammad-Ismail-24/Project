@@ -451,7 +451,14 @@ def _calculate_relevance_score(
             return veto(f"Too new. Car is {clean_year}, user requested max {max_year}.")
 
     # --- SOFT PENALTY: Freshness (15 pts) ---
-    age_score = max(0.0, 15.0 - (car.age_days * 0.5))  
+    age_score = max(0.0, 15.0 - (car.age_days * 0.5))
+
+    # --- HARD VETO 7: Stale Listing (>14 days) ---
+    # age_days == 999 means the scraper could not parse a date — these are
+    # NOT vetoed, because the listing may genuinely be fresh; we just don't
+    # know. Only listings with a confirmed age beyond 14 days are dropped.
+    if 0 < car.age_days <= 998 and car.age_days > 14:
+        return veto(f"Stale listing. Posted {car.age_days} days ago (limit: 14).")
 
     # --- SOFT PENALTY: Data Quality (15 pts) ---
     year_score = 7.5 if clean_year > 0 else 0.0

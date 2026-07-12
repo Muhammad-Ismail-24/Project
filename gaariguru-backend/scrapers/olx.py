@@ -172,6 +172,81 @@ def _lookup_dom_image(title: str, image_map: dict) -> str:
     return ""
 
 
+def _parse_age_days(item) -> int:
+    """
+    Extracts listing age in days from an OLX DOM card.
+
+    OLX displays relative time like "2 days ago", "1 week ago", "just now".
+    Strategy:
+      1. Look for an element with a time/date-related class or data-aut-id.
+      2. Also check the HTML <time> tag (OLX sometimes uses it with datetime attr).
+      3. Scan the full card text as broadest fallback.
+
+    Returns:
+      0   — posted today (minutes/hours/just now)
+      N   — posted N days ago
+      999 — could not detect age (normalizer scores this as stale = 0 pts)
+    """
+    # Strategy 1: data-aut-id attribute (OLX-specific)
+    time_el = item.find(attrs={"data-aut-id": re.compile(r"(date|time|posted|ago)", re.I)})
+
+    # Strategy 2: class-name match
+    if not time_el:
+        time_el = item.find(class_=re.compile(r"(ago|date|time|posted|fresh|listing.?date)", re.I))
+
+    # Strategy 3: <time> HTML tag — check datetime attribute first
+    if not time_el:
+        time_el = item.find("time")
+
+    time_text = ""
+    if time_el:
+        # If <time datetime="..."> is present, prefer that (ISO format)
+        dt_attr = time_el.get("datetime", "")
+        if dt_attr:
+            from datetime import datetime, timezone
+            try:
+                posted = datetime.fromisoformat(dt_attr.replace("Z", "+00:00"))
+                delta = datetime.now(timezone.utc) - posted
+                return max(0, delta.days)
+            except Exception:
+                pass
+        time_text = time_el.get_text(strip=True)
+
+    # Strategy 4: full card text scan
+    if not time_text:
+        time_text = item.get_text(separator=" ")
+
+    return _time_str_to_days(time_text)
+
+
+def _time_str_to_days(text: str) -> int:
+    """Converts a relative time string to an integer day count."""
+    t = text.lower()
+
+    if re.search(r"\b(minute|min|hour|hr|just now|today|moments?)\b", t):
+        return 0
+    if "yesterday" in t:
+        return 1
+
+    m = re.search(r"(\d+)\s*day", t)
+    if m:
+        return int(m.group(1))
+
+    m = re.search(r"(\d+)\s*week", t)
+    if m:
+        return int(m.group(1)) * 7
+
+    m = re.search(r"(\d+)\s*month", t)
+    if m:
+        return int(m.group(1)) * 30
+
+    m = re.search(r"(\d+)\s*year", t)
+    if m:
+        return int(m.group(1)) * 365
+
+    return 999  # unparseable → treated as stale by normalizer scorer
+
+
 async def _fetch(session, url: str):
     try:
         response = await session.get(url, headers=STANDARD_HEADERS, timeout=20)
@@ -244,6 +319,18 @@ def _extract_from_hit(item: dict, fallback_url: str, image_map: dict) -> CarList
                 elif isinstance(first, str) and first.startswith("http"):
                     image_url = first
 
+    # Age in days — OLX JSON hits carry a unix timestamp in 'createdAt'
+    age_days = 999
+    created_at = item.get("createdAt") or item.get("date") or item.get("activated_at")
+    if created_at:
+        try:
+            from datetime import datetime, timezone
+            posted = datetime.fromtimestamp(int(created_at), tz=timezone.utc)
+            delta = datetime.now(timezone.utc) - posted
+            age_days = max(0, delta.days)
+        except Exception:
+            age_days = 999
+
     return CarListing(
         title=title,
         price=str(price),
@@ -253,6 +340,7 @@ def _extract_from_hit(item: dict, fallback_url: str, image_map: dict) -> CarList
         listing_url=listing_url,
         image_url=image_url or None,
         platform="OLX",
+        age_days=age_days,
     )
 
 
@@ -401,6 +489,7 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
                     image_url=image_url or None,
                     platform="OLX",
                     listing_url=link,
+                    age_days=_parse_age_days(card),
                 ))
             except Exception:
                 continue
@@ -449,11 +538,13 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
     if skipped_count > 0:
         print(f"[OLX Scraper] Skipped {skipped_count} featured/boosted ads.")
 
-    # Debug: report image hit rate so we know if DOM map is working
+    # Debug: report image and age hit rates
     with_images = sum(1 for c in cars if c.image_url)
+    age_found = sum(1 for c in cars if c.age_days != 999)
     print(
         f"[OLX Scraper] Extracted {len(cars)} listings via {source} "
-        f"({with_images}/{len(cars)} with images)."
+        f"({with_images}/{len(cars)} with images, "
+        f"Age: {age_found}/{len(cars)} parsed)."
     )
 
     if not cars:
