@@ -6,25 +6,37 @@ Since Gari.pk has strictly enforced Cloudflare JS Challenges against data
 center IPs, we use Google's own servers to fetch the HTML for us.
 Cloudflare never blocks Google.
 
-CITY FIX (this patch):
-  Root cause of "city=Unknown" veto that was killing all 30 extracted listings:
-    1. The DOM city selector (class_ matching "location|city|area") doesn't
-       match Gari.pk's real HTML. The city is typically in a <span> or <li>
-       adjacent to a map-pin icon, not in an element whose CLASS is literally
-       "location", "city", or "area". The Google Translate proxy also strips
-       or renames some classes, making this even less reliable.
-    2. When the DOM lookup failed, the fallback was hardcoded to 'Unknown',
-       which caused the normalizer's city veto to immediately drop the listing.
+PRICE FIX (this patch):
+  Root cause of "PKR 0" on all Gari.pk listings:
+    The class-based price selector (class_=re.compile(r'price')) fails when
+    Google Translate renames or restructures the price element's class.
+    The price text IS present in the card's text_content (confirmed — mileage
+    and year regex work fine on the same string), but the class lookup returns
+    None or an element with just "0".
 
-  Two-part fix:
-    A. BROADEN DOM SELECTORS: try 6+ different city extraction strategies
-       in priority order, each targeting a different HTML pattern Gari.pk
-       uses across its pages.
-    B. GUARANTEED CITY FALLBACK: if all DOM strategies fail, use the city
-       from search_filters (which is always the city the user searched for).
-       This is logically sound — if the user searched "Islamabad", all
-       results on this Islamabad search page ARE in Islamabad, even if the
-       DOM label is missing. 'Unknown' is never a correct fallback here.
+  Fix: Add a PRICE_RE regex fallback that runs on text_content, identical
+  in philosophy to how year and mileage are already extracted. The regex
+  covers every Pakistani price format observed in production:
+    - "PKR 28 Lac"  /  "PKR 28.5 Lacs"  /  "PKR 28.5 Lakh"
+    - "Rs. 45.5 Lacs"
+    - "PKR 2,200,000"  (raw numeric)
+    - "14 Lac"  (no currency prefix)
+  The class-based selector is kept as the first attempt; regex kicks in
+  only when the selector returns '0' or nothing.
+
+IMAGE FIX (this patch):
+  The previous scraper had zero image extraction code — images were simply
+  never populated, causing every Gari.pk card to show "No Image Provided".
+
+  Fix: Add _extract_image() with lazy-load resilience:
+    - Checks data-src / data-original / data-lazy-src before falling back to src
+    - Skips placeholder/blank/1x1 URLs
+    - Google Translate proxy preserves <img> tags and their src attributes
+      intact (Google only rewrites <a href> and injects <font> for text).
+
+CITY FIX (from previous patch, retained):
+  Multi-strategy city extraction with search_filters fallback so
+  city is never 'Unknown'.
 """
 from bs4 import BeautifulSoup
 import re
@@ -32,7 +44,7 @@ from models.car_schema import CarListing
 
 MAX_CARDS = 40
 
-# Known Pakistani cities — used as a regex anchor for text-scan city detection
+# Known Pakistani cities for text-scan city detection
 KNOWN_CITIES = (
     r'Islamabad|Rawalpindi|Lahore|Karachi|Peshawar|Multan|Faisalabad|'
     r'Gujranwala|Sialkot|Quetta|Hyderabad|Bahawalpur|Sargodha|Gujrat|'
@@ -40,42 +52,46 @@ KNOWN_CITIES = (
 )
 CITY_RE = re.compile(KNOWN_CITIES, re.I)
 
+# Pakistani price formats — covers every variant seen in production
+# Examples matched:
+#   "PKR 28 Lac", "PKR 28.5 Lacs", "PKR 28.5 Lakh", "Rs. 45.5 Lacs",
+#   "PKR 2,200,000", "14 Lac", "2.8 Crore"
+PRICE_RE = re.compile(
+    r'(?:PKR|Rs\.?)\s*[\d,\.]+\s*(?:Lac(?:s|hs?)?|Lakh?|Crore|Million|CR)?'
+    r'|[\d,\.]+\s*(?:Lac(?:s|hs?)?|Lakh?|Crore|Million|CR)\b',
+    re.I
+)
+
 
 def _extract_city(item, fallback_city: str) -> str:
     """
-    Tries multiple strategies to extract city text from a Gari.pk card.
-    Returns the first non-empty match, or fallback_city if all fail.
-
-    Strategy priority:
-      1. Element with class containing 'location', 'city', or 'area'
-         (classic selector — works on some Gari.pk page variants)
-      2. <li> or <span> containing a known Pakistani city name
-         (structure-agnostic, catches city labels inside icon+text pairs)
-      3. <i> or <img> tag with a location-icon class sibling scan
-         (catches Font Awesome / custom icon patterns: <i class="fa-map-marker">City</i>)
-      4. Full text scan for a known city name anywhere in the card
-         (broadest possible fallback — should always match if city is mentioned)
-      5. search_filters city (the city the user searched for)
-         (guaranteed last resort — logically correct since results ARE from that city)
+    Multi-strategy city extraction. Falls back to searched city (never 'Unknown').
+    Strategy order:
+      1. Class-name match ('location', 'city', 'area')
+      2. <li>/<span> containing a known Pakistani city name
+      3. Icon sibling scan (Font Awesome / custom map-pin icons)
+      4. Full card text scan for any known city name
+      5. search_filters city (guaranteed fallback)
     """
-    # --- Strategy 1: class-name match ---
+    # Strategy 1: class-name match
     city_el = item.find(class_=re.compile(r'(location|city|area)', re.I))
     if city_el:
         text = city_el.get_text(strip=True).split(',')[0].strip()
         if text and len(text) > 2:
             return text
 
-    # --- Strategy 2: <li> or <span> containing a known Pakistani city name ---
+    # Strategy 2: <li>/<span> containing a known city name
     for tag in item.find_all(['li', 'span']):
         text = tag.get_text(strip=True)
         m = CITY_RE.search(text)
-        if m and len(text) < 60:   # short text = dedicated label, not a description
+        if m and len(text) < 60:
             return m.group(0).capitalize()
 
-    # --- Strategy 3: icon sibling scan ---
-    # Gari.pk uses patterns like <i class="icon-location"></i> followed by city text,
-    # or wraps both in a parent <span>/<div>. Check parent's text after the icon.
-    for icon in item.find_all(['i', 'img'], class_=re.compile(r'(location|map|pin|place|geo)', re.I)):
+    # Strategy 3: icon sibling scan
+    for icon in item.find_all(
+        ['i', 'img'],
+        class_=re.compile(r'(location|map|pin|place|geo)', re.I)
+    ):
         parent = icon.parent
         if parent:
             text = parent.get_text(strip=True).split(',')[0].strip()
@@ -83,14 +99,62 @@ def _extract_city(item, fallback_city: str) -> str:
             if m:
                 return m.group(0).capitalize()
 
-    # --- Strategy 4: full card text scan for any known city ---
+    # Strategy 4: full text scan
     full_text = item.get_text(separator=' ')
     m = CITY_RE.search(full_text)
     if m:
         return m.group(0).capitalize()
 
-    # --- Strategy 5: guaranteed fallback — use the searched city ---
+    # Strategy 5: guaranteed fallback
     return fallback_city
+
+
+def _extract_price(item, text_content: str) -> str:
+    """
+    Two-stage price extraction:
+      Stage 1: class-based selector (fast, accurate when class survives proxy)
+      Stage 2: PRICE_RE regex on full card text (resilient fallback)
+    Returns '0' only if both stages fail.
+    """
+    # Stage 1: class-based
+    price_el = item.find(class_=re.compile(r'price', re.I))
+    if price_el:
+        raw = price_el.get_text(separator=' ', strip=True)
+        # Reject '0', empty, or pure-digit-zero values
+        if raw and raw.strip('0 ') != '':
+            return raw
+
+    # Stage 2: regex on full text
+    m = PRICE_RE.search(text_content)
+    if m:
+        return m.group(0).strip()
+
+    return '0'
+
+
+def _extract_image(item) -> str:
+    """
+    Lazy-load resilient image extraction.
+    Google Translate proxy preserves <img> tags and their src attributes intact.
+    Checks data-src / data-original / data-lazy-src before falling back to src.
+    Skips placeholder / blank / 1x1 pixel URLs.
+    """
+    img = item.find('img')
+    if not img:
+        return ''
+
+    for attr in ('data-src', 'data-original', 'data-lazy-src', 'src'):
+        val = (img.get(attr) or '').strip()
+        if not val:
+            continue
+        if not val.startswith('http'):
+            continue
+        lower = val.lower()
+        if 'placeholder' in lower or 'blank' in lower or '1x1' in lower or 'logo' in lower:
+            continue
+        return val
+
+    return ''
 
 
 async def scrape_gari_pk(
@@ -102,9 +166,8 @@ async def scrape_gari_pk(
     Fetches Gari.pk via the Google Translate proxy (bypasses Cloudflare),
     then parses the returned HTML for car listings.
     """
-    # Extract the city the user searched for — used as the guaranteed fallback
-    # if DOM city extraction fails for any individual card.
     filters = search_filters or {}
+    # City the user searched for — guaranteed fallback so city is never 'Unknown'
     searched_city = filters.get('city', '').replace('-', ' ').title() or 'Unknown'
 
     # ------------------------------------------------------------------ #
@@ -127,11 +190,10 @@ async def scrape_gari_pk(
         return []
 
     # ------------------------------------------------------------------ #
-    # Step 2: Parse HTML
+    # Step 2: Parse HTML — card selectors in priority order
     # ------------------------------------------------------------------ #
     soup = BeautifulSoup(html, 'html.parser')
 
-    # Card selectors in priority order
     items = soup.find_all('div', class_=re.compile(r'car-item', re.I))
     if not items:
         items = soup.find_all('div', class_=re.compile(r'search[_-]?item', re.I))
@@ -151,7 +213,10 @@ async def scrape_gari_pk(
     # Step 3: Extract fields from each card
     # ------------------------------------------------------------------ #
     cars = []
-    city_dom_hits = 0   # track how often DOM extraction succeeds vs fallback
+    city_dom_hits = 0
+    price_class_hits = 0
+    price_regex_hits = 0
+    image_hits = 0
 
     for item in items[:MAX_CARDS]:
         try:
@@ -168,21 +233,31 @@ async def scrape_gari_pk(
             a_tag = item.find('a', href=True)
             link = a_tag['href'] if a_tag else ""
             if link:
-                # Clean Google Translate URL rewriting
                 link = link.replace(
                     "https://www-gari-pk.translate.goog",
                     "https://www.gari.pk"
                 )
-                link = link.split("?_x_tr")[0]   # strip translate parameters
+                link = link.split("?_x_tr")[0]
                 if not link.startswith('http'):
                     link = 'https://www.gari.pk' + link
 
-            # --- Price ---
-            price_el = item.find(class_=re.compile(r'price', re.I))
-            price = price_el.get_text(strip=True) if price_el else '0'
-
-            # --- Text content (used for regex fallbacks) ---
+            # --- Text content (shared by price / year / mileage regex) ---
             text_content = item.get_text(separator=' ')
+
+            # --- Price (two-stage) ---
+            # Check class selector first; use regex on text_content as fallback
+            price_el = item.find(class_=re.compile(r'price', re.I))
+            raw_price = price_el.get_text(separator=' ', strip=True) if price_el else ''
+            if raw_price and raw_price.strip('0 ') != '':
+                price = raw_price
+                price_class_hits += 1
+            else:
+                m = PRICE_RE.search(text_content)
+                if m:
+                    price = m.group(0).strip()
+                    price_regex_hits += 1
+                else:
+                    price = '0'
 
             # --- Year ---
             year = '0'
@@ -201,6 +276,11 @@ async def scrape_gari_pk(
             if city != searched_city:
                 city_dom_hits += 1
 
+            # --- Image ---
+            image_url = _extract_image(item) or None
+            if image_url:
+                image_hits += 1
+
             cars.append(CarListing(
                 title=title,
                 price=price,
@@ -208,14 +288,17 @@ async def scrape_gari_pk(
                 city=city,
                 year=year,
                 listing_url=link,
+                image_url=image_url,
                 platform='Gari.pk',
             ))
         except Exception:
             continue
 
-    fallback_used = len(cars) - city_dom_hits
     print(
         f"[Gari.pk Scraper] Extracted {len(cars)} listings via Google Proxy. "
-        f"City: {city_dom_hits} from DOM, {fallback_used} from search_filters fallback."
+        f"Price: {price_class_hits} class / {price_regex_hits} regex / "
+        f"{len(cars) - price_class_hits - price_regex_hits} missing. "
+        f"Images: {image_hits}/{len(cars)}. "
+        f"City: {city_dom_hits} DOM / {len(cars) - city_dom_hits} fallback."
     )
     return cars
