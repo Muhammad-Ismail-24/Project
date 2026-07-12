@@ -365,27 +365,49 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
             if listing is None:
                 continue
 
-            # UNCONDITIONAL one-time log of the actual constructed image
-            # URL, whether it looks "successful" or not. The previous
-            # debug only fired when image_url was EMPTY — but logs show
-            # it's never empty, meaning we ARE constructing a URL, it's
-            # just possibly pointing somewhere that doesn't actually
-            # serve an image. This line lets you paste the exact URL
-            # into a browser tab to check directly, the same way the
-            # search URL itself was manually verified earlier.
+            # DIAGNOSTIC: the previously constructed URL used the raw
+            # 'externalID' string as-is. Live logs revealed that field
+            # is actually TWO valid 36-char UUIDs concatenated with an
+            # extra hyphen (e.g. "{uuid1}-{uuid2}"), not one flat ID —
+            # almost certainly why the constructed URL never loaded.
+            # Log several plausible alternate constructions here so we
+            # can identify the real working pattern by testing each one
+            # directly in a browser, rather than guessing a third time.
             if not image_url_sample_logged:
                 image_url_sample_logged = True
+                cover = item.get("coverPhoto") or {}
+                numeric_id = cover.get("id", "")
+                ext_id = cover.get("externalID", "")
+
+                candidates = {
+                    "A (current — raw externalID as one blob)": listing.image_url,
+                    "B (plain numeric id)": (
+                        f"https://images.olx.com.pk/thumbnails/{numeric_id}-featureimage.webp"
+                        if numeric_id else "N/A — no numeric id present"
+                    ),
+                }
+                # Attempt to split the externalID into its two component
+                # UUIDs (36 chars each) if it matches that exact shape.
+                if ext_id and len(ext_id) == 73 and ext_id[36] == "-":
+                    uuid1, uuid2 = ext_id[:36], ext_id[37:]
+                    candidates["C (split into two path segments)"] = (
+                        f"https://images.olx.com.pk/thumbnails/{uuid1}/{uuid2}-featureimage.webp"
+                    )
+                    candidates["D (first UUID only)"] = (
+                        f"https://images.olx.com.pk/thumbnails/{uuid1}-featureimage.webp"
+                    )
+                    candidates["E (second UUID only)"] = (
+                        f"https://images.olx.com.pk/thumbnails/{uuid2}-featureimage.webp"
+                    )
+
+                print(f"[OLX Scraper] 🔍 Testing image URL candidates for '{listing.title}':")
+                for label, candidate_url in candidates.items():
+                    print(f"[OLX Scraper]    {label}: {candidate_url}")
                 print(
-                    f"[OLX Scraper] 🔍 Image URL sample for '{listing.title}': "
-                    f"'{listing.image_url}' — paste this into a browser to verify it actually loads."
+                    f"[OLX Scraper] 🔍 Paste EACH candidate URL above into a browser tab — "
+                    f"report back which one (if any) actually renders an image."
                 )
-                print(
-                    f"[OLX Scraper] 🔍 Raw coverPhoto: {json.dumps(item.get('coverPhoto'), default=str)[:400]}"
-                )
-                photos_raw = item.get("photos") or []
-                print(
-                    f"[OLX Scraper] 🔍 Raw photos[0]: {json.dumps(photos_raw[0] if photos_raw else None, default=str)[:400]}"
-                )
+                print(f"[OLX Scraper] 🔍 Raw coverPhoto: {json.dumps(cover, default=str)[:400]}")
 
             if not image_missing_debug_dumped and not listing.image_url:
                 image_missing_debug_dumped = True
