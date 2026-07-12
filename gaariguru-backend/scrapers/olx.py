@@ -114,6 +114,70 @@ def _is_featured_ad(item: dict) -> bool:
     return False
 
 
+def _scrape_dom_images(soup: BeautifulSoup) -> dict:
+    """
+    Scans the actual rendered HTML for real <img> tags inside listing
+    cards, keyed by normalized title text. This is how OLX images were
+    ORIGINALLY extracted, before the JSON-based coverPhoto/externalID
+    reconstruction was introduced — and that reconstruction has since
+    been proven broken across 5 different tested URL patterns (plain
+    externalID, numeric id, split UUIDs, either UUID alone — none of
+    them loaded a real image). The DOM always contains a working image
+    reference because that's literally what renders the photo for a
+    human visitor; no CDN URL guessing is needed at all.
+
+    Returns: { normalized_title_lowercase: image_url }
+    """
+    image_map = {}
+
+    cards = soup.find_all("li", attrs={"data-aut-id": "itemBox"})
+    if not cards:
+        cards = soup.find_all("li", attrs={"aria-label": "Listing"})
+    if not cards:
+        cards = soup.find_all("article")
+
+    for card in cards:
+        try:
+            title_el = card.find(attrs={"data-aut-id": "itemTitle"}) or card.find("h2") or card.find("a")
+            title_text = title_el.get_text(strip=True) if title_el else ""
+            if not title_text:
+                continue
+
+            img_el = card.find("img")
+            if not img_el:
+                continue
+
+            image_url = ""
+            for attr in ("data-src", "data-original", "data-lazy-src", "src"):
+                val = img_el.get(attr, "").strip()
+                if val and val.startswith("http") and "placeholder" not in val.lower():
+                    image_url = val
+                    break
+
+            if image_url:
+                image_map[title_text.strip().lower()] = image_url
+
+        except Exception:
+            continue
+
+    return image_map
+
+
+def _lookup_dom_image(title: str, image_map: dict) -> str:
+    """Exact match first, then a loose substring match as a fallback,
+    since JSON titles and DOM titles can differ slightly in whitespace
+    or truncation."""
+    key = title.strip().lower()
+    if key in image_map:
+        return image_map[key]
+
+    for dom_title, url in image_map.items():
+        if key in dom_title or dom_title in key:
+            return url
+
+    return ""
+
+
 def _extract_from_hit(item: dict, fallback_url: str):
     """
     Extracts a single CarListing from a confirmed-shape OLX Algolia hit,
