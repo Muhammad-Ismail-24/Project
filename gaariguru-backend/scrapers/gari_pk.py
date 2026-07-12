@@ -87,70 +87,206 @@ def _normalize_price_prefix(price: str) -> str:
     return re.sub(r'^Rs\.?\s*', 'PKR ', price.strip(), flags=re.I)
 
 
-def _parse_age_days(item) -> int:
+def _parse_age_days(item, debug: bool = False) -> int:
     """
     Extracts listing age in days from a Gari.pk card.
 
-    Gari.pk displays relative time like "2 days ago", "1 week ago".
-    After Google Translate (auto→en), Urdu time strings become English equivalents:
-      "2 دن پہلے" → "2 days ago"
-      "3 ہفتے پہلے" → "3 weeks ago"
+    FIX (this patch): Previous version returned 999 (stale) for 0/30 cards
+    on some searches (e.g. "Suzuki Every"). Three root causes found:
 
-    Extraction strategy:
-      1. Look for an element with a time/date-related class ('ago', 'date', 'time',
-         'posted', 'fresh', 'new', 'listing-date') — fastest and most precise.
-      2. Scan the full card text for any recognisable relative-time pattern —
-         broadest fallback, catches any structure.
+    1. Google Translate renders Urdu time strings INCONSISTENTLY across
+       searches — sometimes "2 days ago" (full English), sometimes "2 دن"
+       (Urdu days word without translation), sometimes an ABSOLUTE date
+       like "12 July 2025" or "Jul 12" instead of a relative string at
+       all. The old code only handled relative English strings.
 
-    Returns:
-      0   — posted today (minutes/hours ago, or "just now")
-      N   — posted N days ago
-      999 — could not detect age (treated as old/unknown by the scorer,
-             which gives age_score = max(0, 15 - 999*0.5) = 0 pts)
+    2. Pakistani platforms (Gari.pk AND PakWheels confirmed) use the word
+       "about" before the number: "about 6 hours ago", "about 2 days ago".
+       The old regex r'(\d+)\s*day' required the digit to come first, so
+       "about 2 days" never matched.
+
+    3. Strategy 2 (full card text scan) was picking up spec text numbers
+       (engine cc, horsepower, mileage figures) BEFORE the date string
+       because it scanned the entire concatenated card text without any
+       preference ordering.
+
+    Fix strategy:
+    - Add 'about' tolerance to all relative-time patterns.
+    - Add Urdu partial-translation patterns (دن, ہفتے, مہینے, سال).
+    - Add absolute-date parsing (12 July / Jul 12 / DD-MM-YYYY).
+    - Prioritize the dedicated date element (Strategy 1) over full-text
+      scan (Strategy 2) to avoid spec-text number collisions.
+    - Add per-card debug output (enabled via debug=True) so future
+      failures show the exact text being fed to the parser.
     """
-    # Strategy 1: class-based element lookup
+    # Strategy 1: dedicated time/date element (fastest and most precise)
     time_el = item.find(
-        class_=re.compile(r'(ago|date|time|posted|fresh|listing.?date|new)', re.I)
+        class_=re.compile(r'(ago|date|time|posted|fresh|listing.?date|new|updated)', re.I)
     )
-    # Also try <time> HTML tag (some sites use it correctly)
     if not time_el:
         time_el = item.find('time')
-    
+
     time_text = time_el.get_text(strip=True) if time_el else ''
 
-    # Strategy 2: full text scan if element not found
-    if not time_text:
-        time_text = item.get_text(separator=' ')
+    if debug and time_text:
+        print(f"[Gari.pk Age DEBUG] Strategy 1 text: {repr(time_text[:80])}")
 
-    return _time_str_to_days(time_text)
+    if time_text:
+        result = _time_str_to_days(time_text)
+        if result != 999:
+            return result
+
+    # Strategy 2: scan only small inline elements (spans/li/p) — avoids
+    # collisions with spec text in the larger card body.
+    for tag in item.find_all(['span', 'p', 'small', 'li']):
+        text = tag.get_text(strip=True)
+        if len(text) > 60:          # skip long spec-text blobs
+            continue
+        result = _time_str_to_days(text)
+        if result != 999:
+            if debug:
+                print(f"[Gari.pk Age DEBUG] Strategy 2 match in <{tag.name}>: {repr(text[:60])}")
+            return result
+
+    # Strategy 3: full card text as last resort
+    full_text = item.get_text(separator=' ')
+    if debug:
+        print(f"[Gari.pk Age DEBUG] Strategy 3 full text (first 200): {repr(full_text[:200])}")
+    result = _time_str_to_days(full_text)
+    if result != 999:
+        return result
+
+    if debug:
+        print(f"[Gari.pk Age DEBUG] All strategies failed — returning 999 (stale fallback)")
+    return 999
+
+
+MONTH_MAP = {
+    'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+    'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
+    'january': 1, 'february': 2, 'march': 3, 'april': 4, 'june': 6,
+    'july': 7, 'august': 8, 'september': 9, 'october': 10,
+    'november': 11, 'december': 12,
+}
 
 
 def _time_str_to_days(text: str) -> int:
-    """Converts a relative time string to an integer day count."""
-    t = text.lower()
+    """
+    Converts a relative OR absolute time string to an integer day count.
 
-    # Same-day signals
-    if re.search(r'\b(minute|min|hour|hr|just now|today|moments?)\b', t):
+    FIX (this patch):
+    - 'about' tolerance: r'(?:about\s+)?(\d+)\s*unit' so "about 2 days"
+      matches the same as "2 days".
+    - Urdu partial-translation patterns: دن (days), ہفتے (weeks),
+      مہینے (months), سال (years), پہلے (ago).
+    - Absolute date parsing: "12 July", "Jul 12", "12-07-2025",
+      "2025-07-12" — computes days-since-posted from today's date.
+    - Keeps all original relative English patterns intact.
+    """
+    import datetime
+
+    t = text.lower().strip()
+
+    # --- Same-day signals ---
+    if re.search(r'\b(minute|min|hour|hr|just now|today|moments?|ابھی|گھنٹ|منٹ)\b', t):
         return 0
 
-    if 'yesterday' in t:
+    if 'yesterday' in t or 'کل' in t:
         return 1
 
-    m = re.search(r'(\d+)\s*day', t)
+    # --- Relative English (with optional 'about' prefix) ---
+    m = re.search(r'(?:about\s+)?(\d+)\s*day', t)
     if m:
         return int(m.group(1))
 
-    m = re.search(r'(\d+)\s*week', t)
+    m = re.search(r'(?:about\s+)?(\d+)\s*week', t)
     if m:
         return int(m.group(1)) * 7
 
-    m = re.search(r'(\d+)\s*month', t)
+    m = re.search(r'(?:about\s+)?(\d+)\s*month', t)
     if m:
         return int(m.group(1)) * 30
 
-    m = re.search(r'(\d+)\s*year', t)
+    m = re.search(r'(?:about\s+)?(\d+)\s*year', t)
     if m:
         return int(m.group(1)) * 365
+
+    # --- Urdu partial-translation patterns ---
+    # دن = days, ہفتے = weeks, مہینے = months, سال = years, پہلے = ago
+    m = re.search(r'(\d+)\s*دن', text)       # Urdu "days"
+    if m:
+        return int(m.group(1))
+
+    m = re.search(r'(\d+)\s*ہفتے', text)     # Urdu "weeks"
+    if m:
+        return int(m.group(1)) * 7
+
+    m = re.search(r'(\d+)\s*مہینے', text)    # Urdu "months"
+    if m:
+        return int(m.group(1)) * 30
+
+    m = re.search(r'(\d+)\s*سال', text)      # Urdu "years"
+    if m:
+        return int(m.group(1)) * 365
+
+    # --- Absolute date parsing ---
+    # Formats: "12 July 2025", "12 July", "Jul 12", "12-07-2025", "2025-07-12"
+    today = datetime.date.today()
+
+    # "12 July 2025" or "12 July"
+    m = re.search(
+        r'(\d{1,2})\s+(january|february|march|april|may|june|july|august|'
+        r'september|october|november|december|jan|feb|mar|apr|jun|jul|aug|'
+        r'sep|oct|nov|dec)(?:\s+(\d{4}))?',
+        t
+    )
+    if m:
+        day = int(m.group(1))
+        month = MONTH_MAP.get(m.group(2), 0)
+        year = int(m.group(3)) if m.group(3) else today.year
+        if month > 0:
+            try:
+                posted = datetime.date(year, month, day)
+                diff = (today - posted).days
+                return max(0, diff)
+            except ValueError:
+                pass
+
+    # "July 12" or "Jul 12"
+    m = re.search(
+        r'(january|february|march|april|may|june|july|august|'
+        r'september|october|november|december|jan|feb|mar|apr|jun|jul|aug|'
+        r'sep|oct|nov|dec)\s+(\d{1,2})(?:,?\s*(\d{4}))?',
+        t
+    )
+    if m:
+        month = MONTH_MAP.get(m.group(1), 0)
+        day = int(m.group(2))
+        year = int(m.group(3)) if m.group(3) else today.year
+        if month > 0:
+            try:
+                posted = datetime.date(year, month, day)
+                diff = (today - posted).days
+                return max(0, diff)
+            except ValueError:
+                pass
+
+    # "DD-MM-YYYY" or "YYYY-MM-DD"
+    m = re.search(r'(\d{4})-(\d{2})-(\d{2})', t)
+    if m:
+        try:
+            posted = datetime.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+            return max(0, (today - posted).days)
+        except ValueError:
+            pass
+
+    m = re.search(r'(\d{2})-(\d{2})-(\d{4})', t)
+    if m:
+        try:
+            posted = datetime.date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+            return max(0, (today - posted).days)
+        except ValueError:
+            pass
 
     return 999  # unparseable → treated as stale by scorer
 
@@ -376,7 +512,9 @@ async def scrape_gari_pk(
                 image_hits += 1
 
             # --- Age (days since posted) ---
-            age_days = _parse_age_days(item)
+            # debug=True on first 3 cards to confirm which strategy fires
+            # after the fix — remove once age parsing is confirmed working.
+            age_days = _parse_age_days(item, debug=(len(cars) < 3))
             if age_days != 999:
                 age_found += 1
 

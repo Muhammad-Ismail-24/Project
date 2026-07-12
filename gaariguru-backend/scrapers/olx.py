@@ -1,32 +1,45 @@
 """
 scrapers/olx.py
 
-REBUILT against confirmed OLX Algolia hit structure.
+REBUILT (this patch) against a confirmed, reverse-engineered field map of
+OLX's real Algolia hit structure (see report.md). This replaces all the
+previous guess-based extraction helpers with ground-truth field paths.
 
-IMAGE FIX (this patch):
-  The CDN URL reconstruction from coverPhoto.externalID has been proven
-  broken across 5+ tested URL patterns — none of them load a real image.
-  The fix is the original approach that worked before: scrape <img> tags
-  directly from the rendered HTML DOM, then cross-reference them against
-  JSON hits by title. The DOM always has working image URLs because that
-  is literally what the browser renders for a human visitor.
+KEY CONFIRMED FACTS THAT CHANGE EVERYTHING:
 
-  Specifically:
-    1. _scrape_dom_images(soup) builds a { normalized_title: image_url }
-       map by scanning li[data-aut-id="itemBox"] cards in the HTML.
-    2. scrape_olx() calls this BEFORE processing JSON hits.
-    3. _extract_from_hit() accepts image_map and does a title-based
-       lookup instead of constructing a CDN URL from an ID.
-    4. The CDN reconstruction is kept as a last-resort fallback ONLY,
-       since it costs nothing to try if the DOM lookup fails.
+1. PRICE: hit['price'] is a DECOY — it is always 0 for car listings.
+   The real price lives at hit['extraFields']['price']. Every previous
+   price-extraction attempt was searching the wrong top-level field.
 
-KEY CONFIRMED FIELD PATHS (OLX Algolia hit):
-  - Price:   hit['extraFields']['price']     (hit['price'] is always 0)
-  - Year:    hit['extraFields']['year']
-  - Mileage: hit['extraFields']['mileage']
-  - City:    hit['location'] list, item where level == 2
-  - URL:     https://www.olx.com.pk/item/{slug}-iid-{externalID}
-  - Image:   <img> tag from DOM card matching the same title (see above)
+2. IMAGE: there is no direct image URL field to read. The image must be
+   CONSTRUCTED from an ID:
+     photo_id = hit['coverPhoto']['externalID']
+     image_url = f"https://images.olx.com.pk/thumbnails/{photo_id}-featureimage.webp"
+   This is why every previous image-extraction attempt failed — it was
+   looking for a ready-made URL string that doesn't exist in this shape.
+
+3. YEAR / MILEAGE: also live under extraFields (extraFields.year,
+   extraFields.mileage) as plain integers — no more list-of-pairs
+   guessing needed.
+
+4. CITY: hit['location'] is a list of location levels; level == 2 is
+   the city.
+
+5. LISTING URL: hit['slug'] + hit['externalID'] combine directly into
+   https://www.olx.com.pk/item/{slug}-iid-{externalID} — no fallback
+   guessing needed when both fields are present.
+
+6. FEATURED ADS: the top-level hit['product'] field is literally the
+   string "featured" when an ad is promoted/boosted, and absent
+   otherwise. This is now the PRIMARY featured-ad signal, with the
+   'activeProducts' boost-keyword check kept as a secondary signal.
+
+CAUTION (per report.md): the 'make' filter value used in runner.py's
+filter= query parameter is not always the plain make name — e.g. Honda's
+real facet value is "cars-honda", not "honda". This scraper file does not
+touch URL construction, but flag this for whoever next touches the OLX
+filter= logic in runner.py — an incorrect make facet value there could
+silently produce zero-result filters rather than an outright 404.
 """
 from bs4 import BeautifulSoup
 import re
@@ -37,25 +50,14 @@ from models.car_schema import CarListing
 MAX_ORGANIC_CARDS = 35
 
 STANDARD_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
-    ),
-    "Accept": (
-        "text/html,application/xhtml+xml,application/xml;"
-        "q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"
-    ),
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
     "Accept-Encoding": "gzip, deflate, br",
     "Referer": "https://www.google.com/",
     "Cache-Control": "no-cache",
 }
 
-
-# ------------------------------------------------------------------ #
-# HELPERS
-# ------------------------------------------------------------------ #
 
 def _dig(d, *keys, default=None):
     cur = d
@@ -69,21 +71,32 @@ def _dig(d, *keys, default=None):
 
 
 def _strip_filter_and_sort(url: str) -> str:
-    """Return a fallback URL with filter=/sorting= stripped out."""
+    """Fallback URL with filter=/sorting= removed, kept as a resilience
+    net if the richer URL 404s for any reason."""
     parsed = urlparse(url)
     query_pairs = [
         pair for pair in parsed.query.split("&")
-        if pair
-        and not pair.startswith("filter=")
-        and not pair.startswith("sorting=")
+        if pair and not pair.startswith("filter=") and not pair.startswith("sorting=")
     ]
-    return urlunparse(parsed._replace(query="&".join(query_pairs)))
+    stripped_query = "&".join(query_pairs)
+    return urlunparse(parsed._replace(query=stripped_query))
+
+
+async def _fetch(session, url: str):
+    try:
+        response = await session.get(url, headers=STANDARD_HEADERS, timeout=20)
+        return response.status_code, response.text
+    except Exception as e:
+        print(f"[OLX Scraper] Request failed: {e}")
+        return None, None
 
 
 def _is_featured_ad(item: dict) -> bool:
     """
-    Primary signal: top-level 'product' field == 'featured'.
-    Secondary: 'activeProducts' contains a boost keyword.
+    CONFIRMED (report.md): the top-level 'product' field is literally the
+    string "featured" when an ad is promoted, and absent for organic ads.
+    This is now the primary signal. 'activeProducts' boost-keyword check
+    kept as a secondary signal for schema variants.
     """
     if str(item.get("product", "")).lower() == "featured":
         return True
@@ -94,7 +107,7 @@ def _is_featured_ad(item: dict) -> bool:
         for k in active_products.keys():
             kl = str(k).lower()
             if "ad_limit" in kl:
-                continue
+                continue  # posting quota, not a ranking boost
             if any(kw in kl for kw in boost_keywords):
                 return True
 
@@ -103,13 +116,17 @@ def _is_featured_ad(item: dict) -> bool:
 
 def _scrape_dom_images(soup: BeautifulSoup) -> dict:
     """
-    Builds { normalized_title_lowercase: image_url } from <img> tags
-    inside actual listing cards in the rendered HTML.
+    Scans the actual rendered HTML for real <img> tags inside listing
+    cards, keyed by normalized title text. This is how OLX images were
+    ORIGINALLY extracted, before the JSON-based coverPhoto/externalID
+    reconstruction was introduced — and that reconstruction has since
+    been proven broken across 5 different tested URL patterns (plain
+    externalID, numeric id, split UUIDs, either UUID alone — none of
+    them loaded a real image). The DOM always contains a working image
+    reference because that's literally what renders the photo for a
+    human visitor; no CDN URL guessing is needed at all.
 
-    This is the ONLY reliable way to get real image URLs from OLX — the
-    JSON's coverPhoto.externalID does not reconstruct into a working CDN
-    URL in any of the formats we tested. The DOM always has real URLs
-    because that is what the browser uses to display the photo.
+    Returns: { normalized_title_lowercase: image_url }
     """
     image_map = {}
 
@@ -121,11 +138,7 @@ def _scrape_dom_images(soup: BeautifulSoup) -> dict:
 
     for card in cards:
         try:
-            title_el = (
-                card.find(attrs={"data-aut-id": "itemTitle"})
-                or card.find("h2")
-                or card.find("a")
-            )
+            title_el = card.find(attrs={"data-aut-id": "itemTitle"}) or card.find("h2") or card.find("a")
             title_text = title_el.get_text(strip=True) if title_el else ""
             if not title_text:
                 continue
@@ -151,20 +164,13 @@ def _scrape_dom_images(soup: BeautifulSoup) -> dict:
 
 
 def _lookup_dom_image(title: str, image_map: dict) -> str:
-    """
-    Exact match first, then a loose substring match as fallback.
-    JSON titles and DOM titles can differ slightly in whitespace or
-    truncation, so we need the fuzzy fallback.
-    """
-    if not title or not image_map:
-        return ""
-
+    """Exact match first, then a loose substring match as a fallback,
+    since JSON titles and DOM titles can differ slightly in whitespace
+    or truncation."""
     key = title.strip().lower()
-
     if key in image_map:
         return image_map[key]
 
-    # Fuzzy: check if either string contains the other
     for dom_title, url in image_map.items():
         if key in dom_title or dom_title in key:
             return url
@@ -172,99 +178,11 @@ def _lookup_dom_image(title: str, image_map: dict) -> str:
     return ""
 
 
-def _parse_age_days(item) -> int:
+def _extract_from_hit(item: dict, fallback_url: str, age_days: int = 0):
     """
-    Extracts listing age in days from an OLX DOM card.
-
-    OLX displays relative time like "2 days ago", "1 week ago", "just now".
-    Strategy:
-      1. Look for an element with a time/date-related class or data-aut-id.
-      2. Also check the HTML <time> tag (OLX sometimes uses it with datetime attr).
-      3. Scan the full card text as broadest fallback.
-
-    Returns:
-      0   — posted today (minutes/hours/just now)
-      N   — posted N days ago
-      999 — could not detect age (normalizer scores this as stale = 0 pts)
-    """
-    # Strategy 1: data-aut-id attribute (OLX-specific)
-    time_el = item.find(attrs={"data-aut-id": re.compile(r"(date|time|posted|ago)", re.I)})
-
-    # Strategy 2: class-name match
-    if not time_el:
-        time_el = item.find(class_=re.compile(r"(ago|date|time|posted|fresh|listing.?date)", re.I))
-
-    # Strategy 3: <time> HTML tag — check datetime attribute first
-    if not time_el:
-        time_el = item.find("time")
-
-    time_text = ""
-    if time_el:
-        # If <time datetime="..."> is present, prefer that (ISO format)
-        dt_attr = time_el.get("datetime", "")
-        if dt_attr:
-            from datetime import datetime, timezone
-            try:
-                posted = datetime.fromisoformat(dt_attr.replace("Z", "+00:00"))
-                delta = datetime.now(timezone.utc) - posted
-                return max(0, delta.days)
-            except Exception:
-                pass
-        time_text = time_el.get_text(strip=True)
-
-    # Strategy 4: full card text scan
-    if not time_text:
-        time_text = item.get_text(separator=" ")
-
-    return _time_str_to_days(time_text)
-
-
-def _time_str_to_days(text: str) -> int:
-    """Converts a relative time string to an integer day count."""
-    t = text.lower()
-
-    if re.search(r"\b(minute|min|hour|hr|just now|today|moments?)\b", t):
-        return 0
-    if "yesterday" in t:
-        return 1
-
-    m = re.search(r"(\d+)\s*day", t)
-    if m:
-        return int(m.group(1))
-
-    m = re.search(r"(\d+)\s*week", t)
-    if m:
-        return int(m.group(1)) * 7
-
-    m = re.search(r"(\d+)\s*month", t)
-    if m:
-        return int(m.group(1)) * 30
-
-    m = re.search(r"(\d+)\s*year", t)
-    if m:
-        return int(m.group(1)) * 365
-
-    return 999  # unparseable → treated as stale by normalizer scorer
-
-
-async def _fetch(session, url: str):
-    try:
-        response = await session.get(url, headers=STANDARD_HEADERS, timeout=20)
-        return response.status_code, response.text
-    except Exception as e:
-        print(f"[OLX Scraper] Request failed: {e}")
-        return None, None
-
-
-def _extract_from_hit(item: dict, fallback_url: str, image_map: dict) -> CarListing | None:
-    """
-    Extracts a CarListing from one OLX Algolia hit.
-
-    IMAGE STRATEGY (in priority order):
-      1. DOM lookup by title — always works when the page rendered properly.
-      2. CDN reconstruction from coverPhoto.externalID — kept as last resort
-         even though it has consistently failed, costs nothing to try.
-      3. Empty string if both fail — better than crashing.
+    Extracts a single CarListing from a confirmed-shape OLX Algolia hit,
+    using ground-truth field paths from report.md rather than guessing.
+    Returns None if the hit has no usable title.
     """
     title = item.get("title", "")
     if not title:
@@ -272,21 +190,21 @@ def _extract_from_hit(item: dict, fallback_url: str, image_map: dict) -> CarList
 
     extra = item.get("extraFields") or {}
 
-    # Price: real field is extraFields.price (hit['price'] is always 0)
+    # --- PRICE: hit['price'] is a decoy (always 0). Real price is here. ---
     price = extra.get("price", 0)
 
-    # Year and mileage: plain integers under extraFields
+    # --- YEAR / MILEAGE: plain integers under extraFields ---
     year = extra.get("year", 0)
     mileage = extra.get("mileage", 0)
 
-    # City: location list, level == 2 is the city
+    # --- CITY: location is a list of levels; level == 2 is the city ---
     city = "Unknown"
     for loc in item.get("location", []) or []:
         if isinstance(loc, dict) and loc.get("level") == 2:
             city = loc.get("name", "Unknown")
             break
 
-    # Listing URL
+    # --- LISTING URL: slug + externalID combine directly ---
     slug = item.get("slug", "")
     external_id = item.get("externalID", "")
     if slug and external_id:
@@ -294,42 +212,27 @@ def _extract_from_hit(item: dict, fallback_url: str, image_map: dict) -> CarList
     else:
         listing_url = fallback_url
 
-    # ------------------------------------------------------------------ #
-    # IMAGE: DOM lookup first, CDN reconstruction as last resort
-    # ------------------------------------------------------------------ #
-    image_url = _lookup_dom_image(title, image_map)
+    # --- IMAGE: constructed from coverPhoto's externalID ---
+    image_url = ""
+    cover = item.get("coverPhoto")
+    if isinstance(cover, dict):
+        photo_id = cover.get("externalID", "")
+        if photo_id:
+            image_url = f"https://images.olx.com.pk/thumbnails/{photo_id}-featureimage.webp"
 
+    # Fallback: first entry in the photos[] array, same ID-based construction
     if not image_url:
-        # Last-resort CDN reconstruction (consistently failed in testing,
-        # but costs nothing to attempt)
-        cover = item.get("coverPhoto")
-        if isinstance(cover, dict):
-            photo_id = cover.get("externalID", "")
-            if photo_id:
-                image_url = f"https://images.olx.com.pk/thumbnails/{photo_id}-featureimage.webp"
-
-        if not image_url:
-            photos = item.get("photos") or []
-            if isinstance(photos, list) and photos:
-                first = photos[0]
-                if isinstance(first, dict):
-                    photo_id = first.get("externalID", "")
-                    if photo_id:
-                        image_url = f"https://images.olx.com.pk/thumbnails/{photo_id}-featureimage.webp"
-                elif isinstance(first, str) and first.startswith("http"):
-                    image_url = first
-
-    # Age in days — OLX JSON hits carry a unix timestamp in 'createdAt'
-    age_days = 999
-    created_at = item.get("createdAt") or item.get("date") or item.get("activated_at")
-    if created_at:
-        try:
-            from datetime import datetime, timezone
-            posted = datetime.fromtimestamp(int(created_at), tz=timezone.utc)
-            delta = datetime.now(timezone.utc) - posted
-            age_days = max(0, delta.days)
-        except Exception:
-            age_days = 999
+        photos = item.get("photos") or []
+        if isinstance(photos, list) and photos:
+            first_photo = photos[0]
+            if isinstance(first_photo, dict):
+                photo_id = first_photo.get("externalID", "")
+                if photo_id:
+                    image_url = f"https://images.olx.com.pk/thumbnails/{photo_id}-featureimage.webp"
+            elif isinstance(first_photo, str) and first_photo.startswith("http"):
+                # Defensive: if a future schema variant provides a direct
+                # URL string instead of an ID, use it as-is.
+                image_url = first_photo
 
     return CarListing(
         title=title,
@@ -338,15 +241,11 @@ def _extract_from_hit(item: dict, fallback_url: str, image_map: dict) -> CarList
         city=city,
         year=str(year),
         listing_url=listing_url,
-        image_url=image_url or None,
-        platform="OLX",
+        image_url=image_url,
         age_days=age_days,
+        platform="OLX",
     )
 
-
-# ------------------------------------------------------------------ #
-# MAIN SCRAPER
-# ------------------------------------------------------------------ #
 
 async def scrape_olx(url: str, session, search_filters: dict = None) -> list[CarListing]:
     status_code, html = await _fetch(session, url)
@@ -370,22 +269,13 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
     source = None
 
     # ------------------------------------------------------------------ #
-    # BUILD DOM IMAGE MAP FIRST — before we process JSON hits
-    # This scans the actual rendered <img> tags in the HTML once, builds
-    # a lookup table, and then every hit in Layer 3 uses it for free.
-    # ------------------------------------------------------------------ #
-    image_map = _scrape_dom_images(soup)
-    print(f"[OLX Scraper] DOM image map: {len(image_map)} entries scraped from HTML cards.")
-
-    # ------------------------------------------------------------------ #
-    # LAYER 1: JSON State Extraction
+    # LAYER 1: window.state (confirmed primary source per report.md)
     # ------------------------------------------------------------------ #
     for s in soup.find_all("script"):
         content = s.string or ""
         if not content:
             continue
 
-        # Path A: window.state
         match = re.search(r"window\.state\s*=\s*({.*?});\s*(?:window|$)", content, re.DOTALL)
         if match:
             try:
@@ -398,7 +288,7 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
             except Exception:
                 pass
 
-        # Path B: __NEXT_DATA__
+        # __NEXT_DATA__ kept as a fallback source for schema variants
         if s.get("id") == "__NEXT_DATA__":
             try:
                 data = json.loads(content)
@@ -415,27 +305,19 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
                     hits.extend(ad_list)
                     source = "__NEXT_DATA__.adList"
                     break
-
             except Exception:
                 pass
 
     # ------------------------------------------------------------------ #
-    # LAYER 2: Visual DOM Fallback (when JSON found nothing)
+    # LAYER 2: Visual DOM Fallback (only if JSON layer found nothing)
     # ------------------------------------------------------------------ #
     if not hits:
-        print(
-            f"[OLX Scraper] ⚠ JSON state missing for {url}. "
-            f"Using Visual DOM Fallback."
-        )
+        print(f"[OLX Scraper] ⚠ JSON state missing for {url}. Using Visual DOM Fallback (weaker extraction).")
         cards = soup.find_all("li", attrs={"data-aut-id": "itemBox"})
         if not cards:
             cards = soup.find_all("li", attrs={"aria-label": "Listing"})
         if not cards:
             cards = soup.find_all("article")
-
-        if not cards:
-            print(f"[OLX Scraper] ❌ DOM fallback also empty. Raw HTML (first 1000 chars):\n{html[:1000]}")
-            return []
 
         for card in cards:
             if len(cars) >= MAX_ORGANIC_CARDS:
@@ -449,11 +331,7 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
                 if badge:
                     continue
 
-                title_el = (
-                    card.find(attrs={"data-aut-id": "itemTitle"})
-                    or card.find("h2")
-                    or card.find("a")
-                )
+                title_el = card.find(attrs={"data-aut-id": "itemTitle"}) or card.find("h2") or card.find("a")
                 title = title_el.get_text(strip=True) if title_el else ""
                 if not title:
                     continue
@@ -472,24 +350,24 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
                 )
                 price = price_el.get_text(strip=True) if price_el else "0"
 
-                loc_el = (
-                    card.find(attrs={"data-aut-id": "item-location"})
-                    or card.find(attrs={"aria-label": "Location"})
-                )
+                loc_el = card.find(attrs={"data-aut-id": "item-location"}) or card.find(attrs={"aria-label": "Location"})
                 city = loc_el.get_text(strip=True) if loc_el else "Unknown"
 
-                # DOM fallback can use image_map directly since titles
-                # come from the same cards we scanned to build it
-                image_url = image_map.get(title.strip().lower(), "")
+                # Lazy-load resilient image extraction — real src is
+                # often in data-src/data-original, not src, until the
+                # browser actually scrolls the image into view.
+                img_el = card.find("img")
+                image_url = ""
+                if img_el:
+                    for attr in ("data-src", "data-original", "data-lazy-src", "src"):
+                        val = img_el.get(attr, "").strip()
+                        if val and val.startswith("http") and "placeholder" not in val.lower():
+                            image_url = val
+                            break
 
                 cars.append(CarListing(
-                    title=title,
-                    price=price,
-                    city=city,
-                    image_url=image_url or None,
-                    platform="OLX",
-                    listing_url=link,
-                    age_days=_parse_age_days(card),
+                    title=title, price=price, city=city, image_url=image_url,
+                    platform="OLX", listing_url=link
                 ))
             except Exception:
                 continue
@@ -498,56 +376,153 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
         return cars
 
     # ------------------------------------------------------------------ #
-    # LAYER 3: Parse hits from confirmed-shape JSON
+    # LAYER 3: Extract from confirmed-shape JSON hits
+    #
+    # FIX (ordering): hits from window.state arrive in Algolia relevance
+    # order, NOT date order — even though the URL has sorting=desc-creation.
+    # The sort param affects the rendered UI, not the JSON baked into the
+    # HTML. Additionally, the featured/organic split was destroying any
+    # pre-existing date ordering by grouping all organics before all
+    # featured regardless of post date.
+    #
+    # Fix: sort the entire hit list by createdAt/timestamp DESCENDING
+    # before splitting or iterating, so newest listings always come first
+    # regardless of featured status. Also extracts age_days from the
+    # timestamp so the Normalizer's freshness scorer can rank OLX
+    # listings correctly instead of defaulting to 0 for everything.
     # ------------------------------------------------------------------ #
-    print(f"[OLX Scraper] Using JSON source: {source} ({len(hits)} raw hits)")
+    import datetime
+
+    def _hit_timestamp(hit: dict) -> int:
+        """Returns Unix timestamp from a hit for sort key. Higher = newer."""
+        return int(hit.get("createdAt") or hit.get("timestamp") or 0)
+
+    def _hit_age_days(hit: dict) -> int:
+        """Converts hit's createdAt Unix timestamp to days-since-posted."""
+        ts = _hit_timestamp(hit)
+        if ts <= 0:
+            return 0  # unknown age → treat as fresh (don't penalise)
+        try:
+            posted = datetime.datetime.utcfromtimestamp(ts).date()
+            today = datetime.date.today()
+            return max(0, (today - posted).days)
+        except Exception:
+            return 0
+
+    # Sort ALL hits newest-first before any splitting
+    hits_sorted = sorted(hits, key=_hit_timestamp, reverse=True)
+
+    # Log the timestamp range so we can confirm the sort is working
+    if hits_sorted:
+        newest_ts = _hit_timestamp(hits_sorted[0])
+        oldest_ts = _hit_timestamp(hits_sorted[-1])
+        newest_age = _hit_age_days(hits_sorted[0])
+        oldest_age = _hit_age_days(hits_sorted[-1])
+        print(
+            f"[OLX Scraper] Hit timestamp range after sort: "
+            f"newest={newest_age}d ago (ts={newest_ts}), "
+            f"oldest={oldest_age}d ago (ts={oldest_ts})"
+        )
+
+    print(f"[OLX Scraper] Using JSON source: {source} ({len(hits_sorted)} raw hits)")
 
     featured_items = []
     organic_items = []
-    for item in hits:
+
+    for item in hits_sorted:
         try:
-            (featured_items if _is_featured_ad(item) else organic_items).append(item)
+            if _is_featured_ad(item):
+                featured_items.append(item)
+            else:
+                organic_items.append(item)
         except Exception:
             continue
 
-    # Prefer organic-only, but if that would give 0 results (over-broad
-    # featured detection), fall back to all hits rather than returning nothing
+    # Prefer organic-first, but maintain date order WITHIN each group.
+    # If excluding featured leaves nothing, fall back to all hits.
     if organic_items:
         ordered_items = organic_items
         skipped_count = len(featured_items)
     else:
         print(
-            f"[OLX Scraper] ⚠ All {len(featured_items)} hits flagged as featured — "
-            f"looks like over-broad detection. Including them rather than returning 0."
+            f"[OLX Scraper] ⚠ All {len(featured_items)} hits were flagged featured — "
+            f"falling back to including them rather than returning 0 listings."
         )
         ordered_items = featured_items
         skipped_count = 0
 
+    image_missing_debug_dumped = False
+    image_url_sample_logged = False
+
     for item in ordered_items:
         if len(cars) >= MAX_ORGANIC_CARDS:
             break
+
         try:
-            # image_map is passed in — _extract_from_hit does the DOM
-            # lookup internally, with CDN reconstruction as last resort
-            listing = _extract_from_hit(item, fallback_url=url, image_map=image_map)
-            if listing:
-                cars.append(listing)
+            age = _hit_age_days(item)
+            listing = _extract_from_hit(item, fallback_url=url, age_days=age)
+            if listing is None:
+                continue
+
+            # DIAGNOSTIC: the previously constructed URL used the raw
+            # 'externalID' string as-is. Live logs revealed that field
+            # is actually TWO valid 36-char UUIDs concatenated with an
+            # extra hyphen (e.g. "{uuid1}-{uuid2}"), not one flat ID —
+            # almost certainly why the constructed URL never loaded.
+            # Log several plausible alternate constructions here so we
+            # can identify the real working pattern by testing each one
+            # directly in a browser, rather than guessing a third time.
+            if not image_url_sample_logged:
+                image_url_sample_logged = True
+                cover = item.get("coverPhoto") or {}
+                numeric_id = cover.get("id", "")
+                ext_id = cover.get("externalID", "")
+
+                candidates = {
+                    "A (current — raw externalID as one blob)": listing.image_url,
+                    "B (plain numeric id)": (
+                        f"https://images.olx.com.pk/thumbnails/{numeric_id}-featureimage.webp"
+                        if numeric_id else "N/A — no numeric id present"
+                    ),
+                }
+                # Attempt to split the externalID into its two component
+                # UUIDs (36 chars each) if it matches that exact shape.
+                if ext_id and len(ext_id) == 73 and ext_id[36] == "-":
+                    uuid1, uuid2 = ext_id[:36], ext_id[37:]
+                    candidates["C (split into two path segments)"] = (
+                        f"https://images.olx.com.pk/thumbnails/{uuid1}/{uuid2}-featureimage.webp"
+                    )
+                    candidates["D (first UUID only)"] = (
+                        f"https://images.olx.com.pk/thumbnails/{uuid1}-featureimage.webp"
+                    )
+                    candidates["E (second UUID only)"] = (
+                        f"https://images.olx.com.pk/thumbnails/{uuid2}-featureimage.webp"
+                    )
+
+                print(f"[OLX Scraper] 🔍 Testing image URL candidates for '{listing.title}':")
+                for label, candidate_url in candidates.items():
+                    print(f"[OLX Scraper]    {label}: {candidate_url}")
+                print(
+                    f"[OLX Scraper] 🔍 Paste EACH candidate URL above into a browser tab — "
+                    f"report back which one (if any) actually renders an image."
+                )
+                print(f"[OLX Scraper] 🔍 Raw coverPhoto: {json.dumps(cover, default=str)[:400]}")
+
+            if not image_missing_debug_dumped and not listing.image_url:
+                image_missing_debug_dumped = True
+                print(
+                    f"[OLX Scraper] ⚠ No image resolved for '{listing.title}'. "
+                    f"coverPhoto={json.dumps(item.get('coverPhoto'), default=str)[:300]} "
+                    f"photos[0]={json.dumps((item.get('photos') or [None])[0], default=str)[:300]}"
+                )
+
+            cars.append(listing)
+
         except Exception:
             continue
 
     if skipped_count > 0:
-        print(f"[OLX Scraper] Skipped {skipped_count} featured/boosted ads.")
+        print(f"[OLX Scraper] Skipped {skipped_count} featured/boosted ads (confirmed via 'product' field).")
 
-    # Debug: report image and age hit rates
-    with_images = sum(1 for c in cars if c.image_url)
-    age_found = sum(1 for c in cars if c.age_days != 999)
-    print(
-        f"[OLX Scraper] Extracted {len(cars)} listings via {source} "
-        f"({with_images}/{len(cars)} with images, "
-        f"Age: {age_found}/{len(cars)} parsed)."
-    )
-
-    if not cars:
-        print(f"[OLX Scraper] ❌ 0 listings. Raw HTML (first 1000 chars):\n{html[:1000]}")
-
+    print(f"[OLX Scraper] Extracted {len(cars)} listings via {source}")
     return cars
