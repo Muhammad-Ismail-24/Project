@@ -312,22 +312,54 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
 
     # ------------------------------------------------------------------ #
     # LAYER 3: Extract from confirmed-shape JSON hits
+    #
+    # FIX (critical): the featured-ad exclusion was found flagging ALL
+    # hits as featured on real searches (confirmed via live logs — 24/24
+    # hits skipped, 0 organic listings returned, on two separate
+    # searches). The 'activeProducts' field is evidently present as
+    # general metadata on most/all listings (many legitimate sellers use
+    # bulk-posting packages), not a rare boost signal — so treating its
+    # mere presence as "skip this" made the entire OLX scraper return
+    # nothing. Safety net added: if excluding featured ads would leave
+    # zero results, fall back to including them rather than returning
+    # nothing. Degraded data (with some boosted ads mixed in) is far
+    # better than silently contributing zero listings to every search.
     # ------------------------------------------------------------------ #
     print(f"[OLX Scraper] Using JSON source: {source} ({len(hits)} raw hits)")
 
-    featured_skip_count = 0
-    organic_count = 0
-    image_missing_debug_dumped = False
+    featured_items = []
+    organic_items = []
 
     for item in hits:
-        if organic_count >= MAX_ORGANIC_CARDS:
+        try:
+            if _is_featured_ad(item):
+                featured_items.append(item)
+            else:
+                organic_items.append(item)
+        except Exception:
+            continue
+
+    # Prefer organic-first ordering, but if organic-only would leave us
+    # with nothing, fall back to using ALL hits instead of zero.
+    if organic_items:
+        ordered_items = organic_items
+        skipped_count = len(featured_items)
+    else:
+        print(
+            f"[OLX Scraper] ⚠ All {len(featured_items)} hits were flagged featured — "
+            f"this looks like an over-broad detection, not real data. "
+            f"Falling back to including them rather than returning 0 listings."
+        )
+        ordered_items = featured_items
+        skipped_count = 0
+
+    image_missing_debug_dumped = False
+
+    for item in ordered_items:
+        if len(cars) >= MAX_ORGANIC_CARDS:
             break
 
         try:
-            if _is_featured_ad(item):
-                featured_skip_count += 1
-                continue
-
             listing = _extract_from_hit(item, fallback_url=url)
             if listing is None:
                 continue
@@ -341,13 +373,12 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
                 )
 
             cars.append(listing)
-            organic_count += 1
 
         except Exception:
             continue
 
-    if featured_skip_count > 0:
-        print(f"[OLX Scraper] Skipped {featured_skip_count} featured/boosted ads (confirmed via 'product' field).")
+    if skipped_count > 0:
+        print(f"[OLX Scraper] Skipped {skipped_count} featured/boosted ads (confirmed via 'product' field).")
 
-    print(f"[OLX Scraper] Extracted {len(cars)} true organic listings via {source}")
+    print(f"[OLX Scraper] Extracted {len(cars)} listings via {source}")
     return cars

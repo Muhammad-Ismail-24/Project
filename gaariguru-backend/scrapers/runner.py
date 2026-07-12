@@ -248,24 +248,26 @@ async def execute_search_pipeline(
 
             olx_url = "/".join(olx_base_parts)
 
-            # FIX (404 regression): OLX 404s on a LONE 'make_eq_X' filter
-            # with no price/year alongside it — confirmed via live logs
-            # (Bolan/Cultus searches with no budget/year both 404'd on
-            # every page). The only manually-verified working example
-            # always paired make_eq WITH price_between AND year_between
-            # together. Since make is already expressed via the category
-            # prefix ("{make}-cars_c84") and the q- search term, make_eq
-            # is redundant on its own — only add it when there's at least
-            # one other real constraint to pair it with. Otherwise skip
-            # filter= entirely, matching the previously-confirmed-working
-            # plain format.
+            # FIX: make_eq REMOVED from the filter entirely.
+            # report.md explicitly warns that OLX's make facet value is
+            # NOT always the plain make name (e.g. Honda's real facet
+            # value is "cars-honda", not "honda"). Our one manually
+            # verified working example happened to use Toyota, whose
+            # facet value coincidentally matches its plain name — but
+            # every Honda search (City, Civic) has continued 404ing on
+            # the rich URL even WITH price_between also present,
+            # directly disproving the earlier "lone filter" theory and
+            # confirming this is a wrong-facet-value problem instead.
+            # Since we don't have a verified make-name -> facet-value
+            # map for every brand, and make is already expressed via the
+            # category prefix ("{make}-cars_c84") and the q- search
+            # term, we simply never send make_eq at all — eliminating
+            # this entire class of bug rather than guessing per-brand.
             olx_filters = []
             if safe_budget > 0:
                 olx_filters.append(f"price_between_0_to_{safe_budget}")
             if min_year > 0 or max_year > 0:
                 olx_filters.append(f"year_between_{my}_to_{mx}")
-            if safe_make_lower and olx_filters:
-                olx_filters.insert(0, f"make_eq_{safe_make_lower}")
 
             filter_string = ",".join(olx_filters)
 
