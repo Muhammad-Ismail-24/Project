@@ -37,6 +37,18 @@ IMAGE FIX (this patch):
 CITY FIX (from previous patch, retained):
   Multi-strategy city extraction with search_filters fallback so
   city is never 'Unknown'.
+
+PRICE FORMAT FIX (this patch):
+  Root cause of "PKR 32,000" instead of "PKR 3,200,000":
+    Gari.pk shows prices as "Rs. 32 Lacs". The normalizer's _clean_price()
+    strips all non-digit/dot characters from the string. On "rs. 32 lacs"
+    this produces ".32" (the dot in "Rs." survives the strip), which
+    float(".32") = 0.32, then × 100,000 = 32,000 instead of 3,200,000.
+
+    The normalizer works correctly for "PKR 32 Lacs" — that dot doesn't exist.
+    Fix: normalize the "Rs." prefix to "PKR" in the scraper before returning,
+    so the normalizer always receives the format it handles correctly.
+    One regex substitution: r'^Rs\\.?\\s*' → 'PKR '.
 """
 from bs4 import BeautifulSoup
 import re
@@ -61,6 +73,18 @@ PRICE_RE = re.compile(
     r'|[\d,\.]+\s*(?:Lac(?:s|hs?)?|Lakh?|Crore|Million|CR)\b',
     re.I
 )
+
+
+def _normalize_price_prefix(price: str) -> str:
+    """
+    Converts "Rs. 40 Lacs" → "PKR 40 Lacs" so the normalizer parses it correctly.
+
+    The normalizer's _clean_price strips all non-digit/dot chars. "Rs. 40" becomes
+    ".40" → float 0.4 → × 100,000 = 40,000 (wrong). "PKR 40" becomes "40" → 40.0
+    → × 100,000 = 4,000,000 (correct). This one substitution fixes all Rs. variants:
+    "Rs. 40", "Rs 40", "Rs.40" all become "PKR 40".
+    """
+    return re.sub(r'^Rs\.?\s*', 'PKR ', price.strip(), flags=re.I)
 
 
 def _extract_city(item, fallback_city: str) -> str:
@@ -244,17 +268,18 @@ async def scrape_gari_pk(
             # --- Text content (shared by price / year / mileage regex) ---
             text_content = item.get_text(separator=' ')
 
-            # --- Price (two-stage) ---
-            # Check class selector first; use regex on text_content as fallback
+            # --- Price (two-stage, with Rs. → PKR normalization) ---
+            # Stage 1: class selector
             price_el = item.find(class_=re.compile(r'price', re.I))
             raw_price = price_el.get_text(separator=' ', strip=True) if price_el else ''
             if raw_price and raw_price.strip('0 ') != '':
-                price = raw_price
+                price = _normalize_price_prefix(raw_price)
                 price_class_hits += 1
             else:
+                # Stage 2: regex on full card text
                 m = PRICE_RE.search(text_content)
                 if m:
-                    price = m.group(0).strip()
+                    price = _normalize_price_prefix(m.group(0).strip())
                     price_regex_hits += 1
                 else:
                     price = '0'
