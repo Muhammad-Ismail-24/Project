@@ -67,46 +67,76 @@ def _time_str_to_days(text: str) -> int:
     return 999  # unparseable → treated as stale by normalizer scorer
 
 
-def _parse_age_days(item) -> int:
+def _parse_age_days(item, debug: bool = False) -> int:
     """
     Extracts listing age in days from a PakWheels DOM card.
 
     PakWheels displays relative time like "2 days ago", "3 weeks ago".
+
     Strategy:
-      1. Look for an element with a time/date-related class.
-      2. Check the HTML <time> tag with datetime attribute (ISO format).
-      3. Scan the full card text as broadest fallback.
+      1. <time> tag with a datetime attribute — most precise (ISO timestamp).
+      2. Class-name match for date/time/posted elements.
+      3. Per-element regex scan — tests each tag's text individually for a
+         relative-time pattern. This is MUCH safer than dumping the full card
+         text into _time_str_to_days, which was hitting mileage strings like
+         "45,000 km" or year numbers and returning 999 silently every time.
+      4. Debug dump so you can see what the card contains when all else fails.
 
     Returns:
       0   — posted today (minutes/hours/just now)
       N   — posted N days ago
       999 — could not detect age (normalizer scores this as stale = 0 pts)
     """
-    # Strategy 1: class-name match
-    time_el = item.find(class_=re.compile(r"(ago|date|time|posted|fresh|listing.?date)", re.I))
+    from datetime import datetime, timezone
 
-    # Strategy 2: <time> tag — prefer datetime attribute (ISO)
-    if not time_el:
-        time_el = item.find("time")
-
-    time_text = ""
-    if time_el:
-        dt_attr = time_el.get("datetime", "")
+    # Strategy 1: <time datetime="..."> — ISO timestamp, most accurate
+    time_tag = item.find("time")
+    if time_tag:
+        dt_attr = time_tag.get("datetime", "")
         if dt_attr:
-            from datetime import datetime, timezone
             try:
                 posted = datetime.fromisoformat(dt_attr.replace("Z", "+00:00"))
                 delta = datetime.now(timezone.utc) - posted
                 return max(0, delta.days)
             except Exception:
                 pass
-        time_text = time_el.get_text(strip=True)
+        # No datetime attr — try the text of the tag itself
+        result = _time_str_to_days(time_tag.get_text(strip=True))
+        if result != 999:
+            return result
 
-    # Strategy 3: full card text scan
-    if not time_text:
-        time_text = item.get_text(separator=" ")
+    # Strategy 2: class-name match for known date-carrier elements
+    time_el = item.find(class_=re.compile(
+        r"(ago|date|time|posted|fresh|listing.?date|added|updated|when)", re.I
+    ))
+    if time_el:
+        result = _time_str_to_days(time_el.get_text(strip=True))
+        if result != 999:
+            return result
 
-    return _time_str_to_days(time_text)
+    # Strategy 3: walk every element and test its text individually.
+    # We avoid dumping the full card text because mileage strings like
+    # "45,000 km" and year strings like "2016" contain numbers that the
+    # regex can misinterpret — scanning per-element isolates only real
+    # time phrases.
+    TIME_PATTERN = re.compile(
+        r'\b(\d+\s*(?:minute|min|hour|hr|day|week|month|year)s?\s*ago'
+        r'|just now|today|yesterday|moments?\s*ago)\b',
+        re.I
+    )
+    for el in item.find_all(True):
+        text = el.get_text(strip=True)
+        if TIME_PATTERN.search(text):
+            result = _time_str_to_days(text)
+            if result != 999:
+                return result
+
+    # Strategy 4: debug dump — prints card snippet when all strategies miss
+    if debug:
+        snippet = item.get_text(separator=' ', strip=True)[:300]
+        print(f"[PakWheels DEBUG] No date found. Card text: {snippet}")
+
+    return 999  # unparseable — treated as stale = 0 pts by normalizer scorer
 
 
 async def scrape_pakwheels(url: str, session) -> list[CarListing]:
@@ -193,7 +223,7 @@ async def scrape_pakwheels(url: str, session) -> list[CarListing]:
                 listing_url=link,
                 image_url=image_url,
                 platform='PakWheels',
-                age_days=_parse_age_days(item),
+                age_days=_parse_age_days(item, debug=(len(cars) == 0)),
             ))
         except Exception:
             continue
