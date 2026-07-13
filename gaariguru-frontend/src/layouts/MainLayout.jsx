@@ -1,10 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { Menu, X, User } from 'lucide-react';
 
 export default function MainLayout() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('https://carfinder-project-backend.onrender.com/auth/me', {
+          method: 'GET',
+          // CRITICAL: Send secure session cookies to the backend
+          credentials: 'include', 
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+          setUser(null);
+        }
+      } catch (error) {
+        console.error("Auth check failed:", error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
 
   return (
     <div className="relative min-h-screen font-sans text-black selection:bg-black selection:text-white">
@@ -28,7 +61,9 @@ export default function MainLayout() {
 
           {/* Auth Section */}
           <div className="flex items-center">
-            {!isAuthenticated ? (
+            {isLoading ? (
+              <div className="w-8 h-8 rounded-full border-2 border-neutral-300 border-t-black animate-spin"></div>
+            ) : !isAuthenticated || !user ? (
               <button 
                 onClick={() => window.location.href = 'https://carfinder-project-backend.onrender.com/auth/login'}
                 className="flex items-center px-4 py-2 bg-white border border-neutral-200 rounded-full shadow-sm hover:shadow-md transition-all font-semibold text-sm"
@@ -39,9 +74,16 @@ export default function MainLayout() {
             ) : (
               <button 
                 onClick={() => setIsDrawerOpen(true)}
-                className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
+                className="flex items-center gap-2 hover:bg-neutral-100 p-1 pr-3 rounded-full transition-colors"
               >
-                <User className="w-5 h-5" />
+                {user.picture ? (
+                  <img src={user.picture} alt={user.name} className="w-10 h-10 rounded-full object-cover shadow-sm" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center shadow-sm">
+                    <User className="w-5 h-5" />
+                  </div>
+                )}
+                <span className="font-semibold text-sm hidden sm:block">Welcome, {user.name?.split(' ')[0]}</span>
               </button>
             )}
           </div>
