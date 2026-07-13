@@ -35,5 +35,12 @@ class CachedCarListing(SQLModel, table=True):
     liquidity_score: str
     justification: str
 
-    # Relationship back to the cache query record
     search_query: SearchQueryCache = Relationship(back_populates="listings")
+
+class User(SQLModel, table=True):
+    """Database table representing authenticated users."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    email: str = Field(index=True, unique=True)
+    name: Optional[str] = Field(default=None)
+    picture: Optional[str] = Field(default=None)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

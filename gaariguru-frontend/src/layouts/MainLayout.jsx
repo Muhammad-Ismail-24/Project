@@ -30,7 +30,7 @@ export default function MainLayout() {
           <div className="flex items-center">
             {!isAuthenticated ? (
               <button 
-                onClick={() => setIsAuthenticated(true)}
+                onClick={() => window.location.href = 'https://carfinder-project-backend.onrender.com/auth/login'}
                 className="flex items-center px-4 py-2 bg-white border border-neutral-200 rounded-full shadow-sm hover:shadow-md transition-all font-semibold text-sm"
               >
                 <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-4 h-4 mr-2" />

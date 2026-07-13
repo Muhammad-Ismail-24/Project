@@ -6,6 +6,9 @@ from database import create_db_and_tables
 from api.calc_routes import router as calc_router
 from api.chat_routes import router as chat_router
 from api.search_routes import router as search_router
+from starlette.middleware.sessions import SessionMiddleware
+from auth.routes import router as auth_router
+from auth.config import SECRET_KEY
 
 # Initialize the core FastAPI app
 app = FastAPI(title="CarFinder API")
@@ -19,10 +22,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add SessionMiddleware for OAuth2 state management
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SECRET_KEY,
+)
+
 # Include core routers
 app.include_router(calc_router)
 app.include_router(chat_router)
 app.include_router(search_router)
+app.include_router(auth_router)
 
 @app.on_event("startup")
 def on_startup():
