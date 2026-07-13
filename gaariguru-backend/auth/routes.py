@@ -68,61 +68,31 @@ async def auth_callback(request: Request, db: Session = Depends(get_session)):
             db.commit()
             db.refresh(user)
 
-    # Mint a JWT token
-    payload = {
-        "sub": str(user.id),
-        "email": user.email,
-        "name": user.name,
-        "picture": user.picture,
-        "exp": datetime.now(timezone.utc) + timedelta(days=7)
-    }
-    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    # Store the user ID in the session
+    request.session["user_id"] = user.id
 
     # Redirect to the frontend dashboard
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
-    # For production, ensure FRONTEND_URL is set to https://carfinderproject.vercel.app
-    response = RedirectResponse(url=f"{frontend_url}/")
-    
-    # Set the HttpOnly cookie
-    # secure=True in production, samesite="none" for cross-domain
-    is_prod = "onrender.com" in str(request.url) or os.getenv("RENDER")
-    
-    response.set_cookie(
-        key="access_token",
-        value=f"Bearer {token}",
-        httponly=True,
-        secure=is_prod,     
-        samesite="none" if is_prod else "lax", 
-        max_age=3600 * 24 * 7 
-    )
-    return response
+    return RedirectResponse(url=f"{frontend_url}/")
 
 @router.get("/me")
 async def get_current_user(request: Request, db: Session = Depends(get_session)):
-    """Retrieve the current logged-in user from the HttpOnly cookie."""
-    token_str = request.cookies.get("access_token")
-    if not token_str or not token_str.startswith("Bearer "):
+    """Retrieve the current logged-in user from the session."""
+    user_id = request.session.get("user_id")
+    
+    if not user_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
     
-    token = token_str.split(" ")[1]
-    
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("sub")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Invalid token")
-            
-        user = db.get(User, int(user_id))
-        if not user:
-            raise HTTPException(status_code=401, detail="User not found")
-            
-        return {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "picture": user.picture
-        }
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    # Fetch the latest profile from the database
+    user = db.get(User, user_id)
+    if not user:
+        # If user was deleted but session exists, clear the session
+        request.session.pop("user_id", None)
+        raise HTTPException(status_code=401, detail="User not found")
+        
+    return {
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "picture": user.picture
+    }
