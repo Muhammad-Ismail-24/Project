@@ -11,7 +11,7 @@ from auth.routes import router as auth_router
 from auth.config import SECRET_KEY
 
 # Initialize the core FastAPI app
-app = FastAPI(title="CarFinder API")[cite: 1]
+app = FastAPI(title="CarFinder API")
 
 # Add CORS middleware to support local frontend and Vercel production
 # FIX 1: When allow_credentials=True, allow_origins cannot be ["*"]. 
@@ -38,17 +38,17 @@ app.add_middleware(
 )
 
 # Include core routers
-app.include_router(calc_router)[cite: 1]
-app.include_router(chat_router)[cite: 1]
-app.include_router(search_router)[cite: 1]
-app.include_router(auth_router)[cite: 1]
+app.include_router(calc_router)
+app.include_router(chat_router)
+app.include_router(search_router)
+app.include_router(auth_router)
 
-@app.on_event("startup")[cite: 1]
-def on_startup():[cite: 1]
-    """Trigger database and tables creation on application startup."""[cite: 1]
-    create_db_and_tables()[cite: 1]
+@app.on_event("startup")
+def on_startup():
+    """Trigger database and tables creation on application startup."""
+    create_db_and_tables()
 
-@app.get("/")[cite: 1]
-def read_root():[cite: 1]
-    """Simple API status health check endpoint."""[cite: 1]
-    return {"status": "API is running"}[cite: 1]
+@app.get("/")
+def read_root():
+    """Simple API status health check endpoint."""
+    return {"status": "API is running"}
