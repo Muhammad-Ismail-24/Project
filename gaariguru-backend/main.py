@@ -43,6 +43,9 @@ app.include_router(chat_router)
 app.include_router(search_router)
 app.include_router(auth_router)
 
+from api.user_routes import router as user_router
+app.include_router(user_router, prefix="/user", tags=["user"])
+
 @app.on_event("startup")
 def on_startup():
     """Trigger database and tables creation on application startup."""

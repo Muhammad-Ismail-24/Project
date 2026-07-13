@@ -25,7 +25,7 @@ engine = create_engine(DATABASE_URL, echo=False, connect_args=connect_args)
 
 def create_db_and_tables():
     """Initializes the database schema by generating all declared SQLModel tables."""
-    from models.db_models import SearchQueryCache, CachedCarListing, User
+    from models.db_models import SearchQueryCache, CachedCarListing, User, SavedListing
     SQLModel.metadata.create_all(engine)
 
 def get_session():

@@ -44,3 +44,24 @@ class User(SQLModel, table=True):
     name: Optional[str] = Field(default=None)
     picture: Optional[str] = Field(default=None)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    # Relationship to SavedListing
+    saved_listings: List["SavedListing"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+
+from sqlalchemy import UniqueConstraint
+
+class SavedListing(SQLModel, table=True):
+    """Database table representing a car listing saved by a user."""
+    __table_args__ = (UniqueConstraint("user_id", "listing_id", name="uq_user_listing"),)
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    listing_id: str = Field(index=True)
+    platform: str
+    title: str
+    saved_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    
+    user_id: int = Field(foreign_key="user.id", index=True)
+    user: Optional[User] = Relationship(back_populates="saved_listings")
