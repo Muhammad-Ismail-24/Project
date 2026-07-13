@@ -11,3 +11,4 @@ sqlmodel
 python-dotenv
 curl-cffi
 psycopg2-binary
+authlib
