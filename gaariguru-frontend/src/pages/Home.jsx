@@ -1,5 +1,5 @@
 import { searchCars } from '../utils/api';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Background3DShell from '../components/Background3DShell';
 import SearchBar from '../components/SearchBar';
 import CarResultCard from '../components/CarResultCard';
@@ -10,6 +10,28 @@ export default function Home() {
   const [results, setResults] = useState([]);
   const [bestPick, setBestPick] = useState(null);
   const [error, setError] = useState(null);
+  const [savedListingIds, setSavedListingIds] = useState(new Set());
+
+  useEffect(() => {
+    const fetchSavedListings = async () => {
+      try {
+        const response = await fetch('https://carfinder-project-backend.onrender.com/user/saved-listings', {
+          method: 'GET',
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setSavedListingIds(new Set(data.map(item => item.listing_id)));
+        } else if (response.status === 401) {
+          setSavedListingIds(new Set());
+        }
+      } catch (error) {
+        console.error("Failed to fetch saved listings:", error);
+        setSavedListingIds(new Set());
+      }
+    };
+    fetchSavedListings();
+  }, []);
 
   const handleSearch = async (query) => {
     if (!query.trim()) return;
@@ -128,7 +150,7 @@ export default function Home() {
                     <span>Best AI Match</span>
                   </div>
                   <div className="ring-4 ring-amber-400/50 rounded-3xl overflow-hidden shadow-2xl">
-                    <CarResultCard car={bestPick} isHighlighted={true} />
+                    <CarResultCard car={bestPick} isHighlighted={true} savedListingIds={savedListingIds} />
                   </div>
                 </div>
               )}
@@ -139,7 +161,7 @@ export default function Home() {
                   <h3 className="text-2xl font-black tracking-tight text-neutral-800">Alternative Matches</h3>
                   <div className="space-y-6">
                     {otherResults.map((car) => (
-                      <CarResultCard key={car.id} car={car} />
+                      <CarResultCard key={car.id} car={car} savedListingIds={savedListingIds} />
                     ))}
                   </div>
                 </div>
