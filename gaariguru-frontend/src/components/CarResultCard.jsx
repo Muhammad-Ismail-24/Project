@@ -2,7 +2,7 @@ import React from 'react';
 import { Sparkles, MapPin, Calendar, Gauge, ExternalLink } from 'lucide-react';
 import SaveCarButton from './SaveCarButton';
 
-export default function CarResultCard({ car, isHighlighted = false, savedListingIds = new Set() }) {
+export default function CarResultCard({ car, isHighlighted = false, savedListingIds = new Set(), onUnsave }) {
   // Safely parse red flags and AI justifications (accounting for both nested ai_analysis or flat structures)
   const analysis = car.ai_analysis || {};
   
@@ -61,6 +61,7 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
             platform={car.platform} 
             title={car.title} 
             savedListingIds={savedListingIds} 
+            onUnsave={onUnsave}
           />
         </div>
       </div>

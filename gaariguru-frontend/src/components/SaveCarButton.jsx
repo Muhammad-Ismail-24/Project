@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-export default function SaveCarButton({ listingId, platform, title, savedListingIds = new Set() }) {
+export default function SaveCarButton({ listingId, platform, title, savedListingIds = new Set(), onUnsave }) {
   const [isSaved, setIsSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -35,6 +35,9 @@ export default function SaveCarButton({ listingId, platform, title, savedListing
 
         if (response.ok) {
           setIsSaved(false);
+          if (onUnsave) {
+            onUnsave();
+          }
         }
       } else {
         // Save

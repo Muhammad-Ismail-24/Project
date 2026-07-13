@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlmodel import Session, select
 from database import get_session
-from models.db_models import User, SavedListing
+from models.db_models import User, SavedListing, CachedCarListing
 from pydantic import BaseModel
 import urllib.parse
 
@@ -72,16 +72,28 @@ def get_saved_listings(request: Request, db: Session = Depends(get_session)):
         raise HTTPException(status_code=401, detail="Not authenticated")
         
     statement = select(SavedListing).where(SavedListing.user_id == user_id).order_by(SavedListing.saved_at.desc())
-    listings = db.exec(statement).all()
+    saved_items = db.exec(statement).all()
     
-    return [
-        {
-            "listing_id": item.listing_id,
-            "platform": item.platform,
-            "title": item.title,
-            "saved_at": item.saved_at.isoformat()
-        } for item in listings
-    ]
+    if not saved_items:
+        return []
+        
+    # Get the car details for these listings
+    listing_ids = [item.listing_id for item in saved_items]
+    statement_cars = select(CachedCarListing).where(CachedCarListing.id.in_(listing_ids))
+    cars_data = db.exec(statement_cars).all()
+    
+    # Map them back to preserve the sort order
+    car_map = {car.id: car for car in cars_data}
+    
+    result = []
+    for item in saved_items:
+        car = car_map.get(item.listing_id)
+        if car:
+            car_dict = car.model_dump()
+            car_dict["saved_at"] = item.saved_at.isoformat()
+            result.append(car_dict)
+            
+    return result
 
 # REMINDER: Add this to main.py:
 # from api.user_routes import router as user_router

@@ -6,6 +6,7 @@ import MainLayout from './layouts/MainLayout';
 
 // Import all the Pages
 import Home from './pages/Home';
+import SavedCarsPage from './pages/SavedCarsPage';
 import CalculatorsHub from './pages/CalculatorsHub';
 import ChatPage from './pages/ChatPage';
 import About from './pages/About';
@@ -19,6 +20,7 @@ export default function App() {
           <Route index element={<Home />} />
           
           {/* New Page Routes */}
+          <Route path="saved" element={<SavedCarsPage />} />
           <Route path="calculators" element={<CalculatorsHub />} />
           <Route path="chat" element={<ChatPage />} />
           <Route path="about" element={<About />} />
