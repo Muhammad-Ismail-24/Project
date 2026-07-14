@@ -7,9 +7,6 @@ The AI persona is configurable per user via their `agent_name` setting
 (stored in the User table, default "GaariGuru Expert"). The caller passes
 `agent_name` into `get_chatbot_response()` — the system prompt injects it
 so the AI introduces itself by that name and signs its answers with it.
-
-All existing API execution functions (_execute_llama_call,
-_execute_gemini_fallback_chat) and retry/fallback logic are unchanged.
 """
 
 import google.generativeai as genai
@@ -23,7 +20,6 @@ CHATBOT_FALLBACK_RESPONSE = (
 )
 
 # Default persona name used for guests and as the pre-settings default for new users.
-# Changing this constant changes the out-of-the-box experience for everyone.
 DEFAULT_AGENT_NAME = "GaariGuru Expert"
 
 
@@ -33,9 +29,11 @@ async def _execute_llama_call(formatted_messages: list) -> str:
     if not api_key:
         raise ValueError("OPENROUTER_API_KEY is empty/not configured.")
 
+    # FIX 1: max_retries=0 forces instant failover to Gemini if OpenRouter is rate-limited
     client = AsyncOpenAI(
         base_url="https://openrouter.ai/api/v1",
-        api_key=api_key
+        api_key=api_key,
+        max_retries=0  
     )
 
     response = await client.chat.completions.create(
@@ -43,7 +41,7 @@ async def _execute_llama_call(formatted_messages: list) -> str:
         messages=formatted_messages,
         temperature=0.3,
         max_tokens=500,
-        timeout=8.0,
+        timeout=5.0, # Reduced timeout so users don't wait long
         extra_headers={
             "HTTP-Referer": "https://github.com/google/antigravity",
             "X-Title": "CarFinder App Specification Chatbot"
@@ -52,7 +50,7 @@ async def _execute_llama_call(formatted_messages: list) -> str:
     return response.choices[0].message.content or ""
 
 
-@async_retry(retries=2, delay=1.0)
+@async_retry(retries=1, delay=1.0)
 async def _execute_gemini_fallback_chat(formatted_messages: list) -> str:
     """Fallback: executes the chat on Google Gemini if OpenRouter fails."""
     api_key = settings.gemini_api_key
@@ -60,34 +58,40 @@ async def _execute_gemini_fallback_chat(formatted_messages: list) -> str:
         raise ValueError("GEMINI_API_KEY is empty/not configured.")
 
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-3.1-flash-lite")
 
     system_instruction = (
         formatted_messages[0]["content"]
         if formatted_messages and formatted_messages[0]["role"] == "system"
         else ""
     )
-    history_lines = []
-    for msg in formatted_messages[1:]:
-        role_label = "User" if msg["role"] == "user" else "Assistant"
-        history_lines.append(f"{role_label}: {msg['content']}")
 
-    prompt = (
-        f"System Instructions:\n{system_instruction}\n\n"
-        "Conversation History:\n" + "\n".join(history_lines) + "\nAssistant:"
+    # Use a stable, fast Gemini model and pass the system instruction natively
+    model = genai.GenerativeModel(
+        "gemini-1.5-flash",
+        system_instruction=system_instruction
     )
 
-    response = await model.generate_content_async(prompt)
+    # FIX 2: Convert standard OpenAI message format into Gemini's native history array
+    gemini_history = []
+    for msg in formatted_messages[1:]:
+        role = "model" if msg["role"] == "assistant" else "user"
+        gemini_history.append({"role": role, "parts": [msg["content"]]})
+
+    if not gemini_history:
+        return ""
+
+    # Gemini requires the final message to be sent separately from the history
+    last_message = gemini_history.pop()
+
+    chat = model.start_chat(history=gemini_history)
+    response = await chat.send_message_async(last_message["parts"][0])
+
     return response.text or ""
 
 
 def _build_system_prompt(agent_name: str) -> str:
     """
     Builds the system prompt with the persona injected.
-
-    The agent_name is whatever the user set in Settings (e.g. "Ustad Jee",
-    "AutoGuru", "Car Bhai") or the default "GaariGuru Expert" for guests.
-    The rest of the persona — knowledge domain, tone, constraints — is fixed.
     """
     return (
         f"Your name is {agent_name}. "
@@ -138,15 +142,6 @@ async def get_chatbot_response(
 ) -> str:
     """
     Sends a conversation history to Llama 3.3 70B via OpenRouter.
-
-    Args:
-        messages:    List of {"role": "user"|"assistant", "content": "..."} dicts.
-                     The caller is responsible for limiting context window size
-                     (chat_routes.py passes the last 10 DB messages for logged-in users).
-        agent_name:  The persona name injected into the system prompt.
-                     Fetched from User.agent_name in the DB for logged-in users.
-                     Defaults to DEFAULT_AGENT_NAME for guests.
-
     Falls back to Gemini 1.5 Flash if OpenRouter times out or rate-limits (429).
     """
     system_prompt = _build_system_prompt(agent_name)
@@ -176,7 +171,6 @@ async def get_chatbot_response(
         print(f"[Chatbot] Gemini fallback API failed: {gemini_err}")
 
     return CHATBOT_FALLBACK_RESPONSE
-
 
 if __name__ == "__main__":
     import asyncio

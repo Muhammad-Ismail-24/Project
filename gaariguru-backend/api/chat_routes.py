@@ -184,7 +184,8 @@ async def send_message(request: Request, body: SendMessageRequest, session: Sess
         session.add(ai_msg_row)
         session.commit()
 
-    return {"reply": reply, "agent_name": agent_name}
+    # FIX 3: Return the exact object structure the React frontend is expecting
+    return {"role": "assistant", "content": reply, "agent_name": agent_name}
 
 
 # ---------------------------------------------------------------------------
