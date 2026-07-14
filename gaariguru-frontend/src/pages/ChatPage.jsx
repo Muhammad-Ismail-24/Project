@@ -92,19 +92,63 @@ export default function ChatPage() {
       try {
         const data = await fetchSessions();
         setIsGuest(data.is_guest);
+
         if (!data.is_guest) {
           setSessionsList(data.sessions || []);
           if (data.sessions && data.sessions.length > 0) {
-            loadSession(data.sessions[0].session_id);
+            // Don't call loadSession here — it sets isLoading=true again
+            // inside an already-loading state, causing a double spinner.
+            // Set everything directly instead.
+            try {
+              const hist = await fetchSessionHistory(data.sessions[0].session_id);
+              setAgentName(hist.agent_name || 'GaariGuru Expert');
+              setNameInput(hist.agent_name || 'GaariGuru Expert');
+              setMessages(hist.messages.map(m => ({ role: m.role, content: m.content })));
+              setSession(data.sessions[0].session_id);
+            } catch {
+              startNewChat();
+            }
           } else {
             startNewChat();
           }
         } else {
+          // Genuinely a guest — show welcome message
           startNewChat();
         }
       } catch (err) {
-        console.error("Failed to load sessions:", err);
-        startNewChat();
+        // fetchSessions failed — this usually means Render is cold-starting
+        // or there's a network hiccup. DO NOT assume guest. Retry once after
+        // 4 seconds to give Render time to wake up.
+        console.warn("[ChatPage] fetchSessions failed, retrying in 4s:", err.message);
+        setTimeout(async () => {
+          try {
+            const data = await fetchSessions();
+            setIsGuest(data.is_guest);
+            if (!data.is_guest) {
+              setSessionsList(data.sessions || []);
+              if (data.sessions && data.sessions.length > 0) {
+                const hist = await fetchSessionHistory(data.sessions[0].session_id);
+                setAgentName(hist.agent_name || 'GaariGuru Expert');
+                setNameInput(hist.agent_name || 'GaariGuru Expert');
+                setMessages(hist.messages.map(m => ({ role: m.role, content: m.content })));
+                setSession(data.sessions[0].session_id);
+              } else {
+                startNewChat();
+              }
+            } else {
+              startNewChat();
+            }
+          } catch (retryErr) {
+            console.error("[ChatPage] Retry also failed:", retryErr.message);
+            // Only NOW fall back to guest mode — after two genuine failures
+            startNewChat();
+          } finally {
+            setIsLoading(false);
+          }
+        }, 4000);
+        // Keep isLoading=true during the retry window so user sees spinner
+        // not a broken guest UI while Render wakes up
+        return;
       } finally {
         setIsLoading(false);
       }
@@ -305,9 +349,10 @@ export default function ChatPage() {
         {/* Chat Feed */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 bg-white scrollbar-hide">
           {isLoading ? (
-            <div className="flex items-center justify-center h-full text-neutral-400 font-medium">
-              <Loader2 className="w-5 h-5 animate-spin mr-2" />
-              Loading your conversation...
+            <div className="flex flex-col items-center justify-center h-full text-neutral-400 gap-3">
+              <Loader2 className="w-6 h-6 animate-spin text-black" />
+              <p className="font-medium text-sm">Loading your conversation...</p>
+              <p className="text-xs text-neutral-300">This may take a moment on first load.</p>
             </div>
           ) : (
             messages.map((msg, idx) => (
