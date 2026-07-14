@@ -94,7 +94,20 @@ async def get_session_history(session_id: str, request: Request, session: Sessio
 @router.post("")
 async def send_message(request: Request, body: ChatRequest, session: Session = Depends(get_session)):
     new_message_text = body.message.strip()
+    
+    # ── DIAGNOSTIC LOGGING ──────────────────────────────────────────────
+    # These lines tell us exactly what the backend sees on each request.
+    # Remove after confirming the bug is fixed.
+    email_in_session = request.session.get("user_email")
+    print(f"[Chat DEBUG] POST /api/chat received")
+    print(f"[Chat DEBUG] session_id in body: {repr(body.session_id)}")
+    print(f"[Chat DEBUG] user_email in cookie session: {repr(email_in_session)}")
+    print(f"[Chat DEBUG] all session keys: {list(request.session.keys())}")
+    # ────────────────────────────────────────────────────────────────────
+    
     user = _get_user_or_none(request, session)
+    
+    print(f"[Chat DEBUG] user resolved to: {user.email if user else 'None (guest mode)'}")
     
     session_id = body.session_id
     if not session_id or not session_id.strip():
@@ -109,6 +122,7 @@ async def send_message(request: Request, body: ChatRequest, session: Session = D
         )
         session.add(user_msg_row)
         session.commit()
+        print(f"[Chat DEBUG] ✅ user message saved — user_id={user.id}, session_id={session_id}")
 
         recent_rows = session.exec(
             select(ChatMessage)
@@ -151,6 +165,9 @@ async def send_message(request: Request, body: ChatRequest, session: Session = D
         )
         session.add(ai_msg_row)
         session.commit()
+        print(f"[Chat DEBUG] ✅ assistant message saved — user_id={user.id}, session_id={session_id}")
+    else:
+        print(f"[Chat DEBUG] ⚠️ guest mode — no messages saved to DB")
 
     return {"role": "assistant", "content": reply, "session_id": session_id, "agent_name": agent_name}
 
