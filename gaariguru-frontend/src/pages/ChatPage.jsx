@@ -55,6 +55,19 @@ async function deleteSession(sessionId) {
 export default function ChatPage() {
   const [sessionsList, setSessionsList] = useState([]);
   const [activeSessionId, setActiveSessionId] = useState(null);
+
+  // FIX: ref mirrors activeSessionId so handleSend always reads the
+  // current session ID synchronously, even if a second message is sent
+  // before React has flushed the previous state update. Without this,
+  // rapid consecutive messages each get session_id=null and the backend
+  // creates a new session for every message instead of continuing the
+  // existing one.
+  const activeSessionIdRef = useRef(null);
+
+  const setSession = (id) => {
+    activeSessionIdRef.current = id;
+    setActiveSessionId(id);
+  };
   
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
@@ -105,7 +118,7 @@ export default function ChatPage() {
       setAgentName(data.agent_name || 'GaariGuru Expert');
       setNameInput(data.agent_name || 'GaariGuru Expert');
       setMessages(data.messages.map(m => ({ role: m.role, content: m.content })));
-      setActiveSessionId(sessionId);
+      setSession(sessionId);
     } catch (err) {
       console.error(err);
     } finally {
@@ -114,7 +127,7 @@ export default function ChatPage() {
   };
 
   const startNewChat = () => {
-    setActiveSessionId(null);
+    setSession(null);
     setMessages([{
       role: 'assistant',
       content: `Asalam o Alaikum! ${agentName} here. Which car are you looking to buy or inspect today?`,
@@ -131,10 +144,12 @@ export default function ChatPage() {
     setIsTyping(true);
 
     try {
-      const data = await sendMessage(query, activeSessionId);
+      // Read from ref, not state — guarantees the current session ID
+      // is always available synchronously regardless of React flush timing.
+      const data = await sendMessage(query, activeSessionIdRef.current);
       
-      if (data.session_id && !activeSessionId) {
-        setActiveSessionId(data.session_id);
+      if (data.session_id && !activeSessionIdRef.current) {
+        setSession(data.session_id);
       }
 
       setMessages(prev => [...prev, { role: 'assistant', content: data.content }]);
@@ -158,7 +173,7 @@ export default function ChatPage() {
     try {
       await deleteSession(sessionId);
       setSessionsList(prev => prev.filter(s => s.session_id !== sessionId));
-      if (activeSessionId === sessionId) {
+      if (activeSessionIdRef.current === sessionId) {
         startNewChat();
       }
     } catch (err) {
