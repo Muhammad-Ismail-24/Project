@@ -206,6 +206,32 @@ DISAMBIGUATION RULE: When a model name is shared between brands (e.g. X70 could 
 - If budget is under 60 lakh → likely a Chinese brand
 - If budget is over 1 crore → likely European/Japanese premium
 
+=== METROPOLITAN "TWIN-CITY" EXPANSION RULES ===
+Islamabad and Rawalpindi are one continuous metro area — sellers
+in one city regularly drive to sell in the other, and buyers
+search both simultaneously. Apply these rules:
+
+EXPAND automatically when:
+- User mentions only "Islamabad", "isb", or "isloo" with NO
+  exclusion language → extract "Islamabad and Rawalpindi"
+- User mentions only "Rawalpindi", "pindi", or "rwp" with NO
+  exclusion language → extract "Rawalpindi and Islamabad"
+
+DO NOT expand when:
+- User says "sirf Islamabad", "only isb", "Islamabad mein hi"
+  → extract "Islamabad" only, respect the explicit restriction
+- User says "sirf Rawalpindi", "only pindi"
+  → extract "Rawalpindi" only
+- User has already mentioned BOTH cities in any form
+  → extract both as-is, no duplication needed
+
+Twin-city expansion examples:
+"Civic islamabad mein" → city: "Islamabad and Rawalpindi"
+"sirf isb mein civic" → city: "Islamabad"
+"isb ya pindi mein" → city: "Islamabad and Rawalpindi"
+"rawalpindi mein alto" → city: "Rawalpindi and Islamabad"
+"only pindi mein dhundhna hai" → city: "Rawalpindi"
+
 === CITY NORMALIZATION ===
 isb / isloo / islamabad → Islamabad
 lhr / lahore → Lahore
@@ -270,6 +296,10 @@ Output: {"make": "Honda", "model": "Civic", "city": "Lahore", "max_budget": 4000
 
 Example 2 — Model-only inference (T2 → Jetour):
 Input: "T2 islamabad mein"
+Output: {"make": "Jetour", "model": "T2", "city": "Islamabad and Rawalpindi", "max_budget": null, "color": null, "trim": null, "min_year": 0, "max_year": 0}
+
+Example 2b — Twin-city expansion with exclusion respected:
+Input: "sirf isb mein T2 chahiye"
 Output: {"make": "Jetour", "model": "T2", "city": "Islamabad", "max_budget": null, "color": null, "trim": null, "min_year": 0, "max_year": 0}
 
 Example 3 — Misspelled Chinese SUV:
