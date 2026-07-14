@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/chat", tags=["Chatbot"])
 
 CONTEXT_WINDOW_SIZE = 10
 
-class SendMessageRequest(BaseModel):
+class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
     session_id: Optional[str] = None
 
@@ -25,7 +25,7 @@ def _get_user_or_none(request: Request, session: Session) -> Optional[User]:
         return None
     return session.exec(select(User).where(User.email == email)).first()
 
-@router.get("/history/sessions")
+@router.get("/sessions")
 async def get_chat_sessions(request: Request, session: Session = Depends(get_session)):
     user = _get_user_or_none(request, session)
     if not user:
@@ -74,13 +74,13 @@ async def get_session_history(session_id: str, request: Request, session: Sessio
     }
 
 @router.post("")
-async def send_message(request: Request, body: SendMessageRequest, session: Session = Depends(get_session)):
+async def send_message(request: Request, body: ChatRequest, session: Session = Depends(get_session)):
     new_message_text = body.message.strip()
     user = _get_user_or_none(request, session)
     
     session_id = body.session_id
-    if not session_id:
-        session_id = str(uuid.uuid4())
+    if not session_id or not session_id.strip():
+        session_id = uuid.uuid4().hex
 
     if user:
         user_msg_row = ChatMessage(
