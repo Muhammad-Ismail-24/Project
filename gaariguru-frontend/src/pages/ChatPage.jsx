@@ -126,7 +126,6 @@ export default function ChatPage() {
     const query = input.trim();
     if (!query || isTyping) return;
 
-    // Optimistically append the user's message to the UI
     setMessages(prev => [...prev, { role: 'user', content: query }]);
     setInput('');
     setIsTyping(true);
@@ -134,7 +133,6 @@ export default function ChatPage() {
     try {
       const data = await sendMessage(query, activeSessionId);
       
-      // CRITICAL: Ensure subsequent messages go to the same thread
       if (data.session_id && !activeSessionId) {
         setActiveSessionId(data.session_id);
       }
@@ -143,7 +141,6 @@ export default function ChatPage() {
       if (data.agent_name) setAgentName(data.agent_name);
       
       if (!isGuest) {
-        // Refresh sidebar
         const sessionsData = await fetchSessions();
         setSessionsList(sessionsData.sessions || []);
       }

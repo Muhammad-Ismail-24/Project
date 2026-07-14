@@ -46,7 +46,6 @@ class User(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Configurable AI assistant name — user sets this in Settings.
-    # Default "GaariGuru Expert" is used until user changes it.
     agent_name: str = Field(default="GaariGuru Expert")
 
     saved_listings: List["SavedListing"] = Relationship(
@@ -74,14 +73,7 @@ class SavedListing(SQLModel, table=True):
 
 
 class ChatMessage(SQLModel, table=True):
-    """
-    Persistent chat history for logged-in users.
-
-    One row per message turn. Guests never write here — their
-    conversation exists only in React state for the session.
-
-    role: "user" | "assistant"
-    """
+    """Persistent chat history for logged-in users."""
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", index=True)
     session_id: str = Field(index=True)
