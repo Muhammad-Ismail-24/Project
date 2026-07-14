@@ -22,8 +22,26 @@ class UpdateAgentNameRequest(BaseModel):
 def _get_user_or_none(request: Request, session: Session) -> Optional[User]:
     email = request.session.get("user_email")
     if not email:
-        return None
-    return session.exec(select(User).where(User.email == email)).first()
+        return None # No cookie found, user is a true guest
+        
+    user = session.exec(select(User).where(User.email == email)).first()
+    
+    # --- THE AUTO-HEAL FIX ---
+    if not user:
+        # The browser cookie is valid, but the DB row is missing.
+        # Recreate the user profile instantly on the fly.
+        new_user = User(
+            email=email,
+            name=request.session.get("user_name") or "Muhammad Ismail",
+            picture=request.session.get("user_picture"),
+            agent_name="GaariGuru Expert"
+        )
+        session.add(new_user)
+        session.commit()
+        session.refresh(new_user)
+        return new_user
+        
+    return user
 
 @router.get("/sessions")
 async def get_chat_sessions(request: Request, session: Session = Depends(get_session)):
