@@ -24,7 +24,7 @@ from typing import Optional
 
 from agents.chatbot import get_chatbot_response, CHATBOT_FALLBACK_RESPONSE, DEFAULT_AGENT_NAME
 from models.db_models import User, ChatMessage
-from models.database import get_session   # your existing sync session factory
+from database import get_session
 
 router = APIRouter(prefix="/api/chat", tags=["Chatbot"])
 
