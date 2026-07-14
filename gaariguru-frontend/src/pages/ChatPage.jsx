@@ -3,14 +3,13 @@ import { Send, Sparkles, User, Loader2, Trash2, Settings } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://carfinder-project-backend.onrender.com';
 
-// ─── API helpers (inline so no changes needed to utils/api.js) ──────────────
-
+// ─── API helpers ──────────────
 async function fetchHistory() {
   const res = await fetch(`${API_BASE}/api/chat/history`, {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to fetch history');
-  return res.json();   // { agent_name, messages: [{role, content}], is_guest }
+  return res.json();
 }
 
 async function sendMessage(message) {
@@ -24,7 +23,7 @@ async function sendMessage(message) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.detail || 'Chat service unavailable.');
   }
-  return res.json();   // { reply, agent_name }
+  return res.json();
 }
 
 async function updateAgentName(agent_name) {
@@ -55,21 +54,18 @@ export default function ChatPage() {
   const [agentName, setAgentName] = useState('GaariGuru Expert');
   const [isGuest, setIsGuest] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);   // loading history on mount
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Agent name editor state
   const [showNameEditor, setShowNameEditor] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [nameSaving, setNameSaving] = useState(false);
 
   const chatEndRef = useRef(null);
 
-  // ── Auto-scroll ────────────────────────────────────────────────────────────
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  // ── Load history on mount ──────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
@@ -79,10 +75,8 @@ export default function ChatPage() {
         setNameInput(data.agent_name || 'GaariGuru Expert');
 
         if (data.messages && data.messages.length > 0) {
-          // Logged-in user with existing history — show it directly
           setMessages(data.messages.map(m => ({ role: m.role, content: m.content })));
         } else {
-          // Guest OR logged-in with no history — show default greeting
           const name = data.agent_name || 'GaariGuru Expert';
           setMessages([{
             role: 'assistant',
@@ -90,7 +84,6 @@ export default function ChatPage() {
           }]);
         }
       } catch {
-        // Network error / backend down — show default greeting anyway
         setMessages([{
           role: 'assistant',
           content: "Asalam o Alaikum! GaariGuru Expert here. Which car are you looking to buy or inspect today?",
@@ -101,23 +94,19 @@ export default function ChatPage() {
     })();
   }, []);
 
-  // ── Send message ──────────────────────────────────────────────────────────
   const handleSend = async (e) => {
     e.preventDefault();
     const query = input.trim();
     if (!query || isTyping) return;
 
-    // Append user message immediately for snappy UX
     setMessages(prev => [...prev, { role: 'user', content: query }]);
     setInput('');
     setIsTyping(true);
 
     try {
-      // Send ONLY the new message — server reconstructs context from DB (logged-in)
-      // or handles it as a stateless single-turn request (guest)
       const data = await sendMessage(query);
-      setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
-      // Sync agent name in case it changed server-side
+      // FIXED: Uses data.content based on backend updates, with a fallback to data.reply
+      setMessages(prev => [...prev, { role: 'assistant', content: data.content || data.reply }]);
       if (data.agent_name) setAgentName(data.agent_name);
     } catch (err) {
       const errMsg = err.message || 'Automotive chat service is temporarily unavailable.';
@@ -127,7 +116,6 @@ export default function ChatPage() {
     }
   };
 
-  // ── Clear history ─────────────────────────────────────────────────────────
   const handleClearHistory = async () => {
     if (!window.confirm('Clear your entire chat history? This cannot be undone.')) return;
     try {
@@ -141,7 +129,6 @@ export default function ChatPage() {
     }
   };
 
-  // ── Save agent name ───────────────────────────────────────────────────────
   const handleSaveAgentName = async () => {
     const trimmed = nameInput.trim();
     if (!trimmed || trimmed === agentName) {
@@ -161,15 +148,11 @@ export default function ChatPage() {
     }
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="relative z-10 flex flex-col h-[calc(100vh-80px)] max-w-4xl mx-auto px-4 py-6">
-
       {/* Header */}
       <div className="text-center mb-6 relative">
         <h1 className="text-3xl font-black tracking-tight">AI Assistant</h1>
-
-        {/* Agent name display + editor toggle */}
         <div className="flex items-center justify-center gap-2 mt-1">
           {showNameEditor ? (
             <div className="flex items-center gap-2">
@@ -202,7 +185,6 @@ export default function ChatPage() {
               <p className="text-neutral-500 font-medium">
                 {isLoading ? 'Loading...' : `Powered by ${agentName}`}
               </p>
-              {/* Only show rename button for logged-in users */}
               {!isGuest && (
                 <button
                   onClick={() => setShowNameEditor(true)}
@@ -216,7 +198,6 @@ export default function ChatPage() {
           )}
         </div>
 
-        {/* Clear history button — top-right, logged-in only */}
         {!isGuest && messages.length > 1 && (
           <button
             onClick={handleClearHistory}
@@ -231,7 +212,6 @@ export default function ChatPage() {
 
       {/* Chat Feed */}
       <div className="flex-1 overflow-y-auto space-y-6 mb-6 p-4 bg-white/40 backdrop-blur-xl border border-white/50 rounded-3xl shadow-inner scrollbar-hide">
-
         {isLoading ? (
           <div className="flex items-center justify-center h-full text-neutral-400 font-medium">
             <Loader2 className="w-5 h-5 animate-spin mr-2" />
@@ -249,7 +229,8 @@ export default function ChatPage() {
                 </div>
               )}
 
-              <div className={`max-w-[75%] p-4 rounded-2xl text-[15px] leading-relaxed font-medium whitespace-pre-wrap ${
+              {/* FIXED: Added 'break-words' to prevent long string overflow masking */}
+              <div className={`max-w-[75%] p-4 rounded-2xl text-[15px] leading-relaxed font-medium whitespace-pre-wrap break-words ${
                 msg.role === 'user'
                   ? 'bg-black text-white rounded-br-none shadow-md'
                   : 'bg-white border border-neutral-200 text-black rounded-bl-none shadow-sm'
@@ -266,7 +247,6 @@ export default function ChatPage() {
           ))
         )}
 
-        {/* Typing indicator */}
         {isTyping && (
           <div className="flex items-end space-x-3 justify-start">
             <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center shrink-0 shadow-md animate-pulse">
@@ -282,7 +262,6 @@ export default function ChatPage() {
         <div ref={chatEndRef} />
       </div>
 
-      {/* Guest notice */}
       {isGuest && !isLoading && (
         <p className="text-center text-xs text-neutral-400 mb-2">
           Sign in to save your conversation history and customize your assistant's name.
@@ -307,7 +286,6 @@ export default function ChatPage() {
           <Send className="w-5 h-5 ml-1" />
         </button>
       </form>
-
     </div>
   );
 }
