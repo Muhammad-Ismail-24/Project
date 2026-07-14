@@ -67,7 +67,7 @@ async def _execute_gemini_fallback_chat(formatted_messages: list) -> str:
 
     # Use a stable, fast Gemini model and pass the system instruction natively
     model = genai.GenerativeModel(
-        "gemini-1.5-flash",
+        "gemini-3.1-flash-lite",
         system_instruction=system_instruction
     )
 
