@@ -17,7 +17,7 @@ This prevents token bloat while preserving enough context for multi-turn
 conversations about a single car model.
 """
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 from typing import Optional
@@ -70,36 +70,35 @@ def _get_user_or_none(request: Request, session: Session) -> Optional[User]:
 # ---------------------------------------------------------------------------
 
 @router.get("/history")
-async def get_chat_history(request: Request):
+async def get_chat_history(request: Request, session: Session = Depends(get_session)):
     """
     Returns the full chronological chat history for the logged-in user.
     Returns an empty list for guests (no error — frontend handles both cases).
     Also returns the user's configured agent_name so the frontend can display it.
     """
-    with get_session() as session:
-        user = _get_user_or_none(request, session)
+    user = _get_user_or_none(request, session)
 
-        if not user:
-            return {
-                "agent_name": DEFAULT_AGENT_NAME,
-                "messages": [],
-                "is_guest": True,
-            }
-
-        messages = session.exec(
-            select(ChatMessage)
-            .where(ChatMessage.user_id == user.id)
-            .order_by(ChatMessage.created_at.asc())
-        ).all()
-
+    if not user:
         return {
-            "agent_name": user.agent_name,
-            "messages": [
-                {"role": m.role, "content": m.content, "created_at": m.created_at.isoformat()}
-                for m in messages
-            ],
-            "is_guest": False,
+            "agent_name": DEFAULT_AGENT_NAME,
+            "messages": [],
+            "is_guest": True,
         }
+
+    messages = session.exec(
+        select(ChatMessage)
+        .where(ChatMessage.user_id == user.id)
+        .order_by(ChatMessage.created_at.asc())
+    ).all()
+
+    return {
+        "agent_name": user.agent_name,
+        "messages": [
+            {"role": m.role, "content": m.content, "created_at": m.created_at.isoformat()}
+            for m in messages
+        ],
+        "is_guest": False,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -107,7 +106,7 @@ async def get_chat_history(request: Request):
 # ---------------------------------------------------------------------------
 
 @router.post("")
-async def send_message(request: Request, body: SendMessageRequest):
+async def send_message(request: Request, body: SendMessageRequest, session: Session = Depends(get_session)):
     """
     Accepts a single new user message and returns the AI reply.
 
@@ -124,67 +123,66 @@ async def send_message(request: Request, body: SendMessageRequest):
     """
     new_message_text = body.message.strip()
 
-    with get_session() as session:
-        user = _get_user_or_none(request, session)
+    user = _get_user_or_none(request, session)
 
-        if user:
-            # --- Logged-in path ---
+    if user:
+        # --- Logged-in path ---
 
-            # 1. Persist the user's message
-            user_msg_row = ChatMessage(
-                user_id=user.id,
-                role="user",
-                content=new_message_text,
-            )
-            session.add(user_msg_row)
-            session.commit()
+        # 1. Persist the user's message
+        user_msg_row = ChatMessage(
+            user_id=user.id,
+            role="user",
+            content=new_message_text,
+        )
+        session.add(user_msg_row)
+        session.commit()
 
-            # 2. Fetch the last N messages (includes the one we just saved)
-            recent_rows = session.exec(
-                select(ChatMessage)
-                .where(ChatMessage.user_id == user.id)
-                .order_by(ChatMessage.created_at.desc())
-                .limit(CONTEXT_WINDOW_SIZE)
-            ).all()
+        # 2. Fetch the last N messages (includes the one we just saved)
+        recent_rows = session.exec(
+            select(ChatMessage)
+            .where(ChatMessage.user_id == user.id)
+            .order_by(ChatMessage.created_at.desc())
+            .limit(CONTEXT_WINDOW_SIZE)
+        ).all()
 
-            # Reverse so chronological order is preserved for the LLM
-            context_messages = [
-                {"role": row.role, "content": row.content}
-                for row in reversed(recent_rows)
-            ]
+        # Reverse so chronological order is preserved for the LLM
+        context_messages = [
+            {"role": row.role, "content": row.content}
+            for row in reversed(recent_rows)
+        ]
 
-            agent_name = user.agent_name or DEFAULT_AGENT_NAME
+        agent_name = user.agent_name or DEFAULT_AGENT_NAME
 
-        else:
-            # --- Guest path ---
-            context_messages = [{"role": "user", "content": new_message_text}]
-            agent_name = DEFAULT_AGENT_NAME
+    else:
+        # --- Guest path ---
+        context_messages = [{"role": "user", "content": new_message_text}]
+        agent_name = DEFAULT_AGENT_NAME
 
-        # 3. Call the LLM
-        try:
-            reply = await get_chatbot_response(context_messages, agent_name=agent_name)
-        except Exception as e:
-            print(f"[Chat Router] LLM call failed: {e}")
-            raise HTTPException(
-                status_code=503,
-                detail="Automotive chat service is temporarily unavailable. Please try again later."
-            )
+    # 3. Call the LLM
+    try:
+        reply = await get_chatbot_response(context_messages, agent_name=agent_name)
+    except Exception as e:
+        print(f"[Chat Router] LLM call failed: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail="Automotive chat service is temporarily unavailable. Please try again later."
+        )
 
-        if reply == CHATBOT_FALLBACK_RESPONSE:
-            raise HTTPException(
-                status_code=503,
-                detail="Automotive chat service is temporarily unavailable. Please try again later."
-            )
+    if reply == CHATBOT_FALLBACK_RESPONSE:
+        raise HTTPException(
+            status_code=503,
+            detail="Automotive chat service is temporarily unavailable. Please try again later."
+        )
 
-        # 4. Persist the AI reply (logged-in only)
-        if user:
-            ai_msg_row = ChatMessage(
-                user_id=user.id,
-                role="assistant",
-                content=reply,
-            )
-            session.add(ai_msg_row)
-            session.commit()
+    # 4. Persist the AI reply (logged-in only)
+    if user:
+        ai_msg_row = ChatMessage(
+            user_id=user.id,
+            role="assistant",
+            content=reply,
+        )
+        session.add(ai_msg_row)
+        session.commit()
 
     return {"reply": reply, "agent_name": agent_name}
 
@@ -194,19 +192,18 @@ async def send_message(request: Request, body: SendMessageRequest):
 # ---------------------------------------------------------------------------
 
 @router.put("/agent")
-async def update_agent_name(request: Request, body: UpdateAgentNameRequest):
+async def update_agent_name(request: Request, body: UpdateAgentNameRequest, session: Session = Depends(get_session)):
     """
     Saves the user's preferred AI assistant name.
     Guests receive 401 — this setting only makes sense for logged-in users.
     """
-    with get_session() as session:
-        user = _get_user_or_none(request, session)
-        if not user:
-            raise HTTPException(status_code=401, detail="Login required to customize your assistant.")
+    user = _get_user_or_none(request, session)
+    if not user:
+        raise HTTPException(status_code=401, detail="Login required to customize your assistant.")
 
-        user.agent_name = body.agent_name.strip()
-        session.add(user)
-        session.commit()
+    user.agent_name = body.agent_name.strip()
+    session.add(user)
+    session.commit()
 
     return {"agent_name": user.agent_name, "message": "Assistant name updated."}
 
@@ -216,22 +213,21 @@ async def update_agent_name(request: Request, body: UpdateAgentNameRequest):
 # ---------------------------------------------------------------------------
 
 @router.delete("/history")
-async def clear_chat_history(request: Request):
+async def clear_chat_history(request: Request, session: Session = Depends(get_session)):
     """
     Deletes all stored chat messages for the logged-in user.
     Useful for starting a fresh conversation. Guests receive 401.
     """
-    with get_session() as session:
-        user = _get_user_or_none(request, session)
-        if not user:
-            raise HTTPException(status_code=401, detail="Login required.")
+    user = _get_user_or_none(request, session)
+    if not user:
+        raise HTTPException(status_code=401, detail="Login required.")
 
-        messages = session.exec(
-            select(ChatMessage).where(ChatMessage.user_id == user.id)
-        ).all()
+    messages = session.exec(
+        select(ChatMessage).where(ChatMessage.user_id == user.id)
+    ).all()
 
-        for msg in messages:
-            session.delete(msg)
-        session.commit()
+    for msg in messages:
+        session.delete(msg)
+    session.commit()
 
     return {"message": f"Cleared {len(messages)} messages from your chat history."}
