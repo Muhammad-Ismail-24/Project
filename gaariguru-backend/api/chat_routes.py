@@ -20,27 +20,40 @@ class UpdateAgentNameRequest(BaseModel):
     agent_name: str = Field(..., min_length=1, max_length=40)
 
 def _get_user_or_none(request: Request, session: Session) -> Optional[User]:
-    email = request.session.get("user_email")
-    if not email:
-        return None # No cookie found, user is a true guest
-        
-    user = session.exec(select(User).where(User.email == email)).first()
-    
-    # --- THE AUTO-HEAL FIX ---
+    # FIX: auth route saves 'user_id' to session, NOT 'user_email'.
+    # Reading 'user_email' always returned None, putting every logged-in
+    # user into guest mode. Confirmed via Render logs:
+    #   all session keys: ['user_id']   ← cookie arrives correctly
+    #   user_email in cookie session: None  ← wrong key was being read
+    user_id = request.session.get("user_id")
+    if not user_id:
+        # Try email as a fallback in case auth route varies
+        email = request.session.get("user_email")
+        if not email:
+            return None
+        user = session.exec(select(User).where(User.email == email)).first()
+        return user
+
+    user = session.exec(select(User).where(User.id == int(user_id))).first()
+
+    # Auto-heal: valid session but DB row missing (e.g. after DB reset)
     if not user:
-        # The browser cookie is valid, but the DB row is missing.
-        # Recreate the user profile instantly on the fly.
-        new_user = User(
-            email=email,
-            name=request.session.get("user_name") or "Muhammad Ismail",
-            picture=request.session.get("user_picture"),
-            agent_name="GaariGuru Expert"
-        )
-        session.add(new_user)
-        session.commit()
-        session.refresh(new_user)
-        return new_user
-        
+        email = request.session.get("user_email")
+        name = request.session.get("user_name") or "User"
+        picture = request.session.get("user_picture")
+        if email:
+            new_user = User(
+                email=email,
+                name=name,
+                picture=picture,
+                agent_name="GaariGuru Expert"
+            )
+            session.add(new_user)
+            session.commit()
+            session.refresh(new_user)
+            return new_user
+        return None
+
     return user
 
 @router.get("/sessions")
@@ -94,21 +107,8 @@ async def get_session_history(session_id: str, request: Request, session: Sessio
 @router.post("")
 async def send_message(request: Request, body: ChatRequest, session: Session = Depends(get_session)):
     new_message_text = body.message.strip()
-    
-    # ── DIAGNOSTIC LOGGING ──────────────────────────────────────────────
-    # These lines tell us exactly what the backend sees on each request.
-    # Remove after confirming the bug is fixed.
-    email_in_session = request.session.get("user_email")
-    print(f"[Chat DEBUG] POST /api/chat received")
-    print(f"[Chat DEBUG] session_id in body: {repr(body.session_id)}")
-    print(f"[Chat DEBUG] user_email in cookie session: {repr(email_in_session)}")
-    print(f"[Chat DEBUG] all session keys: {list(request.session.keys())}")
-    # ────────────────────────────────────────────────────────────────────
-    
     user = _get_user_or_none(request, session)
-    
-    print(f"[Chat DEBUG] user resolved to: {user.email if user else 'None (guest mode)'}")
-    
+
     session_id = body.session_id
     if not session_id or not session_id.strip():
         session_id = uuid.uuid4().hex
@@ -122,7 +122,6 @@ async def send_message(request: Request, body: ChatRequest, session: Session = D
         )
         session.add(user_msg_row)
         session.commit()
-        print(f"[Chat DEBUG] ✅ user message saved — user_id={user.id}, session_id={session_id}")
 
         recent_rows = session.exec(
             select(ChatMessage)
