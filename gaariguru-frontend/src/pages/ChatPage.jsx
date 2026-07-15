@@ -1,5 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, User, Loader2, Trash2, Settings, Plus, MessageSquare } from 'lucide-react';
+import { Send, Sparkles, User, Loader2, Trash2, Settings, Plus, MessageSquare, X } from 'lucide-react';
+
+// ─── Typing dots — three bouncing spans with staggered delays ─────────────────
+// Extracted as a tiny component so it can be used both in the isTyping bubble
+// and anywhere else a "pending" state needs to be shown.
+function TypingDots() {
+  return (
+    <span className="flex items-center gap-[5px]" aria-label="Typing">
+      <span className="w-2 h-2 rounded-full bg-neutral-400 animate-bounce [animation-delay:0ms]"   />
+      <span className="w-2 h-2 rounded-full bg-neutral-400 animate-bounce [animation-delay:160ms]" />
+      <span className="w-2 h-2 rounded-full bg-neutral-400 animate-bounce [animation-delay:320ms]" />
+    </span>
+  );
+}
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://carfinder-project-backend.onrender.com';
 
@@ -301,47 +314,17 @@ export default function ChatPage() {
           <div className="flex flex-col">
             <h1 className="text-xl font-black tracking-tight text-black">GaariGuru Expert</h1>
             <div className="flex items-center gap-2">
-              {showNameEditor ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={nameInput}
-                    onChange={e => setNameInput(e.target.value)}
-                    maxLength={40}
-                    className="border border-neutral-300 rounded-md px-2 py-0.5 text-xs outline-none focus:border-black"
-                    placeholder="Enter assistant name..."
-                    onKeyDown={e => e.key === 'Enter' && handleSaveAgentName()}
-                    autoFocus
-                  />
-                  <button
-                    onClick={handleSaveAgentName}
-                    disabled={nameSaving}
-                    className="text-[10px] uppercase font-bold bg-black text-white px-2 py-1 rounded disabled:opacity-50"
-                  >
-                    {nameSaving ? 'Saving' : 'Save'}
-                  </button>
-                  <button
-                    onClick={() => { setShowNameEditor(false); setNameInput(agentName); }}
-                    className="text-[10px] uppercase font-bold text-neutral-500 hover:text-black px-1"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <p className="text-xs text-neutral-500 font-medium">
-                    {isLoading ? 'Loading...' : `Powered by ${agentName}`}
-                  </p>
-                  {!isGuest && (
-                    <button
-                      onClick={() => setShowNameEditor(true)}
-                      title="Rename your assistant"
-                      className="text-neutral-400 hover:text-black transition-colors"
-                    >
-                      <Settings className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </>
+              <p className="text-xs text-neutral-500 font-medium">
+                {isLoading ? 'Loading...' : `Powered by ${agentName}`}
+              </p>
+              {!isGuest && (
+                <button
+                  onClick={() => { setNameInput(agentName); setShowNameEditor(true); }}
+                  title="Assistant preferences"
+                  className="text-neutral-400 hover:text-black transition-colors"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                </button>
               )}
             </div>
           </div>
@@ -365,25 +348,38 @@ export default function ChatPage() {
             messages.map((msg, idx) => (
               <div
                 key={idx}
-                className={`flex items-end space-x-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex items-end gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
+                {/* ── AI avatar — subtle gradient background + soft glow ring ── */}
                 {msg.role === 'assistant' && (
-                  <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center shrink-0 shadow-sm border border-neutral-200">
-                    <Sparkles className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center
+                                  bg-gradient-to-br from-neutral-800 to-black
+                                  shadow-[0_0_0_3px_rgba(0,0,0,0.06),0_0_18px_rgba(0,0,0,0.12)]
+                                  border border-white/10">
+                    <Sparkles className="w-3.5 h-3.5 text-white" />
                   </div>
                 )}
 
-                <div className={`max-w-[85%] md:max-w-[70%] p-4 rounded-2xl text-[15px] leading-relaxed font-medium whitespace-pre-wrap break-words ${
-                  msg.role === 'user'
-                    ? 'bg-neutral-100 text-black rounded-br-none shadow-sm border border-neutral-200'
-                    : 'bg-white border border-neutral-200 text-black rounded-bl-none shadow-sm'
-                }`}>
+                {/* ── Message bubble ── */}
+                <div className={`
+                  max-w-[85%] md:max-w-[70%]
+                  px-5 py-3.5
+                  rounded-2xl
+                  text-[15px] leading-relaxed font-medium
+                  whitespace-pre-wrap break-words
+                  ${msg.role === 'user'
+                    ? 'bg-neutral-900 text-white rounded-br-sm shadow-sm'
+                    : 'bg-white text-neutral-800 rounded-bl-sm border border-neutral-100 shadow-[0_2px_12px_rgba(0,0,0,0.06)]'
+                  }
+                `}>
                   {msg.content}
                 </div>
 
+                {/* ── User avatar ── */}
                 {msg.role === 'user' && (
-                  <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center shrink-0 shadow-sm">
-                    <User className="w-4 h-4 text-white" />
+                  <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center
+                                  bg-neutral-200 border border-neutral-300">
+                    <User className="w-4 h-4 text-neutral-600" />
                   </div>
                 )}
               </div>
@@ -391,13 +387,21 @@ export default function ChatPage() {
           )}
 
           {isTyping && (
-            <div className="flex items-end space-x-3 justify-start">
-              <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center shrink-0 shadow-sm border border-neutral-200 animate-pulse">
-                <Sparkles className="w-4 h-4" />
+            <div className="flex items-end gap-3 justify-start">
+              {/* Same polished avatar as in the message list */}
+              <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center
+                              bg-gradient-to-br from-neutral-800 to-black
+                              shadow-[0_0_0_3px_rgba(0,0,0,0.06),0_0_18px_rgba(0,0,0,0.12)]
+                              border border-white/10">
+                <Sparkles className="w-3.5 h-3.5 text-white" />
               </div>
-              <div className="bg-white border border-neutral-200 text-neutral-500 p-4 rounded-2xl rounded-bl-none shadow-sm flex items-center space-x-2 text-[15px] font-medium">
-                <Loader2 className="w-4 h-4 animate-spin text-black" />
-                <span>{agentName} is typing...</span>
+
+              {/* Typing bubble — same geometry as assistant bubbles */}
+              <div className="px-5 py-3.5 rounded-2xl rounded-bl-sm
+                              bg-white border border-neutral-100
+                              shadow-[0_2px_12px_rgba(0,0,0,0.06)]
+                              flex items-center gap-2">
+                <TypingDots />
               </div>
             </div>
           )}
@@ -434,6 +438,137 @@ export default function ChatPage() {
         </div>
 
       </div>
+
+      {/* ── Settings Slide-over ─────────────────────────────────────────────────
+          Rendered at the root level so it layers correctly above the sidebar
+          and chat area without being clipped by any overflow:hidden ancestor.
+
+          Backdrop: fixed, full-screen, z-50 so it sits above the sticky header
+          (z-10). Clicking it closes the drawer without saving.
+
+          Drawer: slides in from the right via translate-x transform.
+          CSS transition handles the animation — no Framer Motion needed here,
+          keeping the bundle lean.
+
+          All handleSaveAgentName / updateAgentName logic is unchanged.
+      ──────────────────────────────────────────────────────────────────────── */}
+
+      {/* Backdrop */}
+      <div
+        aria-hidden="true"
+        onClick={() => { setShowNameEditor(false); setNameInput(agentName); }}
+        className={[
+          'fixed inset-0 z-50',
+          'bg-black/20 backdrop-blur-sm',
+          'transition-opacity duration-300',
+          showNameEditor ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
+        ].join(' ')}
+      />
+
+      {/* Drawer panel */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Assistant preferences"
+        className={[
+          'fixed inset-y-0 right-0 z-50',
+          'w-80 lg:w-96',
+          'bg-white shadow-2xl',
+          'flex flex-col',
+          'transition-transform duration-300 ease-out',
+          showNameEditor ? 'translate-x-0' : 'translate-x-full',
+        ].join(' ')}
+      >
+        {/* ── Drawer header ── */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-100">
+          <div>
+            <h2 className="text-base font-black tracking-tight text-black">
+              Assistant Preferences
+            </h2>
+            <p className="text-xs text-neutral-400 font-medium mt-0.5">
+              Personalise your AI expert
+            </p>
+          </div>
+          <button
+            onClick={() => { setShowNameEditor(false); setNameInput(agentName); }}
+            className="w-8 h-8 flex items-center justify-center rounded-full text-neutral-400 hover:text-black hover:bg-neutral-100 transition-colors"
+            aria-label="Close preferences"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* ── Drawer body ── */}
+        <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8">
+
+          {/* Agent name field */}
+          <div className="space-y-2">
+            <label
+              htmlFor="agent-name-input"
+              className="block text-xs font-black tracking-widest uppercase text-neutral-500"
+            >
+              Assistant Name
+            </label>
+            <input
+              id="agent-name-input"
+              type="text"
+              value={nameInput}
+              onChange={e => setNameInput(e.target.value)}
+              maxLength={40}
+              placeholder="e.g. GaariGuru Expert, Ustad Jee…"
+              onKeyDown={e => e.key === 'Enter' && handleSaveAgentName()}
+              autoFocus={showNameEditor}
+              className={[
+                'w-full px-4 py-3',
+                'rounded-xl border',
+                'text-sm font-medium text-black',
+                'placeholder-neutral-300',
+                'outline-none transition-all duration-200',
+                'focus:border-black focus:ring-2 focus:ring-black/8 focus:shadow-md',
+                'border-neutral-200 bg-neutral-50 hover:border-neutral-300',
+              ].join(' ')}
+            />
+            <p className="text-xs text-neutral-400">
+              This name appears in the header and in the AI's greeting message.
+            </p>
+          </div>
+
+          {/* Current name preview chip */}
+          <div className="rounded-xl bg-neutral-50 border border-neutral-100 px-4 py-3 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center
+                            bg-gradient-to-br from-neutral-800 to-black
+                            shadow-[0_0_0_3px_rgba(0,0,0,0.06)]">
+              <Sparkles className="w-3.5 h-3.5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-black text-black truncate">
+                {nameInput.trim() || 'GaariGuru Expert'}
+              </p>
+              <p className="text-[11px] text-neutral-400">Preview</p>
+            </div>
+          </div>
+
+        </div>
+
+        {/* ── Drawer footer — sticky save / cancel ── */}
+        <div className="px-6 py-5 border-t border-neutral-100 flex gap-3">
+          <button
+            onClick={() => { setShowNameEditor(false); setNameInput(agentName); }}
+            className="flex-1 py-3 rounded-xl border border-neutral-200 text-sm font-bold text-neutral-600 hover:bg-neutral-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSaveAgentName}
+            disabled={nameSaving || !nameInput.trim()}
+            className="flex-1 py-3 rounded-xl bg-black text-white text-sm font-bold hover:bg-neutral-800 transition-colors disabled:opacity-50"
+          >
+            {nameSaving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+
+      </div>
+
     </div>
   );
 }
