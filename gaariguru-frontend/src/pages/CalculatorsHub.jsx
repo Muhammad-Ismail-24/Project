@@ -12,26 +12,22 @@ const CC_OPTIONS = [
 ];
 
 export default function CalculatorsHub() {
-  // Fuel Calculator State
   const [fuelCc, setFuelCc] = useState(1300);
   const [fuelKm, setFuelKm] = useState(40);
   const [fuelCost, setFuelCost] = useState(null);
   const [fuelLoading, setFuelLoading] = useState(false);
 
-  // Transfer Fee State
   const [transferCc, setTransferCc] = useState(1300);
   const [transferFiler, setTransferFiler] = useState(true);
   const [transferCost, setTransferCost] = useState(null);
   const [transferLoading, setTransferLoading] = useState(false);
 
-  // Token Tax State
   const [tokenCc, setTokenCc] = useState(1300);
   const [tokenProvince, setTokenProvince] = useState("Punjab");
   const [tokenFiler, setTokenFiler] = useState(true);
   const [tokenCost, setTokenCost] = useState(null);
   const [tokenLoading, setTokenLoading] = useState(false);
 
-  // Fuel Cost Sync Effect
   useEffect(() => {
     let active = true;
     const fetchFuel = async () => {
@@ -39,17 +35,12 @@ export default function CalculatorsHub() {
       try {
         const res = await calculateFuel({ car_segment_cc: fuelCc, daily_commute_km: fuelKm });
         if (active) setFuelCost(res.monthly_fuel_cost_pkr);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        if (active) setFuelLoading(false);
-      }
+      } catch (err) { console.error(err); } finally { if (active) setFuelLoading(false); }
     };
     fetchFuel();
     return () => { active = false; };
   }, [fuelCc, fuelKm]);
 
-  // Transfer Fee Sync Effect
   useEffect(() => {
     let active = true;
     const fetchTransfer = async () => {
@@ -57,17 +48,12 @@ export default function CalculatorsHub() {
       try {
         const res = await calculateTransfer({ engine_cc: transferCc, is_filer: transferFiler });
         if (active) setTransferCost(res.total_transfer_cost_pkr);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        if (active) setTransferLoading(false);
-      }
+      } catch (err) { console.error(err); } finally { if (active) setTransferLoading(false); }
     };
     fetchTransfer();
     return () => { active = false; };
   }, [transferCc, transferFiler]);
 
-  // Token Tax Sync Effect
   useEffect(() => {
     let active = true;
     const fetchToken = async () => {
@@ -75,11 +61,7 @@ export default function CalculatorsHub() {
       try {
         const res = await calculateToken({ engine_cc: tokenCc, is_filer: tokenFiler, province: tokenProvince });
         if (active) setTokenCost(res.total_annual_token_tax_pkr);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        if (active) setTokenLoading(false);
-      }
+      } catch (err) { console.error(err); } finally { if (active) setTokenLoading(false); }
     };
     fetchToken();
     return () => { active = false; };
@@ -91,29 +73,34 @@ export default function CalculatorsHub() {
   };
 
   return (
-    <div className="relative z-10 pt-32 px-6 pb-24 min-h-screen">
+    <div className="relative z-10 pt-32 px-6 pb-24 min-h-screen font-sans text-black">
+      {/* ── 1-Tone Solid Grey Background ── */}
+      <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden flex items-center justify-center bg-[#a3a3a3]">
+        <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(#000000 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+        <div className="absolute w-[80vw] h-[80vw] max-w-[1000px] max-h-[1000px] bg-white rounded-full blur-[140px] top-[0%] left-[-10%] opacity-40" />
+      </div>
+
       <div className="max-w-7xl mx-auto">
-        
         <div className="text-center mb-16">
           <h1 className="text-5xl font-black tracking-tighter mb-4 text-black">Financial Tools</h1>
-          <p className="text-xl text-neutral-500 font-medium">Calculate exact running costs, taxes, and transfer fees before you buy.</p>
+          <p className="text-xl text-black/60 font-bold">Calculate exact running costs, taxes, and transfer fees before you buy.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           
           {/* Card 1: Fuel Calculator */}
-          <div className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-2xl p-8 shadow-lg">
+          <div className="bg-white/60 backdrop-blur-md border border-black/15 rounded-3xl p-8 shadow-xl">
             <div className="flex items-center mb-6">
-              <div className="p-3 bg-black rounded-xl text-white mr-4"><Fuel className="w-6 h-6" /></div>
-              <h2 className="text-2xl font-bold tracking-tight">Fuel Cost</h2>
+              <div className="p-3 bg-black rounded-xl text-white mr-4 shadow-md"><Fuel className="w-6 h-6" /></div>
+              <h2 className="text-2xl font-black tracking-tight">Fuel Cost</h2>
             </div>
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-bold mb-2">Engine Capacity (CC)</label>
+                <label className="block text-sm font-black uppercase tracking-wider mb-2">Engine Capacity</label>
                 <select 
                   value={fuelCc}
                   onChange={(e) => setFuelCc(Number(e.target.value))}
-                  className="w-full p-4 bg-transparent border border-neutral-300 rounded-xl outline-none focus:border-black font-medium transition-colors cursor-pointer"
+                  className="w-full p-4 bg-white/50 border border-black/15 rounded-xl outline-none focus:border-black font-bold transition-colors cursor-pointer shadow-sm"
                 >
                   {CC_OPTIONS.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -122,8 +109,8 @@ export default function CalculatorsHub() {
               </div>
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <label className="text-sm font-bold">Daily Commute</label>
-                  <span className="text-sm font-bold text-neutral-500">{fuelKm} km</span>
+                  <label className="text-sm font-black uppercase tracking-wider">Daily Commute</label>
+                  <span className="text-sm font-bold text-black/60">{fuelKm} km</span>
                 </div>
                 <input 
                   type="range" 
@@ -134,24 +121,24 @@ export default function CalculatorsHub() {
                   className="w-full accent-black cursor-pointer" 
                 />
               </div>
-              <div className="pt-4 mt-4 border-t border-neutral-200">
-                <p className="text-sm text-neutral-500 font-bold uppercase tracking-wider mb-1">Est. Monthly Cost</p>
+              <div className="pt-4 mt-4 border-t border-black/15">
+                <p className="text-xs text-black/60 font-black uppercase tracking-widest mb-1">Est. Monthly Cost</p>
                 <p className="text-4xl font-black">
-                  {fuelLoading ? "Calculating..." : formatPKR(fuelCost)}
+                  {fuelLoading ? "..." : formatPKR(fuelCost)}
                 </p>
               </div>
             </div>
           </div>
 
           {/* Card 2: Transfer Fee */}
-          <div className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-2xl p-8 shadow-lg">
+          <div className="bg-white/60 backdrop-blur-md border border-black/15 rounded-3xl p-8 shadow-xl">
             <div className="flex items-center mb-6">
-              <div className="p-3 bg-black rounded-xl text-white mr-4"><FileText className="w-6 h-6" /></div>
-              <h2 className="text-2xl font-bold tracking-tight">Transfer Fee</h2>
+              <div className="p-3 bg-black rounded-xl text-white mr-4 shadow-md"><FileText className="w-6 h-6" /></div>
+              <h2 className="text-2xl font-black tracking-tight">Transfer Fee</h2>
             </div>
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-bold mb-2">Filer Status</label>
+                <label className="block text-sm font-black uppercase tracking-wider mb-2">Filer Status</label>
                 <div className="flex space-x-6">
                   <label className="flex items-center space-x-2 cursor-pointer">
                     <input 
@@ -161,7 +148,7 @@ export default function CalculatorsHub() {
                       onChange={() => setTransferFiler(true)}
                       className="accent-black w-4 h-4" 
                     />
-                    <span className="font-semibold text-sm">Active Filer</span>
+                    <span className="font-bold text-sm">Active Filer</span>
                   </label>
                   <label className="flex items-center space-x-2 cursor-pointer">
                     <input 
@@ -171,44 +158,44 @@ export default function CalculatorsHub() {
                       onChange={() => setTransferFiler(false)}
                       className="accent-black w-4 h-4" 
                     />
-                    <span className="font-semibold text-sm">Non-Filer</span>
+                    <span className="font-bold text-sm">Non-Filer</span>
                   </label>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-bold mb-2">Engine Capacity (CC)</label>
+                <label className="block text-sm font-black uppercase tracking-wider mb-2">Engine Capacity</label>
                 <select 
                   value={transferCc}
                   onChange={(e) => setTransferCc(Number(e.target.value))}
-                  className="w-full p-4 bg-transparent border border-neutral-300 rounded-xl outline-none focus:border-black font-medium transition-colors cursor-pointer"
+                  className="w-full p-4 bg-white/50 border border-black/15 rounded-xl outline-none focus:border-black font-bold transition-colors cursor-pointer shadow-sm"
                 >
                   {CC_OPTIONS.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
               </div>
-              <div className="pt-4 mt-4 border-t border-neutral-200">
-                <p className="text-sm text-neutral-500 font-bold uppercase tracking-wider mb-1">Total Fee</p>
+              <div className="pt-4 mt-4 border-t border-black/15">
+                <p className="text-xs text-black/60 font-black uppercase tracking-widest mb-1">Total Fee</p>
                 <p className="text-4xl font-black">
-                  {transferLoading ? "Calculating..." : formatPKR(transferCost)}
+                  {transferLoading ? "..." : formatPKR(transferCost)}
                 </p>
               </div>
             </div>
           </div>
 
           {/* Card 3: Token Tax */}
-          <div className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-2xl p-8 shadow-lg">
+          <div className="bg-white/60 backdrop-blur-md border border-black/15 rounded-3xl p-8 shadow-xl">
             <div className="flex items-center mb-6">
-              <div className="p-3 bg-black rounded-xl text-white mr-4"><Landmark className="w-6 h-6" /></div>
-              <h2 className="text-2xl font-bold tracking-tight">Token Tax</h2>
+              <div className="p-3 bg-black rounded-xl text-white mr-4 shadow-md"><Landmark className="w-6 h-6" /></div>
+              <h2 className="text-2xl font-black tracking-tight">Token Tax</h2>
             </div>
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-bold mb-2">Registration Province</label>
+                <label className="block text-sm font-black uppercase tracking-wider mb-2">Province</label>
                 <select 
                   value={tokenProvince}
                   onChange={(e) => setTokenProvince(e.target.value)}
-                  className="w-full p-4 bg-transparent border border-neutral-300 rounded-xl outline-none focus:border-black font-medium transition-colors cursor-pointer"
+                  className="w-full p-4 bg-white/50 border border-black/15 rounded-xl outline-none focus:border-black font-bold transition-colors cursor-pointer shadow-sm"
                 >
                   <option value="Punjab">Punjab</option>
                   <option value="Sindh">Sindh</option>
@@ -217,11 +204,11 @@ export default function CalculatorsHub() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-bold mb-2">Engine Capacity (CC)</label>
+                <label className="block text-sm font-black uppercase tracking-wider mb-2">Engine Capacity</label>
                 <select 
                   value={tokenCc}
                   onChange={(e) => setTokenCc(Number(e.target.value))}
-                  className="w-full p-4 bg-transparent border border-neutral-300 rounded-xl outline-none focus:border-black font-medium transition-colors cursor-pointer"
+                  className="w-full p-4 bg-white/50 border border-black/15 rounded-xl outline-none focus:border-black font-bold transition-colors cursor-pointer shadow-sm"
                 >
                   {CC_OPTIONS.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -229,7 +216,7 @@ export default function CalculatorsHub() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-bold mb-2">Filer Status</label>
+                <label className="block text-sm font-black uppercase tracking-wider mb-2">Filer Status</label>
                 <div className="flex space-x-6">
                   <label className="flex items-center space-x-2 cursor-pointer">
                     <input 
@@ -239,7 +226,7 @@ export default function CalculatorsHub() {
                       onChange={() => setTokenFiler(true)}
                       className="accent-black w-4 h-4" 
                     />
-                    <span className="font-semibold text-sm">Active Filer</span>
+                    <span className="font-bold text-sm">Active Filer</span>
                   </label>
                   <label className="flex items-center space-x-2 cursor-pointer">
                     <input 
@@ -249,14 +236,14 @@ export default function CalculatorsHub() {
                       onChange={() => setTokenFiler(false)}
                       className="accent-black w-4 h-4" 
                     />
-                    <span className="font-semibold text-sm">Non-Filer</span>
+                    <span className="font-bold text-sm">Non-Filer</span>
                   </label>
                 </div>
               </div>
-              <div className="pt-4 mt-4 border-t border-neutral-200">
-                <p className="text-sm text-neutral-500 font-bold uppercase tracking-wider mb-1">Annual Tax</p>
+              <div className="pt-4 mt-4 border-t border-black/15">
+                <p className="text-xs text-black/60 font-black uppercase tracking-widest mb-1">Annual Tax</p>
                 <p className="text-4xl font-black">
-                  {tokenLoading ? "Calculating..." : formatPKR(tokenCost)}
+                  {tokenLoading ? "..." : formatPKR(tokenCost)}
                 </p>
               </div>
             </div>
