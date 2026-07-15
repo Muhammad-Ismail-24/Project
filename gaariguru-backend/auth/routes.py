@@ -5,23 +5,20 @@ from auth.config import oauth, SECRET_KEY
 from database import get_session
 from models.db_models import User
 import os
-import jwt
-from datetime import datetime, timedelta, timezone
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.get("/login")
 async def login(request: Request):
     """Redirect to Google for OAuth authentication."""
-    # Construct the callback URL
-    redirect_uri = request.url_for("auth_callback")
+    # Since Vercel proxies the request, FastAPI's request.url_for() generates the Render URL.
+    # We MUST explicitly send the Vercel URL to Google to match Cloud Console.
     
-    # Render requires secure cookies (https). Make sure redirect_uri is https if not local
-    if "onrender.com" in str(redirect_uri) or os.getenv("RENDER"):
-        redirect_uri = str(redirect_uri).replace("http://", "https://")
+    # Defaults to Vercel, but allows local testing if FRONTEND_URL is set to localhost
+    frontend_url = os.getenv("FRONTEND_URL", "https://carfinderproject.vercel.app").rstrip("/")
+    redirect_uri = f"{frontend_url}/auth/google/callback"
 
     return await oauth.google.authorize_redirect(request, redirect_uri)
-
 
 @router.get("/google/callback", name="auth_callback")
 async def auth_callback(request: Request, db: Session = Depends(get_session)):
@@ -72,7 +69,7 @@ async def auth_callback(request: Request, db: Session = Depends(get_session)):
     request.session["user_id"] = user.id
 
     # Redirect to the frontend dashboard
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    frontend_url = os.getenv("FRONTEND_URL", "https://carfinderproject.vercel.app").rstrip("/")
     return RedirectResponse(url=f"{frontend_url}/")
 
 @router.get("/me")
