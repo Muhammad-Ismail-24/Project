@@ -152,6 +152,40 @@ RESALE VALUE REALITY (as of 2025-2026):
 - Poor resale: Chinese brands (MG, Changan, Haval) — newer, so resale data limited but depreciation faster than Japanese
 - Dead money: European luxury (BMW, Mercedes, Audi) — parts costs and depreciation brutal unless you use it as a business
 
+TOYOTA COROLLA PAKISTANI GENERATION NAMES (critical — LLMs frequently confuse these):
+- "Indus Corolla" / "Indus shape": 1994–2001 ONLY. Boxy, fully discontinued. Assembled by Indus Motors originally.
+- "Corolla X" / "X shape": 2002–2007 (NZE121/NZE122). Pakistani buyers call this the X shape. Available as XLi, GLi.
+- "Altis shape" / "2009 Corolla" / "new shape (old)": 2008–2014 (E140). Called "new shape" by older generation of buyers. XLi, GLi, Altis trims.
+- "New Corolla" / "2014 shape": 2014–2021 (E160/E170). What most buyers mean when they say "new shape Corolla" today. XLi, GLi, Altis 1.6, Altis Grande 1.8.
+- "Latest shape": 2021+ (E210). Very new, rare in used market.
+
+NEVER call the 2002-2007 model the "Indus shape". Indus shape ended in 2001.
+NEVER say "Indus shape 2005-2008" — this generation does not exist under that name.
+At a budget of PKR 15 lakhs (2025-2026 market), realistic Corolla options are:
+  - 2007-2010 (end of X shape or early Altis shape) — these are the honest targets at this budget.
+  - A "clean" 2008-2012 Altis shape is possible at 15-17 lakhs depending on condition.
+  - 2014+ shape starts at 25+ lakhs minimum for any reasonable condition.
+
+HONDA CITY PAKISTANI GENERATION NAMES:
+- "Old City" / "i-DSI": 2003–2008 (4th gen). 1.3L i-DSI engine. Fuel efficient but underpowered.
+- "2009 City": 2009–2014 (5th gen). 1.3L and 1.5L i-VTEC. Popular, reliable, sweet spot.
+- "2015 City": 2015–2020 (6th gen). Still 1.5L i-VTEC. Grace variant introduced.
+- "New City": 2021+ (7th gen). 1.2L and 1.5L i-VTEC. Currently assembled.
+At PKR 15 lakhs: realistic City options are 2011–2014 (5th gen) in reasonable condition.
+
+HONDA CIVIC PAKISTANI GENERATION NAMES:
+- "FD Civic" / "Reborn Civic": 2006–2011 (8th gen). Very popular resale car.
+- "FB Civic": 2012–2015 (9th gen). Known AC compressor failures especially 2012-2013. Avoid those years.
+- "FC Civic" / "Turbo Civic": 2016–2021 (10th gen). 1.5L Turbo CVT. Most modern widely available.
+- "11th gen Civic": 2022+ — very new, rare used.
+
+SUZUKI GENERATION NOTES:
+- "Old Cultus": 2000–2017 (boxy shape). Dead reliable, parts available everywhere, cheap.
+- "New Cultus": 2017–present. Decent but AGS auto variant has chronic transmission issues.
+- "Old Alto" (800cc): Discontinued 2018. The classic boxy one.
+- "New Alto" (660cc): 2019–present. Main Alto sold today. Completely different platform.
+- "Mehran": Discontinued 2019. Still enormously common used. Parts literally everywhere.
+
 TRIM COMPARISON QUICK REFERENCE:
 - Corolla: XLi < GLi < Altis 1.6 < Altis 1.8 Grande (Grande = leather, sunroof, alloys)
 - Civic: Standard < Oriel < RS (RS = sport kit, sunroof, paddle shifters)
