@@ -64,7 +64,7 @@ function BmwModel() {
       return;
     }
 
-    // ── 2. Cinematic Drive-Off Trajectory ──
+    // ── 2. Cinematic Drive-Off Trajectory (Ratio Fixed) ──
     const scrollY = window.scrollY;
     const maxScroll = document.body.scrollHeight - window.innerHeight;
     const rawProgress = maxScroll > 0 ? scrollY / maxScroll : 0;
@@ -76,9 +76,12 @@ function BmwModel() {
       delta
     );
 
-    // CHANGED: Target X is now -35 (way off screen) and Z is -15 (deeper into the background)
-    const currentX = THREE.MathUtils.lerp(4, -35, smoothedProgress.current);
-    const currentZ = THREE.MathUtils.lerp(2, -15, smoothedProgress.current);
+    // FIXED: Maintained the exact 5:8 ratio for Z:X travel to prevent sideways drifting.
+    // Original good ratio was X: 4 to -12 (diff -16), Z: 2 to -8 (diff -10).
+    // Scaled by 2.5x to drive off screen -> X diff: -40, Z diff: -25.
+    // New Targets -> X: 4 - 40 = -36 | Z: 2 - 25 = -23
+    const currentX = THREE.MathUtils.lerp(4, -36, smoothedProgress.current);
+    const currentZ = THREE.MathUtils.lerp(2, -23, smoothedProgress.current);
     
     // Locked angle for perfectly straight reversing
     const fixedAngle = (Math.PI / 5) + Math.PI;
