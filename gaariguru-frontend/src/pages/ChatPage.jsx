@@ -11,7 +11,6 @@ function TypingDots() {
   );
 }
 
-// PROXY FIX: Changed this to an empty string so it automatically routes to /api/...
 const API_BASE = '';
 
 async function fetchSessions() {
@@ -86,6 +85,9 @@ export default function ChatPage() {
   const [nameInput, setNameInput] = useState('');
   const [nameSaving, setNameSaving] = useState(false);
 
+  // New layout state to manage the mobile history sidebar toggle
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
   const chatEndRef = useRef(null);
 
   useEffect(() => {
@@ -150,6 +152,7 @@ export default function ChatPage() {
 
   const loadSession = async (sessionId) => {
     setIsLoading(true);
+    setIsMobileSidebarOpen(false); // Close mobile history drawer when a chat is selected
     try {
       const data = await fetchSessionHistory(sessionId);
       setAgentName(data.agent_name || 'GaariGuru Expert');
@@ -165,6 +168,7 @@ export default function ChatPage() {
 
   const startNewChat = () => {
     setSession(null);
+    setIsMobileSidebarOpen(false); // Close mobile history drawer when starting a new chat
     setMessages([{
       role: 'assistant',
       content: `Asalam o Alaikum! ${agentName} here. Which car are you looking to buy or inspect today?`,
@@ -236,11 +240,23 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-80px)] w-full overflow-hidden bg-[#a3a3a3] font-sans text-black">
+    <div className="flex h-[calc(100vh-80px)] w-full overflow-hidden bg-[#a3a3a3] font-sans text-black relative">
       
-      {/* ── Sidebar ── */}
+      {/* ── Mobile Sidebar Backdrop ── */}
+      {isMobileSidebarOpen && !isGuest && (
+        <div 
+          onClick={() => setIsMobileSidebarOpen(false)}
+          className="fixed inset-0 top-20 z-30 bg-black/20 backdrop-blur-sm md:hidden"
+        />
+      )}
+
+      {/* ── Sidebar (Responsive Dynamic Layout) ── */}
       {!isGuest && (
-        <div className="w-64 bg-white/20 backdrop-blur-md border-r border-black/15 flex flex-col shrink-0">
+        <div className={`
+          fixed top-20 bottom-0 left-0 z-40 w-64 bg-[#a3a3a3] border-r border-black/15 flex flex-col shrink-0 transition-transform duration-300 ease-in-out
+          md:static md:translate-x-0 md:bg-white/20 md:backdrop-blur-md h-full
+          ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}>
           <div className="p-4 border-b border-black/15">
             <button 
               onClick={startNewChat}
@@ -278,28 +294,42 @@ export default function ChatPage() {
       )}
 
       {/* ── Main Chat Area ── */}
-      <div className="flex-1 flex flex-col h-full relative">
+      <div className="flex-1 flex flex-col h-full relative min-w-0">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-black/15 bg-white/40 backdrop-blur-md sticky top-0 z-10 shadow-sm">
-          <div className="flex flex-col">
-            <h1 className="text-xl font-black tracking-tight text-black">GaariGuru Expert</h1>
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-black/60 font-bold">
-                {isLoading ? 'Loading...' : `Powered by ${agentName}`}
-              </p>
-              {!isGuest && (
-                <button
-                  onClick={() => { setNameInput(agentName); setShowNameEditor(true); }}
-                  title="Assistant preferences"
-                  className="text-black/40 hover:text-black transition-colors"
-                >
-                  <Settings className="w-3.5 h-3.5" />
-                </button>
-              )}
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-black/15 bg-white/40 backdrop-blur-md sticky top-0 z-10 shadow-sm">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Toggle History Button (Only visible on Mobile Phones) */}
+            {!isGuest && (
+              <button
+                onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+                className="md:hidden p-2 text-black hover:bg-black/10 rounded-xl border border-black/10 bg-white/60 shadow-sm transition-all shrink-0"
+                title="Toggle chat history"
+              >
+                <MessageSquare className="w-5 h-5" />
+              </button>
+            )}
+            
+            <div className="flex flex-col min-w-0">
+              <h1 className="text-lg sm:text-xl font-black tracking-tight text-black truncate">GaariGuru Expert</h1>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs text-black/60 font-bold truncate">
+                  {isLoading ? 'Loading...' : `Powered by ${agentName}`}
+                </p>
+                {!isGuest && (
+                  <button
+                    onClick={() => { setNameInput(agentName); setShowNameEditor(true); }}
+                    title="Assistant preferences"
+                    className="text-black/40 hover:text-black transition-colors shrink-0"
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          
+          <div className="flex items-center gap-2 shrink-0">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-black/10 bg-white/60 text-xs font-bold text-black shadow-sm">
               <span className="w-2 h-2 rounded-full bg-black"></span>
               Online
@@ -318,18 +348,16 @@ export default function ChatPage() {
             messages.map((msg, idx) => (
               <div
                 key={idx}
-                className={`flex items-end gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex items-end gap-2 sm:gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                {/* AI Avatar */}
                 {msg.role === 'assistant' && (
                   <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center bg-black shadow-md border border-white/20">
                     <Sparkles className="w-3.5 h-3.5 text-white" />
                   </div>
                 )}
 
-                {/* Message Bubble */}
                 <div className={`
-                  max-w-[85%] md:max-w-[70%] px-5 py-3.5 rounded-3xl text-[15px] leading-relaxed font-bold whitespace-pre-wrap break-words shadow-md
+                  max-w-[88%] md:max-w-[70%] px-4 sm:px-5 py-3 rounded-3xl text-[14px] sm:text-[15px] leading-relaxed font-bold whitespace-pre-wrap break-words shadow-md
                   ${msg.role === 'user'
                     ? 'bg-black text-white rounded-br-sm border border-black'
                     : 'bg-white/60 backdrop-blur-md text-black rounded-bl-sm border border-black/15'
@@ -338,7 +366,6 @@ export default function ChatPage() {
                   {msg.content}
                 </div>
 
-                {/* User Avatar */}
                 {msg.role === 'user' && (
                   <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center bg-white border border-black/20 shadow-sm">
                     <User className="w-4 h-4 text-black" />
@@ -377,14 +404,14 @@ export default function ChatPage() {
                 onChange={e => setInput(e.target.value)}
                 placeholder="Ask about fuel averages, ground clearance, parts..."
                 disabled={isTyping || isLoading}
-                className="w-full bg-white/60 backdrop-blur-md border border-black/20 rounded-full pl-6 pr-16 py-4 outline-none focus:border-black focus:ring-1 focus:ring-black transition-all font-bold text-base md:text-lg placeholder-black/50 text-black shadow-sm disabled:opacity-60"
+                className="w-full bg-white/60 backdrop-blur-md border border-black/20 rounded-full pl-5 pr-14 py-3.5 outline-none focus:border-black focus:ring-1 focus:ring-black transition-all font-bold text-sm sm:text-base placeholder-black/50 text-black shadow-sm disabled:opacity-60"
               />
               <button
                 type="submit"
                 disabled={isTyping || isLoading || !input.trim()}
-                className="absolute right-2 w-12 h-12 bg-black text-white rounded-full flex items-center justify-center hover:bg-neutral-800 transition-colors shadow-md disabled:opacity-50"
+                className="absolute right-1.5 w-10 h-12 bg-black text-white rounded-full flex items-center justify-center hover:bg-neutral-800 transition-colors shadow-md disabled:opacity-50"
               >
-                <Send className="w-5 h-5 ml-1" />
+                <Send className="w-4 h-4 ml-0.5" />
               </button>
             </form>
           </div>
