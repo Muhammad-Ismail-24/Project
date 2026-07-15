@@ -104,7 +104,7 @@ export default function Home() {
           >
             {/* Accent Badge */}
             <motion.div variants={heroItemVariants}>
-              <div className="inline-flex items-center px-5 py-2 rounded-full bg-black text-white text-xs font-bold tracking-widest uppercase mb-8">
+              <div className="inline-flex items-center px-5 py-2 rounded-full bg-black text-white text-xs font-bold tracking-widest uppercase mb-8 shadow-md">
                 GaariGuru AI Engine
               </div>
             </motion.div>
@@ -140,11 +140,11 @@ export default function Home() {
               simultaneously to ensure you never miss a deal.
             </p>
             <div className="flex flex-wrap gap-3">
-              {/* Grey Pills with Black Borders */}
+              {/* Grey Pills with Soft Elevation */}
               {['PakWheels', 'OLX Pakistan', 'Drive.pk', 'Gari.pk'].map(platform => (
                 <span
                   key={platform}
-                  className="px-5 py-2.5 bg-[#a3a3a3] border border-black rounded-full text-sm font-bold tracking-wide text-black cursor-default"
+                  className="px-5 py-2.5 bg-[#a3a3a3] border border-black/15 shadow-md rounded-full text-sm font-bold tracking-wide text-black cursor-default"
                 >
                   {platform}
                 </span>
@@ -157,8 +157,8 @@ export default function Home() {
             SECTION 3 — AI Info Panel
         ════════════════════════════════════════════════════════════════════ */}
         <div className="min-h-screen flex flex-col justify-center px-6 max-w-7xl mx-auto">
-          {/* Grey Panel with Black Border */}
-          <div className="max-w-xl ml-auto bg-[#a3a3a3] p-10 rounded-[2rem] border border-black shadow-2xl">
+          {/* Elevated Grey Panel */}
+          <div className="max-w-xl ml-auto bg-[#a3a3a3] p-10 rounded-[2rem] border border-black/15 shadow-2xl">
             <ShieldCheck className="w-12 h-12 text-black mb-6" />
             <h2 className="text-4xl font-black tracking-tight mb-4 text-black">
               Powered by AI
@@ -201,7 +201,7 @@ export default function Home() {
               )}
 
               {error && (
-                <div className="flex items-center space-x-3 bg-[#a3a3a3] border border-black text-black p-6 rounded-2xl">
+                <div className="flex items-center space-x-3 bg-[#a3a3a3] border border-black/15 shadow-md text-black p-6 rounded-2xl">
                   <AlertCircle className="w-6 h-6 shrink-0" />
                   <p className="font-bold">{error}</p>
                 </div>
@@ -209,12 +209,12 @@ export default function Home() {
 
               {bestPick && !isLoading && (
                 <div className="space-y-6">
-                  <div className="inline-flex items-center space-x-2 bg-black text-white font-bold text-sm uppercase px-4 py-1.5 rounded-full tracking-wider">
+                  <div className="inline-flex items-center space-x-2 bg-black text-white font-bold text-sm uppercase px-4 py-1.5 rounded-full tracking-wider shadow-md">
                     <Sparkles className="w-4 h-4" />
                     <span>Best AI Match</span>
                   </div>
                   {/* Result Card Wrapper */}
-                  <div className="rounded-3xl overflow-hidden shadow-2xl border border-black bg-[#a3a3a3]">
+                  <div className="rounded-3xl overflow-hidden shadow-2xl border border-black/15 bg-[#a3a3a3]">
                     <CarResultCard
                       car={bestPick}
                       isHighlighted={true}
@@ -225,13 +225,13 @@ export default function Home() {
               )}
 
               {otherResults.length > 0 && !isLoading && (
-                <div className="space-y-6 pt-6 border-t border-black/20">
+                <div className="space-y-6 pt-6 border-t border-black/10">
                   <h3 className="text-2xl font-black tracking-tight text-black">
                     Alternative Matches
                   </h3>
                   <div className="space-y-6">
                     {otherResults.map(car => (
-                      <div key={car.id} className="rounded-3xl overflow-hidden border border-black bg-[#a3a3a3]">
+                      <div key={car.id} className="rounded-3xl overflow-hidden border border-black/15 shadow-xl bg-[#a3a3a3]">
                         <CarResultCard car={car} savedListingIds={savedListingIds} />
                       </div>
                     ))}
@@ -240,7 +240,7 @@ export default function Home() {
               )}
 
               {results.length === 0 && !isLoading && !error && (
-                <div className="text-center py-20 bg-[#a3a3a3] rounded-3xl border border-black shadow-lg">
+                <div className="text-center py-20 bg-[#a3a3a3] rounded-3xl border border-black/15 shadow-xl">
                   <p className="text-black font-semibold text-lg">
                     No search query executed yet. Try typing something above!
                   </p>
