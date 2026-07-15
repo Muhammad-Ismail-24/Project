@@ -16,7 +16,6 @@ const heroItemVariants = {
   visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 80, damping: 18, mass: 1 } },
 };
 
-// ─── Custom Typewriter (Responsive Font Sizes) ─────────────────────────────────
 const HeroTypewriter = () => {
   const line1 = "Find the right car.";
   const line2 = "Skip the wrong ones.";
@@ -50,7 +49,6 @@ const HeroTypewriter = () => {
   }, [phase, displayed1, displayed2, line1, line2]);
 
   return (
-    // Responsive Text sizes and dynamic min-height so it doesn't push UI on mobile
     <h1 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tighter text-black mb-6 leading-[0.95] md:leading-[0.9] min-h-[100px] sm:min-h-[120px] md:min-h-[145px]">
       {displayed1}
       {phase === 1 && <span className="animate-pulse text-black ml-1">|</span>}
@@ -67,6 +65,9 @@ export default function Home() {
   const [bestPick, setBestPick] = useState(null);
   const [error, setError] = useState(null);
   const [savedListingIds, setSavedListingIds] = useState(new Set());
+  
+  // NEW STATE: Tracks if the user has actually pressed enter/search
+  const [hasSearched, setHasSearched] = useState(false);
 
   useEffect(() => {
     const fetchSavedListings = async () => {
@@ -83,12 +84,23 @@ export default function Home() {
 
   const handleSearch = async (query) => {
     if (!query.trim()) return;
-    setResults([]); setBestPick(null); setError(null); setIsLoading(true);
+    
+    // Reset states for a new search
+    setResults([]); 
+    setBestPick(null); 
+    setError(null); 
+    setIsLoading(true);
+    setHasSearched(true); // Flag that a search was initiated
+    
     try {
       const data = await searchCars(query);
       setResults(data);
       if (data && data.length > 0) setBestPick(data[0]);
-    } catch (err) { setError('Search failed.'); } finally { setIsLoading(false); }
+    } catch (err) { 
+      setError('Search failed. Please try again.'); 
+    } finally { 
+      setIsLoading(false); 
+    }
   };
 
   const otherResults = results.filter(car => !bestPick || car.id !== bestPick.id);
@@ -96,7 +108,6 @@ export default function Home() {
   return (
     <div className="relative w-full overflow-x-hidden font-sans text-black">
 
-      {/* ── Background ── */}
       <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden flex items-center justify-center bg-[#a3a3a3]">
         <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(#000000 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
         <div className="absolute w-[80vw] h-[80vw] max-w-[1000px] max-h-[1000px] bg-white rounded-full blur-[140px] top-[0%] right-[-10%] opacity-40" />
@@ -106,7 +117,6 @@ export default function Home() {
 
       <div className="relative z-10 w-full">
 
-        {/* SECTION 1 — Hero */}
         <div className="min-h-[80vh] lg:min-h-screen flex flex-col justify-center px-6 max-w-7xl mx-auto pt-32 lg:pt-40 pb-16 lg:pb-0">
           <motion.div className="max-w-md" variants={heroContainerVariants} initial="hidden" animate="visible">
             <motion.div variants={heroItemVariants}>
@@ -126,7 +136,6 @@ export default function Home() {
           </motion.div>
         </div>
 
-        {/* SECTION 2 — Market Platforms */}
         <div className="min-h-[70vh] lg:min-h-screen flex flex-col justify-center px-6 max-w-7xl mx-auto py-16 lg:py-0">
           <div className="max-w-md">
             <Database className="w-8 h-8 md:w-10 md:h-10 text-black mb-4 md:mb-6" />
@@ -147,7 +156,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* SECTION 3 — AI Info Panel */}
         <div className="min-h-[70vh] lg:min-h-screen flex flex-col justify-center px-6 max-w-7xl mx-auto py-16 lg:py-0">
           <div className="max-w-xl ml-auto bg-[#a3a3a3] p-8 md:p-10 rounded-3xl md:rounded-[2rem] border border-black/15 shadow-2xl">
             <ShieldCheck className="w-8 h-8 md:w-12 md:h-12 text-black mb-4 md:mb-6" />
@@ -162,7 +170,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* SECTION 4 — Search */}
         <div id="search-section" className="min-h-[80vh] lg:min-h-screen px-6 pt-24 lg:pt-32 pb-[30vh] lg:pb-[40vh] relative z-20">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-10 md:mb-12">
@@ -220,9 +227,19 @@ export default function Home() {
                 </div>
               )}
 
-              {results.length === 0 && !isLoading && !error && (
+              {/* FIX: Shows when the strict AI vetoes all listings */}
+              {results.length === 0 && !isLoading && !error && hasSearched && (
                 <div className="text-center py-16 md:py-20 bg-white/60 backdrop-blur-md rounded-2xl md:rounded-3xl border border-black/15 shadow-xl">
-                  <p className="text-base md:text-lg font-bold text-black px-4">
+                  <p className="text-base md:text-lg font-black text-black px-4">
+                    No cars found matching your strict criteria. Try broadening your search or budget!
+                  </p>
+                </div>
+              )}
+
+              {/* FIX: Shows only when they first load the page */}
+              {results.length === 0 && !isLoading && !error && !hasSearched && (
+                <div className="text-center py-16 md:py-20 bg-white/60 backdrop-blur-md rounded-2xl md:rounded-3xl border border-black/15 shadow-xl">
+                  <p className="text-base md:text-lg font-black text-black px-4">
                     No search query executed yet. Try typing something above!
                   </p>
                 </div>
