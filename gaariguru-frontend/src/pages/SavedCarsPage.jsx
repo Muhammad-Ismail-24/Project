@@ -12,7 +12,8 @@ export default function SavedCarsPage() {
   useEffect(() => {
     const fetchSavedCars = async () => {
       try {
-        const response = await fetch('https://carfinder-project-backend.onrender.com/user/saved-listings', {
+        // PROXY FIX: Using relative path
+        const response = await fetch('/user/saved-listings', {
           method: 'GET',
           credentials: 'include',
         });
@@ -44,7 +45,6 @@ export default function SavedCarsPage() {
 
   return (
     <div className="relative w-full min-h-[calc(100vh-80px)] overflow-x-hidden font-sans text-black">
-      {/* ── 1-Tone Solid Grey Background ── */}
       <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden flex items-center justify-center bg-[#a3a3a3]">
         <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(#000000 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
         <div className="absolute w-[80vw] h-[80vw] max-w-[1000px] max-h-[1000px] bg-white rounded-full blur-[140px] top-[0%] right-[-10%] opacity-40" />

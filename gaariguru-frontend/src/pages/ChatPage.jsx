@@ -11,7 +11,8 @@ function TypingDots() {
   );
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://carfinder-project-backend.onrender.com';
+// PROXY FIX: Changed this to an empty string so it automatically routes to /api/...
+const API_BASE = '';
 
 async function fetchSessions() {
   const res = await fetch(`${API_BASE}/api/chat/sessions`, { credentials: 'include' });

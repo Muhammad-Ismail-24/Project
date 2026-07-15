@@ -19,9 +19,9 @@ export default function SaveCarButton({ listingId, platform, title, savedListing
 
     try {
       if (isSaved) {
-        // Unsave
+        // PROXY FIX: Unsave using relative path
         const encodedId = encodeURIComponent(listingId);
-        const response = await fetch(`https://carfinder-project-backend.onrender.com/user/saved-listings/${encodedId}`, {
+        const response = await fetch(`/user/saved-listings/${encodedId}`, {
           method: 'DELETE',
           credentials: 'include',
         });
@@ -39,8 +39,8 @@ export default function SaveCarButton({ listingId, platform, title, savedListing
           }
         }
       } else {
-        // Save
-        const response = await fetch('https://carfinder-project-backend.onrender.com/user/saved-listings', {
+        // PROXY FIX: Save using relative path
+        const response = await fetch('/user/saved-listings', {
           method: 'POST',
           credentials: 'include',
           headers: {

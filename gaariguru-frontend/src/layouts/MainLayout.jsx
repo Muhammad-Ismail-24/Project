@@ -18,7 +18,8 @@ export default function MainLayout() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch('https://carfinder-project-backend.onrender.com/auth/me', {
+        // PROXY FIX: Now using relative path
+        const response = await fetch('/auth/me', {
           method: 'GET',
           credentials: 'include', 
           headers: {
@@ -53,7 +54,6 @@ export default function MainLayout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
           
           <div className="flex items-center gap-3">
-            {/* Mobile Hamburger Button (Only visible on small screens) */}
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="md:hidden p-2 -ml-2 text-black hover:bg-black/10 rounded-full transition-colors"
@@ -61,13 +61,11 @@ export default function MainLayout() {
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
 
-            {/* Logo */}
             <Link to="/" className="text-xl sm:text-2xl font-black tracking-tighter uppercase text-black">
               GaariGuru
             </Link>
           </div>
 
-          {/* Desktop Center Links (Hidden on mobile) */}
           <div className="hidden md:flex space-x-8 absolute left-1/2 -translate-x-1/2">
             <Link to="/" className="font-black text-black hover:opacity-70 transition-opacity">Discover</Link>
             <Link to="/calculators" className="font-black text-black hover:opacity-70 transition-opacity">Calculators</Link>
@@ -75,13 +73,13 @@ export default function MainLayout() {
             <Link to="/about" className="font-black text-black hover:opacity-70 transition-opacity">About</Link>
           </div>
 
-          {/* Auth Section */}
           <div className="flex items-center">
             {isLoading ? (
               <div className="w-8 h-8 rounded-full border-2 border-black/30 border-t-black animate-spin"></div>
             ) : !isAuthenticated || !user ? (
               <button 
-                onClick={() => window.location.href = 'https://carfinder-project-backend.onrender.com/auth/login'}
+                // PROXY FIX: Now using relative path for redirect
+                onClick={() => window.location.href = '/auth/login'}
                 className="flex items-center px-4 py-2 bg-[#a3a3a3] border border-black rounded-full hover:bg-black hover:text-white transition-colors font-bold text-sm whitespace-nowrap shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none"
               >
                 <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-4 h-4 mr-2 bg-white rounded-full" />
@@ -99,7 +97,6 @@ export default function MainLayout() {
                     <User className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                 )}
-                {/* Name is hidden on mobile to save space, only showing the avatar */}
                 <span className="font-black text-sm hidden sm:block text-black">Welcome, {user.name?.split(' ')[0]}</span>
               </button>
             )}

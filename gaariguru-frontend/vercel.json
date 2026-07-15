@@ -1,6 +1,18 @@
 {
   "rewrites": [
     {
+      "source": "/auth/:path*",
+      "destination": "https://carfinder-project-backend.onrender.com/auth/:path*"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://carfinder-project-backend.onrender.com/api/:path*"
+    },
+    {
+      "source": "/user/:path*",
+      "destination": "https://carfinder-project-backend.onrender.com/user/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
