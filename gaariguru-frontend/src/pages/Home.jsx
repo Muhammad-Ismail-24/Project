@@ -71,28 +71,12 @@ export default function Home() {
   const otherResults = results.filter(car => !bestPick || car.id !== bestPick.id);
 
   return (
-    // Removed the solid background color here so the negative z-index background can show through
-    <div className="relative w-full overflow-x-hidden font-sans text-white">
+    <div className="relative w-full overflow-x-hidden font-sans text-black">
 
-      {/* ── Darker Metallic Titanium Background (Pushed to z-[-1] so car shows!) ── */}
-      <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden flex items-center justify-center bg-zinc-800">
-        {/* Dark Gunmetal Base Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-zinc-400 via-zinc-600 to-zinc-800" />
-        
-        {/* Subtle Dark Grid */}
-        <div 
-          className="absolute inset-0 opacity-[0.15]" 
-          style={{ 
-            backgroundImage: 'radial-gradient(#000000 1px, transparent 1px)', 
-            backgroundSize: '32px 32px' 
-          }} 
-        />
-        
-        {/* Stark White Spotlight BEHIND the car to make reflections pop */}
-        <div className="absolute w-[80vw] h-[80vw] max-w-[1000px] max-h-[1000px] bg-white rounded-full blur-[140px] top-[0%] right-[-10%] opacity-60" />
-        
-        {/* Deep Shadow gradient at bottom to ground it into the search section */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-zinc-800/90" />
+      {/* ── 1-Tone Solid Grey Background (Applied to the whole page) ── */}
+      <div className="fixed inset-0 z-[-1] bg-[#e5e5e5] pointer-events-none flex items-center justify-center overflow-hidden">
+        {/* Soft white spotlight strictly behind the car to separate the black model from the grey wall */}
+        <div className="absolute w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] bg-white rounded-full blur-[120px] top-[10%] right-[0%] opacity-80" />
       </div>
 
       {/* ── Fixed 3D canvas (Sits at z-0) ── */}
@@ -113,21 +97,21 @@ export default function Home() {
           >
             {/* The "Black Touch" Badge */}
             <motion.div variants={heroItemVariants}>
-              <div className="inline-flex items-center px-5 py-2 rounded-full bg-black text-white text-xs font-bold tracking-widest uppercase mb-8 shadow-xl">
+              <div className="inline-flex items-center px-5 py-2 rounded-full bg-black text-white text-xs font-bold tracking-widest uppercase mb-8 shadow-md">
                 GaariGuru AI Engine
               </div>
             </motion.div>
 
             <motion.h1
               variants={heroItemVariants}
-              className="text-6xl md:text-7xl font-black tracking-tighter text-white mb-6 leading-[0.9]"
+              className="text-6xl md:text-7xl font-black tracking-tighter text-black mb-6 leading-[0.9]"
             >
               Find the right car.<br />Skip the wrong ones.
             </motion.h1>
 
             <motion.p
               variants={heroItemVariants}
-              className="text-xl font-medium text-zinc-200 drop-shadow-sm"
+              className="text-xl font-medium text-neutral-600"
             >
               We scan thousands of listings across Pakistan, flag risk, and grade
               liquidity — so you only see cars worth buying.
@@ -140,11 +124,11 @@ export default function Home() {
         ════════════════════════════════════════════════════════════════════ */}
         <div className="min-h-screen flex flex-col justify-center px-6 max-w-7xl mx-auto">
           <div className="max-w-md">
-            <Database className="w-10 h-10 text-zinc-300 mb-6 drop-shadow-sm" />
-            <h2 className="text-4xl font-black tracking-tight mb-4 text-white drop-shadow-md">
+            <Database className="w-10 h-10 text-neutral-400 mb-6" />
+            <h2 className="text-4xl font-black tracking-tight mb-4 text-black">
               Total Market Coverage
             </h2>
-            <p className="text-zinc-200 font-medium text-lg leading-relaxed mb-8 drop-shadow-sm">
+            <p className="text-neutral-600 font-medium text-lg leading-relaxed mb-8">
               We deploy stealth data harvesters across the top automotive marketplaces
               simultaneously to ensure you never miss a deal.
             </p>
@@ -153,7 +137,7 @@ export default function Home() {
               {['PakWheels', 'OLX Pakistan', 'Drive.pk', 'Gari.pk'].map(platform => (
                 <span
                   key={platform}
-                  className="px-5 py-2.5 bg-white backdrop-blur-xl border border-white rounded-full text-sm font-bold tracking-wide shadow-xl text-black hover:bg-gray-100 transition-all cursor-default"
+                  className="px-5 py-2.5 bg-white border border-neutral-200 rounded-full text-sm font-bold tracking-wide shadow-sm text-black hover:shadow-md transition-all cursor-default"
                 >
                   {platform}
                 </span>
@@ -166,13 +150,13 @@ export default function Home() {
             SECTION 3 — AI Info Panel
         ════════════════════════════════════════════════════════════════════ */}
         <div className="min-h-screen flex flex-col justify-center px-6 max-w-7xl mx-auto">
-          {/* The "Black Touch" Glass Panel */}
-          <div className="max-w-xl ml-auto bg-black/40 backdrop-blur-xl p-10 rounded-[2rem] border border-black/50 shadow-2xl">
-            <ShieldCheck className="w-12 h-12 text-white mb-6" />
-            <h2 className="text-4xl font-black tracking-tight mb-4 text-white">
+          {/* The "White Touch" Panel */}
+          <div className="max-w-xl ml-auto bg-white p-10 rounded-[2rem] border border-neutral-200 shadow-xl">
+            <ShieldCheck className="w-12 h-12 text-black mb-6" />
+            <h2 className="text-4xl font-black tracking-tight mb-4 text-black">
               Powered by AI
             </h2>
-            <p className="text-zinc-200 font-medium text-lg leading-relaxed">
+            <p className="text-neutral-600 font-medium text-lg leading-relaxed">
               Our system doesn't just show you prices. It reads descriptions, analyzes
               the market, and flags risky keywords like "showered for fresh look" or
               "duplicate file" before you make a costly mistake.
@@ -181,18 +165,15 @@ export default function Home() {
         </div>
 
         {/* ════════════════════════════════════════════════════════════════════
-            SECTION 4 — Search
+            SECTION 4 — Search (Now seamlessly integrated into the grey)
         ════════════════════════════════════════════════════════════════════ */}
-        <div
-          id="search-section"
-          className="min-h-screen px-6 pt-32 pb-32 bg-zinc-800 relative z-20 border-t border-zinc-700 shadow-[0_-20px_50px_rgba(0,0,0,0.3)]"
-        >
+        <div id="search-section" className="min-h-screen px-6 pt-32 pb-32 relative z-20">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-5xl font-black tracking-tight mb-4 text-white">
+              <h2 className="text-5xl font-black tracking-tight mb-4 text-black">
                 Start Your Search
               </h2>
-              <p className="text-zinc-400 font-medium text-xl">
+              <p className="text-neutral-500 font-medium text-xl">
                 Let the engine analyze the market for you.
               </p>
             </div>
@@ -202,15 +183,15 @@ export default function Home() {
             <div className="mt-24 space-y-12">
               {isLoading && (
                 <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                  <Loader2 className="w-12 h-12 text-white animate-spin" />
-                  <p className="text-zinc-400 font-bold text-lg animate-pulse">
+                  <Loader2 className="w-12 h-12 text-black animate-spin" />
+                  <p className="text-neutral-500 font-bold text-lg animate-pulse">
                     GaariGuru is fetching &amp; appraising listings...
                   </p>
                 </div>
               )}
 
               {error && (
-                <div className="flex items-center space-x-3 bg-red-900/30 border border-red-800 text-red-400 p-6 rounded-2xl shadow-sm">
+                <div className="flex items-center space-x-3 bg-red-50 border border-red-200 text-red-700 p-6 rounded-2xl shadow-sm">
                   <AlertCircle className="w-6 h-6 shrink-0" />
                   <p className="font-medium">{error}</p>
                 </div>
@@ -218,11 +199,11 @@ export default function Home() {
 
               {bestPick && !isLoading && (
                 <div className="space-y-6">
-                  <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-white font-bold text-sm uppercase px-4 py-1.5 rounded-full shadow-md tracking-wider">
+                  <div className="inline-flex items-center space-x-2 bg-black text-white font-bold text-sm uppercase px-4 py-1.5 rounded-full shadow-md tracking-wider">
                     <Sparkles className="w-4 h-4" />
                     <span>Best AI Match</span>
                   </div>
-                  <div className="ring-4 ring-amber-400/50 rounded-3xl overflow-hidden shadow-2xl">
+                  <div className="ring-4 ring-black/10 rounded-3xl overflow-hidden shadow-2xl bg-white">
                     <CarResultCard
                       car={bestPick}
                       isHighlighted={true}
@@ -233,8 +214,8 @@ export default function Home() {
               )}
 
               {otherResults.length > 0 && !isLoading && (
-                <div className="space-y-6 pt-6 border-t border-zinc-700">
-                  <h3 className="text-2xl font-black tracking-tight text-white">
+                <div className="space-y-6 pt-10">
+                  <h3 className="text-2xl font-black tracking-tight text-black border-b border-neutral-300 pb-4">
                     Alternative Matches
                   </h3>
                   <div className="space-y-6">
@@ -246,8 +227,8 @@ export default function Home() {
               )}
 
               {results.length === 0 && !isLoading && !error && (
-                <div className="text-center py-20 bg-zinc-900/50 border border-zinc-700/50 rounded-3xl shadow-sm">
-                  <p className="text-zinc-500 font-semibold text-lg">
+                <div className="text-center py-20 bg-white border border-neutral-200 rounded-3xl shadow-sm">
+                  <p className="text-neutral-500 font-semibold text-lg">
                     No search query executed yet. Try typing something above!
                   </p>
                 </div>
