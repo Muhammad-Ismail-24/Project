@@ -64,7 +64,7 @@ function BmwModel() {
       return;
     }
 
-    // ── 2. Cinematic Drive-Off Trajectory (Ratio Fixed) ──
+    // ── 2. Cinematic Drive-Off Trajectory (Delayed for Text Avoidance) ──
     const scrollY = window.scrollY;
     const maxScroll = document.body.scrollHeight - window.innerHeight;
     const rawProgress = maxScroll > 0 ? scrollY / maxScroll : 0;
@@ -76,12 +76,15 @@ function BmwModel() {
       delta
     );
 
-    // FIXED: Maintained the exact 5:8 ratio for Z:X travel to prevent sideways drifting.
-    // Original good ratio was X: 4 to -12 (diff -16), Z: 2 to -8 (diff -10).
-    // Scaled by 2.5x to drive off screen -> X diff: -40, Z diff: -25.
-    // New Targets -> X: 4 - 40 = -36 | Z: 2 - 25 = -23
-    const currentX = THREE.MathUtils.lerp(4, -36, smoothedProgress.current);
-    const currentZ = THREE.MathUtils.lerp(2, -23, smoothedProgress.current);
+    // DELAY CURVE: By cubing the progress (Math.pow(x, 3)), the car barely moves 
+    // during the first half of the page, avoiding the left-aligned text. 
+    // As you scroll past the right-aligned text, it slips through the gap in the 
+    // center-left, and then rapidly accelerates off-screen at the very bottom.
+    const delayedProgress = Math.pow(smoothedProgress.current, 3);
+
+    // X and Z use the exact same straight-line ratio as before, but mapped to the delayed curve
+    const currentX = THREE.MathUtils.lerp(4, -36, delayedProgress);
+    const currentZ = THREE.MathUtils.lerp(2, -23, delayedProgress);
     
     // Locked angle for perfectly straight reversing
     const fixedAngle = (Math.PI / 5) + Math.PI;
