@@ -16,12 +16,19 @@ async function fetchSessionHistory(sessionId) {
   return res.json();
 }
 
-async function sendMessage(message, sessionId) {
+async function sendMessage(message, sessionId, guestHistory = []) {
   const res = await fetch(`${API_BASE}/api/chat`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, session_id: sessionId }),
+    body: JSON.stringify({
+      message,
+      session_id: sessionId,
+      // Send conversation history for guest mode continuity — the backend
+      // uses this to give the expert context across the whole browser session.
+      // For logged-in users this is ignored (backend reads from DB instead).
+      guest_history: guestHistory.map(m => ({ role: m.role, content: m.content })),
+    }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -188,9 +195,9 @@ export default function ChatPage() {
     setIsTyping(true);
 
     try {
-      // Read from ref, not state — guarantees the current session ID
-      // is always available synchronously regardless of React flush timing.
-      const data = await sendMessage(query, activeSessionIdRef.current);
+      // Pass full message history for guest mode so the expert has
+      // context across the whole browser session, not just one message.
+      const data = await sendMessage(query, activeSessionIdRef.current, messages);
       
       if (data.session_id && !activeSessionIdRef.current) {
         setSession(data.session_id);

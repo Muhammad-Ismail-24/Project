@@ -10,11 +10,17 @@ from database import get_session
 
 router = APIRouter(prefix="/api/chat", tags=["Chatbot"])
 
-CONTEXT_WINDOW_SIZE = 10
+CONTEXT_WINDOW_SIZE = 20  # was 10 (5 exchanges) — increased to 10 full exchanges
+                          # so the expert remembers which car was being discussed
+                          # across a longer technical conversation
 
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
     session_id: Optional[str] = None
+    # Guest history: frontend passes the full in-memory conversation so
+    # the expert has context even without DB persistence. This gives guests
+    # a coherent multi-turn experience within the same browser session.
+    guest_history: Optional[List[dict]] = None
 
 class UpdateAgentNameRequest(BaseModel):
     agent_name: str = Field(..., min_length=1, max_length=40)
@@ -137,7 +143,21 @@ async def send_message(request: Request, body: ChatRequest, session: Session = D
 
         agent_name = user.agent_name or DEFAULT_AGENT_NAME
     else:
-        context_messages = [{"role": "user", "content": new_message_text}]
+        # Guest mode: use history passed from frontend (in-memory continuity)
+        # rather than a single cold message. Sanitise to prevent injection.
+        raw_history = body.guest_history or []
+        safe_history = [
+            {"role": h["role"], "content": h["content"]}
+            for h in raw_history
+            if isinstance(h, dict)
+            and h.get("role") in ("user", "assistant")
+            and isinstance(h.get("content"), str)
+        ]
+        # Append current message if not already the last entry
+        if not safe_history or safe_history[-1].get("content") != new_message_text:
+            safe_history.append({"role": "user", "content": new_message_text})
+        # Cap to last 20 messages so guests don't send unbounded context
+        context_messages = safe_history[-20:]
         agent_name = DEFAULT_AGENT_NAME
 
     try:
@@ -164,9 +184,6 @@ async def send_message(request: Request, body: ChatRequest, session: Session = D
         )
         session.add(ai_msg_row)
         session.commit()
-        print(f"[Chat DEBUG] ✅ assistant message saved — user_id={user.id}, session_id={session_id}")
-    else:
-        print(f"[Chat DEBUG] ⚠️ guest mode — no messages saved to DB")
 
     return {"role": "assistant", "content": reply, "session_id": session_id, "agent_name": agent_name}
 
