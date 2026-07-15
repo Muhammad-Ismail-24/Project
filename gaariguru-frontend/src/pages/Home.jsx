@@ -73,10 +73,21 @@ export default function Home() {
   return (
     <div className="relative w-full overflow-x-hidden font-sans text-black">
 
-      {/* ── 1-Tone Solid Grey Background (Applied to the whole page) ── */}
-      <div className="fixed inset-0 z-[-1] bg-[#e5e5e5] pointer-events-none flex items-center justify-center overflow-hidden">
-        {/* Soft white spotlight strictly behind the car to separate the black model from the grey wall */}
-        <div className="absolute w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] bg-white rounded-full blur-[120px] top-[10%] right-[0%] opacity-80" />
+      {/* ── Metallic Titanium Background ── */}
+      <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden flex items-center justify-center bg-gray-200">
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-100 via-gray-300 to-gray-400" />
+        
+        {/* Subtle dot matrix */}
+        <div 
+          className="absolute inset-0 opacity-[0.05]" 
+          style={{ 
+            backgroundImage: 'radial-gradient(#000000 1px, transparent 1px)', 
+            backgroundSize: '32px 32px' 
+          }} 
+        />
+        
+        {/* Crisp white spotlight to backlight the car */}
+        <div className="absolute w-[80vw] h-[80vw] max-w-[1000px] max-h-[1000px] bg-white rounded-full blur-[120px] top-[0%] right-[-10%] opacity-90" />
       </div>
 
       {/* ── Fixed 3D canvas (Sits at z-0) ── */}
@@ -95,7 +106,6 @@ export default function Home() {
             initial="hidden"
             animate="visible"
           >
-            {/* The "Black Touch" Badge */}
             <motion.div variants={heroItemVariants}>
               <div className="inline-flex items-center px-5 py-2 rounded-full bg-black text-white text-xs font-bold tracking-widest uppercase mb-8 shadow-md">
                 GaariGuru AI Engine
@@ -111,7 +121,7 @@ export default function Home() {
 
             <motion.p
               variants={heroItemVariants}
-              className="text-xl font-medium text-neutral-600"
+              className="text-xl font-medium text-neutral-700"
             >
               We scan thousands of listings across Pakistan, flag risk, and grade
               liquidity — so you only see cars worth buying.
@@ -124,16 +134,15 @@ export default function Home() {
         ════════════════════════════════════════════════════════════════════ */}
         <div className="min-h-screen flex flex-col justify-center px-6 max-w-7xl mx-auto">
           <div className="max-w-md">
-            <Database className="w-10 h-10 text-neutral-400 mb-6" />
+            <Database className="w-10 h-10 text-neutral-600 mb-6" />
             <h2 className="text-4xl font-black tracking-tight mb-4 text-black">
               Total Market Coverage
             </h2>
-            <p className="text-neutral-600 font-medium text-lg leading-relaxed mb-8">
+            <p className="text-neutral-700 font-medium text-lg leading-relaxed mb-8">
               We deploy stealth data harvesters across the top automotive marketplaces
               simultaneously to ensure you never miss a deal.
             </p>
             <div className="flex flex-wrap gap-3">
-              {/* The "White Touch" Pills */}
               {['PakWheels', 'OLX Pakistan', 'Drive.pk', 'Gari.pk'].map(platform => (
                 <span
                   key={platform}
@@ -150,13 +159,12 @@ export default function Home() {
             SECTION 3 — AI Info Panel
         ════════════════════════════════════════════════════════════════════ */}
         <div className="min-h-screen flex flex-col justify-center px-6 max-w-7xl mx-auto">
-          {/* The "White Touch" Panel */}
-          <div className="max-w-xl ml-auto bg-white p-10 rounded-[2rem] border border-neutral-200 shadow-xl">
+          <div className="max-w-xl ml-auto bg-white/90 backdrop-blur-xl p-10 rounded-[2rem] border border-neutral-200 shadow-xl">
             <ShieldCheck className="w-12 h-12 text-black mb-6" />
             <h2 className="text-4xl font-black tracking-tight mb-4 text-black">
               Powered by AI
             </h2>
-            <p className="text-neutral-600 font-medium text-lg leading-relaxed">
+            <p className="text-neutral-700 font-medium text-lg leading-relaxed">
               Our system doesn't just show you prices. It reads descriptions, analyzes
               the market, and flags risky keywords like "showered for fresh look" or
               "duplicate file" before you make a costly mistake.
@@ -165,15 +173,15 @@ export default function Home() {
         </div>
 
         {/* ════════════════════════════════════════════════════════════════════
-            SECTION 4 — Search (Now seamlessly integrated into the grey)
+            SECTION 4 — Search (With extra Scroll Runway!)
         ════════════════════════════════════════════════════════════════════ */}
-        <div id="search-section" className="min-h-screen px-6 pt-32 pb-32 relative z-20">
+        <div id="search-section" className="min-h-screen px-6 pt-32 pb-[40vh] relative z-20">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-5xl font-black tracking-tight mb-4 text-black">
                 Start Your Search
               </h2>
-              <p className="text-neutral-500 font-medium text-xl">
+              <p className="text-neutral-600 font-medium text-xl">
                 Let the engine analyze the market for you.
               </p>
             </div>
@@ -184,7 +192,7 @@ export default function Home() {
               {isLoading && (
                 <div className="flex flex-col items-center justify-center py-20 space-y-4">
                   <Loader2 className="w-12 h-12 text-black animate-spin" />
-                  <p className="text-neutral-500 font-bold text-lg animate-pulse">
+                  <p className="text-neutral-600 font-bold text-lg animate-pulse">
                     GaariGuru is fetching &amp; appraising listings...
                   </p>
                 </div>
@@ -203,7 +211,7 @@ export default function Home() {
                     <Sparkles className="w-4 h-4" />
                     <span>Best AI Match</span>
                   </div>
-                  <div className="ring-4 ring-black/10 rounded-3xl overflow-hidden shadow-2xl bg-white">
+                  <div className="ring-4 ring-black/5 rounded-3xl overflow-hidden shadow-2xl bg-white">
                     <CarResultCard
                       car={bestPick}
                       isHighlighted={true}
@@ -227,7 +235,7 @@ export default function Home() {
               )}
 
               {results.length === 0 && !isLoading && !error && (
-                <div className="text-center py-20 bg-white border border-neutral-200 rounded-3xl shadow-sm">
+                <div className="text-center py-20 bg-white/80 backdrop-blur-md border border-neutral-200 rounded-3xl shadow-sm">
                   <p className="text-neutral-500 font-semibold text-lg">
                     No search query executed yet. Try typing something above!
                   </p>

@@ -64,7 +64,7 @@ function BmwModel() {
       return;
     }
 
-    // ── 2. PERFECTLY STRAIGHT REVERSE LOGIC ──
+    // ── 2. Cinematic Drive-Off Trajectory ──
     const scrollY = window.scrollY;
     const maxScroll = document.body.scrollHeight - window.innerHeight;
     const rawProgress = maxScroll > 0 ? scrollY / maxScroll : 0;
@@ -76,11 +76,11 @@ function BmwModel() {
       delta
     );
 
-    // Adjusted X and Z to form a perfect straight line matching the car's locked angle
-    const currentX = THREE.MathUtils.lerp(4, -12, smoothedProgress.current);
-    const currentZ = THREE.MathUtils.lerp(2, -8, smoothedProgress.current);
+    // CHANGED: Target X is now -35 (way off screen) and Z is -15 (deeper into the background)
+    const currentX = THREE.MathUtils.lerp(4, -35, smoothedProgress.current);
+    const currentZ = THREE.MathUtils.lerp(2, -15, smoothedProgress.current);
     
-    // STRICTLY LOCKED ANGLE - No rotation whatsoever on scroll
+    // Locked angle for perfectly straight reversing
     const fixedAngle = (Math.PI / 5) + Math.PI;
 
     carRef.current.position.set(currentX, REVEAL_Y_REST, currentZ);
