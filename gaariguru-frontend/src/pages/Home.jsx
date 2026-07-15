@@ -73,10 +73,8 @@ export default function Home() {
   return (
     <div className="relative w-full overflow-x-hidden font-sans text-black">
 
-      {/* ── 1-Tone Solid Grey Background (NO GRADIENTS) ── */}
+      {/* ── 1-Tone Solid Grey Background ── */}
       <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden flex items-center justify-center bg-[#a3a3a3]">
-        
-        {/* Subtle dark dot grid for scale */}
         <div 
           className="absolute inset-0 opacity-[0.05]" 
           style={{ 
@@ -84,9 +82,8 @@ export default function Home() {
             backgroundSize: '32px 32px' 
           }} 
         />
-        
-        {/* Stark White Spotlight strictly BEHIND the car so the black paint pops */}
-        <div className="absolute w-[80vw] h-[80vw] max-w-[1000px] max-h-[1000px] bg-white rounded-full blur-[140px] top-[0%] right-[-10%] opacity-60" />
+        {/* Soft white spotlight to highlight the black car silhouette */}
+        <div className="absolute w-[80vw] h-[80vw] max-w-[1000px] max-h-[1000px] bg-white rounded-full blur-[140px] top-[0%] right-[-10%] opacity-40" />
       </div>
 
       {/* ── Fixed 3D canvas (Sits at z-0) ── */}
@@ -105,9 +102,9 @@ export default function Home() {
             initial="hidden"
             animate="visible"
           >
-            {/* High Contrast Badge */}
+            {/* Accent Badge */}
             <motion.div variants={heroItemVariants}>
-              <div className="inline-flex items-center px-5 py-2 rounded-full bg-black text-white text-xs font-bold tracking-widest uppercase mb-8 shadow-xl">
+              <div className="inline-flex items-center px-5 py-2 rounded-full bg-black text-white text-xs font-bold tracking-widest uppercase mb-8">
                 GaariGuru AI Engine
               </div>
             </motion.div>
@@ -121,7 +118,7 @@ export default function Home() {
 
             <motion.p
               variants={heroItemVariants}
-              className="text-xl font-medium text-neutral-800"
+              className="text-xl font-medium text-black/80"
             >
               We scan thousands of listings across Pakistan, flag risk, and grade
               liquidity — so you only see cars worth buying.
@@ -134,20 +131,20 @@ export default function Home() {
         ════════════════════════════════════════════════════════════════════ */}
         <div className="min-h-screen flex flex-col justify-center px-6 max-w-7xl mx-auto">
           <div className="max-w-md">
-            <Database className="w-10 h-10 text-neutral-700 mb-6" />
+            <Database className="w-10 h-10 text-black mb-6" />
             <h2 className="text-4xl font-black tracking-tight mb-4 text-black">
               Total Market Coverage
             </h2>
-            <p className="text-neutral-800 font-medium text-lg leading-relaxed mb-8">
+            <p className="text-black/80 font-medium text-lg leading-relaxed mb-8">
               We deploy stealth data harvesters across the top automotive marketplaces
               simultaneously to ensure you never miss a deal.
             </p>
             <div className="flex flex-wrap gap-3">
-              {/* White Touch Pills */}
+              {/* Grey Pills with Black Borders */}
               {['PakWheels', 'OLX Pakistan', 'Drive.pk', 'Gari.pk'].map(platform => (
                 <span
                   key={platform}
-                  className="px-5 py-2.5 bg-white backdrop-blur-xl border border-white rounded-full text-sm font-bold tracking-wide shadow-md text-black cursor-default"
+                  className="px-5 py-2.5 bg-[#a3a3a3] border border-black rounded-full text-sm font-bold tracking-wide text-black cursor-default"
                 >
                   {platform}
                 </span>
@@ -160,13 +157,13 @@ export default function Home() {
             SECTION 3 — AI Info Panel
         ════════════════════════════════════════════════════════════════════ */}
         <div className="min-h-screen flex flex-col justify-center px-6 max-w-7xl mx-auto">
-          {/* White Touch Glass Panel */}
-          <div className="max-w-xl ml-auto bg-white/90 backdrop-blur-xl p-10 rounded-[2rem] border border-white shadow-2xl">
+          {/* Grey Panel with Black Border */}
+          <div className="max-w-xl ml-auto bg-[#a3a3a3] p-10 rounded-[2rem] border border-black shadow-2xl">
             <ShieldCheck className="w-12 h-12 text-black mb-6" />
             <h2 className="text-4xl font-black tracking-tight mb-4 text-black">
               Powered by AI
             </h2>
-            <p className="text-neutral-700 font-medium text-lg leading-relaxed">
+            <p className="text-black/80 font-medium text-lg leading-relaxed">
               Our system doesn't just show you prices. It reads descriptions, analyzes
               the market, and flags risky keywords like "showered for fresh look" or
               "duplicate file" before you make a costly mistake.
@@ -175,8 +172,7 @@ export default function Home() {
         </div>
 
         {/* ════════════════════════════════════════════════════════════════════
-            SECTION 4 — Search (With 40vh padding for the Drive-Off effect)
-            Notice there is NO bg-color class here, so the flat grey flows through
+            SECTION 4 — Search 
         ════════════════════════════════════════════════════════════════════ */}
         <div
           id="search-section"
@@ -187,7 +183,7 @@ export default function Home() {
               <h2 className="text-5xl font-black tracking-tight mb-4 text-black">
                 Start Your Search
               </h2>
-              <p className="text-neutral-700 font-medium text-xl">
+              <p className="text-black/80 font-medium text-xl">
                 Let the engine analyze the market for you.
               </p>
             </div>
@@ -198,26 +194,27 @@ export default function Home() {
               {isLoading && (
                 <div className="flex flex-col items-center justify-center py-20 space-y-4">
                   <Loader2 className="w-12 h-12 text-black animate-spin" />
-                  <p className="text-neutral-700 font-bold text-lg animate-pulse">
+                  <p className="text-black/80 font-bold text-lg animate-pulse">
                     GaariGuru is fetching &amp; appraising listings...
                   </p>
                 </div>
               )}
 
               {error && (
-                <div className="flex items-center space-x-3 bg-white border border-red-200 text-red-600 p-6 rounded-2xl shadow-sm">
+                <div className="flex items-center space-x-3 bg-[#a3a3a3] border border-black text-black p-6 rounded-2xl">
                   <AlertCircle className="w-6 h-6 shrink-0" />
-                  <p className="font-medium">{error}</p>
+                  <p className="font-bold">{error}</p>
                 </div>
               )}
 
               {bestPick && !isLoading && (
                 <div className="space-y-6">
-                  <div className="inline-flex items-center space-x-2 bg-black text-white font-bold text-sm uppercase px-4 py-1.5 rounded-full shadow-md tracking-wider">
+                  <div className="inline-flex items-center space-x-2 bg-black text-white font-bold text-sm uppercase px-4 py-1.5 rounded-full tracking-wider">
                     <Sparkles className="w-4 h-4" />
                     <span>Best AI Match</span>
                   </div>
-                  <div className="ring-4 ring-black/5 rounded-3xl overflow-hidden shadow-2xl bg-white">
+                  {/* Result Card Wrapper */}
+                  <div className="rounded-3xl overflow-hidden shadow-2xl border border-black bg-[#a3a3a3]">
                     <CarResultCard
                       car={bestPick}
                       isHighlighted={true}
@@ -228,21 +225,23 @@ export default function Home() {
               )}
 
               {otherResults.length > 0 && !isLoading && (
-                <div className="space-y-6 pt-6 border-t border-neutral-400">
+                <div className="space-y-6 pt-6 border-t border-black/20">
                   <h3 className="text-2xl font-black tracking-tight text-black">
                     Alternative Matches
                   </h3>
                   <div className="space-y-6">
                     {otherResults.map(car => (
-                      <CarResultCard key={car.id} car={car} savedListingIds={savedListingIds} />
+                      <div key={car.id} className="rounded-3xl overflow-hidden border border-black bg-[#a3a3a3]">
+                        <CarResultCard car={car} savedListingIds={savedListingIds} />
+                      </div>
                     ))}
                   </div>
                 </div>
               )}
 
               {results.length === 0 && !isLoading && !error && (
-                <div className="text-center py-20 bg-white/80 backdrop-blur-md rounded-3xl shadow-md border border-white">
-                  <p className="text-neutral-600 font-semibold text-lg">
+                <div className="text-center py-20 bg-[#a3a3a3] rounded-3xl border border-black shadow-lg">
+                  <p className="text-black font-semibold text-lg">
                     No search query executed yet. Try typing something above!
                   </p>
                 </div>
