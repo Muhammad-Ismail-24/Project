@@ -86,44 +86,34 @@ export default function Home() {
   const otherResults = results.filter(car => !bestPick || car.id !== bestPick.id);
 
   return (
-    <div className="relative w-full overflow-x-hidden font-sans">
+    <div className="relative w-full overflow-x-hidden font-sans bg-slate-50">
 
       {/* ── Fixed 3D canvas ── */}
       <Background3DShell />
 
-      {/* ── Radial spotlight behind the 3D car ──────────────────────────────
+      {/* ── Premium SaaS Background ──────────────────────────────
           Sits above the Canvas (z-1) but below page content (z-10).
-          pointer-events-none so it never blocks clicks.
-          Two layered blobs: one warm-white glow centered right where the car
-          sits on load, one cooler accent below-left for depth.
+          Features a modern dot-grid and soft colored light orbs.
       ──────────────────────────────────────────────────────────────────────── */}
-      <div className="fixed inset-0 z-[1] pointer-events-none overflow-hidden">
-        {/* Primary glow — soft white spotlight behind the car */}
-        <div
-          className="absolute rounded-full blur-[140px]"
-          style={{
-            width:      '70vw',
-            height:     '70vw',
-            maxWidth:   '900px',
-            maxHeight:  '900px',
-            top:        '5%',
-            right:      '-10%',
-            background: 'radial-gradient(circle, rgba(255,255,255,0.55) 0%, rgba(245,245,245,0.18) 55%, transparent 80%)',
-          }}
+      <div className="fixed inset-0 z-[1] pointer-events-none overflow-hidden flex items-center justify-center">
+        
+        {/* 1. Subtle Dot Matrix Grid */}
+        <div 
+          className="absolute inset-0 opacity-[0.5]" 
+          style={{ 
+            backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', 
+            backgroundSize: '32px 32px' 
+          }} 
         />
-        {/* Accent glow — very subtle cool undertone for dimension */}
-        <div
-          className="absolute rounded-full blur-[180px]"
-          style={{
-            width:      '50vw',
-            height:     '50vw',
-            maxWidth:   '700px',
-            maxHeight:  '700px',
-            bottom:     '10%',
-            right:      '5%',
-            background: 'radial-gradient(circle, rgba(220,225,235,0.30) 0%, transparent 70%)',
-          }}
-        />
+
+        {/* 2. Primary Glow - Soft Indigo behind the car */}
+        <div className="absolute w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] bg-indigo-500/15 rounded-full blur-[120px] top-[-5%] right-[-5%]" />
+
+        {/* 3. Secondary Glow - Soft Sky Blue on the bottom left */}
+        <div className="absolute w-[50vw] h-[50vw] max-w-[600px] max-h-[600px] bg-sky-400/15 rounded-full blur-[120px] bottom-[5%] left-[-10%]" />
+        
+        {/* 4. Center fade to ensure text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-50/30 to-slate-50/80" />
       </div>
 
       <div className="relative z-10 w-full">
