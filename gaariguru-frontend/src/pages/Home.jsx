@@ -73,11 +73,12 @@ export default function Home() {
   return (
     <div className="relative w-full overflow-x-hidden font-sans text-black">
 
-      {/* ── Metallic Titanium Background ── */}
-      <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden flex items-center justify-center bg-gray-200">
+      {/* ── The True Metallic Titanium Background (Consistent across whole page) ── */}
+      <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden flex items-center justify-center bg-gray-300">
+        {/* Metallic Silver Base Gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-gray-100 via-gray-300 to-gray-400" />
         
-        {/* Subtle dot matrix */}
+        {/* Subtle dot matrix for an engineered look */}
         <div 
           className="absolute inset-0 opacity-[0.05]" 
           style={{ 
@@ -175,6 +176,7 @@ export default function Home() {
         {/* ════════════════════════════════════════════════════════════════════
             SECTION 4 — Search (With extra Scroll Runway!)
         ════════════════════════════════════════════════════════════════════ */}
+        {/* Notice this section has NO background color class, so the metallic gradient shows through perfectly */}
         <div id="search-section" className="min-h-screen px-6 pt-32 pb-[40vh] relative z-20">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
