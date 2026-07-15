@@ -91,29 +91,39 @@ export default function Home() {
       {/* ── Fixed 3D canvas ── */}
       <Background3DShell />
 
-      {/* ── Premium SaaS Background ──────────────────────────────
+      {/* ── Dark Automotive Showroom Background ──────────────────
           Sits above the Canvas (z-1) but below page content (z-10).
-          Features a modern dot-grid and soft colored light orbs.
+          Deep charcoal studio base, a stark overhead spotlight, a
+          faint technical grid, and an edge vignette — built to make
+          the black 3D model's paint and reflections pop.
       ──────────────────────────────────────────────────────────────────────── */}
-      <div className="fixed inset-0 z-[1] pointer-events-none overflow-hidden flex items-center justify-center">
+      <div className="fixed inset-0 z-[1] pointer-events-none overflow-hidden flex items-center justify-center bg-zinc-950">
         
-        {/* 1. Subtle Dot Matrix Grid */}
+        {/* 1. Technical Grid — faint engineering blueprint, not decoration */}
         <div 
-          className="absolute inset-0 opacity-[0.5]" 
+          className="absolute inset-0" 
           style={{ 
-            backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', 
-            backgroundSize: '32px 32px' 
+            backgroundImage: 'linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)', 
+            backgroundSize: '80px 80px' 
           }} 
         />
 
-        {/* 2. Primary Glow - Soft Indigo behind the car */}
-        <div className="absolute w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] bg-indigo-500/15 rounded-full blur-[120px] top-[-5%] right-[-5%]" />
+        {/* 2. Key Light - Stark white showroom spotlight, centered overhead */}
+        <div className="absolute w-[55vw] h-[55vw] max-w-[900px] max-h-[900px] bg-white/15 rounded-full blur-[140px] top-[-15%] left-1/2 -translate-x-1/2" />
 
-        {/* 3. Secondary Glow - Soft Sky Blue on the bottom left */}
-        <div className="absolute w-[50vw] h-[50vw] max-w-[600px] max-h-[600px] bg-sky-400/15 rounded-full blur-[120px] bottom-[5%] left-[-10%]" />
+        {/* 3. Fill Light - Cool steel undertone, low and off-center for depth */}
+        <div className="absolute w-[45vw] h-[45vw] max-w-[650px] max-h-[650px] bg-zinc-300/10 rounded-full blur-[130px] bottom-[-15%] right-[8%]" />
         
-        {/* 4. Center fade to ensure text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-50/30 to-slate-50/80" />
+        {/* 4. Edge Vignette - contains the light, pulls focus back to the car */}
+        <div 
+          className="absolute inset-0" 
+          style={{ 
+            background: 'radial-gradient(ellipse at center, transparent 35%, rgba(9,9,11,0.85) 100%)' 
+          }} 
+        />
+
+        {/* 5. Bottom fade - blends Hero into the next section on the same dark base */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-zinc-950/30 to-zinc-950/95" />
       </div>
 
       <div className="relative z-10 w-full">
