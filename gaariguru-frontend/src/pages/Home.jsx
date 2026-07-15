@@ -201,7 +201,7 @@ export default function Home() {
               )}
 
               {error && (
-                <div className="flex items-center space-x-3 bg-[#a3a3a3] border border-black/15 shadow-md text-black p-6 rounded-2xl">
+                <div className="flex items-center space-x-3 bg-white/60 backdrop-blur-md border border-black/15 shadow-md text-black p-6 rounded-2xl">
                   <AlertCircle className="w-6 h-6 shrink-0" />
                   <p className="font-bold">{error}</p>
                 </div>
@@ -239,8 +239,9 @@ export default function Home() {
                 </div>
               )}
 
+              {/* ── Frosted Whitish Empty State Box ── */}
               {results.length === 0 && !isLoading && !error && (
-                <div className="text-center py-20 bg-[#a3a3a3] rounded-3xl border border-black/15 shadow-xl">
+                <div className="text-center py-20 bg-white/60 backdrop-blur-md rounded-3xl border border-black/15 shadow-xl">
                   <p className="text-black font-semibold text-lg">
                     No search query executed yet. Try typing something above!
                   </p>

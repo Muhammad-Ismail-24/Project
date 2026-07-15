@@ -31,11 +31,12 @@ export default function SearchBar({ onSearch, isLoading }) {
   return (
     <div className="w-full max-w-4xl mx-auto relative z-20">
 
+      {/* ── Frosted Whitish Search form ── */}
       <form
         onSubmit={handleSubmit}
         className={[
           'flex items-center w-full',
-          'bg-[#a3a3a3]', 
+          'bg-white/60 backdrop-blur-md', 
           'border border-black/20 px-5 py-1',
           'transition-all duration-300 ease-out',
           showDropdown
@@ -66,10 +67,11 @@ export default function SearchBar({ onSearch, isLoading }) {
         )}
       </form>
 
+      {/* ── Frosted Whitish Suggestion dropdown ── */}
       <div
         className={[
           'absolute left-0 right-0 z-50',
-          'bg-[#a3a3a3]',
+          'bg-white/60 backdrop-blur-md',
           'border border-black/20 border-t-0',
           'rounded-b-2xl',
           'overflow-hidden',
