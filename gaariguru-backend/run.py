@@ -13,6 +13,12 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
     host = os.getenv("HOST", "0.0.0.0")
     
-    # CRITICAL FIX: reload MUST be False on Windows when using Playwright.
-    # If True, Uvicorn spawns a child process that forgets the Proactor loop policy!
-    uvicorn.run("main:app", host=host, port=port, reload=False)
+    # Added proxy_headers=True and forwarded_allow_ips
+    uvicorn.run(
+        "main:app", 
+        host=host, 
+        port=port, 
+        reload=False, 
+        proxy_headers=True, 
+        forwarded_allow_ips="*"
+    )

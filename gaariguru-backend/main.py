@@ -9,13 +9,18 @@ from api.search_routes import router as search_router
 from starlette.middleware.sessions import SessionMiddleware
 from auth.routes import router as auth_router
 from auth.config import SECRET_KEY
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 # Initialize the core FastAPI app
 app = FastAPI(title="CarFinder API")
 
+# ─── CRITICAL FIX FOR MOBILE OAUTH ──────────────────────────────────────
+# Render load balancers terminate HTTPS. We must tell FastAPI to trust the 
+# headers so it knows the connection is secure. If we don't do this, 
+# SessionMiddleware drops the cookie on mobile browsers!
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+
 # Add CORS middleware to support local frontend and Vercel production
-# FIX 1: When allow_credentials=True, allow_origins cannot be ["*"]. 
-# You must explicitly define your frontend domains.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -28,13 +33,12 @@ app.add_middleware(
 )
 
 # Add SessionMiddleware for OAuth2 state management
-# FIX 2: Added same_site="none" and https_only=True to allow cookies 
-# to travel between Render and your frontend (Vercel/Localhost).
 app.add_middleware(
     SessionMiddleware,
     secret_key=SECRET_KEY,
     same_site="none",
     https_only=True,
+    max_age=14 * 24 * 60 * 60 # Added explicit 14-day expiration
 )
 
 # Include core routers
