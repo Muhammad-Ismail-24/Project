@@ -1,4 +1,4 @@
-import React, { useRef, useLayoutEffect } from 'react';
+import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Environment, ContactShadows, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
@@ -14,6 +14,32 @@ function BmwModel() {
   const revealProgress = useRef(0);
   const revealDone = useRef(false);
   const materialsRef = useRef([]);
+
+  // ─── Mobile Detection ───
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // ─── Mathematical Scale Factor ───
+  // Shrink the car and its trajectory by 40% on mobile to fit the narrow screen
+  const scaleFactor = isMobile ? 0.6 : 1; 
+  const carScale = 1.3 * scaleFactor;
+  
+  // Starting positions
+  const startX = 4 * scaleFactor;
+  const startZ = 2 * scaleFactor;
+  
+  // Deltas (Maintains the exact 25/40 ratio to prevent drifting)
+  const deltaX = -40 * scaleFactor;
+  const deltaZ = -25 * scaleFactor;
+  
+  // End positions
+  const endX = startX + deltaX;
+  const endZ = startZ + deltaZ;
 
   useLayoutEffect(() => {
     const mats = [];
@@ -37,6 +63,9 @@ function BmwModel() {
   useFrame((state, delta) => {
     if (!carRef.current) return;
 
+    // Locked angle for perfectly straight reversing
+    const fixedAngle = (Math.PI / 5) + Math.PI;
+
     // ── 1. Reveal Animation ──
     if (!revealDone.current) {
       revealProgress.current = Math.min(revealProgress.current + delta / REVEAL_DURATION, 1);
@@ -58,13 +87,13 @@ function BmwModel() {
         revealDone.current = true;
       }
 
-      carRef.current.position.x = 4;
-      carRef.current.position.z = 2;
-      carRef.current.rotation.y = (Math.PI / 5) + Math.PI;
+      carRef.current.position.x = startX;
+      carRef.current.position.z = startZ;
+      carRef.current.rotation.y = fixedAngle;
       return;
     }
 
-    // ── 2. Cinematic Drive-Off Trajectory (Delayed for Text Avoidance) ──
+    // ── 2. Cinematic Drive-Off Trajectory ──
     const scrollY = window.scrollY;
     const maxScroll = document.body.scrollHeight - window.innerHeight;
     const rawProgress = maxScroll > 0 ? scrollY / maxScroll : 0;
@@ -76,24 +105,17 @@ function BmwModel() {
       delta
     );
 
-    // DELAY CURVE: By cubing the progress (Math.pow(x, 3)), the car barely moves 
-    // during the first half of the page, avoiding the left-aligned text. 
-    // As you scroll past the right-aligned text, it slips through the gap in the 
-    // center-left, and then rapidly accelerates off-screen at the very bottom.
     const delayedProgress = Math.pow(smoothedProgress.current, 3);
 
-    // X and Z use the exact same straight-line ratio as before, but mapped to the delayed curve
-    const currentX = THREE.MathUtils.lerp(4, -36, delayedProgress);
-    const currentZ = THREE.MathUtils.lerp(2, -23, delayedProgress);
-    
-    // Locked angle for perfectly straight reversing
-    const fixedAngle = (Math.PI / 5) + Math.PI;
+    // Dynamic endpoints based on screen size
+    const currentX = THREE.MathUtils.lerp(startX, endX, delayedProgress);
+    const currentZ = THREE.MathUtils.lerp(startZ, endZ, delayedProgress);
 
     carRef.current.position.set(currentX, REVEAL_Y_REST, currentZ);
     carRef.current.rotation.y = fixedAngle;
   });
 
-  return <primitive ref={carRef} object={scene} scale={1.3} />;
+  return <primitive ref={carRef} object={scene} scale={carScale} />;
 }
 
 export default function Background3DShell() {
