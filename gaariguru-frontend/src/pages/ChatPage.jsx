@@ -85,7 +85,6 @@ export default function ChatPage() {
   const [nameInput, setNameInput] = useState('');
   const [nameSaving, setNameSaving] = useState(false);
 
-  // New layout state to manage the mobile history sidebar toggle
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const chatEndRef = useRef(null);
@@ -152,7 +151,7 @@ export default function ChatPage() {
 
   const loadSession = async (sessionId) => {
     setIsLoading(true);
-    setIsMobileSidebarOpen(false); // Close mobile history drawer when a chat is selected
+    setIsMobileSidebarOpen(false); 
     try {
       const data = await fetchSessionHistory(sessionId);
       setAgentName(data.agent_name || 'GaariGuru Expert');
@@ -168,7 +167,7 @@ export default function ChatPage() {
 
   const startNewChat = () => {
     setSession(null);
-    setIsMobileSidebarOpen(false); // Close mobile history drawer when starting a new chat
+    setIsMobileSidebarOpen(false); 
     setMessages([{
       role: 'assistant',
       content: `Asalam o Alaikum! ${agentName} here. Which car are you looking to buy or inspect today?`,
@@ -240,7 +239,8 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-80px)] w-full overflow-hidden bg-[#a3a3a3] font-sans text-black relative">
+    // FIX 1: Using 100dvh prevents mobile browser address bars from breaking the chat view
+    <div className="flex h-[calc(100dvh-80px)] w-full overflow-hidden bg-[#a3a3a3] font-sans text-black relative">
       
       {/* ── Mobile Sidebar Backdrop ── */}
       {isMobileSidebarOpen && !isGuest && (
@@ -299,11 +299,10 @@ export default function ChatPage() {
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-black/15 bg-white/40 backdrop-blur-md sticky top-0 z-10 shadow-sm">
           <div className="flex items-center gap-3 min-w-0">
-            {/* Toggle History Button (Only visible on Mobile Phones) */}
             {!isGuest && (
               <button
                 onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-                className="md:hidden p-2 text-black hover:bg-black/10 rounded-xl border border-black/10 bg-white/60 shadow-sm transition-all shrink-0"
+                className="md:hidden p-2 text-black hover:bg-black/10 rounded-xl border border-black/10 bg-white/60 shadow-sm transition-all shrink-0 active:scale-95"
                 title="Toggle chat history"
               >
                 <MessageSquare className="w-5 h-5" />
@@ -338,7 +337,7 @@ export default function ChatPage() {
         </div>
 
         {/* Chat Feed */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scrollbar-hide overscroll-y-contain">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-full text-black/60 gap-3">
               <Loader2 className="w-6 h-6 animate-spin text-black" />
@@ -348,7 +347,8 @@ export default function ChatPage() {
             messages.map((msg, idx) => (
               <div
                 key={idx}
-                className={`flex items-end gap-2 sm:gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                // FIX 2: Slide-in and fade-in animation for a smoother mobile app feel
+                className={`flex items-end gap-2 sm:gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {msg.role === 'assistant' && (
                   <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center bg-black shadow-md border border-white/20">
@@ -376,7 +376,7 @@ export default function ChatPage() {
           )}
 
           {isTyping && (
-            <div className="flex items-end gap-3 justify-start">
+            <div className="flex items-end gap-3 justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center bg-black shadow-md border border-white/20">
                 <Sparkles className="w-3.5 h-3.5 text-white" />
               </div>
@@ -402,14 +402,15 @@ export default function ChatPage() {
                 type="text"
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                placeholder="Ask about fuel averages, ground clearance, parts..."
+                placeholder="Ask about fuel averages, ground clearance..."
                 disabled={isTyping || isLoading}
-                className="w-full bg-white/60 backdrop-blur-md border border-black/20 rounded-full pl-5 pr-14 py-3.5 outline-none focus:border-black focus:ring-1 focus:ring-black transition-all font-bold text-sm sm:text-base placeholder-black/50 text-black shadow-sm disabled:opacity-60"
+                // FIX 3: text-base instead of text-sm guarantees iOS Safari won't auto-zoom the page!
+                className="w-full bg-white/60 backdrop-blur-md border border-black/20 rounded-full pl-5 pr-14 py-3.5 outline-none focus:border-black focus:ring-1 focus:ring-black transition-all font-bold text-base placeholder-black/50 text-black shadow-sm disabled:opacity-60"
               />
               <button
                 type="submit"
                 disabled={isTyping || isLoading || !input.trim()}
-                className="absolute right-1.5 w-10 h-12 bg-black text-white rounded-full flex items-center justify-center hover:bg-neutral-800 transition-colors shadow-md disabled:opacity-50"
+                className="absolute right-1.5 w-10 h-11 bg-black text-white rounded-full flex items-center justify-center hover:bg-neutral-800 transition-colors shadow-md disabled:opacity-50 active:scale-95"
               >
                 <Send className="w-4 h-4 ml-0.5" />
               </button>
@@ -453,7 +454,7 @@ export default function ChatPage() {
               maxLength={40}
               placeholder="e.g. GaariGuru Expert..."
               onKeyDown={e => e.key === 'Enter' && handleSaveAgentName()}
-              className="w-full px-4 py-3 rounded-xl border border-black/20 bg-white/60 backdrop-blur-sm text-sm font-bold text-black placeholder-black/40 outline-none focus:border-black focus:ring-1 focus:ring-black shadow-sm"
+              className="w-full px-4 py-3 rounded-xl border border-black/20 bg-white/60 backdrop-blur-sm text-base font-bold text-black placeholder-black/40 outline-none focus:border-black focus:ring-1 focus:ring-black shadow-sm"
             />
           </div>
 

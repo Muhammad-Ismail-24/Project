@@ -12,7 +12,6 @@ export default function SavedCarsPage() {
   useEffect(() => {
     const fetchSavedCars = async () => {
       try {
-        // PROXY FIX: Using relative path
         const response = await fetch('/user/saved-listings', {
           method: 'GET',
           credentials: 'include',
@@ -45,6 +44,7 @@ export default function SavedCarsPage() {
 
   return (
     <div className="relative w-full min-h-[calc(100vh-80px)] overflow-x-hidden font-sans text-black">
+      {/* ── Background ── */}
       <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden flex items-center justify-center bg-[#a3a3a3]">
         <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(#000000 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
         <div className="absolute w-[80vw] h-[80vw] max-w-[1000px] max-h-[1000px] bg-white rounded-full blur-[140px] top-[0%] right-[-10%] opacity-40" />
@@ -52,25 +52,33 @@ export default function SavedCarsPage() {
 
       <Background3DShell />
       
-      <div className="relative z-10 w-full pt-16 px-6 max-w-7xl mx-auto pb-32">
-        <div className="mb-12 text-center md:text-left">
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-black mb-4">Saved Cars</h1>
-          <p className="text-xl font-medium text-black/80">Review your bookmarked vehicles and top picks.</p>
+      <div className="relative z-10 w-full pt-24 md:pt-32 px-4 md:px-6 max-w-7xl mx-auto pb-16 md:pb-32">
+        <div className="mb-10 md:mb-12 text-center md:text-left">
+          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-black mb-3 md:mb-4">
+            Saved Cars
+          </h1>
+          <p className="text-lg md:text-xl font-bold text-black">
+            Review your bookmarked vehicles and top picks.
+          </p>
         </div>
 
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-4">
-            <Loader2 className="w-12 h-12 text-black animate-spin" />
-            <p className="text-black/80 font-bold text-lg animate-pulse">Loading your saved cars...</p>
+          <div className="flex flex-col items-center justify-center py-16 md:py-20 space-y-4">
+            <Loader2 className="w-10 h-10 md:w-12 md:h-12 text-black animate-spin" />
+            <p className="text-black font-bold text-base md:text-lg animate-pulse">
+              Loading your saved cars...
+            </p>
           </div>
         ) : savedCars.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-32 bg-white/60 backdrop-blur-md border border-black/15 rounded-3xl shadow-2xl">
-            <BookmarkX className="w-16 h-16 text-black/40 mb-6" />
-            <h3 className="text-2xl font-black tracking-tight text-black mb-4">No saved cars yet</h3>
-            <p className="text-black/60 font-bold text-lg mb-8 text-center max-w-md">
+          <div className="flex flex-col items-center justify-center py-16 md:py-32 px-4 bg-white/60 backdrop-blur-md border border-black/15 rounded-2xl md:rounded-3xl shadow-2xl">
+            <BookmarkX className="w-12 h-12 md:w-16 md:h-16 text-black mb-4 md:mb-6" />
+            <h3 className="text-xl md:text-2xl font-black tracking-tight text-black mb-3 md:mb-4">
+              No saved cars yet
+            </h3>
+            <p className="text-black font-bold text-sm md:text-lg mb-6 md:mb-8 text-center max-w-md">
               You haven't saved any cars yet! Go browse our listings and hit the heart icon to save your favorites here.
             </p>
-            <Link to="/" className="px-8 py-4 bg-black text-white font-bold rounded-full hover:bg-neutral-800 transition-colors shadow-lg">
+            <Link to="/" className="px-6 py-3 md:px-8 md:py-4 bg-black text-white font-bold rounded-full hover:bg-neutral-800 transition-colors shadow-lg text-sm md:text-base">
               Explore Cars
             </Link>
           </div>
