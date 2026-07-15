@@ -91,7 +91,7 @@ function BmwModel() {
       return;
     }
 
-    // ── 2. Scroll-driven animation (existing logic, untouched) ───────────────
+    // ── 2. Scroll-driven animation (Fixed Straight Trajectory) ───────────────
     const scrollY    = window.scrollY;
     const maxScroll  = document.body.scrollHeight - window.innerHeight;
     const rawProgress = maxScroll > 0 ? scrollY / maxScroll : 0;
@@ -103,14 +103,16 @@ function BmwModel() {
       delta
     );
 
+    // Car drives in a straight line backward. 
+    // Adjusted the Z axis slightly so it backs up deeper into the scene.
     const currentX         = THREE.MathUtils.lerp(4,  -15, smoothedProgress.current);
-    const currentZ         = THREE.MathUtils.lerp(2,   -2, smoothedProgress.current);
-    const startAngle       = (Math.PI / 5)   + Math.PI;
-    const endAngle         = (Math.PI / 1.5) + Math.PI;
-    const currentRotationY = THREE.MathUtils.lerp(startAngle, endAngle, smoothedProgress.current);
+    const currentZ         = THREE.MathUtils.lerp(2,   -6, smoothedProgress.current);
+    
+    // We lock the rotation angle so it does not curve or drift while reversing.
+    const fixedAngle       = (Math.PI / 5) + Math.PI;
 
     carRef.current.position.set(currentX, REVEAL_Y_REST, currentZ);
-    carRef.current.rotation.y = currentRotationY;
+    carRef.current.rotation.y = fixedAngle;
   });
 
   return (
