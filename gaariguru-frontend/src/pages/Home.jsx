@@ -22,6 +22,56 @@ const heroItemVariants = {
   },
 };
 
+// ─── Custom Typewriter Component for the Hero Headline ───────────────────────
+const HeroTypewriter = () => {
+  const line1 = "Find the right car.";
+  const line2 = "Skip the wrong ones.";
+  
+  const [displayed1, setDisplayed1] = useState('');
+  const [displayed2, setDisplayed2] = useState('');
+  const [phase, setPhase] = useState(0); // 0: wait, 1: type1, 2: wait, 3: type2, 4: done
+
+  useEffect(() => {
+    // Initial delay before typing starts
+    if (phase === 0) {
+      const t = setTimeout(() => setPhase(1), 400);
+      return () => clearTimeout(t);
+    }
+    // Type out the first line
+    if (phase === 1) {
+      if (displayed1.length < line1.length) {
+        const t = setTimeout(() => setDisplayed1(line1.slice(0, displayed1.length + 1)), 50);
+        return () => clearTimeout(t);
+      } else {
+        // Pause briefly after the first line finishes
+        const t = setTimeout(() => setPhase(3), 400); 
+        return () => clearTimeout(t);
+      }
+    }
+    // Type out the second line
+    if (phase === 3) {
+      if (displayed2.length < line2.length) {
+        const t = setTimeout(() => setDisplayed2(line2.slice(0, displayed2.length + 1)), 50);
+        return () => clearTimeout(t);
+      } else {
+        setPhase(4); // Finished
+      }
+    }
+  }, [phase, displayed1, displayed2, line1, line2]);
+
+  return (
+    <h1 className="text-6xl md:text-7xl font-black tracking-tighter text-black mb-6 leading-[0.9] min-h-[130px] md:min-h-[145px]">
+      {displayed1}
+      {/* Blinking cursor for the first line */}
+      {phase === 1 && <span className="animate-pulse text-black ml-1">|</span>}
+      <br />
+      <span className="text-black/60">{displayed2}</span>
+      {/* Blinking cursor for the second line (stays blinking when finished) */}
+      {phase >= 3 && <span className="animate-pulse text-black/60 ml-1">|</span>}
+    </h1>
+  );
+};
+
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState([]);
@@ -109,12 +159,10 @@ export default function Home() {
               </div>
             </motion.div>
 
-            <motion.h1
-              variants={heroItemVariants}
-              className="text-6xl md:text-7xl font-black tracking-tighter text-black mb-6 leading-[0.9]"
-            >
-              Find the right car.<br />Skip the wrong ones.
-            </motion.h1>
+            {/* ── Injection of the New Typewriter Component ── */}
+            <motion.div variants={heroItemVariants}>
+              <HeroTypewriter />
+            </motion.div>
 
             <motion.p
               variants={heroItemVariants}
