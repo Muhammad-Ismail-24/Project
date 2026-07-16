@@ -3,6 +3,32 @@ import { Sparkles, MapPin, Calendar, Gauge, ExternalLink, Loader2, ShieldAlert, 
 import SaveCarButton from './SaveCarButton';
 import { evaluateSingleCar } from '../utils/api';
 
+const generateHeuristicTags = (title = '') => {
+  const tags = [];
+  const lowerTitle = title.toLowerCase();
+
+  // Negative / Warning tags
+  if (lowerTitle.includes('shower')) {
+    tags.push({ text: 'Danger: Showered', type: 'danger' });
+  }
+  if (lowerTitle.includes('touchup') || lowerTitle.includes('touch up')) {
+    tags.push({ text: 'Warning: Touchups', type: 'warning' });
+  }
+  if (lowerTitle.includes('paint') || lowerTitle.includes('repaint')) {
+    tags.push({ text: 'Warning: Painted', type: 'warning' });
+  }
+
+  // Positive tags
+  if (lowerTitle.includes('genuine') || lowerTitle.includes('bumper to bumper')) {
+    tags.push({ text: 'High Liquidity: Genuine', type: 'positive' });
+  }
+  if (lowerTitle.includes('non accident') || lowerTitle.includes('no accident')) {
+    tags.push({ text: 'Positive: Non-Accidental', type: 'positive' });
+  }
+
+  return tags;
+};
+
 export default function CarResultCard({ car, isHighlighted = false, savedListingIds = new Set(), onUnsave, userQuery = '' }) {
   const analysis = car.ai_analysis || {};
   
@@ -29,6 +55,7 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
 
   const liquidityScore = aiData?.liquidity_score || null;
   const justification = aiData?.justification || null;
+  const heuristicTags = generateHeuristicTags(car.title);
 
   const priceDisplay = typeof car.price === 'number' 
     ? `PKR ${car.price.toLocaleString()}` 
@@ -118,10 +145,20 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
         </div>
 
         {/* Warning Flags (only shown after AI Review) */}
-        {redFlags.length > 0 && (
+        {(redFlags.length > 0 || heuristicTags.length > 0) && (
           <div className="flex flex-wrap gap-2 mb-4">
+            {heuristicTags.map((tag, idx) => (
+              <span key={`heuristic-${idx}`} className={`inline-flex items-center gap-1.5 border shadow-sm text-xs font-bold px-3 py-1 rounded-full ${
+                tag.type === 'danger' ? 'bg-red-50 border-red-200 text-red-700' :
+                tag.type === 'warning' ? 'bg-orange-50 border-orange-200 text-orange-700' :
+                'bg-green-50 border-green-200 text-green-700'
+              }`}>
+                {tag.type === 'danger' || tag.type === 'warning' ? <ShieldAlert className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
+                {tag.text}
+              </span>
+            ))}
             {redFlags.map((flag, idx) => (
-              <span key={idx} className="inline-flex items-center gap-1.5 bg-black border border-black text-white shadow-md text-xs font-bold px-3 py-1 rounded-full">
+              <span key={`ai-${idx}`} className="inline-flex items-center gap-1.5 bg-black border border-black text-white shadow-md text-xs font-bold px-3 py-1 rounded-full">
                 <ShieldAlert className="w-3 h-3" />
                 {flag}
               </span>
