@@ -16,7 +16,7 @@ export default function About() {
         </h1>
         
         {/* Frosted Glass Panel */}
-        <div className="bg-white/60 backdrop-blur-md border border-black/15 rounded-2xl md:rounded-3xl p-6 sm:p-8 md:p-10 shadow-2xl space-y-6 md:space-y-8">
+        <div className="bg-white/60 backdrop-blur-xl border border-white/5 rounded-2xl md:rounded-3xl p-6 sm:p-8 md:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] space-y-6 md:space-y-8">
           
           <section>
             <h2 className="text-xl md:text-2xl font-black tracking-tight mb-2 md:mb-3">The Problem</h2>

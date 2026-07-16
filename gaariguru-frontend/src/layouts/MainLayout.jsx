@@ -84,10 +84,38 @@ export default function MainLayout() {
           </div>
 
           <div className="hidden md:flex space-x-8 absolute left-1/2 -translate-x-1/2">
-            <NavLink to="/" className={({ isActive }) => `relative font-black transition-all duration-300 ease-in-out after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:bg-black after:transition-all after:duration-300 ${isActive ? 'text-black after:w-full' : 'text-black/60 hover:text-black after:w-0 hover:after:w-full'}`}>Discover</NavLink>
-            <NavLink to="/calculators" className={({ isActive }) => `relative font-black transition-all duration-300 ease-in-out after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:bg-black after:transition-all after:duration-300 ${isActive ? 'text-black after:w-full' : 'text-black/60 hover:text-black after:w-0 hover:after:w-full'}`}>Calculators</NavLink>
-            <NavLink to="/chat" className={({ isActive }) => `relative font-black transition-all duration-300 ease-in-out after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:bg-black after:transition-all after:duration-300 ${isActive ? 'text-black after:w-full' : 'text-black/60 hover:text-black after:w-0 hover:after:w-full'}`}>Assistant</NavLink>
-            <NavLink to="/about" className={({ isActive }) => `relative font-black transition-all duration-300 ease-in-out after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:bg-black after:transition-all after:duration-300 ${isActive ? 'text-black after:w-full' : 'text-black/60 hover:text-black after:w-0 hover:after:w-full'}`}>About</NavLink>
+            <NavLink to="/" className={({ isActive }) => `relative flex flex-col items-center font-black transition-all duration-300 ease-in-out after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:bg-black after:transition-all after:duration-300 ${isActive ? 'text-black after:w-full' : 'text-black/60 hover:text-black after:w-0 hover:after:w-full'}`}>
+              {({ isActive }) => (
+                <>
+                  <span>Discover</span>
+                  {isActive && <div className="h-1 w-1 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] mx-auto mt-1 absolute -bottom-3" />}
+                </>
+              )}
+            </NavLink>
+            <NavLink to="/calculators" className={({ isActive }) => `relative flex flex-col items-center font-black transition-all duration-300 ease-in-out after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:bg-black after:transition-all after:duration-300 ${isActive ? 'text-black after:w-full' : 'text-black/60 hover:text-black after:w-0 hover:after:w-full'}`}>
+              {({ isActive }) => (
+                <>
+                  <span>Calculators</span>
+                  {isActive && <div className="h-1 w-1 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] mx-auto mt-1 absolute -bottom-3" />}
+                </>
+              )}
+            </NavLink>
+            <NavLink to="/chat" className={({ isActive }) => `relative flex flex-col items-center font-black transition-all duration-300 ease-in-out after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:bg-black after:transition-all after:duration-300 ${isActive ? 'text-black after:w-full' : 'text-black/60 hover:text-black after:w-0 hover:after:w-full'}`}>
+              {({ isActive }) => (
+                <>
+                  <span>Assistant</span>
+                  {isActive && <div className="h-1 w-1 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] mx-auto mt-1 absolute -bottom-3" />}
+                </>
+              )}
+            </NavLink>
+            <NavLink to="/about" className={({ isActive }) => `relative flex flex-col items-center font-black transition-all duration-300 ease-in-out after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:bg-black after:transition-all after:duration-300 ${isActive ? 'text-black after:w-full' : 'text-black/60 hover:text-black after:w-0 hover:after:w-full'}`}>
+              {({ isActive }) => (
+                <>
+                  <span>About</span>
+                  {isActive && <div className="h-1 w-1 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] mx-auto mt-1 absolute -bottom-3" />}
+                </>
+              )}
+            </NavLink>
           </div>
 
           <div className="flex items-center">
@@ -103,20 +131,20 @@ export default function MainLayout() {
                 Sign in
               </button>
             ) : (
-              <button 
+              <div 
                 onClick={() => setIsDrawerOpen(true)}
-                className="flex items-center gap-2 hover:bg-black/5 p-1 pr-3 rounded-full transition-colors duration-200 border border-transparent hover:border-black/10"
+                className="flex items-center gap-2 bg-zinc-800/50 border border-zinc-700 px-3 py-1.5 rounded-full hover:bg-zinc-800 transition-colors cursor-pointer shadow-sm"
               >
                 {user.picture ? (
-                  <img src={user.picture} alt={user.name} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-black/20" />
+                  <img src={user.picture} alt={user.name} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover" />
                 ) : (
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black text-white flex items-center justify-center">
-                    <User className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black text-white flex items-center justify-center">
+                    <User className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                 )}
-                <span className="font-black text-sm hidden sm:block text-black">Welcome, {user.name?.split(' ')[0]}</span>
-                <ChevronDown className="w-4 h-4 text-black/60 hidden sm:block" />
-              </button>
+                <span className="font-bold text-sm hidden sm:block text-white">Welcome, {user.name?.split(' ')[0]}</span>
+                <ChevronDown className="w-4 h-4 text-zinc-400 hidden sm:block" />
+              </div>
             )}
           </div>
         </div>
@@ -147,12 +175,12 @@ export default function MainLayout() {
 
       {/* Preferences Drawer */}
       <div 
-        className={`fixed inset-y-0 right-0 z-[60] w-80 sm:w-96 bg-[#a3a3a3] shadow-2xl border-l border-black transform transition-transform duration-300 ease-in-out ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed inset-y-0 right-0 z-[60] w-80 sm:w-96 bg-zinc-900/90 backdrop-blur-xl shadow-2xl border-l border-white/10 transform transition-transform duration-300 ease-in-out ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <div className="p-6">
-          <div className="flex justify-between items-center mb-8 border-b border-black pb-4">
-            <h2 className="text-xl font-black tracking-tight text-black">Preferences</h2>
-            <button onClick={() => setIsDrawerOpen(false)} className="p-2 hover:bg-black/10 rounded-full text-black transition-colors">
+          <div className="flex justify-between items-center mb-8 border-b border-zinc-700/50 pb-4">
+            <h2 className="text-xl font-black tracking-tight text-white">Preferences</h2>
+            <button onClick={() => setIsDrawerOpen(false)} className="p-2 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -161,36 +189,36 @@ export default function MainLayout() {
             <Link 
               to="/saved" 
               onClick={() => setIsDrawerOpen(false)}
-              className="flex items-center justify-between w-full p-4 bg-black text-white rounded-xl hover:bg-neutral-800 transition-colors font-bold border border-black shadow-md"
+              className="flex items-center justify-between w-full bg-zinc-800/50 border border-zinc-700 rounded-lg p-3 text-sm font-bold hover:bg-zinc-800 transition-colors text-white shadow-sm"
             >
               <span>My Saved Cars</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
             </Link>
             <div>
-              <label className="block text-sm font-black mb-2 text-black uppercase tracking-wider">Assistant Name</label>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2 block">Assistant Name</label>
               <input 
                 type="text" 
                 value={assistantName}
                 onChange={(e) => setAssistantName(e.target.value)}
                 onBlur={handleNameBlur}
                 placeholder="e.g. GaariGuru Expert..."
-                className="w-full p-3 bg-[#a3a3a3] border border-black rounded-lg outline-none font-bold text-black focus:ring-2 focus:ring-black placeholder-black/40 shadow-sm"
+                className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg p-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-white placeholder-zinc-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-black mb-2 text-black uppercase tracking-wider">Daily Commute (km)</label>
-              <input type="range" min="0" max="100" className="w-full accent-black" />
+              <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2 block">Daily Commute (km)</label>
+              <input type="range" min="0" max="100" className="w-full accent-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-black mb-2 text-black uppercase tracking-wider">Tax Status</label>
-              <select className="w-full p-3 bg-[#a3a3a3] border border-black rounded-lg outline-none font-bold text-black focus:ring-2 focus:ring-black">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2 block">Tax Status</label>
+              <select className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg p-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-white">
                 <option>Filer</option>
                 <option>Non-Filer</option>
               </select>
             </div>
             <button 
               onClick={() => setIsAuthenticated(false)}
-              className="w-full mt-4 py-3 bg-[#a3a3a3] border border-black text-black font-black rounded-lg hover:bg-black hover:text-white transition-colors"
+              className="w-full border border-red-500/20 text-red-400 hover:bg-red-500/10 rounded-lg py-2 mt-4 font-bold transition-colors"
             >
               Sign Out
             </button>
