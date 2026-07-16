@@ -123,40 +123,17 @@ async def search_cars(request: SearchRequest, session: Session = Depends(get_ses
         return []
 
     # ----------------------------------------------------
-    # STEP 4: Evaluation (The "Top 5" AI Diet)
+    # STEP 4: On-Demand Appraisal (No batch evaluation)
     # ----------------------------------------------------
-    top_5_cars = clean_listings[:5]
-    remaining_cars = clean_listings[5:]
+    # AI appraisal is now triggered per-card by the user via the "AI Review" button.
+    # Cards are returned clean without any ai_analysis payload.
+    # ----------------------------------------------------
+    print(f"[Pipeline] Returning {len(clean_listings)} clean listings (no batch AI appraisal).")
 
-
-
-
-    print(f"[AI Diet] Ingesting Top {len(top_5_cars)} listings to Gemini appraiser")
-    # evaluated_top_5 = await evaluate_scraped_listings(top_5_cars, request.query)
-    
-    # Mock data to save API limits during testing
-    mock_analysis = {
-        "red_flags": [],
-        "liquidity_score": "High",
-        "justification": "Mock AI evaluation applied during testing to conserve API rate limits."
-    }
-    evaluated_top_5 = [
-        {**car.model_dump(), "ai_analysis": mock_analysis}
-        for car in top_5_cars
+    evaluated_listings = [
+        {**car.model_dump(), "ai_analysis": None}
+        for car in clean_listings
     ]
-
-    standard_analysis = {
-        "red_flags": [],
-        "liquidity_score": "Standard",
-        "justification": "Standard listing. Deep AI analysis is reserved for the Top 5 best matches for this search."
-    }
-
-    remaining_with_fallback = [
-        {**car.model_dump(), "ai_analysis": standard_analysis}
-        for car in remaining_cars
-    ]
-
-    evaluated_listings = evaluated_top_5 + remaining_with_fallback
 
     # ----------------------------------------------------
     # STEP 5: Save Results to Cache Database
@@ -169,7 +146,7 @@ async def search_cars(request: SearchRequest, session: Session = Depends(get_ses
         session.refresh(new_cache)
 
         for item in evaluated_listings:
-            analysis = item.get("ai_analysis", {})
+            analysis = item.get("ai_analysis") or {}
             db_car = CachedCarListing(
                 id=item.get("id"),
                 search_id=new_cache.id,
@@ -285,24 +262,13 @@ async def search_cars_stream(request: SearchRequest, session: Session = Depends(
 
         yield f"data: {json.dumps({'status': f'Found {len(clean_listings)} cars. Scoring top matches...'})}\n\n"
 
-        top_5_cars = clean_listings[:5]
-        remaining_cars = clean_listings[5:]
+        yield f"data: {json.dumps({'status': f'{len(clean_listings)} cars ready!'})}\n\n"
 
-        yield f"data: {json.dumps({'status': f'Top {min(5, len(clean_listings))} cars selected! Passing to AI Appraiser...'})}\n\n"
-        evaluated_top_5 = await evaluate_scraped_listings(top_5_cars, request.query)
-
-        standard_analysis = {
-            "red_flags": [],
-            "liquidity_score": "Standard",
-            "justification": "Standard listing. Deep AI analysis is reserved for the Top 5 best matches for this search."
-        }
-
-        remaining_with_fallback = [
-            {**car.model_dump(), "ai_analysis": standard_analysis}
-            for car in remaining_cars
+        # On-Demand: No batch AI appraisal. Cards arrive clean.
+        evaluated_listings = [
+            {**car.model_dump(), "ai_analysis": None}
+            for car in clean_listings
         ]
-
-        evaluated_listings = evaluated_top_5 + remaining_with_fallback
 
         try:
             new_cache = SearchQueryCache(normalized_query=cache_key)
@@ -311,7 +277,7 @@ async def search_cars_stream(request: SearchRequest, session: Session = Depends(
             session.refresh(new_cache)
 
             for item in evaluated_listings:
-                analysis = item.get("ai_analysis", {})
+                analysis = item.get("ai_analysis") or {}
                 db_car = CachedCarListing(
                     id=item.get("id"),
                     search_id=new_cache.id,

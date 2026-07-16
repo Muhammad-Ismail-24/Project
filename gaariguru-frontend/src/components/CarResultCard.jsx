@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, MapPin, Calendar, Gauge, ExternalLink, Loader2, ChevronDown, ShieldAlert, TrendingUp } from 'lucide-react';
+import { Sparkles, MapPin, Calendar, Gauge, ExternalLink, Loader2, ShieldAlert, TrendingUp } from 'lucide-react';
 import SaveCarButton from './SaveCarButton';
 import { evaluateSingleCar } from '../utils/api';
 
@@ -11,10 +11,11 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
   const [aiData, setAiData] = useState(null);
   const [evalError, setEvalError] = useState(null);
 
+  // Red flags: prefer on-demand data, then existing analysis, then raw JSON field
   let redFlags = [];
-  if (aiData?.red_flags) {
+  if (aiData?.red_flags?.length) {
     redFlags = aiData.red_flags;
-  } else if (analysis.red_flags) {
+  } else if (analysis.red_flags?.length) {
     redFlags = analysis.red_flags;
   } else if (car.red_flags_json) {
     try {
@@ -26,8 +27,8 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
     }
   }
 
-  const liquidityScore = aiData?.liquidity_score || analysis.liquidity_score || car.liquidity_score || 'Medium';
-  const justification = aiData?.justification || analysis.justification || car.justification || 'Listing meets standard query parameters.';
+  const liquidityScore = aiData?.liquidity_score || null;
+  const justification = aiData?.justification || null;
 
   const priceDisplay = typeof car.price === 'number' 
     ? `PKR ${car.price.toLocaleString()}` 
@@ -36,8 +37,6 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
   const mileageDisplay = typeof car.mileage === 'number' 
     ? `${car.mileage.toLocaleString()} km` 
     : `${car.mileage} km`;
-
-  const hasExistingAppraisal = !!(analysis.justification && analysis.justification !== 'Mock AI evaluation applied during testing to conserve API rate limits.' && analysis.justification !== 'Standard listing. Deep AI analysis is reserved for the Top 5 best matches for this search.');
 
   // ─── On-Demand Evaluate Handler ───
   const handleEvaluate = async () => {
@@ -103,7 +102,7 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
           <h2 className="text-2xl font-black tracking-tight text-black line-clamp-2 pr-4">{car.title}</h2>
           <div className="text-right flex-shrink-0">
             <p className="text-2xl font-black text-black">{priceDisplay}</p>
-            {(aiData || hasExistingAppraisal) && (
+            {liquidityScore && (
               <span className={`inline-block mt-2 px-3 py-1 border shadow-sm text-xs font-bold uppercase tracking-wider rounded-full ${liquidityBadge[liquidityScore] || liquidityBadge.Medium}`}>
                 {liquidityScore} Liquidity
               </span>
@@ -118,7 +117,7 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
           <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-black"/> {car.city}</span>
         </div>
 
-        {/* Warning Flags (Strict Black & White) */}
+        {/* Warning Flags (only shown after AI Review) */}
         {redFlags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
             {redFlags.map((flag, idx) => (
@@ -130,35 +129,8 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
           </div>
         )}
 
-        {/* ── On-Demand AI Review Section ── */}
-        {!aiData && !hasExistingAppraisal && (
-          <div className="mb-4">
-            <button
-              onClick={handleEvaluate}
-              disabled={isEvaluating}
-              className="group relative inline-flex items-center gap-2 bg-white/60 backdrop-blur-md border border-black/20 hover:border-black hover:bg-white/80 text-black font-bold text-sm px-5 py-2.5 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isEvaluating ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Appraising...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 group-hover:animate-pulse" />
-                  <span>AI Review</span>
-                  <ChevronDown className="w-3.5 h-3.5 opacity-50" />
-                </>
-              )}
-            </button>
-            {evalError && (
-              <p className="text-xs font-bold text-black/60 mt-2">{evalError}</p>
-            )}
-          </div>
-        )}
-
-        {/* ── AI Appraisal Results (Expandable) ── */}
-        {(aiData || hasExistingAppraisal) && (
+        {/* ── AI Appraisal Results (shown after review) ── */}
+        {aiData && justification && (
           <div className="mb-4 bg-white/40 backdrop-blur-sm rounded-xl p-4 border border-black/10 shadow-sm space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center">
@@ -172,14 +144,32 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
           </div>
         )}
 
-        {/* Footer Area: External Link */}
+        {/* Footer Area: AI Review Button + View Ad */}
         <div className="mt-auto flex flex-col md:flex-row items-stretch md:items-end gap-4">
-          {!aiData && !hasExistingAppraisal && (
-            <div className="bg-white/40 backdrop-blur-sm rounded-xl p-4 flex items-start space-x-3 border border-black/10 flex-grow shadow-sm">
-              <Sparkles className="w-5 h-5 text-black shrink-0 mt-0.5" />
-              <p className="text-sm text-black/80 leading-relaxed font-bold">
-                {justification}
-              </p>
+          
+          {/* AI Review Button (replaces old justification box) */}
+          {!aiData && (
+            <div className="flex-grow">
+              <button
+                onClick={handleEvaluate}
+                disabled={isEvaluating}
+                className="group w-full md:w-auto inline-flex items-center justify-center gap-2 bg-white/60 backdrop-blur-md border border-black/20 hover:border-black hover:bg-white/80 text-black font-bold text-sm px-5 py-3 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isEvaluating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Appraising...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 group-hover:animate-pulse" />
+                    <span>AI Review</span>
+                  </>
+                )}
+              </button>
+              {evalError && (
+                <p className="text-xs font-bold text-black/60 mt-2">{evalError}</p>
+              )}
             </div>
           )}
           
