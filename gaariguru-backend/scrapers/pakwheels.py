@@ -178,9 +178,16 @@ async def scrape_pakwheels(url: str, session) -> list[CarListing]:
             if not title:
                 continue
 
-            link = a_tag.get('href', '').strip() if a_tag else url
-            if link and not link.startswith('http'):
-                link = 'https://www.pakwheels.com' + link
+            # --- Link ---
+            final_listing_url = ""
+            try:
+                relative_url = a_tag.get('href', '').strip() if a_tag else ''
+                if relative_url.startswith('/'):
+                    final_listing_url = f"https://www.pakwheels.com{relative_url}"
+                elif relative_url.startswith('http'):
+                    final_listing_url = relative_url
+            except Exception:
+                pass
 
             # --- Price ---
             price = _extract_price(item)
@@ -217,7 +224,7 @@ async def scrape_pakwheels(url: str, session) -> list[CarListing]:
                 mileage=mileage,
                 city=city_text,
                 year=year,
-                listing_url=link,
+                listing_url=final_listing_url,
                 image_url=image_url,
                 platform='PakWheels',
                 age_days=_parse_age_days(item, debug=(len(cars) == 0)),

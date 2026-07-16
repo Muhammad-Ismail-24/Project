@@ -171,28 +171,40 @@ MONTH_MAP = {
 
 
 def _time_str_to_days(text: str) -> int:
-    """
-    Converts a relative OR absolute time string to an integer day count.
-
-    FIX (this patch):
-    - 'about' tolerance: r'(?:about\s+)?(\d+)\s*unit' so "about 2 days"
-      matches the same as "2 days".
-    - Urdu partial-translation patterns: دن (days), ہفتے (weeks),
-      مہینے (months), سال (years), پہلے (ago).
-    - Absolute date parsing: "12 July", "Jul 12", "12-07-2025",
-      "2025-07-12" — computes days-since-posted from today's date.
-    - Keeps all original relative English patterns intact.
-    """
     import datetime
 
     t = text.lower().strip()
 
-    # --- Same-day signals ---
-    if re.search(r'\b(minute|min|hour|hr|just now|today|moments?|ابھی|گھنٹ|منٹ)\b', t):
-        return 0
+    # --- Absolute date parsing FIRST to avoid being shadowed by 'hr'/'min' in full text ---
+    today = datetime.date.today()
 
-    if 'yesterday' in t or 'کل' in t:
-        return 1
+    # Try strptime for absolute dates first (e.g., Oct 12, 2023)
+    date_match = re.search(r'([a-z]{3,9})\s+(\d{1,2}),?\s+(\d{4})', t)
+    if date_match:
+        try:
+            month_str = date_match.group(1)[:3].capitalize()
+            clean_date = f"{month_str} {date_match.group(2)}, {date_match.group(3)}"
+            posted = datetime.datetime.strptime(clean_date, "%b %d, %Y").date()
+            return max(0, (today - posted).days)
+        except Exception:
+            pass
+
+    # "DD-MM-YYYY" or "YYYY-MM-DD"
+    m = re.search(r'(\d{4})-(\d{2})-(\d{2})', t)
+    if m:
+        try:
+            posted = datetime.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+            return max(0, (today - posted).days)
+        except ValueError:
+            pass
+
+    m = re.search(r'(\d{2})-(\d{2})-(\d{4})', t)
+    if m:
+        try:
+            posted = datetime.date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+            return max(0, (today - posted).days)
+        except ValueError:
+            pass
 
     # --- Relative English (with optional 'about' prefix) ---
     m = re.search(r'(?:about\s+)?(\d+)\s*day', t)
@@ -212,81 +224,25 @@ def _time_str_to_days(text: str) -> int:
         return int(m.group(1)) * 365
 
     # --- Urdu partial-translation patterns ---
-    # دن = days, ہفتے = weeks, مہینے = months, سال = years, پہلے = ago
-    m = re.search(r'(\d+)\s*دن', text)       # Urdu "days"
+    m = re.search(r'(\d+)\s*دن', t)       # Urdu "days"
     if m:
         return int(m.group(1))
-
-    m = re.search(r'(\d+)\s*ہفتے', text)     # Urdu "weeks"
+    m = re.search(r'(\d+)\s*ہفتے', t)     # Urdu "weeks"
     if m:
         return int(m.group(1)) * 7
-
-    m = re.search(r'(\d+)\s*مہینے', text)    # Urdu "months"
+    m = re.search(r'(\d+)\s*مہینے', t)    # Urdu "months"
     if m:
         return int(m.group(1)) * 30
-
-    m = re.search(r'(\d+)\s*سال', text)      # Urdu "years"
+    m = re.search(r'(\d+)\s*سال', t)      # Urdu "years"
     if m:
         return int(m.group(1)) * 365
 
-    # --- Absolute date parsing ---
-    # Formats: "12 July 2025", "12 July", "Jul 12", "12-07-2025", "2025-07-12"
-    today = datetime.date.today()
+    # --- Same-day signals (put LAST to prevent 'hr'/'min' in full text from overwriting actual dates) ---
+    if re.search(r'\b(minute|min|hour|hr|just now|today|moments?|ابھی|گھنٹ|منٹ)\b', t):
+        return 0
 
-    # "12 July 2025" or "12 July"
-    m = re.search(
-        r'(\d{1,2})\s+(january|february|march|april|may|june|july|august|'
-        r'september|october|november|december|jan|feb|mar|apr|jun|jul|aug|'
-        r'sep|oct|nov|dec)(?:\s+(\d{4}))?',
-        t
-    )
-    if m:
-        day = int(m.group(1))
-        month = MONTH_MAP.get(m.group(2), 0)
-        year = int(m.group(3)) if m.group(3) else today.year
-        if month > 0:
-            try:
-                posted = datetime.date(year, month, day)
-                diff = (today - posted).days
-                return max(0, diff)
-            except ValueError:
-                pass
-
-    # "July 12" or "Jul 12"
-    m = re.search(
-        r'(january|february|march|april|may|june|july|august|'
-        r'september|october|november|december|jan|feb|mar|apr|jun|jul|aug|'
-        r'sep|oct|nov|dec)\s+(\d{1,2})(?:,?\s*(\d{4}))?',
-        t
-    )
-    if m:
-        month = MONTH_MAP.get(m.group(1), 0)
-        day = int(m.group(2))
-        year = int(m.group(3)) if m.group(3) else today.year
-        if month > 0:
-            try:
-                posted = datetime.date(year, month, day)
-                diff = (today - posted).days
-                return max(0, diff)
-            except ValueError:
-                pass
-
-    # "DD-MM-YYYY" or "YYYY-MM-DD"
-    m = re.search(r'(\d{4})-(\d{2})-(\d{2})', t)
-    if m:
-        try:
-            posted = datetime.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
-            return max(0, (today - posted).days)
-        except ValueError:
-            pass
-
-    m = re.search(r'(\d{2})-(\d{2})-(\d{4})', t)
-    if m:
-        try:
-            posted = datetime.date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
-            return max(0, (today - posted).days)
-        except ValueError:
-            pass
+    if 'yesterday' in t or 'کل' in t:
+        return 1
 
     return 999  # unparseable → treated as stale by scorer
 
@@ -449,6 +405,13 @@ async def scrape_gari_pk(
 
     for item in items[:MAX_CARDS]:
         try:
+            # --- Text content (shared by price / year / mileage regex) ---
+            text_content = item.get_text(separator=' ')
+
+            # TASK 1: Filter SOLD listings
+            if re.search(r'\bsold\b', text_content, re.I):
+                continue
+
             # --- Title ---
             title_el = (
                 item.find(['h2', 'h3', 'h4', 'h5'])
@@ -469,9 +432,6 @@ async def scrape_gari_pk(
                 link = link.split("?_x_tr")[0]
                 if not link.startswith('http'):
                     link = 'https://www.gari.pk' + link
-
-            # --- Text content (shared by price / year / mileage regex) ---
-            text_content = item.get_text(separator=' ')
 
             # --- Price (two-stage, with Rs. → PKR normalization) ---
             # Stage 1: class selector

@@ -7,6 +7,7 @@ Uses curl_cffi AsyncSession for TLS-fingerprinted requests.
 from bs4 import BeautifulSoup
 import re
 from models.car_schema import CarListing
+from datetime import datetime
 
 MAX_ORGANIC_CARDS = 40
 
@@ -64,6 +65,10 @@ async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> 
     for item in items:
         try:
             text_content = item.get_text(separator=' ')
+
+            # TASK 1: Filter SOLD listings
+            if re.search(r'\bsold\b', text_content, re.I):
+                continue
 
             # --- Title ---
             title_el = item.find(['h2', 'h3', 'h4'])
@@ -123,22 +128,37 @@ async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> 
                         break
 
             # --- Age/Freshness ---
-            age_days = 0
+            age_days = 999  # Failsafe default to 999 instead of 0
             text_lower = text_content.lower()
-            if 'hours' in text_lower or 'mins' in text_lower or 'just now' in text_lower:
-                age_days = 0
-            elif 'days' in text_lower:
-                day_match = re.search(r'(\d+)\s+days?', text_lower)
-                if day_match:
-                    age_days = int(day_match.group(1))
-            elif 'week' in text_lower:
-                week_match = re.search(r'(\d+)\s+weeks?', text_lower)
-                if week_match:
-                    age_days = int(week_match.group(1)) * 7
-            elif 'month' in text_lower:
-                month_match = re.search(r'(\d+)\s+months?', text_lower)
-                if month_match:
-                    age_days = int(month_match.group(1)) * 30
+
+            # Try absolute dates like "Oct 12, 2023" or "October 12, 2023"
+            abs_date_match = re.search(r'([A-Z][a-z]{2,8})\s+(\d{1,2}),?\s+(\d{4})', text_content)
+            if abs_date_match:
+                try:
+                    month_str = abs_date_match.group(1)[:3]  # truncate to 3 chars for %b
+                    clean_date_str = f"{month_str} {abs_date_match.group(2)}, {abs_date_match.group(3)}"
+                    dt = datetime.strptime(clean_date_str, "%b %d, %Y")
+                    delta = datetime.now() - dt
+                    age_days = max(0, delta.days)
+                except Exception:
+                    age_days = 999
+            else:
+                if re.search(r'\b(minute|min|hour|hr|just now|today|moments?)\b', text_lower):
+                    age_days = 0
+                elif 'yesterday' in text_lower:
+                    age_days = 1
+                elif 'day' in text_lower:
+                    day_match = re.search(r'(\d+)\s+days?', text_lower)
+                    if day_match:
+                        age_days = int(day_match.group(1))
+                elif 'week' in text_lower:
+                    week_match = re.search(r'(\d+)\s+weeks?', text_lower)
+                    if week_match:
+                        age_days = int(week_match.group(1)) * 7
+                elif 'month' in text_lower:
+                    month_match = re.search(r'(\d+)\s+months?', text_lower)
+                    if month_match:
+                        age_days = int(month_match.group(1)) * 30
 
             # --- Image ---
             image_url = ''
