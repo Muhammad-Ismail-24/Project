@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Sparkles, User, Loader2, Trash2, Settings, Plus, MessageSquare, X } from 'lucide-react';
+import { useOutletContext } from 'react-router-dom';
 
 function TypingDots() {
   return (
@@ -75,15 +76,11 @@ export default function ChatPage() {
   
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
-  const [agentName, setAgentName] = useState('GaariGuru Expert');
+  const { assistantName: agentName, setAssistantName: setAgentName } = useOutletContext() || { assistantName: 'GaariGuru Expert', setAssistantName: () => {} };
   const [isGuest, setIsGuest] = useState(true);
   
   const [isTyping, setIsTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-
-  const [showNameEditor, setShowNameEditor] = useState(false);
-  const [nameInput, setNameInput] = useState('');
-  const [nameSaving, setNameSaving] = useState(false);
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
@@ -104,8 +101,7 @@ export default function ChatPage() {
           if (data.sessions && data.sessions.length > 0) {
             try {
               const hist = await fetchSessionHistory(data.sessions[0].session_id);
-              setAgentName(hist.agent_name || 'GaariGuru Expert');
-              setNameInput(hist.agent_name || 'GaariGuru Expert');
+              if (hist.agent_name) setAgentName(hist.agent_name);
               setMessages(hist.messages.map(m => ({ role: m.role, content: m.content })));
               setSession(data.sessions[0].session_id);
             } catch {
@@ -126,8 +122,7 @@ export default function ChatPage() {
               setSessionsList(data.sessions || []);
               if (data.sessions && data.sessions.length > 0) {
                 const hist = await fetchSessionHistory(data.sessions[0].session_id);
-                setAgentName(hist.agent_name || 'GaariGuru Expert');
-                setNameInput(hist.agent_name || 'GaariGuru Expert');
+                if (hist.agent_name) setAgentName(hist.agent_name);
                 setMessages(hist.messages.map(m => ({ role: m.role, content: m.content })));
                 setSession(data.sessions[0].session_id);
               } else {
@@ -154,8 +149,7 @@ export default function ChatPage() {
     setIsMobileSidebarOpen(false); 
     try {
       const data = await fetchSessionHistory(sessionId);
-      setAgentName(data.agent_name || 'GaariGuru Expert');
-      setNameInput(data.agent_name || 'GaariGuru Expert');
+      if (data.agent_name) setAgentName(data.agent_name);
       setMessages(data.messages.map(m => ({ role: m.role, content: m.content })));
       setSession(sessionId);
     } catch (err) {
@@ -216,25 +210,6 @@ export default function ChatPage() {
       }
     } catch (err) {
       alert('Failed to delete chat.');
-    }
-  };
-
-  const handleSaveAgentName = async () => {
-    const trimmed = nameInput.trim();
-    if (!trimmed || trimmed === agentName) {
-      setShowNameEditor(false);
-      return;
-    }
-    setNameSaving(true);
-    try {
-      const data = await updateAgentName(trimmed);
-      setAgentName(data.agent_name);
-      setNameInput(data.agent_name);
-      setShowNameEditor(false);
-    } catch {
-      alert('Failed to update assistant name. Please try again.');
-    } finally {
-      setNameSaving(false);
     }
   };
 
@@ -311,20 +286,6 @@ export default function ChatPage() {
             
             <div className="flex flex-col min-w-0">
               <h1 className="text-lg sm:text-xl font-black tracking-tight text-black truncate">{agentName}</h1>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs text-black/60 font-bold truncate">
-                  {isLoading ? 'Loading...' : `Powered by ${agentName}`}
-                </p>
-                {!isGuest && (
-                  <button
-                    onClick={() => { setNameInput(agentName); setShowNameEditor(true); }}
-                    title="Assistant preferences"
-                    className="text-black/40 hover:text-black transition-colors shrink-0"
-                  >
-                    <Settings className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
             </div>
           </div>
           
@@ -420,73 +381,7 @@ export default function ChatPage() {
 
       </div>
 
-      {/* ── Settings Drawer ── */}
-      <div
-        aria-hidden="true"
-        onClick={() => { setShowNameEditor(false); setNameInput(agentName); }}
-        className={['fixed inset-0 z-50 bg-black/20 backdrop-blur-sm transition-opacity duration-300', showNameEditor ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'].join(' ')}
-      />
-
-      <div
-        role="dialog"
-        className={['fixed inset-y-0 right-0 z-50 w-80 lg:w-96 bg-[#a3a3a3] shadow-2xl flex flex-col border-l border-black/15 transition-transform duration-300 ease-out', showNameEditor ? 'translate-x-0' : 'translate-x-full'].join(' ')}
-      >
-        <div className="flex items-center justify-between px-6 py-5 border-b border-black/10 bg-white/40 backdrop-blur-md">
-          <div>
-            <h2 className="text-base font-black tracking-tight text-black">Assistant Preferences</h2>
-            <p className="text-xs text-black/60 font-bold mt-0.5">Personalise your AI expert</p>
-          </div>
-          <button
-            onClick={() => { setShowNameEditor(false); setNameInput(agentName); }}
-            className="w-8 h-8 flex items-center justify-center rounded-full text-black/60 hover:text-black hover:bg-black/10 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8">
-          <div className="space-y-2">
-            <label className="block text-xs font-black tracking-widest uppercase text-black">Assistant Name</label>
-            <input
-              type="text"
-              value={nameInput}
-              onChange={e => setNameInput(e.target.value)}
-              maxLength={40}
-              placeholder="e.g. GaariGuru Expert..."
-              onKeyDown={e => e.key === 'Enter' && handleSaveAgentName()}
-              className="w-full px-4 py-3 rounded-xl border border-black/20 bg-white/60 backdrop-blur-sm text-base font-bold text-black placeholder-black/40 outline-none focus:border-black focus:ring-1 focus:ring-black shadow-sm"
-            />
-          </div>
-
-          <div className="rounded-xl bg-white/60 backdrop-blur-md border border-black/15 px-4 py-3 flex items-center gap-3 shadow-sm">
-            <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center bg-black shadow-md border border-white/20">
-              <Sparkles className="w-3.5 h-3.5 text-white" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-black text-black truncate">{nameInput.trim() || 'GaariGuru Expert'}</p>
-              <p className="text-[11px] text-black/60 font-bold">Preview</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="px-6 py-5 border-t border-black/10 bg-white/40 backdrop-blur-md flex gap-3">
-          <button
-            onClick={() => { setShowNameEditor(false); setNameInput(agentName); }}
-            className="flex-1 py-3 rounded-xl border border-black text-sm font-bold text-black hover:bg-black hover:text-white transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSaveAgentName}
-            disabled={nameSaving || !nameInput.trim()}
-            className="flex-1 py-3 rounded-xl bg-black border border-black text-white text-sm font-bold hover:bg-neutral-800 transition-colors disabled:opacity-50 shadow-md"
-          >
-            {nameSaving ? 'Saving…' : 'Save'}
-          </button>
-        </div>
-
       </div>
-
     </div>
   );
 }

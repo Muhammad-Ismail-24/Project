@@ -10,6 +10,23 @@ export default function MainLayout() {
   const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
 
+  const [assistantName, setAssistantName] = useState('GaariGuru Expert');
+
+  const handleNameBlur = async (e) => {
+    const newName = e.target.value.trim() || 'GaariGuru Expert';
+    setAssistantName(newName);
+    try {
+      await fetch('/api/chat/agent', {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent_name: newName }),
+      });
+    } catch (error) {
+      console.error('Failed to update agent name:', error);
+    }
+  };
+
   // Close mobile menu automatically when clicking a link
   useEffect(() => {
     setIsMobileMenuOpen(false);
@@ -124,7 +141,7 @@ export default function MainLayout() {
 
       {/* Main Content Area */}
       <main className="relative z-10 pt-20">
-        <Outlet />
+        <Outlet context={{ assistantName, setAssistantName }} />
       </main>
 
       {/* Preferences Drawer */}
@@ -148,6 +165,17 @@ export default function MainLayout() {
               <span>My Saved Cars</span>
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
             </Link>
+            <div>
+              <label className="block text-sm font-black mb-2 text-black uppercase tracking-wider">Assistant Name</label>
+              <input 
+                type="text" 
+                value={assistantName}
+                onChange={(e) => setAssistantName(e.target.value)}
+                onBlur={handleNameBlur}
+                placeholder="e.g. GaariGuru Expert..."
+                className="w-full p-3 bg-[#a3a3a3] border border-black rounded-lg outline-none font-bold text-black focus:ring-2 focus:ring-black placeholder-black/40 shadow-sm"
+              />
+            </div>
             <div>
               <label className="block text-sm font-black mb-2 text-black uppercase tracking-wider">Daily Commute (km)</label>
               <input type="range" min="0" max="100" className="w-full accent-black" />
