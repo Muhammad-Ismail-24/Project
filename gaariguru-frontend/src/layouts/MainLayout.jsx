@@ -88,7 +88,6 @@ export default function MainLayout() {
               {({ isActive }) => (
                 <>
                   <span>Discover</span>
-                  {isActive && <div className="h-1 w-1 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] mx-auto mt-1 absolute -bottom-3" />}
                 </>
               )}
             </NavLink>
@@ -96,7 +95,6 @@ export default function MainLayout() {
               {({ isActive }) => (
                 <>
                   <span>Calculators</span>
-                  {isActive && <div className="h-1 w-1 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] mx-auto mt-1 absolute -bottom-3" />}
                 </>
               )}
             </NavLink>
@@ -104,7 +102,6 @@ export default function MainLayout() {
               {({ isActive }) => (
                 <>
                   <span>Assistant</span>
-                  {isActive && <div className="h-1 w-1 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] mx-auto mt-1 absolute -bottom-3" />}
                 </>
               )}
             </NavLink>
@@ -112,7 +109,6 @@ export default function MainLayout() {
               {({ isActive }) => (
                 <>
                   <span>About</span>
-                  {isActive && <div className="h-1 w-1 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] mx-auto mt-1 absolute -bottom-3" />}
                 </>
               )}
             </NavLink>
