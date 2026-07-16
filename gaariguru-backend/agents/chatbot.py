@@ -9,7 +9,8 @@ The AI persona is configurable per user via their `agent_name` setting
 so the AI introduces itself by that name and signs its answers with it.
 """
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from openai import AsyncOpenAI
 from agents.config import settings, async_retry
 
@@ -57,7 +58,7 @@ async def _execute_gemini_fallback_chat(formatted_messages: list) -> str:
     if not api_key:
         raise ValueError("GEMINI_API_KEY is empty/not configured.")
 
-    genai.configure(api_key=api_key)
+    client = genai.Client(api_key=api_key)
 
     system_instruction = (
         formatted_messages[0]["content"]
@@ -65,26 +66,22 @@ async def _execute_gemini_fallback_chat(formatted_messages: list) -> str:
         else ""
     )
 
-    # Use a stable, fast Gemini model and pass the system instruction natively
-    model = genai.GenerativeModel(
-        "gemini-3.1-flash-lite",
-        system_instruction=system_instruction
-    )
-
-    # FIX 2: Convert standard OpenAI message format into Gemini's native history array
+    # FIX 2: Convert standard OpenAI message format into Gemini's native history array using new SDK types
     gemini_history = []
     for msg in formatted_messages[1:]:
         role = "model" if msg["role"] == "assistant" else "user"
-        gemini_history.append({"role": role, "parts": [msg["content"]]})
+        gemini_history.append(types.Content(role=role, parts=[types.Part.from_text(text=msg["content"])]))
 
     if not gemini_history:
         return ""
 
-    # Gemini requires the final message to be sent separately from the history
-    last_message = gemini_history.pop()
-
-    chat = model.start_chat(history=gemini_history)
-    response = await chat.send_message_async(last_message["parts"][0])
+    response = await client.aio.models.generate_content(
+        model="gemini-3.1-flash-lite",
+        contents=gemini_history,
+        config=types.GenerateContentConfig(
+            system_instruction=system_instruction
+        )
+    )
 
     return response.text or ""
 

@@ -1,6 +1,7 @@
 import json
 import re
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from models.car_schema import CarListing
 from typing import List
 from agents.config import settings, async_retry
@@ -60,16 +61,16 @@ def _sanitize_json_response(raw_text: str) -> str:
 
 # Retries=3: allows 3 re-attempts on 429 with 15s sleep between each
 @async_retry(retries=3, delay=2.0)
-async def _execute_gemini_call(model: genai.GenerativeModel, system_instruction: str, prompt: str):
+async def _execute_gemini_call(client: genai.Client, system_instruction: str, prompt: str):
     """Executes the async Gemini call wrapped inside the retry handler."""
-    return await model.generate_content_async(
-        contents=[system_instruction, prompt],
-        generation_config={
-            # Task 3 Fix: max_output_tokens raised from 2000 to 8000 to prevent
-            # premature JSON truncation when evaluating 5 cars.
-            "response_mime_type": "application/json",
-            "max_output_tokens": 8000
-        }
+    return await client.aio.models.generate_content(
+        model="gemini-3.1-flash-lite",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=system_instruction,
+            response_mime_type="application/json",
+            max_output_tokens=8000
+        )
     )
 
 
@@ -93,9 +94,7 @@ async def evaluate_scraped_listings(listings: List[CarListing], original_user_qu
 
     try:
         # Configure Gemini client
-        genai.configure(api_key=api_key)
-        # Using gemini-3.1-flash-lite for higher rate limits
-        model = genai.GenerativeModel("gemini-3.1-flash-lite")
+        client = genai.Client(api_key=api_key)
 
         # Serialize the listings for model context
         serialized_cars = []
@@ -145,7 +144,7 @@ async def evaluate_scraped_listings(listings: List[CarListing], original_user_qu
         )
 
         # Execute API call with retries
-        response = await _execute_gemini_call(model, system_instruction, prompt)
+        response = await _execute_gemini_call(client, system_instruction, prompt)
         response_text = response.text.strip()
         
         # Parse the JSON response with sanitization
@@ -210,8 +209,7 @@ async def evaluate_single_listing(listing: dict, original_user_query: str) -> di
         return DEFAULT_AI_ANALYSIS
 
     try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-3.1-flash-lite")
+        client = genai.Client(api_key=api_key)
 
         system_instruction = (
             "You are an expert Pakistani automotive appraiser. "
@@ -237,12 +235,14 @@ async def evaluate_single_listing(listing: dict, original_user_query: str) -> di
             "Perform the appraisal and return the JSON object:"
         )
 
-        response = await model.generate_content_async(
-            contents=[system_instruction, prompt],
-            generation_config={
-                "response_mime_type": "application/json",
-                "max_output_tokens": 2000
-            }
+        response = await client.aio.models.generate_content(
+            model="gemini-3.1-flash-lite",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                response_mime_type="application/json",
+                max_output_tokens=2000
+            )
         )
 
         response_text = response.text.strip()

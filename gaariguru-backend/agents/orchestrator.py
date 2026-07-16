@@ -1,6 +1,7 @@
 import json
 import re
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from openai import AsyncOpenAI
 from agents.config import settings, async_retry
 
@@ -371,14 +372,16 @@ async def _execute_gemini_primary_orchestrate(user_input: str) -> str:
     if not api_key:
         raise ValueError("GEMINI_API_KEY is empty/not configured.")
 
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-3.1-flash-lite")
-
+    client = genai.Client(api_key=api_key)
     system_prompt = _build_system_prompt()
 
-    response = await model.generate_content_async(
-        contents=[system_prompt, user_input],
-        generation_config={"response_mime_type": "application/json"}
+    response = await client.aio.models.generate_content(
+        model="gemini-3.1-flash-lite",
+        contents=user_input,
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            response_mime_type="application/json"
+        )
     )
     return response.text or ""
 

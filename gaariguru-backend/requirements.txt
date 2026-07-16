@@ -5,7 +5,7 @@ pydantic-settings
 requests
 beautifulsoup4
 httpx
-google-generativeai
+google-genai
 openai
 sqlmodel
 python-dotenv
