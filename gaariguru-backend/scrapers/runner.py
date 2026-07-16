@@ -208,7 +208,7 @@ async def execute_search_pipeline(
             # plain make name (e.g. Honda = "cars-honda", not "honda"). Make is
             # already expressed via the category prefix and q- search term.
             # ------------------------------------------------------------------ #
-            olx_slug     = OLX_CITY_MAP.get(c, "")
+            olx_slug     = OLX_CITY_MAP.get(target_city.lower(), "")
             olx_category = f"{safe_make_lower}-cars_c84" if safe_make_lower else "cars_c84"
 
             olx_base_parts = ["https://www.olx.com.pk"]

@@ -186,6 +186,8 @@ async def scrape_pakwheels(url: str, session) -> list[CarListing]:
                     final_listing_url = f"https://www.pakwheels.com{relative_url}"
                 elif relative_url.startswith('http'):
                     final_listing_url = relative_url
+                elif relative_url:
+                    final_listing_url = f"https://www.pakwheels.com/{relative_url}"
             except Exception:
                 pass
 
