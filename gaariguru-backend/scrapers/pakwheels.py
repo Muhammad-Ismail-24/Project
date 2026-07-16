@@ -168,18 +168,15 @@ async def scrape_pakwheels(url: str, session) -> list[CarListing]:
         try:
             # --- Title ---
             title_el = item.find(['h2', 'h3', 'h4'])
-            if not title_el:
-                title_el = item.find('a', string=re.compile(r'\w+'))
-            if not title_el:
-                continue
+            a_tag = None
+            if title_el:
+                a_tag = title_el if title_el.name == 'a' else title_el.find('a')
+            if not a_tag:
+                a_tag = item.find('a', string=re.compile(r'\w+'))
 
-            title = title_el.get_text(strip=True)
+            title = a_tag.get_text(strip=True) if a_tag else (title_el.get_text(strip=True) if title_el else "")
             if not title:
                 continue
-
-            a_tag = title_el if title_el.name == 'a' else title_el.find('a')
-            if not a_tag:
-                a_tag = item.find('a')
 
             link = a_tag.get('href', '').strip() if a_tag else url
             if link and not link.startswith('http'):

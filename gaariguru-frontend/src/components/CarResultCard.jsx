@@ -53,7 +53,14 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
     }
   }
 
-  const liquidityScore = aiData?.liquidity_score || null;
+  // Algorithmic Liquidity Tagging: Instant heuristic evaluation
+  const instantLiquidity = (car.relevance_score > 85 || car.score > 85 || isHighlighted) 
+    ? 'High' 
+    : ['corolla', 'civic', 'alto', 'city', 'vitz', 'cultus'].some(m => car.title.toLowerCase().includes(m)) 
+      ? 'High' 
+      : null;
+
+  const liquidityScore = aiData?.liquidity_score || instantLiquidity;
   const justification = aiData?.justification || null;
   const heuristicTags = generateHeuristicTags(car.title);
 
@@ -144,7 +151,7 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
           <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-black"/> {car.city}</span>
         </div>
 
-        {/* Warning Flags (only shown after AI Review) */}
+        {/* Instant Heuristic Tags & AI Warning Flags */}
         {(redFlags.length > 0 || heuristicTags.length > 0) && (
           <div className="flex flex-wrap gap-2 mb-4">
             {heuristicTags.map((tag, idx) => (
