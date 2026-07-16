@@ -166,30 +166,33 @@ async def scrape_pakwheels(url: str, session) -> list[CarListing]:
 
     for item in items:
         try:
-            # --- Title ---
+            # --- Title & Link Extraction ---
             title_el = item.find(['h2', 'h3', 'h4'])
-            a_tag = None
-            if title_el:
-                a_tag = title_el if title_el.name == 'a' else title_el.find('a')
+            a_tag = title_el.find('a') if title_el else None
+            
+            # Fallback if the heading doesn't contain the anchor
             if not a_tag:
-                a_tag = item.find('a', string=re.compile(r'\w+'))
+                a_tag = item.find('a', class_=re.compile(r'car-name|cls-name', re.I))
 
-            title = a_tag.get_text(strip=True) if a_tag else (title_el.get_text(strip=True) if title_el else "")
+            title = a_tag.get_text(strip=True) if a_tag else ""
+            if not title and title_el:
+                title = title_el.get_text(strip=True)
+
             if not title:
                 continue
 
             # --- Link ---
-            final_listing_url = ""
-            try:
-                relative_url = a_tag.get('href', '').strip() if a_tag else ''
-                if relative_url.startswith('/'):
-                    final_listing_url = f"https://www.pakwheels.com{relative_url}"
-                elif relative_url.startswith('http'):
-                    final_listing_url = relative_url
-                elif relative_url:
-                    final_listing_url = f"https://www.pakwheels.com/{relative_url}"
-            except Exception:
-                pass
+            # Default to the master search URL if everything fails
+            final_listing_url = url 
+            
+            if a_tag and a_tag.has_attr('href'):
+                raw_href = a_tag['href'].strip()
+                if raw_href.startswith('/'):
+                    final_listing_url = f"https://www.pakwheels.com{raw_href}"
+                elif raw_href.startswith('http'):
+                    final_listing_url = raw_href
+                elif raw_href:
+                    final_listing_url = f"https://www.pakwheels.com/{raw_href}"
 
             # --- Price ---
             price = _extract_price(item)
