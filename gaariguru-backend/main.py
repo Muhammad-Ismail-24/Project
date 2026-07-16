@@ -6,6 +6,7 @@ from database import create_db_and_tables
 from api.calc_routes import router as calc_router
 from api.chat_routes import router as chat_router
 from api.search_routes import router as search_router
+from api.evaluate_routes import router as evaluate_router
 from starlette.middleware.sessions import SessionMiddleware
 from auth.routes import router as auth_router
 from auth.config import SECRET_KEY
@@ -45,6 +46,7 @@ app.add_middleware(
 app.include_router(calc_router)
 app.include_router(chat_router)
 app.include_router(search_router)
+app.include_router(evaluate_router)
 app.include_router(auth_router)
 
 from api.user_routes import router as user_router

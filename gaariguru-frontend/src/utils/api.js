@@ -70,4 +70,26 @@ export const chatWithBot = async (messages) => {
   return response.data.reply;
 };
 
+export const evaluateSingleCar = async (listingData, userQuery) => {
+  try {
+    const response = await api.post('/evaluate-single', {
+      title: listingData.title,
+      price: typeof listingData.price === 'number' ? listingData.price : parseInt(String(listingData.price).replace(/\D/g, '')) || 0,
+      mileage: typeof listingData.mileage === 'number' ? listingData.mileage : parseInt(String(listingData.mileage).replace(/\D/g, '')) || 0,
+      year: typeof listingData.year === 'number' ? listingData.year : parseInt(String(listingData.year)) || 0,
+      city: listingData.city || '',
+      platform: listingData.platform || '',
+      user_query: userQuery,
+    });
+    return response.data;
+  } catch (err) {
+    console.error('[evaluateSingleCar] API error:', err);
+    return {
+      red_flags: [],
+      liquidity_score: 'Medium',
+      justification: 'AI appraisal is currently unavailable. Please try again later.',
+    };
+  }
+};
+
 export default api;

@@ -196,3 +196,82 @@ async def evaluate_scraped_listings(listings: List[CarListing], original_user_qu
             {**json.loads(car.model_dump_json()), "ai_analysis": DEFAULT_AI_ANALYSIS}
             for car in listings
         ]
+
+
+async def evaluate_single_listing(listing: dict, original_user_query: str) -> dict:
+    """Evaluates a single car listing using Gemini and returns an AI analysis dict.
+
+    Returns a dict with keys: red_flags, liquidity_score, justification.
+    Falls back to DEFAULT_AI_ANALYSIS on any failure.
+    """
+    api_key = settings.gemini_api_key
+    if not api_key:
+        print("[Evaluator] WARNING: GEMINI_API_KEY not configured. Returning default analysis.")
+        return DEFAULT_AI_ANALYSIS
+
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-3.1-flash-lite")
+
+        system_instruction = (
+            "You are an expert Pakistani automotive appraiser. "
+            "Evaluate this SINGLE vehicle listing against the Pakistani used car market. "
+            "Consider its price, mileage, year, and city. "
+            "Return a strict JSON object with exactly three keys: "
+            "'red_flags' (list of strings - check for Duplicate Book, Showered, NCP, "
+            "Engine Swap, File Missing, Auction Sheet Missing etc. - empty list if none), "
+            "'liquidity_score' (strictly 'High', 'Medium', or 'Low'), and "
+            "'justification' (2-3 sentences explaining market fit). "
+            "Do NOT return markdown or conversational text. Return ONLY the raw JSON object."
+        )
+
+        prompt = (
+            f"User Original Query: \"{original_user_query}\"\n\n"
+            f"Listing to Evaluate:\n"
+            f"  Title: {listing.get('title', 'N/A')}\n"
+            f"  Price: {listing.get('price', 'N/A')}\n"
+            f"  Mileage: {listing.get('mileage', 'N/A')}\n"
+            f"  Year: {listing.get('year', 'N/A')}\n"
+            f"  City: {listing.get('city', 'N/A')}\n"
+            f"  Platform: {listing.get('platform', 'N/A')}\n\n"
+            "Perform the appraisal and return the JSON object:"
+        )
+
+        response = await model.generate_content_async(
+            contents=[system_instruction, prompt],
+            generation_config={
+                "response_mime_type": "application/json",
+                "max_output_tokens": 2000
+            }
+        )
+
+        response_text = response.text.strip()
+        sanitized = _sanitize_json_response(response_text)
+        parsed = json.loads(sanitized)
+
+        # Validate and normalize the parsed result
+        if not isinstance(parsed, dict):
+            print(f"[Evaluator] Single listing response is not a dict: {type(parsed)}")
+            return DEFAULT_AI_ANALYSIS
+
+        red_flags = parsed.get("red_flags", [])
+        if not isinstance(red_flags, list):
+            red_flags = [str(red_flags)]
+
+        score = parsed.get("liquidity_score", "Medium")
+        if score not in ["High", "Medium", "Low"]:
+            score = "Medium"
+
+        justification = parsed.get("justification", "Matches criteria.")
+        if not isinstance(justification, str):
+            justification = str(justification)
+
+        return {
+            "red_flags": red_flags,
+            "liquidity_score": score,
+            "justification": justification
+        }
+
+    except Exception as e:
+        print(f"[Evaluator] Exception during single listing evaluation: {e}")
+        return DEFAULT_AI_ANALYSIS

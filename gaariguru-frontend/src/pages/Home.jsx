@@ -68,6 +68,7 @@ export default function Home() {
   
   // NEW STATE: Tracks if the user has actually pressed enter/search
   const [hasSearched, setHasSearched] = useState(false);
+  const [lastQuery, setLastQuery] = useState('');
 
   useEffect(() => {
     const fetchSavedListings = async () => {
@@ -91,6 +92,7 @@ export default function Home() {
     setError(null); 
     setIsLoading(true);
     setHasSearched(true); // Flag that a search was initiated
+    setLastQuery(query);
     
     try {
       const data = await searchCars(query);
@@ -207,7 +209,7 @@ export default function Home() {
                     <span>Best AI Match</span>
                   </div>
                   <div className="rounded-3xl overflow-hidden shadow-2xl border border-black/15 bg-[#a3a3a3]">
-                    <CarResultCard car={bestPick} isHighlighted={true} savedListingIds={savedListingIds} />
+                    <CarResultCard car={bestPick} isHighlighted={true} savedListingIds={savedListingIds} userQuery={lastQuery} />
                   </div>
                 </div>
               )}
@@ -220,7 +222,7 @@ export default function Home() {
                   <div className="space-y-6">
                     {otherResults.map(car => (
                       <div key={car.id} className="rounded-2xl md:rounded-3xl overflow-hidden border border-black/15 shadow-xl bg-[#a3a3a3]">
-                        <CarResultCard car={car} savedListingIds={savedListingIds} />
+                        <CarResultCard car={car} savedListingIds={savedListingIds} userQuery={lastQuery} />
                       </div>
                     ))}
                   </div>
