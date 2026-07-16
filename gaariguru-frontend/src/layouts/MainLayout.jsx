@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Menu, X, User } from 'lucide-react';
+import { Outlet, Link, NavLink, useLocation } from 'react-router-dom';
+import { Menu, X, User, ChevronDown } from 'lucide-react';
 
 export default function MainLayout() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -67,7 +67,7 @@ export default function MainLayout() {
     <div className="relative min-h-screen font-sans text-black selection:bg-black selection:text-white">
       
       {/* ── Fixed Navbar ── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#a3a3a3] border-b border-black shadow-sm">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/20 backdrop-blur-md border-b border-black/10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
           
           <div className="flex items-center gap-3">
@@ -78,16 +78,16 @@ export default function MainLayout() {
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
 
-            <Link to="/" className="text-xl sm:text-2xl font-black tracking-tighter uppercase text-black">
+            <Link to="/" className="text-xl sm:text-2xl font-black tracking-tighter uppercase text-black hover:scale-105 transition-transform duration-200 inline-block">
               GaariGuru
             </Link>
           </div>
 
           <div className="hidden md:flex space-x-8 absolute left-1/2 -translate-x-1/2">
-            <Link to="/" className="font-black text-black hover:opacity-70 transition-opacity">Discover</Link>
-            <Link to="/calculators" className="font-black text-black hover:opacity-70 transition-opacity">Calculators</Link>
-            <Link to="/chat" className="font-black text-black hover:opacity-70 transition-opacity">Assistant</Link>
-            <Link to="/about" className="font-black text-black hover:opacity-70 transition-opacity">About</Link>
+            <NavLink to="/" className={({ isActive }) => `relative font-black transition-all duration-300 ease-in-out after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:bg-black after:transition-all after:duration-300 ${isActive ? 'text-black after:w-full' : 'text-black/60 hover:text-black after:w-0 hover:after:w-full'}`}>Discover</NavLink>
+            <NavLink to="/calculators" className={({ isActive }) => `relative font-black transition-all duration-300 ease-in-out after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:bg-black after:transition-all after:duration-300 ${isActive ? 'text-black after:w-full' : 'text-black/60 hover:text-black after:w-0 hover:after:w-full'}`}>Calculators</NavLink>
+            <NavLink to="/chat" className={({ isActive }) => `relative font-black transition-all duration-300 ease-in-out after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:bg-black after:transition-all after:duration-300 ${isActive ? 'text-black after:w-full' : 'text-black/60 hover:text-black after:w-0 hover:after:w-full'}`}>Assistant</NavLink>
+            <NavLink to="/about" className={({ isActive }) => `relative font-black transition-all duration-300 ease-in-out after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:bg-black after:transition-all after:duration-300 ${isActive ? 'text-black after:w-full' : 'text-black/60 hover:text-black after:w-0 hover:after:w-full'}`}>About</NavLink>
           </div>
 
           <div className="flex items-center">
@@ -105,16 +105,17 @@ export default function MainLayout() {
             ) : (
               <button 
                 onClick={() => setIsDrawerOpen(true)}
-                className="flex items-center gap-2 hover:bg-black/10 p-1 pr-3 rounded-full transition-colors border border-transparent hover:border-black"
+                className="flex items-center gap-2 hover:bg-black/5 p-1 pr-3 rounded-full transition-colors duration-200 border border-transparent hover:border-black/10"
               >
                 {user.picture ? (
-                  <img src={user.picture} alt={user.name} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-black" />
+                  <img src={user.picture} alt={user.name} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-black/20" />
                 ) : (
                   <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black text-white flex items-center justify-center">
                     <User className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                 )}
                 <span className="font-black text-sm hidden sm:block text-black">Welcome, {user.name?.split(' ')[0]}</span>
+                <ChevronDown className="w-4 h-4 text-black/60 hidden sm:block" />
               </button>
             )}
           </div>
@@ -122,19 +123,19 @@ export default function MainLayout() {
 
         {/* ── Mobile Dropdown Menu ── */}
         {isMobileMenuOpen && (
-          <div className="md:hidden absolute top-20 left-0 w-full bg-[#a3a3a3] border-b border-black shadow-2xl flex flex-col py-4 px-6 space-y-6 z-40">
-            <Link to="/" className="font-black text-black text-2xl flex items-center gap-3">
-              <span className="w-2 h-2 bg-black rounded-full"></span> Discover
-            </Link>
-            <Link to="/calculators" className="font-black text-black text-2xl flex items-center gap-3">
-              <span className="w-2 h-2 bg-black rounded-full"></span> Calculators
-            </Link>
-            <Link to="/chat" className="font-black text-black text-2xl flex items-center gap-3">
-              <span className="w-2 h-2 bg-black rounded-full"></span> Assistant
-            </Link>
-            <Link to="/about" className="font-black text-black text-2xl flex items-center gap-3">
-              <span className="w-2 h-2 bg-black rounded-full"></span> About
-            </Link>
+          <div className="md:hidden absolute top-20 left-0 w-full bg-white/60 backdrop-blur-xl border-b border-black/10 shadow-2xl flex flex-col py-4 px-6 space-y-6 z-40">
+            <NavLink to="/" className={({ isActive }) => `font-black text-2xl flex items-center gap-3 transition-colors duration-200 ${isActive ? 'text-black' : 'text-black/60'}`}>
+              {({ isActive }) => <><span className={`w-2 h-2 rounded-full transition-colors ${isActive ? 'bg-black' : 'bg-transparent'}`}></span> Discover</>}
+            </NavLink>
+            <NavLink to="/calculators" className={({ isActive }) => `font-black text-2xl flex items-center gap-3 transition-colors duration-200 ${isActive ? 'text-black' : 'text-black/60'}`}>
+              {({ isActive }) => <><span className={`w-2 h-2 rounded-full transition-colors ${isActive ? 'bg-black' : 'bg-transparent'}`}></span> Calculators</>}
+            </NavLink>
+            <NavLink to="/chat" className={({ isActive }) => `font-black text-2xl flex items-center gap-3 transition-colors duration-200 ${isActive ? 'text-black' : 'text-black/60'}`}>
+              {({ isActive }) => <><span className={`w-2 h-2 rounded-full transition-colors ${isActive ? 'bg-black' : 'bg-transparent'}`}></span> Assistant</>}
+            </NavLink>
+            <NavLink to="/about" className={({ isActive }) => `font-black text-2xl flex items-center gap-3 transition-colors duration-200 ${isActive ? 'text-black' : 'text-black/60'}`}>
+              {({ isActive }) => <><span className={`w-2 h-2 rounded-full transition-colors ${isActive ? 'bg-black' : 'bg-transparent'}`}></span> About</>}
+            </NavLink>
           </div>
         )}
       </nav>
