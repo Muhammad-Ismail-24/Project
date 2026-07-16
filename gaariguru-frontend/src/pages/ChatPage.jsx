@@ -310,7 +310,7 @@ export default function ChatPage() {
             )}
             
             <div className="flex flex-col min-w-0">
-              <h1 className="text-lg sm:text-xl font-black tracking-tight text-black truncate">GaariGuru Expert</h1>
+              <h1 className="text-lg sm:text-xl font-black tracking-tight text-black truncate">{agentName}</h1>
               <div className="flex items-center gap-1.5">
                 <p className="text-xs text-black/60 font-bold truncate">
                   {isLoading ? 'Loading...' : `Powered by ${agentName}`}
