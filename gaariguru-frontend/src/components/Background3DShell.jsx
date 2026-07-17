@@ -19,31 +19,18 @@ const REVEAL_Y_OVERSHOOT = REVEAL_Y_REST + 0.22;
 const BASE_SCALE = 1.15; 
 
 // ─── Top-of-page idle state ────────────────────────────────────────────────────
-const IDLE_ROT_SPEED     = 0.55;    // rad/s for the slow sinusoidal sway
-const IDLE_ROT_AMP       = 0.055;   // ±~3.1° sway amplitude
-const IDLE_LEVITATE_FREQ = 1.5;     // Hz of the vertical float
-const IDLE_LEVITATE_AMP  = 0.08;    // ±0.08 units of vertical travel
+const IDLE_ROT_SPEED     = 0.55;    
+const IDLE_ROT_AMP       = 0.055;   
+const IDLE_LEVITATE_FREQ = 1.5;     
+const IDLE_LEVITATE_AMP  = 0.08;    
 const POINTER_ROT_AMP    = 0.20;
 
 // ─── Angles ───────────────────────────────────────────────────────────────────
-const START_ANGLE = (Math.PI / 5) + Math.PI; // 216 deg (front-left resting angle)
-
-// TARGET_LEFT_ANGLE was Math.PI * 1.5 (270°). This was wrong for two reasons:
-//
-// 1. Standard GLB convention has the car nose pointing toward +Z. A 270° Y rotation
-//    faces the car toward -X (world left) in object space, but at a perspective
-//    camera the car still appears angled because of projection distortion at the
-//    far-left FOV edge.
-//
-// 2. The empirical "looks flat from the camera" angle for a car exiting left is
-//    Math.PI (180°) + a small over-rotation (~0.12 rad) to compensate for the
-//    perspective foreshortening that makes 180° look slightly nose-in.
-//    This constant should be tuned by +/- 0.05 if the model's authored forward
-//    direction differs from +Z.
-const TARGET_LEFT_ANGLE = Math.PI + 0.12; // ~192.9° — visually flat profile from cam
+const START_ANGLE       = (Math.PI / 5) + Math.PI; // 216 deg (front-left resting angle)
+const TARGET_LEFT_ANGLE = Math.PI + 0.12;          // Over-rotated slightly to counter perspective lens
 
 // ─── isAtTopFactor transition band ────────────────────────────────────────────
-const BLEND_BAND = 150;   // pixels — full blend happens inside first 150px
+const BLEND_BAND = 150;   
 
 // ─── Camera parallax ──────────────────────────────────────────────────────────
 const PARALLAX_X = 0.28;
@@ -55,22 +42,11 @@ function BmwModel() {
   const carRef     = useRef();
   const materialsRef = useRef([]);
 
-  // Scroll-drive smoothing
   const smoothedProgress = useRef(0);
-
-  // Smoothed camera lookAt target — tracks car X during scroll so the
-  // car stays in optical centre and perspective distortion doesn't make
-  // a constant-Z path look diagonal. Fades back to origin on scroll-up.
-  const smoothedLookAtX = useRef(0);
-
-  // Reveal
   const revealProgress = useRef(0);
   const revealDone     = useRef(false);
-
-  // Blended top-of-page factor (0 = fully scrolled, 1 = at top)
   const topFactor = useRef(1);
 
-  // ─── Mobile detection ─────────────────────────────────────────────────────
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768);
@@ -78,7 +54,6 @@ function BmwModel() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // ─── Global Mouse & Horizontal Drag Tracker ─────────────────────────────
   const globalMouse  = useRef({ x: 0, y: 0 });
   const dragOffset   = useRef(0); 
   const isDragging   = useRef(false);
@@ -87,7 +62,6 @@ function BmwModel() {
   useEffect(() => {
     const handleDown = (e) => {
       if (window.scrollY > 20) return;
-
       if (e.button !== 0 && e.type === 'mousedown') return;
       if (e.target.closest('button, a, input, select, textarea, [role="button"]')) return;
 
@@ -110,12 +84,10 @@ function BmwModel() {
           isDragging.current = false;
           return;
         }
-
         if (e.type === 'mousemove' && e.buttons !== 1) {
           isDragging.current = false;
           return;
         }
-
         if (window.getSelection) {
           window.getSelection().removeAllRanges();
         }
@@ -148,17 +120,15 @@ function BmwModel() {
     };
   }, []);
 
-  // ─── Geometry ─────────────────────────────────────────────────────────────
   const scaleFactor = isMobile ? 0.6 : 1;
   const carScale    = BASE_SCALE * scaleFactor;
   
-  // Adjusted to create a perfect horizontal rail (endZ matches startZ perfectly)
+  // Strict horizontal rail math
   const startX      =  3.5 * scaleFactor;
   const startZ      =  0.5 * scaleFactor; 
-  const endX        = -10  * scaleFactor; // Enough to clear screen, prevents perspective drop
+  const endX        = -20  * scaleFactor; // Fixed distance so it drives fully off screen
   const endZ        =  0.5 * scaleFactor; 
 
-  // ─── Material — real automotive clearcoat paint ────────────────────────────
   useLayoutEffect(() => {
     const mats = [];
     scene.traverse((child) => {
@@ -182,7 +152,6 @@ function BmwModel() {
     materialsRef.current = mats;
   }, [scene]);
 
-  // ─── Render loop ───────────────────────────────────────────────────────────
   useFrame((state, delta) => {
     if (!carRef.current) return;
 
@@ -190,52 +159,35 @@ function BmwModel() {
     const maxScroll   = document.body.scrollHeight - window.innerHeight;
     const rawProgress = maxScroll > 0 ? scrollY / maxScroll : 0;
 
-    // ── Phase 1: Reveal ────────────────────────────────────────────────────
     if (!revealDone.current) {
-      revealProgress.current = Math.min(
-        revealProgress.current + delta / REVEAL_DURATION, 1
-      );
+      revealProgress.current = Math.min(revealProgress.current + delta / REVEAL_DURATION, 1);
       const t = revealProgress.current;
-
       let revealY;
       if (t < 0.85) {
-        const e1 = 1 - Math.pow(1 - (t / 0.85), 3);
-        revealY = THREE.MathUtils.lerp(REVEAL_Y_START, REVEAL_Y_OVERSHOOT, e1);
+        revealY = THREE.MathUtils.lerp(REVEAL_Y_START, REVEAL_Y_OVERSHOOT, 1 - Math.pow(1 - (t / 0.85), 3));
       } else {
-        const e2 = 1 - Math.pow(1 - ((t - 0.85) / 0.15), 2);
-        revealY = THREE.MathUtils.lerp(REVEAL_Y_OVERSHOOT, REVEAL_Y_REST, e2);
+        revealY = THREE.MathUtils.lerp(REVEAL_Y_OVERSHOOT, REVEAL_Y_REST, 1 - Math.pow(1 - ((t - 0.85) / 0.15), 2));
       }
-
       const opacity = Math.min((t / 0.85) * 1.15, 1);
       materialsRef.current.forEach(mat => { mat.opacity = opacity; });
       carRef.current.position.set(startX, revealY, startZ);
       carRef.current.rotation.y = START_ANGLE;
       carRef.current.rotation.x = 0;
-
       if (revealProgress.current >= 1) {
-        materialsRef.current.forEach(mat => {
-          mat.opacity = 1; mat.transparent = false; mat.needsUpdate = true;
-        });
+        materialsRef.current.forEach(mat => { mat.opacity = 1; mat.transparent = false; mat.needsUpdate = true; });
         revealDone.current = true;
       }
       return;
     }
 
-    // ── Phase 2: Core State Machine ─────────────────────────────────────────
     const rawTopFactor = Math.max(0, 1 - scrollY / BLEND_BAND);
-    topFactor.current = THREE.MathUtils.damp(
-      topFactor.current, rawTopFactor, 4.0, delta
-    );
+    topFactor.current = THREE.MathUtils.damp(topFactor.current, rawTopFactor, 4.0, delta);
     const tf = topFactor.current; 
 
-    smoothedProgress.current = THREE.MathUtils.damp(
-      smoothedProgress.current, rawProgress, 2.5, delta
-    );
-    
-    // Core timing curve
+    smoothedProgress.current = THREE.MathUtils.damp(smoothedProgress.current, rawProgress, 2.5, delta);
     const delayedProgress = Math.pow(smoothedProgress.current, 1.5); 
 
-    // 1. BASE SCROLL PATH (Unbreakable straight horizontal rail)
+    // 1. BASE SCROLL PATH
     const targetX = THREE.MathUtils.lerp(startX, endX, delayedProgress);
     const targetZ = THREE.MathUtils.lerp(startZ, endZ, delayedProgress);
     const baseScrollAngle = THREE.MathUtils.lerp(START_ANGLE, TARGET_LEFT_ANGLE, delayedProgress);
@@ -255,8 +207,6 @@ function BmwModel() {
     const idleSway    = Math.sin(elapsed * IDLE_ROT_SPEED) * IDLE_ROT_AMP;
     const pointerSway = globalMouse.current.x * POINTER_ROT_AMP;
     
-    // We strictly isolate the interactive modifiers and fade them out based on `tf`.
-    // This mathematically prevents the parabolic dual-lerp clash.
     const dragRemainder = dragOffset.current - baseOffset;
     const interactiveOffset = (idleSway + pointerSway + dragRemainder) * tf;
 
@@ -268,65 +218,33 @@ function BmwModel() {
     );
     carRef.current.rotation.x = 0;
 
-    // ── Camera Parallax (fades to zero as car exits) ───────────────────────
-    // Parallax is a top-of-page-only effect. During scroll, moving the camera
-    // in X amplifies the diagonal illusion because the car is no longer near
-    // the camera's lookAt origin. We fade parallax strength to zero as tf → 0
-    // so the camera is completely stationary while the car drives left.
-    const parallaxStrength = tf * PARALLAX_X;  // was: tf * X + (1-tf) * X * 0.4
+    // 4. Parallax fades out during scroll
+    const parallaxStrength = tf * PARALLAX_X;  
 
     const targetCamX = globalMouse.current.x * parallaxStrength;
     const targetCamY = 2 + globalMouse.current.y * (parallaxStrength * 0.5);
 
-    state.camera.position.x = THREE.MathUtils.damp(
-      state.camera.position.x, targetCamX, 3.5, delta
-    );
-    state.camera.position.y = THREE.MathUtils.damp(
-      state.camera.position.y, targetCamY, 3.5, delta
-    );
+    state.camera.position.x = THREE.MathUtils.damp(state.camera.position.x, targetCamX, 3.5, delta);
+    state.camera.position.y = THREE.MathUtils.damp(state.camera.position.y, targetCamY, 3.5, delta);
 
-    // ── Camera LookAt — tracks car X to eliminate perspective-diagonal illusion ─
-    // With a fixed lookAt(0, 0.3, 0), a car moving to X=-10 is 10 units left of
-    // the camera's target point. Perspective projection compresses objects at the
-    // FOV periphery, making constant-Z motion look like it's receding. Tracking
-    // the car's X position keeps it centred in the frustum so Z appears constant.
-    //
-    // We blend the lookAt X from 0 (at top) toward the car's X position (scrolled),
-    // using tf to fade back to origin when scrolling back up — matching the
-    // bi-directional blend already on all other properties.
-    const lookAtTargetX = THREE.MathUtils.lerp(targetX, 0, tf);
-    smoothedLookAtX.current = THREE.MathUtils.damp(
-      smoothedLookAtX.current, lookAtTargetX, 4.0, delta
-    );
-    state.camera.lookAt(smoothedLookAtX.current, 0.3, 0);
+    // FIX: Camera stays permanently locked to center so the car actually leaves the screen
+    state.camera.lookAt(0, 0.3, 0);
   });
 
   return <primitive ref={carRef} object={scene} scale={carScale} />;
 }
-
 
 export default function Background3DShell() {
   return (
     <div id="canvas-container" className="fixed inset-0 z-0 w-full h-full pointer-events-none">
       <Canvas
         camera={{ position: [0, 2, 8], fov: 45 }}
-        gl={{
-          antialias: true,
-          toneMappingExposure: 0.72,
-        }}
+        gl={{ antialias: true, toneMappingExposure: 0.72 }}
       >
         <Environment preset="studio" />
         <ambientLight intensity={0.4} />
         <directionalLight position={[10, 10, 5]} intensity={0.5} />
-        <ContactShadows
-          resolution={1024}
-          scale={20}
-          blur={4.5}
-          opacity={0.32}
-          far={10}
-          color="#000000"
-          position={[0, -1, 0]}
-        />
+        <ContactShadows resolution={1024} scale={20} blur={4.5} opacity={0.32} far={10} color="#000000" position={[0, -1, 0]} />
         <React.Suspense fallback={null}>
           <BmwModel />
         </React.Suspense>
