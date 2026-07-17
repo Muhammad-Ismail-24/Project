@@ -1,8 +1,8 @@
 /*
   Background3DShell.jsx
   Automotive 3D landing hero scene tracking.
-  Provides premium, natural clearcoat reflections, seamless bi-directional state blending,
-  and global mouse tracking to bypass pointer-events-none.
+  Provides premium clearcoat reflections, bi-directional scroll blending,
+  and global click-and-drag showroom rotation.
 */
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
@@ -21,7 +21,7 @@ const IDLE_ROT_AMP       = 0.055;   // ±~3.1° sway amplitude
 const IDLE_LEVITATE_FREQ = 1.5;     // Hz of the vertical float
 const IDLE_LEVITATE_AMP  = 0.08;    // ±0.08 units of vertical travel
 
-// Mouse rotation influence at top: pointer.x maps to ±this many radians (~11.5°)
+// Mouse rotation influence at top: pointer.x maps to ±this many radians
 const POINTER_ROT_AMP    = 0.20;
 
 // ─── Scroll-drive ─────────────────────────────────────────────────────────────
@@ -58,17 +58,63 @@ function BmwModel() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // ─── Global Mouse Tracker (Bypasses pointer-events-none) ───────────────
+  // ─── Global Mouse & Drag Tracker ────────────────────────────────────────
   const globalMouse = useRef({ x: 0, y: 0 });
+  const dragOffset  = useRef(0);
+  const isDragging  = useRef(false);
+  const lastMousePos = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
-    const handleMouseMove = (e) => {
-      // Normalize to match Three.js coordinate system (-1 to +1)
-      globalMouse.current.x = (e.clientX / window.innerWidth) * 2 - 1;
-      globalMouse.current.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    const handleDown = (e) => {
+      // Ignore right-clicks
+      if (e.button !== 0 && e.type === 'mousedown') return;
+      
+      // Ignore clicks on buttons, links, or inputs so UI remains functional
+      if (e.target.closest('button, a, input, select, textarea, [role="button"]')) return;
+
+      isDragging.current = true;
+      lastMousePos.current = {
+        x: e.touches ? e.touches[0].clientX : e.clientX,
+        y: e.touches ? e.touches[0].clientY : e.clientY
+      };
     };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+
+    const handleMove = (e) => {
+      const currentX = e.touches ? e.touches[0].clientX : e.clientX;
+      const currentY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      // 1. Passive Parallax Tracking
+      globalMouse.current.x = (currentX / window.innerWidth) * 2 - 1;
+      globalMouse.current.y = -(currentY / window.innerHeight) * 2 + 1;
+
+      // 2. Active Drag Rotation
+      if (isDragging.current) {
+        const deltaX = currentX - lastMousePos.current.x;
+        dragOffset.current += deltaX * 0.012; // Drag sensitivity
+        lastMousePos.current = { x: currentX, y: currentY };
+      }
+    };
+
+    const handleUp = () => {
+      isDragging.current = false;
+    };
+
+    // Attach to window to bypass the canvas pointer-events-none barrier
+    window.addEventListener('mousedown', handleDown);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    window.addEventListener('touchstart', handleDown);
+    window.addEventListener('touchmove', handleMove);
+    window.addEventListener('touchend', handleUp);
+
+    return () => {
+      window.removeEventListener('mousedown', handleDown);
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+      window.removeEventListener('touchstart', handleDown);
+      window.removeEventListener('touchmove', handleMove);
+      window.removeEventListener('touchend', handleUp);
+    };
   }, []);
 
   // ─── Geometry ─────────────────────────────────────────────────────────────
@@ -87,9 +133,9 @@ function BmwModel() {
       if (child.isMesh) {
         const mat = new THREE.MeshStandardMaterial({
           color:           '#080808',
-          roughness:       0.28,      // Increased to break down the plasticky gloss reflections
-          metalness:       0.85,      // Stays structurally heavyweight metal
-          envMapIntensity: 1.4,       // Balanced studio reflection intensity
+          roughness:       0.28,      
+          metalness:       0.85,      
+          envMapIntensity: 1.4,      
           transparent:     true,
           opacity:         0,
         });
@@ -164,21 +210,20 @@ function BmwModel() {
     const elapsed    = state.clock.getElapsedTime();
     const levitation = Math.sin(elapsed * IDLE_LEVITATE_FREQ) * IDLE_LEVITATE_AMP;
     
-    // Combine base trajectory tracking with the animated levitation factor
     const finalY = REVEAL_Y_REST + (levitation * tf);
 
     carRef.current.position.set(targetX, finalY, targetZ);
 
     // ── Rotation Blending ──────────────────────────────────────────────────
-    // Top-of-page interactive rotation target
+    // Top-of-page interactive rotation target (includes user drag offset!)
     const idleSway     = Math.sin(elapsed * IDLE_ROT_SPEED) * IDLE_ROT_AMP;
     const pointerSway  = globalMouse.current.x * POINTER_ROT_AMP;
-    const topStateRotY = fixedAngle + idleSway + pointerSway;
+    const topStateRotY = fixedAngle + idleSway + pointerSway + dragOffset.current;
 
     // Scrolled driving trajectory target
     const scrollStateRotY = fixedAngle + (SCROLL_ROTATION_DELTA * delayedProgress);
 
-    // Linearly interpolate between top interactive state and scroll drive state based on tf
+    // Linearly interpolate between top interactive state and scroll drive state
     const finalTargetRotY = THREE.MathUtils.lerp(scrollStateRotY, topStateRotY, tf);
 
     carRef.current.rotation.y = THREE.MathUtils.damp(
