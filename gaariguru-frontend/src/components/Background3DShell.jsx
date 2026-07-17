@@ -3,7 +3,7 @@
   Automotive 3D landing hero scene tracking.
   Provides premium clearcoat reflections, bi-directional scroll blending,
   placeholder-locked horizontal turntable drag, pure horizontal trajectory,
-  and corrected geometry-centered dynamic wheel rotation.
+  and dynamic wheel rotation (without exploding!).
 */
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
@@ -135,18 +135,11 @@ function BmwModel() {
     const wheels = [];
 
     scene.traverse((child) => {
-      // FIX: Ensure the object is actually a physical mesh before altering geometry
       if (child.isMesh) {
         const name = child.name.toLowerCase();
         
+        // Grab the wheels, but DO NOT alter their geometry coordinates!
         if (name.includes('tyre') || name.includes('rim')) {
-          child.geometry.computeBoundingBox();
-          const center = new THREE.Vector3();
-          child.geometry.boundingBox.getCenter(center);
-          
-          child.geometry.translate(-center.x, -center.y, -center.z);
-          child.position.copy(center);
-
           wheels.push(child);
         }
 
@@ -242,6 +235,7 @@ function BmwModel() {
     const spinMultiplier = 3.0;
     
     wheelRefs.current.forEach((wheel) => {
+      // Safely apply rotation to the wheels based on distance traveled
       wheel.rotation.x = distanceTraveled * spinMultiplier;
     });
 
