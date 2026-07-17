@@ -2,7 +2,8 @@
   Background3DShell.jsx
   Automotive 3D landing hero scene tracking.
   Provides premium clearcoat reflections, bi-directional scroll blending,
-  placeholder-locked horizontal turntable drag, and pure horizontal trajectory.
+  placeholder-locked horizontal turntable drag, pure horizontal trajectory,
+  and dynamic wheel rotation.
 */
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
@@ -26,8 +27,8 @@ const IDLE_LEVITATE_AMP  = 0.08;
 const POINTER_ROT_AMP    = 0.20;
 
 // ─── Angles ───────────────────────────────────────────────────────────────────
-const START_ANGLE       = (Math.PI / 5) + Math.PI; // 216 deg (front-left resting angle)
-const TARGET_LEFT_ANGLE = Math.PI + 0.12;          // Over-rotated slightly to counter perspective lens
+const START_ANGLE       = (Math.PI / 5) + Math.PI; 
+const TARGET_LEFT_ANGLE = Math.PI + 0.12;          
 
 // ─── isAtTopFactor transition band ────────────────────────────────────────────
 const BLEND_BAND = 150;   
@@ -41,6 +42,9 @@ function BmwModel() {
   const { scene }  = useGLTF('/bmwm5.glb');
   const carRef     = useRef();
   const materialsRef = useRef([]);
+  
+  // NEW: Store references to the wheel meshes to animate them
+  const wheelRefs  = useRef([]);
 
   const smoothedProgress = useRef(0);
   const revealProgress = useRef(0);
@@ -123,15 +127,22 @@ function BmwModel() {
   const scaleFactor = isMobile ? 0.6 : 1;
   const carScale    = BASE_SCALE * scaleFactor;
   
-  // Strict horizontal rail math
   const startX      =  3.5 * scaleFactor;
   const startZ      =  0.5 * scaleFactor; 
-  const endX        = -20  * scaleFactor; // Fixed distance so it drives fully off screen
+  const endX        = -20  * scaleFactor; 
   const endZ        =  0.5 * scaleFactor; 
 
   useLayoutEffect(() => {
     const mats = [];
+    const wheels = [];
+
     scene.traverse((child) => {
+      // Look for parts of the model named "wheel" or "tire"
+      const name = child.name.toLowerCase();
+      if (name.includes('wheel') || name.includes('tire')) {
+        wheels.push(child);
+      }
+
       if (child.isMesh) {
         const mat = new THREE.MeshPhysicalMaterial({
           color:              '#080808',  
@@ -149,7 +160,9 @@ function BmwModel() {
         mats.push(mat);
       }
     });
+
     materialsRef.current = mats;
+    wheelRefs.current = wheels;
   }, [scene]);
 
   useFrame((state, delta) => {
@@ -218,7 +231,18 @@ function BmwModel() {
     );
     carRef.current.rotation.x = 0;
 
-    // 4. Parallax fades out during scroll
+    // 4. DYNAMIC WHEEL ROTATION
+    // Calculate how far the car has physically moved from the start
+    const distanceTraveled = startX - targetX; 
+    // This multiplier acts as the wheel size ratio. Increase it if wheels spin too slow.
+    const spinMultiplier = 2.5; 
+    
+    wheelRefs.current.forEach((wheel) => {
+      // Rotating on the X-axis handles forward/backward rolling
+      wheel.rotation.x = distanceTraveled * spinMultiplier;
+    });
+
+    // 5. PARALLAX FADES OUT DURING SCROLL
     const parallaxStrength = tf * PARALLAX_X;  
 
     const targetCamX = globalMouse.current.x * parallaxStrength;
@@ -227,7 +251,6 @@ function BmwModel() {
     state.camera.position.x = THREE.MathUtils.damp(state.camera.position.x, targetCamX, 3.5, delta);
     state.camera.position.y = THREE.MathUtils.damp(state.camera.position.y, targetCamY, 3.5, delta);
 
-    // FIX: Camera stays permanently locked to center so the car actually leaves the screen
     state.camera.lookAt(0, 0.3, 0);
   });
 
