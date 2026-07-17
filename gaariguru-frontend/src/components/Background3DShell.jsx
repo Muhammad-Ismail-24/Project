@@ -135,24 +135,21 @@ function BmwModel() {
     const wheels = [];
 
     scene.traverse((child) => {
-      // FIX: Use the exact names from the GLB JSON dump
-      const name = child.name.toLowerCase();
-      if (name.includes('tyre') || name.includes('rim')) {
-        
-        // PIVOT FIX: Compute the exact center of the wheel/rim geometry
-        // This stops the wheels from swinging wildly if the 3D artist messed up the export pivot
-        child.geometry.computeBoundingBox();
-        const center = new THREE.Vector3();
-        child.geometry.boundingBox.getCenter(center);
-        
-        // Offset the geometry to perfectly center it on its own axis, then move the mesh wrapper back
-        child.geometry.translate(-center.x, -center.y, -center.z);
-        child.position.copy(center);
-
-        wheels.push(child);
-      }
-
+      // FIX: Ensure the object is actually a physical mesh before altering geometry
       if (child.isMesh) {
+        const name = child.name.toLowerCase();
+        
+        if (name.includes('tyre') || name.includes('rim')) {
+          child.geometry.computeBoundingBox();
+          const center = new THREE.Vector3();
+          child.geometry.boundingBox.getCenter(center);
+          
+          child.geometry.translate(-center.x, -center.y, -center.z);
+          child.position.copy(center);
+
+          wheels.push(child);
+        }
+
         const mat = new THREE.MeshPhysicalMaterial({
           color:              '#080808',  
           roughness:          0.42,       
@@ -242,10 +239,9 @@ function BmwModel() {
 
     // 4. DYNAMIC WHEEL ROTATION
     const distanceTraveled = startX - targetX; 
-    const spinMultiplier = 3.0; // Adjusted for realistic speed
+    const spinMultiplier = 3.0;
     
     wheelRefs.current.forEach((wheel) => {
-      // With the geometry centered above, rotating X spins them perfectly on their axles
       wheel.rotation.x = distanceTraveled * spinMultiplier;
     });
 
