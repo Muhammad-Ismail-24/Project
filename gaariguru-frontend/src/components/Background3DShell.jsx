@@ -2,7 +2,7 @@
   Background3DShell.jsx
   Automotive 3D landing hero scene tracking.
   Provides premium clearcoat reflections, bi-directional scroll blending,
-  and locked horizontal (turntable) click-and-drag rotation.
+  locked horizontal (turntable) drag, and shortest-path unwinding prevention.
 */
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
@@ -60,16 +60,13 @@ function BmwModel() {
 
   // ─── Global Mouse & Horizontal Drag Tracker ─────────────────────────────
   const globalMouse  = useRef({ x: 0, y: 0 });
-  const dragOffset   = useRef(0); // Tracks ONLY horizontal drag now
+  const dragOffset   = useRef(0); 
   const isDragging   = useRef(false);
   const lastMousePos = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     const handleDown = (e) => {
-      // Ignore right-clicks. Ensure it's left click (button === 0)
       if (e.button !== 0 && e.type === 'mousedown') return;
-      
-      // Ignore clicks on buttons, links, or inputs so UI remains functional
       if (e.target.closest('button, a, input, select, textarea, [role="button"]')) return;
 
       isDragging.current = true;
@@ -83,15 +80,22 @@ function BmwModel() {
       const currentX = e.touches ? e.touches[0].clientX : e.clientX;
       const currentY = e.touches ? e.touches[0].clientY : e.clientY;
 
-      // 1. Passive Parallax Tracking
       globalMouse.current.x = (currentX / window.innerWidth) * 2 - 1;
       globalMouse.current.y = -(currentY / window.innerHeight) * 2 + 1;
 
-      // 2. Active Horizontal Drag Rotation
       if (isDragging.current) {
+        // FIX 1: If it's a mouse event and left click is no longer held down, force cancel
+        if (e.type === 'mousemove' && e.buttons !== 1) {
+          isDragging.current = false;
+          return;
+        }
+
+        // FIX 1: Actively clear text selection to prevent drag-locking
+        if (window.getSelection) {
+          window.getSelection().removeAllRanges();
+        }
+
         const deltaX = currentX - lastMousePos.current.x;
-        
-        // Only update horizontal (Y-axis) spin
         dragOffset.current += deltaX * 0.012; 
         
         lastMousePos.current = { x: currentX, y: currentY };
@@ -102,7 +106,6 @@ function BmwModel() {
       isDragging.current = false;
     };
 
-    // Attach to window to bypass the canvas pointer-events-none barrier
     window.addEventListener('mousedown', handleDown);
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleUp);
@@ -177,7 +180,6 @@ function BmwModel() {
       materialsRef.current.forEach(mat => { mat.opacity = opacity; });
       carRef.current.position.set(startX, revealY, startZ);
       carRef.current.rotation.y = fixedAngle;
-      // Lock X rotation to 0 to keep it flat
       carRef.current.rotation.x = 0;
 
       if (revealProgress.current >= 1) {
@@ -190,18 +192,12 @@ function BmwModel() {
     }
 
     // ── Phase 2: Bi-directional state machine ──────────────────────────────
-
-    // Compute raw top factor (1.0 = top of page, 0.0 = scrolled down)
     const rawTopFactor = Math.max(0, 1 - scrollY / BLEND_BAND);
-
-    // Smooth state transitions to eliminate jerking
     topFactor.current = THREE.MathUtils.damp(
       topFactor.current, rawTopFactor, 4.0, delta
     );
+    const tf = topFactor.current; 
 
-    const tf = topFactor.current; // 1 = at top, 0 = scrolled down
-
-    // Smooth the absolute scrolling progress tracking
     smoothedProgress.current = THREE.MathUtils.damp(
       smoothedProgress.current, rawProgress, 2.5, delta
     );
@@ -211,33 +207,31 @@ function BmwModel() {
     const targetX = THREE.MathUtils.lerp(startX, endX, delayedProgress);
     const targetZ = THREE.MathUtils.lerp(startZ, endZ, delayedProgress);
 
-    // Levitation recalculates smoothly from state.clock whenever tf > 0
     const elapsed    = state.clock.getElapsedTime();
     const levitation = Math.sin(elapsed * IDLE_LEVITATE_FREQ) * IDLE_LEVITATE_AMP;
-    
     const finalY = REVEAL_Y_REST + (levitation * tf);
 
     carRef.current.position.set(targetX, finalY, targetZ);
 
-    // ── Rotation Blending (Horizontal ONLY) ────────────────────────────────
+    // ── Rotation Blending (Shortest Path Math) ─────────────────────────────
     
-    // YAW (Left/Right Spin)
+    // FIX 2: Find the nearest 360-degree cycle the user is currently on
+    const PI2 = Math.PI * 2;
+    const cycles = Math.round(dragOffset.current / PI2);
+    const baseOffset = cycles * PI2;
+
     const idleSway     = Math.sin(elapsed * IDLE_ROT_SPEED) * IDLE_ROT_AMP;
     const pointerSway  = globalMouse.current.x * POINTER_ROT_AMP;
-    // We add dragOffset.current to give horizontal turntable spin
     const topStateRotY = fixedAngle + idleSway + pointerSway + dragOffset.current;
 
-    // Scrolled driving trajectory target
-    const scrollStateRotY = fixedAngle + (SCROLL_ROTATION_DELTA * delayedProgress);
+    // FIX 2: Add baseOffset so the scroll target matches the current cycle
+    const scrollStateRotY = fixedAngle + baseOffset + (SCROLL_ROTATION_DELTA * delayedProgress);
 
-    // Linearly interpolate between interactive spin state and drive state
     const finalTargetRotY = THREE.MathUtils.lerp(scrollStateRotY, topStateRotY, tf);
 
-    // Apply dampened horizontal rotation
     carRef.current.rotation.y = THREE.MathUtils.damp(
       carRef.current.rotation.y, finalTargetRotY, 5.0, delta
     );
-    // Explicitly lock X-axis rotation so the car never flips up/down
     carRef.current.rotation.x = 0;
 
     // ── Camera Parallax ────────────────────────────────────────────────────
