@@ -3,7 +3,7 @@
   Automotive 3D landing hero scene tracking.
   Provides premium clearcoat reflections, bi-directional scroll blending,
   placeholder-locked horizontal turntable drag, pure horizontal trajectory,
-  and dynamic wheel rotation (without exploding!).
+  and safely-cloned dynamic wheel rotation.
 */
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
@@ -138,8 +138,23 @@ function BmwModel() {
       if (child.isMesh) {
         const name = child.name.toLowerCase();
         
-        // Grab the wheels, but DO NOT alter their geometry coordinates!
+        // Pivot Correction Logic
         if (name.includes('tyre') || name.includes('rim')) {
+          
+          // 1. Clone the geometry to prevent shared instances from compounding math and exploding
+          child.geometry = child.geometry.clone();
+          
+          // 2. Compute the exact bounding box and visual center of this specific wheel
+          child.geometry.computeBoundingBox();
+          const center = new THREE.Vector3();
+          child.geometry.boundingBox.getCenter(center);
+          
+          // 3. Shift the geometry vertices to center around local 0,0,0
+          child.geometry.translate(-center.x, -center.y, -center.z);
+          
+          // 4. Safely add the offset to the mesh's position, absorbing any parent transforms
+          child.position.add(center);
+
           wheels.push(child);
         }
 
@@ -232,10 +247,9 @@ function BmwModel() {
 
     // 4. DYNAMIC WHEEL ROTATION
     const distanceTraveled = startX - targetX; 
-    const spinMultiplier = 3.0;
+    const spinMultiplier = 3.0; // Feel free to tweak to match rotation speed to visual drag
     
     wheelRefs.current.forEach((wheel) => {
-      // Safely apply rotation to the wheels based on distance traveled
       wheel.rotation.x = distanceTraveled * spinMultiplier;
     });
 
