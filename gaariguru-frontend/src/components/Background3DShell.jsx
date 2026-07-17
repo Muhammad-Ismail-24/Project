@@ -2,7 +2,7 @@
   Background3DShell.jsx
   Automotive 3D landing hero scene tracking.
   Provides premium clearcoat reflections, bi-directional scroll blending,
-  and global click-and-drag showroom rotation.
+  and global 360-degree click-and-drag showroom rotation across all directions.
 */
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
@@ -58,10 +58,10 @@ function BmwModel() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // ─── Global Mouse & Drag Tracker ────────────────────────────────────────
-  const globalMouse = useRef({ x: 0, y: 0 });
-  const dragOffset  = useRef(0);
-  const isDragging  = useRef(false);
+  // ─── Global Mouse & Full 360 Drag Tracker ───────────────────────────────
+  const globalMouse  = useRef({ x: 0, y: 0 });
+  const dragOffset   = useRef({ x: 0, y: 0 }); // Tracks both horizontal & vertical drag
+  const isDragging   = useRef(false);
   const lastMousePos = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -87,10 +87,14 @@ function BmwModel() {
       globalMouse.current.x = (currentX / window.innerWidth) * 2 - 1;
       globalMouse.current.y = -(currentY / window.innerHeight) * 2 + 1;
 
-      // 2. Active Drag Rotation
+      // 2. Active 360 Drag Rotation (Any Direction)
       if (isDragging.current) {
         const deltaX = currentX - lastMousePos.current.x;
-        dragOffset.current += deltaX * 0.012; // Drag sensitivity
+        const deltaY = currentY - lastMousePos.current.y;
+        
+        dragOffset.current.x += deltaX * 0.012; // Left/Right Spin
+        dragOffset.current.y += deltaY * 0.012; // Up/Down Spin
+        
         lastMousePos.current = { x: currentX, y: currentY };
       }
     };
@@ -215,19 +219,29 @@ function BmwModel() {
     carRef.current.position.set(targetX, finalY, targetZ);
 
     // ── Rotation Blending ──────────────────────────────────────────────────
-    // Top-of-page interactive rotation target (includes user drag offset!)
+    
+    // YAW (Left/Right Spin)
     const idleSway     = Math.sin(elapsed * IDLE_ROT_SPEED) * IDLE_ROT_AMP;
     const pointerSway  = globalMouse.current.x * POINTER_ROT_AMP;
-    const topStateRotY = fixedAngle + idleSway + pointerSway + dragOffset.current;
+    const topStateRotY = fixedAngle + idleSway + pointerSway + dragOffset.current.x;
+    
+    // PITCH (Up/Down Spin)
+    const topStateRotX = dragOffset.current.y;
 
-    // Scrolled driving trajectory target
+    // Scrolled driving trajectory targets (Flat on the road)
     const scrollStateRotY = fixedAngle + (SCROLL_ROTATION_DELTA * delayedProgress);
+    const scrollStateRotX = 0; 
 
-    // Linearly interpolate between top interactive state and scroll drive state
+    // Linearly interpolate between full 3D interactive state and flat scroll drive state
     const finalTargetRotY = THREE.MathUtils.lerp(scrollStateRotY, topStateRotY, tf);
+    const finalTargetRotX = THREE.MathUtils.lerp(scrollStateRotX, topStateRotX, tf);
 
+    // Apply dampened rotations
     carRef.current.rotation.y = THREE.MathUtils.damp(
       carRef.current.rotation.y, finalTargetRotY, 5.0, delta
+    );
+    carRef.current.rotation.x = THREE.MathUtils.damp(
+      carRef.current.rotation.x, finalTargetRotX, 5.0, delta
     );
 
     // ── Camera Parallax ────────────────────────────────────────────────────
