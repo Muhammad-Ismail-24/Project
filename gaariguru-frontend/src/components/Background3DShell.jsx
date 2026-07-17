@@ -16,7 +16,7 @@ const REVEAL_Y_REST      = -1;
 const REVEAL_Y_OVERSHOOT = REVEAL_Y_REST + 0.22;
 
 // ─── Scalings ──────────────────────────────────────────────────────────────────
-const BASE_SCALE = 0.95; // Updated scale for full visibility[cite: 3]
+const BASE_SCALE = 0.95; // Updated scale for full visibility
 
 // ─── Top-of-page idle state ────────────────────────────────────────────────────
 const IDLE_ROT_SPEED     = 0.55;    // rad/s for the slow sinusoidal sway
@@ -28,7 +28,7 @@ const IDLE_LEVITATE_AMP  = 0.08;    // ±0.08 units of vertical travel
 const POINTER_ROT_AMP    = 0.20;
 
 // ─── Scroll-drive ─────────────────────────────────────────────────────────────
-const SCROLL_ROTATION_DELTA = 0.18;   // ~10° total rotation at full scroll
+const SCROLL_ROTATION_DELTA = Math.PI / 3.2;   // Rotates perfectly to face the left side
 
 // ─── isAtTopFactor transition band ────────────────────────────────────────────
 const BLEND_BAND = 150;   // pixels — full blend happens inside first 150px
@@ -137,10 +137,10 @@ function BmwModel() {
   // ─── Geometry ─────────────────────────────────────────────────────────────
   const scaleFactor = isMobile ? 0.6 : 1;
   const carScale    = BASE_SCALE * scaleFactor;
-  const startX      =  4  * scaleFactor;
-  const startZ      =  2  * scaleFactor;
-  const endX        = startX + (-40 * scaleFactor);
-  const endZ        = startZ + (-25 * scaleFactor);
+  const startX      =  2.5 * scaleFactor; // Fully visible on load
+  const startZ      =  0.5 * scaleFactor; // Closer to camera
+  const endX        = -18  * scaleFactor; // Drives off completely to the left
+  const endZ        =  4   * scaleFactor; // Drives slightly towards camera, no shrinking
   const fixedAngle  = (Math.PI / 5) + Math.PI;
 
   // ─── Material — natural satin clearcoat ────────────────────────────────────
@@ -148,7 +148,7 @@ function BmwModel() {
     const mats = [];
     scene.traverse((child) => {
       if (child.isMesh) {
-        // Material adjusted for realism[cite: 3]
+        // Material adjusted for realism
         const mat = new THREE.MeshStandardMaterial({
           color:           '#050505',
           roughness:       0.35,      
@@ -213,7 +213,8 @@ function BmwModel() {
     smoothedProgress.current = THREE.MathUtils.damp(
       smoothedProgress.current, rawProgress, 2.5, delta
     );
-    const delayedProgress = Math.pow(smoothedProgress.current, 3);
+    // Modified to 1.5 so car moves sooner to match the UI gap timing
+    const delayedProgress = Math.pow(smoothedProgress.current, 1.5); 
 
     // ── Position Blending ──────────────────────────────────────────────────
     const targetX = THREE.MathUtils.lerp(startX, endX, delayedProgress);
@@ -271,11 +272,11 @@ export default function Background3DShell() {
     <div id="canvas-container" className="fixed inset-0 z-0 w-full h-full pointer-events-none">
       <Canvas
         camera={{ position: [0, 2, 8], fov: 45 }}
-        gl={{ antialias: true, toneMappingExposure: 1.1 }} // Natural exposure[cite: 3]
+        gl={{ antialias: true, toneMappingExposure: 1.1 }} // Natural exposure
       >
         <Environment preset="studio" />
         <ambientLight intensity={0.4} />
-        <directionalLight position={[10, 10, 5]} intensity={0.9} /> {/* Soft lighting[cite: 3] */}
+        <directionalLight position={[10, 10, 5]} intensity={0.9} /> {/* Soft lighting */}
         <ContactShadows
           resolution={1024}
           scale={20}
