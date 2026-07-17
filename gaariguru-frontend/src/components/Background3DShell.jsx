@@ -1,7 +1,8 @@
 /*
   Background3DShell.jsx
   Automotive 3D landing hero scene tracking.
-  Provides premium, natural clearcoat reflections and seamless bi-directional state blending.
+  Provides premium, natural clearcoat reflections, seamless bi-directional state blending,
+  and global mouse tracking to bypass pointer-events-none.
 */
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
@@ -57,6 +58,19 @@ function BmwModel() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  // ─── Global Mouse Tracker (Bypasses pointer-events-none) ───────────────
+  const globalMouse = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      // Normalize to match Three.js coordinate system (-1 to +1)
+      globalMouse.current.x = (e.clientX / window.innerWidth) * 2 - 1;
+      globalMouse.current.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
   // ─── Geometry ─────────────────────────────────────────────────────────────
   const scaleFactor = isMobile ? 0.6 : 1;
   const carScale    = 1.3 * scaleFactor;
@@ -75,7 +89,7 @@ function BmwModel() {
           color:           '#080808',
           roughness:       0.28,      // Increased to break down the plasticky gloss reflections
           metalness:       0.85,      // Stays structurally heavyweight metal
-          envMapIntensity: 1.4,      // Balanced studio reflection intensity
+          envMapIntensity: 1.4,       // Balanced studio reflection intensity
           transparent:     true,
           opacity:         0,
         });
@@ -158,7 +172,7 @@ function BmwModel() {
     // ── Rotation Blending ──────────────────────────────────────────────────
     // Top-of-page interactive rotation target
     const idleSway     = Math.sin(elapsed * IDLE_ROT_SPEED) * IDLE_ROT_AMP;
-    const pointerSway  = state.pointer.x * POINTER_ROT_AMP;
+    const pointerSway  = globalMouse.current.x * POINTER_ROT_AMP;
     const topStateRotY = fixedAngle + idleSway + pointerSway;
 
     // Scrolled driving trajectory target
@@ -174,8 +188,8 @@ function BmwModel() {
     // ── Camera Parallax ────────────────────────────────────────────────────
     const parallaxStrength = tf * PARALLAX_X + (1 - tf) * PARALLAX_X * 0.4;
 
-    const targetCamX = state.pointer.x * parallaxStrength;
-    const targetCamY = 2 + state.pointer.y * (parallaxStrength * 0.5);
+    const targetCamX = globalMouse.current.x * parallaxStrength;
+    const targetCamY = 2 + globalMouse.current.y * (parallaxStrength * 0.5);
 
     state.camera.position.x = THREE.MathUtils.damp(
       state.camera.position.x, targetCamX, 3.5, delta
