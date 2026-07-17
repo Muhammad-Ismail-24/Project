@@ -2,7 +2,7 @@
   Background3DShell.jsx
   Automotive 3D landing hero scene tracking.
   Provides premium clearcoat reflections, bi-directional scroll blending,
-  placeholder-locked horizontal turntable drag, and unwinding prevention.
+  placeholder-locked horizontal turntable drag, and pure horizontal trajectory.
 */
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
@@ -16,7 +16,6 @@ const REVEAL_Y_REST      = -1;
 const REVEAL_Y_OVERSHOOT = REVEAL_Y_REST + 0.22;
 
 // ─── Scalings ──────────────────────────────────────────────────────────────────
-// Increased scale so the car sits larger and more prominently on the screen
 const BASE_SCALE = 1.15; 
 
 // ─── Top-of-page idle state ────────────────────────────────────────────────────
@@ -24,13 +23,11 @@ const IDLE_ROT_SPEED     = 0.55;    // rad/s for the slow sinusoidal sway
 const IDLE_ROT_AMP       = 0.055;   // ±~3.1° sway amplitude
 const IDLE_LEVITATE_FREQ = 1.5;     // Hz of the vertical float
 const IDLE_LEVITATE_AMP  = 0.08;    // ±0.08 units of vertical travel
-
-// Mouse rotation influence at top: pointer.x maps to ±this many radians
 const POINTER_ROT_AMP    = 0.20;
 
-// ─── Scroll-drive ─────────────────────────────────────────────────────────────
-// Exactly 90 degrees (Math.PI / 2) to force the car to face pure left
-const SCROLL_ROTATION_DELTA = Math.PI / 2;   
+// ─── Angles ───────────────────────────────────────────────────────────────────
+const START_ANGLE       = (Math.PI / 5) + Math.PI; // 216 deg (front-left resting angle)
+const TARGET_LEFT_ANGLE = Math.PI * 1.5;           // 270 deg (pure profile left)
 
 // ─── isAtTopFactor transition band ────────────────────────────────────────────
 const BLEND_BAND = 150;   // pixels — full blend happens inside first 150px
@@ -136,11 +133,12 @@ function BmwModel() {
   // ─── Geometry ─────────────────────────────────────────────────────────────
   const scaleFactor = isMobile ? 0.6 : 1;
   const carScale    = BASE_SCALE * scaleFactor;
-  const startX      =  4.2 * scaleFactor; // Pushed further to the right
+  
+  // Adjusted to create a perfect horizontal rail (endZ matches startZ perfectly)
+  const startX      =  3.5 * scaleFactor;
   const startZ      =  0.5 * scaleFactor; 
-  const endX        = -22  * scaleFactor; // Drives entirely off the left screen edge
-  const endZ        =  0.5 * scaleFactor; // Locked identically to startZ to eliminate parabolic arc
-  const fixedAngle  = (Math.PI / 5) + Math.PI;
+  const endX        = -10  * scaleFactor; // Enough to clear screen, prevents perspective drop
+  const endZ        =  0.5 * scaleFactor; 
 
   // ─── Material — real automotive clearcoat paint ────────────────────────────
   useLayoutEffect(() => {
@@ -193,7 +191,7 @@ function BmwModel() {
       const opacity = Math.min((t / 0.85) * 1.15, 1);
       materialsRef.current.forEach(mat => { mat.opacity = opacity; });
       carRef.current.position.set(startX, revealY, startZ);
-      carRef.current.rotation.y = fixedAngle;
+      carRef.current.rotation.y = START_ANGLE;
       carRef.current.rotation.x = 0;
 
       if (revealProgress.current >= 1) {
@@ -205,7 +203,7 @@ function BmwModel() {
       return;
     }
 
-    // ── Phase 2: Bi-directional state machine ──────────────────────────────
+    // ── Phase 2: Core State Machine ─────────────────────────────────────────
     const rawTopFactor = Math.max(0, 1 - scrollY / BLEND_BAND);
     topFactor.current = THREE.MathUtils.damp(
       topFactor.current, rawTopFactor, 4.0, delta
@@ -216,33 +214,39 @@ function BmwModel() {
       smoothedProgress.current, rawProgress, 2.5, delta
     );
     
+    // Core timing curve
     const delayedProgress = Math.pow(smoothedProgress.current, 1.5); 
 
-    // ── Position Blending ──────────────────────────────────────────────────
+    // 1. BASE SCROLL PATH (Unbreakable straight horizontal rail)
     const targetX = THREE.MathUtils.lerp(startX, endX, delayedProgress);
     const targetZ = THREE.MathUtils.lerp(startZ, endZ, delayedProgress);
+    const baseScrollAngle = THREE.MathUtils.lerp(START_ANGLE, TARGET_LEFT_ANGLE, delayedProgress);
 
+    // 2. Y-AXIS LEVITATION
     const elapsed    = state.clock.getElapsedTime();
     const levitation = Math.sin(elapsed * IDLE_LEVITATE_FREQ) * IDLE_LEVITATE_AMP;
     const finalY = REVEAL_Y_REST + (levitation * tf);
 
     carRef.current.position.set(targetX, finalY, targetZ);
 
-    // ── Rotation Blending (Shortest Path Math) ─────────────────────────────
+    // 3. SHORTEST PATH & INTERACTIVE ROTATION
     const PI2 = Math.PI * 2;
     const cycles = Math.round(dragOffset.current / PI2);
     const baseOffset = cycles * PI2;
 
-    const idleSway     = Math.sin(elapsed * IDLE_ROT_SPEED) * IDLE_ROT_AMP;
-    const pointerSway  = globalMouse.current.x * POINTER_ROT_AMP;
-    const topStateRotY = fixedAngle + idleSway + pointerSway + dragOffset.current;
-
-    const scrollStateRotY = fixedAngle + baseOffset + (SCROLL_ROTATION_DELTA * delayedProgress);
-
-    const finalTargetRotY = THREE.MathUtils.lerp(scrollStateRotY, topStateRotY, tf);
+    const idleSway    = Math.sin(elapsed * IDLE_ROT_SPEED) * IDLE_ROT_AMP;
+    const pointerSway = globalMouse.current.x * POINTER_ROT_AMP;
+    
+    // We strictly isolate the interactive modifiers and fade them out based on `tf`.
+    // This mathematically prevents the parabolic dual-lerp clash.
+    const dragRemainder = dragOffset.current - baseOffset;
+    const interactiveOffset = (idleSway + pointerSway + dragRemainder) * tf;
 
     carRef.current.rotation.y = THREE.MathUtils.damp(
-      carRef.current.rotation.y, finalTargetRotY, 5.0, delta
+      carRef.current.rotation.y, 
+      baseOffset + baseScrollAngle + interactiveOffset, 
+      5.0, 
+      delta
     );
     carRef.current.rotation.x = 0;
 
