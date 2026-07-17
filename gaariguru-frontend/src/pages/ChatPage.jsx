@@ -214,171 +214,200 @@ export default function ChatPage() {
   };
 
   return (
-    // FIX 1: Using 100dvh prevents mobile browser address bars from breaking the chat view
-    <div className="flex h-[calc(100dvh-80px)] w-full overflow-hidden bg-[#a3a3a3] font-sans text-black relative">
-      
+    <div className="flex h-[calc(100dvh-80px)] w-full overflow-hidden bg-white font-sans text-black relative">
+
       {/* ── Mobile Sidebar Backdrop ── */}
       {isMobileSidebarOpen && !isGuest && (
-        <div 
+        <div
           onClick={() => setIsMobileSidebarOpen(false)}
-          className="fixed inset-0 top-20 z-30 bg-black/20 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 top-20 z-30 bg-black/30 backdrop-blur-sm md:hidden"
         />
       )}
 
-      {/* ── Sidebar (Responsive Dynamic Layout) ── */}
+      {/* ── Sidebar ── */}
       {!isGuest && (
-        <div className={`
-          fixed top-20 bottom-0 left-0 z-40 w-64 bg-[#a3a3a3] border-r border-black/15 flex flex-col shrink-0 transition-transform duration-300 ease-in-out
-          md:static md:translate-x-0 md:bg-white/20 md:backdrop-blur-md h-full
+        <aside className={`
+          fixed top-20 bottom-0 left-0 z-40 w-72 bg-neutral-950 flex flex-col shrink-0
+          transition-transform duration-300 ease-in-out
+          md:static md:translate-x-0 h-full
           ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}>
-          <div className="p-4 border-b border-black/15">
-            <button 
+          {/* Sidebar Header */}
+          <div className="p-5 border-b border-white/10">
+            <button
               onClick={startNewChat}
-              className="w-full flex items-center justify-center gap-2 bg-black text-white font-bold py-3 rounded-xl hover:bg-neutral-800 transition-colors shadow-md border border-transparent"
+              className="w-full flex items-center justify-center gap-2 bg-white text-black text-sm font-bold py-3 rounded-xl hover:bg-neutral-100 transition-colors"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               New Chat
             </button>
           </div>
-          
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
-            <h3 className="text-[11px] font-black text-black/60 uppercase tracking-widest mb-2 px-2 mt-2">Recent Chats</h3>
+
+          {/* Sessions List */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-0.5">
+            <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-3 px-2 mt-2">
+              Recent Chats
+            </p>
+            {sessionsList.length === 0 && (
+              <p className="text-xs text-white/30 px-2 py-4 text-center">No conversations yet.</p>
+            )}
             {sessionsList.map(session => (
-              <div 
+              <div
                 key={session.session_id}
                 onClick={() => loadSession(session.session_id)}
-                className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${activeSessionId === session.session_id ? 'bg-white/60 shadow-sm border border-black/20' : 'hover:bg-white/30 border border-transparent'}`}
+                className={`group flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-all ${
+                  activeSessionId === session.session_id
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/60 hover:bg-white/5 hover:text-white'
+                }`}
               >
-                <div className="flex items-center gap-2 overflow-hidden w-full">
-                  <MessageSquare className={`w-4 h-4 shrink-0 ${activeSessionId === session.session_id ? 'text-black' : 'text-black/60'}`} />
-                  <span className={`text-sm font-bold truncate ${activeSessionId === session.session_id ? 'text-black' : 'text-black/80'}`}>
-                    {session.latest_message}
-                  </span>
+                <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
+                  <MessageSquare className="w-3.5 h-3.5 shrink-0 opacity-60" />
+                  <span className="text-[13px] font-medium truncate">{session.latest_message}</span>
                 </div>
-                <button 
+                <button
                   onClick={(e) => handleDeleteSession(e, session.session_id)}
-                  className="opacity-0 group-hover:opacity-100 p-1 text-black/40 hover:text-black rounded transition-all shrink-0"
+                  className="opacity-0 group-hover:opacity-100 p-1 text-white/30 hover:text-white rounded transition-all shrink-0 ml-1"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             ))}
           </div>
-        </div>
+        </aside>
       )}
 
       {/* ── Main Chat Area ── */}
-      <div className="flex-1 flex flex-col h-full relative min-w-0">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-black/15 bg-white/40 backdrop-blur-md sticky top-0 z-10 shadow-sm">
+      <div className="flex-1 flex flex-col h-full min-w-0 bg-white">
+
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between px-5 sm:px-8 py-4 border-b border-neutral-100 bg-white sticky top-0 z-10">
           <div className="flex items-center gap-3 min-w-0">
             {!isGuest && (
               <button
                 onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-                className="md:hidden p-2 text-black hover:bg-black/10 rounded-xl border border-black/10 bg-white/60 shadow-sm transition-all shrink-0 active:scale-95"
-                title="Toggle chat history"
+                className="md:hidden p-2 text-black hover:bg-neutral-100 rounded-lg transition-all shrink-0"
               >
                 <MessageSquare className="w-5 h-5" />
               </button>
             )}
-            
-            <div className="flex flex-col min-w-0">
-              <h1 className="text-lg sm:text-xl font-black tracking-tight text-black truncate">{agentName}</h1>
+            <div className="flex items-center gap-3 min-w-0">
+              {/* Agent avatar */}
+              <div className="w-9 h-9 rounded-xl bg-black flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-base font-black tracking-tight text-black leading-tight truncate">
+                  {agentName}
+                </h1>
+                <p className="text-[11px] text-neutral-400 font-medium">Pakistani Car Expert</p>
+              </div>
             </div>
           </div>
-          
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-black/10 bg-white/60 text-xs font-bold text-black shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-black"></span>
-              Online
-            </span>
-          </div>
+
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-100 text-[11px] font-bold text-neutral-600 shrink-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            Online
+          </span>
         </div>
 
-        {/* Chat Feed */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scrollbar-hide overscroll-y-contain">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center h-full text-black/60 gap-3">
-              <Loader2 className="w-6 h-6 animate-spin text-black" />
-              <p className="font-bold text-sm">Loading your conversation...</p>
-            </div>
-          ) : (
-            messages.map((msg, idx) => (
-              <div
-                key={idx}
-                // FIX 2: Slide-in and fade-in animation for a smoother mobile app feel
-                className={`flex items-end gap-2 sm:gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                {msg.role === 'assistant' && (
-                  <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center bg-black shadow-md border border-white/20">
-                    <Sparkles className="w-3.5 h-3.5 text-white" />
-                  </div>
-                )}
+        {/* ── Chat Feed ── */}
+        <div className="flex-1 overflow-y-auto overscroll-y-contain scrollbar-hide">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center h-64 gap-4 text-neutral-400">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <p className="text-sm font-medium">Loading your conversation...</p>
+                <p className="text-xs text-neutral-300">This may take a moment on first load.</p>
+              </div>
+            ) : (
+              messages.map((msg, idx) => (
+                <div
+                  key={idx}
+                  className={`flex items-start gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300 ${
+                    msg.role === 'user' ? 'justify-end' : 'justify-start'
+                  }`}
+                >
+                  {/* AI Avatar */}
+                  {msg.role === 'assistant' && (
+                    <div className="w-8 h-8 rounded-xl bg-black flex items-center justify-center shrink-0 mt-0.5">
+                      <Sparkles className="w-3.5 h-3.5 text-white" />
+                    </div>
+                  )}
 
-                <div className={`
-                  max-w-[88%] md:max-w-[70%] px-4 sm:px-5 py-3 rounded-3xl text-[14px] sm:text-[15px] leading-relaxed font-bold whitespace-pre-wrap break-words shadow-md
-                  ${msg.role === 'user'
-                    ? 'bg-black text-white rounded-br-sm border border-black'
-                    : 'bg-white/60 backdrop-blur-md text-black rounded-bl-sm border border-black/15'
-                  }
-                `}>
-                  {msg.content}
+                  {/* Bubble */}
+                  <div className={`
+                    max-w-[80%] md:max-w-[68%]
+                    ${msg.role === 'user'
+                      ? 'bg-black text-white px-5 py-3.5 rounded-2xl rounded-tr-sm text-[14px] sm:text-[15px] font-medium leading-relaxed'
+                      : 'text-black text-[14px] sm:text-[15px] font-normal leading-relaxed'
+                    }
+                  `}>
+                    {msg.role === 'assistant' ? (
+                      // AI messages: no bubble, just clean prose on white
+                      // This gives it a professional editorial feel vs chat-bubble feel
+                      <div className="bg-neutral-50 border border-neutral-100 rounded-2xl rounded-tl-sm px-5 py-4 whitespace-pre-wrap break-words">
+                        {msg.content}
+                      </div>
+                    ) : (
+                      // User messages: solid black pill
+                      <div className="whitespace-pre-wrap break-words">{msg.content}</div>
+                    )}
+                  </div>
+
+                  {/* User Avatar */}
+                  {msg.role === 'user' && (
+                    <div className="w-8 h-8 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center shrink-0 mt-0.5">
+                      <User className="w-4 h-4 text-neutral-600" />
+                    </div>
+                  )}
                 </div>
+              ))
+            )}
 
-                {msg.role === 'user' && (
-                  <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center bg-white border border-black/20 shadow-sm">
-                    <User className="w-4 h-4 text-black" />
-                  </div>
-                )}
+            {/* Typing indicator */}
+            {isTyping && (
+              <div className="flex items-start gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="w-8 h-8 rounded-xl bg-black flex items-center justify-center shrink-0 mt-0.5">
+                  <Sparkles className="w-3.5 h-3.5 text-white" />
+                </div>
+                <div className="bg-neutral-50 border border-neutral-100 rounded-2xl rounded-tl-sm px-5 py-4">
+                  <TypingDots />
+                </div>
               </div>
-            ))
-          )}
+            )}
 
-          {isTyping && (
-            <div className="flex items-end gap-3 justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center bg-black shadow-md border border-white/20">
-                <Sparkles className="w-3.5 h-3.5 text-white" />
-              </div>
-              <div className="px-5 py-4 rounded-3xl rounded-bl-sm bg-white/60 backdrop-blur-md border border-black/15 shadow-md flex items-center gap-2">
-                <TypingDots />
-              </div>
-            </div>
-          )}
-
-          <div ref={chatEndRef} />
+            <div ref={chatEndRef} />
+          </div>
         </div>
 
-        {/* Input Area */}
-        <div className="p-4 bg-white/40 backdrop-blur-md border-t border-black/15">
+        {/* ── Input Area ── */}
+        <div className="border-t border-neutral-100 bg-white px-4 sm:px-6 py-4">
           <div className="max-w-3xl mx-auto">
             {isGuest && !isLoading && (
-              <p className="text-center text-xs text-black/60 font-bold mb-2">
+              <p className="text-center text-xs text-neutral-400 font-medium mb-3">
                 Sign in to save multiple conversations and customize your assistant.
               </p>
             )}
-            <form onSubmit={handleSend} className="relative flex items-center shrink-0 w-full">
+            <form onSubmit={handleSend} className="relative flex items-center w-full">
               <input
                 type="text"
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                placeholder="Ask about fuel averages, ground clearance..."
+                placeholder="Ask about fuel averages, ground clearance, parts..."
                 disabled={isTyping || isLoading}
-                // FIX 3: text-base instead of text-sm guarantees iOS Safari won't auto-zoom the page!
-                className="w-full bg-white/60 backdrop-blur-md border border-black/20 rounded-full pl-5 pr-14 py-3.5 outline-none focus:border-black focus:ring-1 focus:ring-black transition-all font-bold text-base placeholder-black/50 text-black shadow-sm disabled:opacity-60"
+                className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl pl-5 pr-14 py-4 outline-none focus:border-black focus:ring-2 focus:ring-black/5 transition-all font-medium text-base placeholder-neutral-400 text-black disabled:opacity-50"
               />
               <button
                 type="submit"
                 disabled={isTyping || isLoading || !input.trim()}
-                className="absolute right-1.5 w-10 h-11 bg-black text-white rounded-full flex items-center justify-center hover:bg-neutral-800 transition-colors shadow-md disabled:opacity-50 active:scale-95"
+                className="absolute right-2 w-10 h-10 bg-black text-white rounded-xl flex items-center justify-center hover:bg-neutral-800 transition-all disabled:opacity-40 active:scale-95"
               >
-                <Send className="w-4 h-4 ml-0.5" />
+                <Send className="w-4 h-4" />
               </button>
             </form>
           </div>
         </div>
-
       </div>
     </div>
   );
