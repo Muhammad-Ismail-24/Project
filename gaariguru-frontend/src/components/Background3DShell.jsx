@@ -3,7 +3,7 @@
   Automotive 3D landing hero scene tracking.
   Provides premium clearcoat reflections, bi-directional scroll blending,
   placeholder-locked horizontal turntable drag, pure horizontal trajectory,
-  and safely-cloned dynamic wheel rotation.
+  and safe, non-destructive wheel rotation.
 */
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
@@ -138,23 +138,8 @@ function BmwModel() {
       if (child.isMesh) {
         const name = child.name.toLowerCase();
         
-        // Pivot Correction Logic
+        // Target only the mesh nodes named "tyre" or "rim"
         if (name.includes('tyre') || name.includes('rim')) {
-          
-          // 1. Clone the geometry to prevent shared instances from compounding math and exploding
-          child.geometry = child.geometry.clone();
-          
-          // 2. Compute the exact bounding box and visual center of this specific wheel
-          child.geometry.computeBoundingBox();
-          const center = new THREE.Vector3();
-          child.geometry.boundingBox.getCenter(center);
-          
-          // 3. Shift the geometry vertices to center around local 0,0,0
-          child.geometry.translate(-center.x, -center.y, -center.z);
-          
-          // 4. Safely add the offset to the mesh's position, absorbing any parent transforms
-          child.position.add(center);
-
           wheels.push(child);
         }
 
@@ -214,26 +199,21 @@ function BmwModel() {
     smoothedProgress.current = THREE.MathUtils.damp(smoothedProgress.current, rawProgress, 2.5, delta);
     const delayedProgress = Math.pow(smoothedProgress.current, 1.5); 
 
-    // 1. BASE SCROLL PATH
     const targetX = THREE.MathUtils.lerp(startX, endX, delayedProgress);
     const targetZ = THREE.MathUtils.lerp(startZ, endZ, delayedProgress);
     const baseScrollAngle = THREE.MathUtils.lerp(START_ANGLE, TARGET_LEFT_ANGLE, delayedProgress);
 
-    // 2. Y-AXIS LEVITATION
     const elapsed    = state.clock.getElapsedTime();
     const levitation = Math.sin(elapsed * IDLE_LEVITATE_FREQ) * IDLE_LEVITATE_AMP;
     const finalY = REVEAL_Y_REST + (levitation * tf);
 
     carRef.current.position.set(targetX, finalY, targetZ);
 
-    // 3. SHORTEST PATH & INTERACTIVE ROTATION
     const PI2 = Math.PI * 2;
     const cycles = Math.round(dragOffset.current / PI2);
     const baseOffset = cycles * PI2;
-
     const idleSway    = Math.sin(elapsed * IDLE_ROT_SPEED) * IDLE_ROT_AMP;
     const pointerSway = globalMouse.current.x * POINTER_ROT_AMP;
-    
     const dragRemainder = dragOffset.current - baseOffset;
     const interactiveOffset = (idleSway + pointerSway + dragRemainder) * tf;
 
@@ -246,22 +226,22 @@ function BmwModel() {
     carRef.current.rotation.x = 0;
 
     // 4. DYNAMIC WHEEL ROTATION
+    // We apply rotation only to the specific wheel mesh. 
+    // Because we are not centering pivots, the wheel will spin *in place*. 
+    // It will look a bit weird if the pivot is off, but it WON'T explode the car!
     const distanceTraveled = startX - targetX; 
-    const spinMultiplier = 3.0; // Feel free to tweak to match rotation speed to visual drag
-    
+    const spinMultiplier = 3.0;
     wheelRefs.current.forEach((wheel) => {
       wheel.rotation.x = distanceTraveled * spinMultiplier;
     });
 
     // 5. PARALLAX
     const parallaxStrength = tf * PARALLAX_X;  
-
     const targetCamX = globalMouse.current.x * parallaxStrength;
     const targetCamY = 2 + globalMouse.current.y * (parallaxStrength * 0.5);
 
     state.camera.position.x = THREE.MathUtils.damp(state.camera.position.x, targetCamX, 3.5, delta);
     state.camera.position.y = THREE.MathUtils.damp(state.camera.position.y, targetCamY, 3.5, delta);
-
     state.camera.lookAt(0, 0.3, 0);
   });
 
