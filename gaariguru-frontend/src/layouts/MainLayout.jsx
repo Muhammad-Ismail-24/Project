@@ -138,8 +138,8 @@ export default function MainLayout() {
                     <User className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                 )}
-                <span className="font-bold text-sm hidden sm:block text-white">Welcome, {user.name?.split(' ')[0]}</span>
-                <ChevronDown className="w-4 h-4 text-zinc-400 hidden sm:block" />
+                <span className="font-medium text-sm hidden sm:block text-white">Welcome, {user.name?.split(' ')[0]}</span>
+                <ChevronDown className="w-4 h-4 text-white/40 hidden sm:block" />
               </div>
             )}
           </div>
@@ -171,12 +171,12 @@ export default function MainLayout() {
 
       {/* Preferences Drawer */}
       <div 
-        className={`fixed inset-y-0 right-0 z-[60] w-80 sm:w-96 bg-zinc-950/95 backdrop-blur-xl shadow-2xl border-l border-white/8 transform transition-transform duration-300 ease-in-out ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed inset-y-0 right-0 z-[60] w-80 sm:w-96 bg-[#b8b8b8]/85 backdrop-blur-2xl shadow-2xl border-l border-white/40 transform transition-transform duration-300 ease-in-out ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <div className="p-6">
-          <div className="flex justify-between items-center mb-8 border-b border-zinc-700/50 pb-4">
-            <h2 className="text-base font-semibold tracking-tight text-white">Preferences</h2>
-            <button onClick={() => setIsDrawerOpen(false)} className="p-2 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors">
+          <div className="flex justify-between items-center mb-8 border-b border-black/10 pb-4">
+            <h2 className="text-base font-semibold tracking-tight text-black">Preferences</h2>
+            <button onClick={() => setIsDrawerOpen(false)} className="p-1.5 hover:bg-black/10 rounded-xl text-black/50 hover:text-black transition-colors">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -185,36 +185,36 @@ export default function MainLayout() {
             <Link 
               to="/saved" 
               onClick={() => setIsDrawerOpen(false)}
-              className="flex items-center justify-between w-full bg-zinc-800/40 border border-zinc-700/50 rounded-xl p-3 text-sm font-medium hover:bg-zinc-800/70 transition-colors text-white"
+              className="flex items-center justify-between w-full bg-white/50 border border-white/60 rounded-xl p-3 text-sm font-medium hover:bg-white/70 transition-colors text-black"
             >
               <span>My Saved Cars</span>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
             </Link>
             <div>
-              <label className="text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-500 mb-2 block">Assistant Name</label>
+              <label className="text-[10px] font-medium uppercase tracking-[0.14em] text-black/45 mb-2 block">Assistant Name</label>
               <input 
                 type="text" 
                 value={assistantName}
                 onChange={(e) => setAssistantName(e.target.value)}
                 onBlur={handleNameBlur}
                 placeholder="e.g. GaariGuru Expert..."
-                className="w-full bg-zinc-800/40 border border-zinc-700/50 rounded-xl p-2.5 text-sm focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all text-white placeholder-zinc-500 font-normal"
+                className="w-full bg-white/50 border border-white/60 rounded-xl p-2.5 text-sm focus:border-black/30 focus:ring-1 focus:ring-black/10 transition-all text-black placeholder-black/35 font-normal"
               />
             </div>
             <div>
-              <label className="text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-500 mb-2 block">Daily Commute (km)</label>
-              <input type="range" min="0" max="100" className="w-full accent-white" />
+              <label className="text-[10px] font-medium uppercase tracking-[0.14em] text-black/45 mb-2 block">Daily Commute (km)</label>
+              <input type="range" min="0" max="100" className="w-full accent-black" />
             </div>
             <div>
-              <label className="text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-500 mb-2 block">Tax Status</label>
-              <select className="w-full bg-zinc-800/40 border border-zinc-700/50 rounded-xl p-2.5 text-sm focus:border-white/30 transition-all text-white font-normal">
+              <label className="text-[10px] font-medium uppercase tracking-[0.14em] text-black/45 mb-2 block">Tax Status</label>
+              <select className="w-full bg-white/50 border border-white/60 rounded-xl p-2.5 text-sm focus:border-black/30 focus:ring-1 focus:ring-black/10 transition-all text-black font-normal">
                 <option>Filer</option>
                 <option>Non-Filer</option>
               </select>
             </div>
             <button 
               onClick={() => setIsAuthenticated(false)}
-              className="w-full border border-red-500/15 text-red-400/80 hover:bg-red-500/8 rounded-xl py-2 mt-4 font-medium text-sm transition-colors"
+              className="w-full border border-red-400/25 text-red-500/80 hover:bg-red-400/10 rounded-xl py-2 mt-4 font-medium text-sm transition-colors"
             >
               Sign Out
             </button>
