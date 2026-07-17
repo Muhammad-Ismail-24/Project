@@ -26,8 +26,21 @@ const IDLE_LEVITATE_AMP  = 0.08;    // ±0.08 units of vertical travel
 const POINTER_ROT_AMP    = 0.20;
 
 // ─── Angles ───────────────────────────────────────────────────────────────────
-const START_ANGLE       = (Math.PI / 5) + Math.PI; // 216 deg (front-left resting angle)
-const TARGET_LEFT_ANGLE = Math.PI * 1.5;           // 270 deg (pure profile left)
+const START_ANGLE = (Math.PI / 5) + Math.PI; // 216 deg (front-left resting angle)
+
+// TARGET_LEFT_ANGLE was Math.PI * 1.5 (270°). This was wrong for two reasons:
+//
+// 1. Standard GLB convention has the car nose pointing toward +Z. A 270° Y rotation
+//    faces the car toward -X (world left) in object space, but at a perspective
+//    camera the car still appears angled because of projection distortion at the
+//    far-left FOV edge.
+//
+// 2. The empirical "looks flat from the camera" angle for a car exiting left is
+//    Math.PI (180°) + a small over-rotation (~0.12 rad) to compensate for the
+//    perspective foreshortening that makes 180° look slightly nose-in.
+//    This constant should be tuned by +/- 0.05 if the model's authored forward
+//    direction differs from +Z.
+const TARGET_LEFT_ANGLE = Math.PI + 0.12; // ~192.9° — visually flat profile from cam
 
 // ─── isAtTopFactor transition band ────────────────────────────────────────────
 const BLEND_BAND = 150;   // pixels — full blend happens inside first 150px
@@ -44,6 +57,11 @@ function BmwModel() {
 
   // Scroll-drive smoothing
   const smoothedProgress = useRef(0);
+
+  // Smoothed camera lookAt target — tracks car X during scroll so the
+  // car stays in optical centre and perspective distortion doesn't make
+  // a constant-Z path look diagonal. Fades back to origin on scroll-up.
+  const smoothedLookAtX = useRef(0);
 
   // Reveal
   const revealProgress = useRef(0);
@@ -250,8 +268,12 @@ function BmwModel() {
     );
     carRef.current.rotation.x = 0;
 
-    // ── Camera Parallax ────────────────────────────────────────────────────
-    const parallaxStrength = tf * PARALLAX_X + (1 - tf) * PARALLAX_X * 0.4;
+    // ── Camera Parallax (fades to zero as car exits) ───────────────────────
+    // Parallax is a top-of-page-only effect. During scroll, moving the camera
+    // in X amplifies the diagonal illusion because the car is no longer near
+    // the camera's lookAt origin. We fade parallax strength to zero as tf → 0
+    // so the camera is completely stationary while the car drives left.
+    const parallaxStrength = tf * PARALLAX_X;  // was: tf * X + (1-tf) * X * 0.4
 
     const targetCamX = globalMouse.current.x * parallaxStrength;
     const targetCamY = 2 + globalMouse.current.y * (parallaxStrength * 0.5);
@@ -263,7 +285,20 @@ function BmwModel() {
       state.camera.position.y, targetCamY, 3.5, delta
     );
 
-    state.camera.lookAt(0, 0.3, 0);
+    // ── Camera LookAt — tracks car X to eliminate perspective-diagonal illusion ─
+    // With a fixed lookAt(0, 0.3, 0), a car moving to X=-10 is 10 units left of
+    // the camera's target point. Perspective projection compresses objects at the
+    // FOV periphery, making constant-Z motion look like it's receding. Tracking
+    // the car's X position keeps it centred in the frustum so Z appears constant.
+    //
+    // We blend the lookAt X from 0 (at top) toward the car's X position (scrolled),
+    // using tf to fade back to origin when scrolling back up — matching the
+    // bi-directional blend already on all other properties.
+    const lookAtTargetX = THREE.MathUtils.lerp(targetX, 0, tf);
+    smoothedLookAtX.current = THREE.MathUtils.damp(
+      smoothedLookAtX.current, lookAtTargetX, 4.0, delta
+    );
+    state.camera.lookAt(smoothedLookAtX.current, 0.3, 0);
   });
 
   return <primitive ref={carRef} object={scene} scale={carScale} />;
