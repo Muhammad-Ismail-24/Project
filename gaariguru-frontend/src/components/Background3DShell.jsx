@@ -15,6 +15,9 @@ const REVEAL_Y_START     = -4.5;
 const REVEAL_Y_REST      = -1;
 const REVEAL_Y_OVERSHOOT = REVEAL_Y_REST + 0.22;
 
+// ─── Scalings ──────────────────────────────────────────────────────────────────
+const BASE_SCALE = 0.95; // Updated scale for full visibility[cite: 3]
+
 // ─── Top-of-page idle state ────────────────────────────────────────────────────
 const IDLE_ROT_SPEED     = 0.55;    // rad/s for the slow sinusoidal sway
 const IDLE_ROT_AMP       = 0.055;   // ±~3.1° sway amplitude
@@ -133,7 +136,7 @@ function BmwModel() {
 
   // ─── Geometry ─────────────────────────────────────────────────────────────
   const scaleFactor = isMobile ? 0.6 : 1;
-  const carScale    = 1.3 * scaleFactor;
+  const carScale    = BASE_SCALE * scaleFactor;
   const startX      =  4  * scaleFactor;
   const startZ      =  2  * scaleFactor;
   const endX        = startX + (-40 * scaleFactor);
@@ -145,11 +148,12 @@ function BmwModel() {
     const mats = [];
     scene.traverse((child) => {
       if (child.isMesh) {
+        // Material adjusted for realism[cite: 3]
         const mat = new THREE.MeshStandardMaterial({
-          color:           '#080808',
-          roughness:       0.28,      
+          color:           '#050505',
+          roughness:       0.35,      
           metalness:       0.85,      
-          envMapIntensity: 1.4,      
+          envMapIntensity: 1.0,      
           transparent:     true,
           opacity:         0,
         });
@@ -267,11 +271,11 @@ export default function Background3DShell() {
     <div id="canvas-container" className="fixed inset-0 z-0 w-full h-full pointer-events-none">
       <Canvas
         camera={{ position: [0, 2, 8], fov: 45 }}
-        gl={{ antialias: true, toneMappingExposure: 1.5 }}
+        gl={{ antialias: true, toneMappingExposure: 1.1 }} // Natural exposure[cite: 3]
       >
         <Environment preset="studio" />
         <ambientLight intensity={0.4} />
-        <directionalLight position={[10, 10, 5]} intensity={1.3} />
+        <directionalLight position={[10, 10, 5]} intensity={0.9} /> {/* Soft lighting[cite: 3] */}
         <ContactShadows
           resolution={1024}
           scale={20}
