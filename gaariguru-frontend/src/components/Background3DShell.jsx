@@ -42,7 +42,6 @@ function BmwModel() {
   const { scene }  = useGLTF('/bmwm5.glb');
   const carRef     = useRef();
   const materialsRef = useRef([]);
-  const wheelRefs  = useRef([]);
 
   const smoothedProgress = useRef(0);
   const revealProgress = useRef(0);
@@ -132,17 +131,9 @@ function BmwModel() {
 
   useLayoutEffect(() => {
     const mats = [];
-    const wheels = [];
 
     scene.traverse((child) => {
       if (child.isMesh) {
-        const name = child.name.toLowerCase();
-        
-        // Target only the mesh nodes named "tyre" or "rim"
-        if (name.includes('tyre') || name.includes('rim')) {
-          wheels.push(child);
-        }
-
         const mat = new THREE.MeshPhysicalMaterial({
           color:              '#080808',  
           roughness:          0.42,       
@@ -161,7 +152,6 @@ function BmwModel() {
     });
 
     materialsRef.current = mats;
-    wheelRefs.current = wheels;
   }, [scene]);
 
   useFrame((state, delta) => {
@@ -225,17 +215,7 @@ function BmwModel() {
     );
     carRef.current.rotation.x = 0;
 
-    // 4. DYNAMIC WHEEL ROTATION
-    // We apply rotation only to the specific wheel mesh. 
-    // Because we are not centering pivots, the wheel will spin *in place*. 
-    // It will look a bit weird if the pivot is off, but it WON'T explode the car!
-    const distanceTraveled = startX - targetX; 
-    const spinMultiplier = 3.0;
-    wheelRefs.current.forEach((wheel) => {
-      wheel.rotation.x = distanceTraveled * spinMultiplier;
-    });
-
-    // 5. PARALLAX
+    // 4. PARALLAX
     const parallaxStrength = tf * PARALLAX_X;  
     const targetCamX = globalMouse.current.x * parallaxStrength;
     const targetCamY = 2 + globalMouse.current.y * (parallaxStrength * 0.5);
