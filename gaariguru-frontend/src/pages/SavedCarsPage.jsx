@@ -45,9 +45,11 @@ export default function SavedCarsPage() {
   return (
     <div className="relative w-full min-h-[calc(100vh-80px)] overflow-x-hidden font-sans text-black">
       {/* ── Background ── */}
-      <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden flex items-center justify-center bg-[#a3a3a3]">
-        <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(#000000 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
-        <div className="absolute w-[80vw] h-[80vw] max-w-[1000px] max-h-[1000px] bg-white rounded-full blur-[140px] top-[0%] right-[-10%] opacity-40" />
+      <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden bg-[#b0b0b0]">
+        <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(to right,rgba(0,0,0,0.06) 1px,transparent 1px),linear-gradient(to bottom,rgba(0,0,0,0.06) 1px,transparent 1px)', backgroundSize: '72px 72px' }} />
+        <div className="absolute w-[75vw] h-[75vw] max-w-[1100px] max-h-[1100px] bg-white rounded-full blur-[160px] opacity-35 top-[-10%] right-[-12%]" />
+        <div className="absolute w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-white rounded-full blur-[120px] opacity-15 bottom-[5%] left-[-5%]" />
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 60% 40%, transparent 40%, rgba(0,0,0,0.18) 100%)' }} />
       </div>
 
       <Background3DShell />
@@ -57,28 +59,28 @@ export default function SavedCarsPage() {
           <h1 className="text-4xl md:text-5xl font-black tracking-tight text-black mb-3 md:mb-4">
             Saved Cars
           </h1>
-          <p className="text-lg md:text-xl font-bold text-black">
+          <p className="text-base font-medium text-black/55">
             Review your bookmarked vehicles and top picks.
           </p>
         </div>
 
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-16 md:py-20 space-y-4">
-            <Loader2 className="w-10 h-10 md:w-12 md:h-12 text-black animate-spin" />
-            <p className="text-black font-bold text-base md:text-lg animate-pulse">
+            <Loader2 className="w-7 h-7 text-black/40 animate-spin" />
+            <p className="text-black font-medium text-black/50 text-sm animate-pulse">
               Loading your saved cars...
             </p>
           </div>
         ) : savedCars.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 md:py-32 px-4 bg-white/60 backdrop-blur-md border border-black/15 rounded-2xl md:rounded-3xl shadow-2xl">
-            <BookmarkX className="w-12 h-12 md:w-16 md:h-16 text-black mb-4 md:mb-6" />
+          <div className="flex flex-col items-center justify-center py-16 md:py-32 px-4 bg-white/55 backdrop-blur-md border border-white/60 rounded-2xl shadow-lg">
+            <BookmarkX className="w-10 h-10 text-black/40 mb-4 md:mb-6" />
             <h3 className="text-xl md:text-2xl font-black tracking-tight text-black mb-3 md:mb-4">
               No saved cars yet
             </h3>
             <p className="text-black font-bold text-sm md:text-lg mb-6 md:mb-8 text-center max-w-md">
               You haven't saved any cars yet! Go browse our listings and hit the heart icon to save your favorites here.
             </p>
-            <Link to="/" className="px-6 py-3 md:px-8 md:py-4 bg-black text-white font-bold rounded-full hover:bg-neutral-800 transition-colors shadow-lg text-sm md:text-base">
+            <Link to="/" className="px-6 py-2.5 bg-black text-white text-sm font-medium rounded-xl hover:bg-neutral-800 transition-colors">
               Explore Cars
             </Link>
           </div>
