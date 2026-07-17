@@ -16,7 +16,8 @@ const REVEAL_Y_REST      = -1;
 const REVEAL_Y_OVERSHOOT = REVEAL_Y_REST + 0.22;
 
 // ─── Scalings ──────────────────────────────────────────────────────────────────
-const BASE_SCALE = 0.95; // Updated scale for full visibility
+// Increased scale so the car sits larger and more prominently on the screen
+const BASE_SCALE = 1.15; 
 
 // ─── Top-of-page idle state ────────────────────────────────────────────────────
 const IDLE_ROT_SPEED     = 0.55;    // rad/s for the slow sinusoidal sway
@@ -28,7 +29,8 @@ const IDLE_LEVITATE_AMP  = 0.08;    // ±0.08 units of vertical travel
 const POINTER_ROT_AMP    = 0.20;
 
 // ─── Scroll-drive ─────────────────────────────────────────────────────────────
-const SCROLL_ROTATION_DELTA = Math.PI / 3.2;   // Rotates perfectly to face the left side
+// Exactly 90 degrees (Math.PI / 2) to force the car to face pure left
+const SCROLL_ROTATION_DELTA = Math.PI / 2;   
 
 // ─── isAtTopFactor transition band ────────────────────────────────────────────
 const BLEND_BAND = 150;   // pixels — full blend happens inside first 150px
@@ -69,7 +71,6 @@ function BmwModel() {
 
   useEffect(() => {
     const handleDown = (e) => {
-      // FIX: Prevent grabbing the car if it has left the top placeholder
       if (window.scrollY > 20) return;
 
       if (e.button !== 0 && e.type === 'mousedown') return;
@@ -86,12 +87,10 @@ function BmwModel() {
       const currentX = e.touches ? e.touches[0].clientX : e.clientX;
       const currentY = e.touches ? e.touches[0].clientY : e.clientY;
 
-      // Parallax tracks passively everywhere
       globalMouse.current.x = (currentX / window.innerWidth) * 2 - 1;
       globalMouse.current.y = -(currentY / window.innerHeight) * 2 + 1;
 
       if (isDragging.current) {
-        // FIX: Cancel drag immediately if user scrolls down while holding the mouse
         if (window.scrollY > 20) {
           isDragging.current = false;
           return;
@@ -137,10 +136,10 @@ function BmwModel() {
   // ─── Geometry ─────────────────────────────────────────────────────────────
   const scaleFactor = isMobile ? 0.6 : 1;
   const carScale    = BASE_SCALE * scaleFactor;
-  const startX      =  2.5 * scaleFactor; // Fully visible on load
-  const startZ      =  0.5 * scaleFactor; // Closer to camera
-  const endX        = -18  * scaleFactor; // Drives off completely to the left
-  const endZ        =  4   * scaleFactor; // Drives slightly towards camera, no shrinking
+  const startX      =  4.2 * scaleFactor; // Pushed further to the right
+  const startZ      =  0.5 * scaleFactor; 
+  const endX        = -22  * scaleFactor; // Drives entirely off the left screen edge
+  const endZ        =  0.5 * scaleFactor; // Locked identically to startZ to eliminate parabolic arc
   const fixedAngle  = (Math.PI / 5) + Math.PI;
 
   // ─── Material — real automotive clearcoat paint ────────────────────────────
@@ -148,25 +147,13 @@ function BmwModel() {
     const mats = [];
     scene.traverse((child) => {
       if (child.isMesh) {
-        // MeshPhysicalMaterial adds a two-layer shading model:
-        // - Base layer: dark metallic paint (metalness + roughness control the
-        //   micro-flake glitter depth)
-        // - Clearcoat layer: thin lacquer on top that catches specular highlights
-        //   separately from the base. clearcoatRoughness softens those highlights
-        //   so they scatter slightly instead of producing a single blown-out glare
-        //   point on the hood.
-        // MeshStandardMaterial cannot do this — it only has one shading layer,
-        // so specular highlights hit the full metalness and look like plastic glare.
         const mat = new THREE.MeshPhysicalMaterial({
-          color:              '#080808',  // Deep near-black base
-          roughness:          0.42,       // Micro-roughness of the metallic base layer
-          metalness:          0.88,       // High metalness for dark metallic flake
-          envMapIntensity:    0.85,       // Environment reflection (slightly pulled back
-                                          // so the studio preset doesn't overpower)
-          clearcoat:          0.95,       // Strong clearcoat — nearly full lacquer
-          clearcoatRoughness: 0.12,       // Slight scatter on the clearcoat highlights;
-                                          // 0 = mirror-sharp glare, 1 = matte —
-                                          // 0.12 gives soft, spread specular bloom
+          color:              '#080808',  
+          roughness:          0.42,       
+          metalness:          0.88,       
+          envMapIntensity:    0.85,       
+          clearcoat:          0.95,       
+          clearcoatRoughness: 0.12,       
           transparent:        true,
           opacity:            0,
         });
@@ -228,7 +215,7 @@ function BmwModel() {
     smoothedProgress.current = THREE.MathUtils.damp(
       smoothedProgress.current, rawProgress, 2.5, delta
     );
-    // Modified to 1.5 so car moves sooner to match the UI gap timing
+    
     const delayedProgress = Math.pow(smoothedProgress.current, 1.5); 
 
     // ── Position Blending ──────────────────────────────────────────────────
@@ -242,8 +229,6 @@ function BmwModel() {
     carRef.current.position.set(targetX, finalY, targetZ);
 
     // ── Rotation Blending (Shortest Path Math) ─────────────────────────────
-    
-    // Find the nearest 360-degree cycle the user is currently on
     const PI2 = Math.PI * 2;
     const cycles = Math.round(dragOffset.current / PI2);
     const baseOffset = cycles * PI2;
@@ -252,7 +237,6 @@ function BmwModel() {
     const pointerSway  = globalMouse.current.x * POINTER_ROT_AMP;
     const topStateRotY = fixedAngle + idleSway + pointerSway + dragOffset.current;
 
-    // Add baseOffset so the scroll target matches the current cycle
     const scrollStateRotY = fixedAngle + baseOffset + (SCROLL_ROTATION_DELTA * delayedProgress);
 
     const finalTargetRotY = THREE.MathUtils.lerp(scrollStateRotY, topStateRotY, tf);
@@ -289,20 +273,11 @@ export default function Background3DShell() {
         camera={{ position: [0, 2, 8], fov: 45 }}
         gl={{
           antialias: true,
-          // toneMappingExposure was 1.1 — too high for a clearcoat material
-          // receiving a studio environment map. At 1.1 the highlight on the
-          // hood was clipping to pure white (blown-out). 0.72 keeps specular
-          // peaks visible as bright silver rather than white-out glare,
-          // consistent with real automotive photography lighting.
           toneMappingExposure: 0.72,
         }}
       >
         <Environment preset="studio" />
-        {/* ambientLight fills in the shadow side of the car — keep at 0.4 */}
         <ambientLight intensity={0.4} />
-        {/* directionalLight was 0.9 — too punchy on top of the studio env map.
-            0.5 adds a soft secondary key light without competing with the
-            environment's own specular contribution. */}
         <directionalLight position={[10, 10, 5]} intensity={0.5} />
         <ContactShadows
           resolution={1024}
