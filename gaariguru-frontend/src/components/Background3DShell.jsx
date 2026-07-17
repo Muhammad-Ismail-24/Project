@@ -2,7 +2,7 @@
   Background3DShell.jsx
   Automotive 3D landing hero scene tracking.
   Provides premium clearcoat reflections, bi-directional scroll blending,
-  locked horizontal (turntable) drag, and shortest-path unwinding prevention.
+  placeholder-locked horizontal turntable drag, and unwinding prevention.
 */
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
@@ -66,6 +66,9 @@ function BmwModel() {
 
   useEffect(() => {
     const handleDown = (e) => {
+      // FIX: Prevent grabbing the car if it has left the top placeholder
+      if (window.scrollY > 20) return;
+
       if (e.button !== 0 && e.type === 'mousedown') return;
       if (e.target.closest('button, a, input, select, textarea, [role="button"]')) return;
 
@@ -80,17 +83,22 @@ function BmwModel() {
       const currentX = e.touches ? e.touches[0].clientX : e.clientX;
       const currentY = e.touches ? e.touches[0].clientY : e.clientY;
 
+      // Parallax tracks passively everywhere
       globalMouse.current.x = (currentX / window.innerWidth) * 2 - 1;
       globalMouse.current.y = -(currentY / window.innerHeight) * 2 + 1;
 
       if (isDragging.current) {
-        // FIX 1: If it's a mouse event and left click is no longer held down, force cancel
+        // FIX: Cancel drag immediately if user scrolls down while holding the mouse
+        if (window.scrollY > 20) {
+          isDragging.current = false;
+          return;
+        }
+
         if (e.type === 'mousemove' && e.buttons !== 1) {
           isDragging.current = false;
           return;
         }
 
-        // FIX 1: Actively clear text selection to prevent drag-locking
         if (window.getSelection) {
           window.getSelection().removeAllRanges();
         }
@@ -215,7 +223,7 @@ function BmwModel() {
 
     // ── Rotation Blending (Shortest Path Math) ─────────────────────────────
     
-    // FIX 2: Find the nearest 360-degree cycle the user is currently on
+    // Find the nearest 360-degree cycle the user is currently on
     const PI2 = Math.PI * 2;
     const cycles = Math.round(dragOffset.current / PI2);
     const baseOffset = cycles * PI2;
@@ -224,7 +232,7 @@ function BmwModel() {
     const pointerSway  = globalMouse.current.x * POINTER_ROT_AMP;
     const topStateRotY = fixedAngle + idleSway + pointerSway + dragOffset.current;
 
-    // FIX 2: Add baseOffset so the scroll target matches the current cycle
+    // Add baseOffset so the scroll target matches the current cycle
     const scrollStateRotY = fixedAngle + baseOffset + (SCROLL_ROTATION_DELTA * delayedProgress);
 
     const finalTargetRotY = THREE.MathUtils.lerp(scrollStateRotY, topStateRotY, tf);
