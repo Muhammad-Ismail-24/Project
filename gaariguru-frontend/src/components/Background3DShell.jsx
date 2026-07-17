@@ -3,7 +3,7 @@
   Automotive 3D landing hero scene tracking.
   Provides premium clearcoat reflections, bi-directional scroll blending,
   placeholder-locked horizontal turntable drag, pure horizontal trajectory,
-  and dynamic wheel rotation.
+  and corrected geometry-centered dynamic wheel rotation.
 */
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
@@ -42,8 +42,6 @@ function BmwModel() {
   const { scene }  = useGLTF('/bmwm5.glb');
   const carRef     = useRef();
   const materialsRef = useRef([]);
-  
-  // NEW: Store references to the wheel meshes to animate them
   const wheelRefs  = useRef([]);
 
   const smoothedProgress = useRef(0);
@@ -137,9 +135,20 @@ function BmwModel() {
     const wheels = [];
 
     scene.traverse((child) => {
-      // Look for parts of the model named "wheel" or "tire"
+      // FIX: Use the exact names from the GLB JSON dump
       const name = child.name.toLowerCase();
-      if (name.includes('wheel') || name.includes('tire')) {
+      if (name.includes('tyre') || name.includes('rim')) {
+        
+        // PIVOT FIX: Compute the exact center of the wheel/rim geometry
+        // This stops the wheels from swinging wildly if the 3D artist messed up the export pivot
+        child.geometry.computeBoundingBox();
+        const center = new THREE.Vector3();
+        child.geometry.boundingBox.getCenter(center);
+        
+        // Offset the geometry to perfectly center it on its own axis, then move the mesh wrapper back
+        child.geometry.translate(-center.x, -center.y, -center.z);
+        child.position.copy(center);
+
         wheels.push(child);
       }
 
@@ -232,17 +241,15 @@ function BmwModel() {
     carRef.current.rotation.x = 0;
 
     // 4. DYNAMIC WHEEL ROTATION
-    // Calculate how far the car has physically moved from the start
     const distanceTraveled = startX - targetX; 
-    // This multiplier acts as the wheel size ratio. Increase it if wheels spin too slow.
-    const spinMultiplier = 2.5; 
+    const spinMultiplier = 3.0; // Adjusted for realistic speed
     
     wheelRefs.current.forEach((wheel) => {
-      // Rotating on the X-axis handles forward/backward rolling
+      // With the geometry centered above, rotating X spins them perfectly on their axles
       wheel.rotation.x = distanceTraveled * spinMultiplier;
     });
 
-    // 5. PARALLAX FADES OUT DURING SCROLL
+    // 5. PARALLAX
     const parallaxStrength = tf * PARALLAX_X;  
 
     const targetCamX = globalMouse.current.x * parallaxStrength;
