@@ -2,7 +2,7 @@
   Background3DShell.jsx
   Automotive 3D landing hero scene tracking.
   Provides premium clearcoat reflections, bi-directional scroll blending,
-  and global 360-degree click-and-drag showroom rotation across all directions.
+  and locked horizontal (turntable) click-and-drag rotation.
 */
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
@@ -58,15 +58,15 @@ function BmwModel() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // ─── Global Mouse & Full 360 Drag Tracker ───────────────────────────────
+  // ─── Global Mouse & Horizontal Drag Tracker ─────────────────────────────
   const globalMouse  = useRef({ x: 0, y: 0 });
-  const dragOffset   = useRef({ x: 0, y: 0 }); // Tracks both horizontal & vertical drag
+  const dragOffset   = useRef(0); // Tracks ONLY horizontal drag now
   const isDragging   = useRef(false);
   const lastMousePos = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     const handleDown = (e) => {
-      // Ignore right-clicks
+      // Ignore right-clicks. Ensure it's left click (button === 0)
       if (e.button !== 0 && e.type === 'mousedown') return;
       
       // Ignore clicks on buttons, links, or inputs so UI remains functional
@@ -87,13 +87,12 @@ function BmwModel() {
       globalMouse.current.x = (currentX / window.innerWidth) * 2 - 1;
       globalMouse.current.y = -(currentY / window.innerHeight) * 2 + 1;
 
-      // 2. Active 360 Drag Rotation (Any Direction)
+      // 2. Active Horizontal Drag Rotation
       if (isDragging.current) {
         const deltaX = currentX - lastMousePos.current.x;
-        const deltaY = currentY - lastMousePos.current.y;
         
-        dragOffset.current.x += deltaX * 0.012; // Left/Right Spin
-        dragOffset.current.y += deltaY * 0.012; // Up/Down Spin
+        // Only update horizontal (Y-axis) spin
+        dragOffset.current += deltaX * 0.012; 
         
         lastMousePos.current = { x: currentX, y: currentY };
       }
@@ -178,6 +177,8 @@ function BmwModel() {
       materialsRef.current.forEach(mat => { mat.opacity = opacity; });
       carRef.current.position.set(startX, revealY, startZ);
       carRef.current.rotation.y = fixedAngle;
+      // Lock X rotation to 0 to keep it flat
+      carRef.current.rotation.x = 0;
 
       if (revealProgress.current >= 1) {
         materialsRef.current.forEach(mat => {
@@ -218,31 +219,26 @@ function BmwModel() {
 
     carRef.current.position.set(targetX, finalY, targetZ);
 
-    // ── Rotation Blending ──────────────────────────────────────────────────
+    // ── Rotation Blending (Horizontal ONLY) ────────────────────────────────
     
     // YAW (Left/Right Spin)
     const idleSway     = Math.sin(elapsed * IDLE_ROT_SPEED) * IDLE_ROT_AMP;
     const pointerSway  = globalMouse.current.x * POINTER_ROT_AMP;
-    const topStateRotY = fixedAngle + idleSway + pointerSway + dragOffset.current.x;
-    
-    // PITCH (Up/Down Spin)
-    const topStateRotX = dragOffset.current.y;
+    // We add dragOffset.current to give horizontal turntable spin
+    const topStateRotY = fixedAngle + idleSway + pointerSway + dragOffset.current;
 
-    // Scrolled driving trajectory targets (Flat on the road)
+    // Scrolled driving trajectory target
     const scrollStateRotY = fixedAngle + (SCROLL_ROTATION_DELTA * delayedProgress);
-    const scrollStateRotX = 0; 
 
-    // Linearly interpolate between full 3D interactive state and flat scroll drive state
+    // Linearly interpolate between interactive spin state and drive state
     const finalTargetRotY = THREE.MathUtils.lerp(scrollStateRotY, topStateRotY, tf);
-    const finalTargetRotX = THREE.MathUtils.lerp(scrollStateRotX, topStateRotX, tf);
 
-    // Apply dampened rotations
+    // Apply dampened horizontal rotation
     carRef.current.rotation.y = THREE.MathUtils.damp(
       carRef.current.rotation.y, finalTargetRotY, 5.0, delta
     );
-    carRef.current.rotation.x = THREE.MathUtils.damp(
-      carRef.current.rotation.x, finalTargetRotX, 5.0, delta
-    );
+    // Explicitly lock X-axis rotation so the car never flips up/down
+    carRef.current.rotation.x = 0;
 
     // ── Camera Parallax ────────────────────────────────────────────────────
     const parallaxStrength = tf * PARALLAX_X + (1 - tf) * PARALLAX_X * 0.4;
