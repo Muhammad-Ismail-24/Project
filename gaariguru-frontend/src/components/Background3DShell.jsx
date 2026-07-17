@@ -143,21 +143,36 @@ function BmwModel() {
   const endZ        =  4   * scaleFactor; // Drives slightly towards camera, no shrinking
   const fixedAngle  = (Math.PI / 5) + Math.PI;
 
-  // ─── Material — natural satin clearcoat ────────────────────────────────────
+  // ─── Material — real automotive clearcoat paint ────────────────────────────
   useLayoutEffect(() => {
     const mats = [];
     scene.traverse((child) => {
       if (child.isMesh) {
-        // Material adjusted for realism
-        const mat = new THREE.MeshStandardMaterial({
-          color:           '#050505',
-          roughness:       0.35,      
-          metalness:       0.85,      
-          envMapIntensity: 1.0,      
-          transparent:     true,
-          opacity:         0,
+        // MeshPhysicalMaterial adds a two-layer shading model:
+        // - Base layer: dark metallic paint (metalness + roughness control the
+        //   micro-flake glitter depth)
+        // - Clearcoat layer: thin lacquer on top that catches specular highlights
+        //   separately from the base. clearcoatRoughness softens those highlights
+        //   so they scatter slightly instead of producing a single blown-out glare
+        //   point on the hood.
+        // MeshStandardMaterial cannot do this — it only has one shading layer,
+        // so specular highlights hit the full metalness and look like plastic glare.
+        const mat = new THREE.MeshPhysicalMaterial({
+          color:              '#080808',  // Deep near-black base
+          roughness:          0.42,       // Micro-roughness of the metallic base layer
+          metalness:          0.88,       // High metalness for dark metallic flake
+          envMapIntensity:    0.85,       // Environment reflection (slightly pulled back
+                                          // so the studio preset doesn't overpower)
+          clearcoat:          0.95,       // Strong clearcoat — nearly full lacquer
+          clearcoatRoughness: 0.12,       // Slight scatter on the clearcoat highlights;
+                                          // 0 = mirror-sharp glare, 1 = matte —
+                                          // 0.12 gives soft, spread specular bloom
+          transparent:        true,
+          opacity:            0,
         });
         child.material = mat;
+        child.castShadow    = true;
+        child.receiveShadow = true;
         mats.push(mat);
       }
     });
@@ -272,11 +287,23 @@ export default function Background3DShell() {
     <div id="canvas-container" className="fixed inset-0 z-0 w-full h-full pointer-events-none">
       <Canvas
         camera={{ position: [0, 2, 8], fov: 45 }}
-        gl={{ antialias: true, toneMappingExposure: 1.1 }} // Natural exposure
+        gl={{
+          antialias: true,
+          // toneMappingExposure was 1.1 — too high for a clearcoat material
+          // receiving a studio environment map. At 1.1 the highlight on the
+          // hood was clipping to pure white (blown-out). 0.72 keeps specular
+          // peaks visible as bright silver rather than white-out glare,
+          // consistent with real automotive photography lighting.
+          toneMappingExposure: 0.72,
+        }}
       >
         <Environment preset="studio" />
+        {/* ambientLight fills in the shadow side of the car — keep at 0.4 */}
         <ambientLight intensity={0.4} />
-        <directionalLight position={[10, 10, 5]} intensity={0.9} /> {/* Soft lighting */}
+        {/* directionalLight was 0.9 — too punchy on top of the studio env map.
+            0.5 adds a soft secondary key light without competing with the
+            environment's own specular contribution. */}
+        <directionalLight position={[10, 10, 5]} intensity={0.5} />
         <ContactShadows
           resolution={1024}
           scale={20}
