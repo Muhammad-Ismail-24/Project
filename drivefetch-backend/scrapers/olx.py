@@ -3,22 +3,12 @@ scrapers/olx.py
 
 REBUILT against confirmed OLX Algolia hit structure.
 
-IMAGE FIX (this patch):
+IMAGE FIX:
   The CDN URL reconstruction from coverPhoto.externalID has been proven
-  broken across 5+ tested URL patterns — none of them load a real image.
-  The fix is the original approach that worked before: scrape <img> tags
-  directly from the rendered HTML DOM, then cross-reference them against
-  JSON hits by title. The DOM always has working image URLs because that
-  is literally what the browser renders for a human visitor.
-
-  Specifically:
-    1. _scrape_dom_images(soup) builds a { normalized_title: image_url }
-       map by scanning li[data-aut-id="itemBox"] cards in the HTML.
-    2. scrape_olx() calls this BEFORE processing JSON hits.
-    3. _extract_from_hit() accepts image_map and does a title-based
-       lookup instead of constructing a CDN URL from an ID.
-    4. The CDN reconstruction is kept as a last-resort fallback ONLY,
-       since it costs nothing to try if the DOM lookup fails.
+  broken across 5+ tested URL patterns. 
+  The fix maps <img> tags directly from the rendered HTML DOM to their 
+  corresponding JSON hits using the exact external listing ID (-iid-).
+  This guarantees 1-to-1 mapping and eliminates incorrect photo rendering.
 
 KEY CONFIRMED FIELD PATHS (OLX Algolia hit):
   - Price:   hit['extraFields']['price']     (hit['price'] is always 0)
@@ -26,7 +16,7 @@ KEY CONFIRMED FIELD PATHS (OLX Algolia hit):
   - Mileage: hit['extraFields']['mileage']
   - City:    hit['location'] list, item where level == 2
   - URL:     https://www.olx.com.pk/item/{slug}-iid-{externalID}
-  - Image:   <img> tag from DOM card matching the same title (see above)
+  - Image:   <img> tag from DOM card matching the same ID
 """
 from bs4 import BeautifulSoup
 import re
@@ -103,13 +93,8 @@ def _is_featured_ad(item: dict) -> bool:
 
 def _scrape_dom_images(soup: BeautifulSoup) -> dict:
     """
-    Builds { normalized_title_lowercase: image_url } from <img> tags
-    inside actual listing cards in the rendered HTML.
-
-    This is the ONLY reliable way to get real image URLs from OLX — the
-    JSON's coverPhoto.externalID does not reconstruct into a working CDN
-    URL in any of the formats we tested. The DOM always has real URLs
-    because that is what the browser uses to display the photo.
+    Builds { listing_id: image_url } from <img> tags inside actual listing cards.
+    Maps by exact unique ID instead of title to prevent collisions.
     """
     image_map = {}
 
@@ -121,14 +106,17 @@ def _scrape_dom_images(soup: BeautifulSoup) -> dict:
 
     for card in cards:
         try:
-            title_el = (
-                card.find(attrs={"data-aut-id": "itemTitle"})
-                or card.find("h2")
-                or card.find("a")
-            )
-            title_text = title_el.get_text(strip=True) if title_el else ""
-            if not title_text:
+            # Extract unique ID from the href instead of the title
+            a_tag = card.find("a", href=True)
+            if not a_tag:
                 continue
+            
+            href = a_tag["href"]
+            match = re.search(r'-iid-(\d+)', href)
+            if not match:
+                continue
+            
+            listing_id = match.group(1)
 
             img_el = card.find("img")
             if not img_el:
@@ -142,34 +130,12 @@ def _scrape_dom_images(soup: BeautifulSoup) -> dict:
                     break
 
             if image_url:
-                image_map[title_text.strip().lower()] = image_url
+                image_map[listing_id] = image_url
 
         except Exception:
             continue
 
     return image_map
-
-
-def _lookup_dom_image(title: str, image_map: dict) -> str:
-    """
-    Exact match first, then a loose substring match as fallback.
-    JSON titles and DOM titles can differ slightly in whitespace or
-    truncation, so we need the fuzzy fallback.
-    """
-    if not title or not image_map:
-        return ""
-
-    key = title.strip().lower()
-
-    if key in image_map:
-        return image_map[key]
-
-    # Fuzzy: check if either string contains the other
-    for dom_title, url in image_map.items():
-        if key in dom_title or dom_title in key:
-            return url
-
-    return ""
 
 
 def _parse_age_days(item) -> int:
@@ -261,7 +227,7 @@ def _extract_from_hit(item: dict, fallback_url: str, image_map: dict) -> CarList
     Extracts a CarListing from one OLX Algolia hit.
 
     IMAGE STRATEGY (in priority order):
-      1. DOM lookup by title — always works when the page rendered properly.
+      1. Exact ID DOM lookup — always works when the page rendered properly.
       2. CDN reconstruction from coverPhoto.externalID — kept as last resort
          even though it has consistently failed, costs nothing to try.
       3. Empty string if both fail — better than crashing.
@@ -288,16 +254,17 @@ def _extract_from_hit(item: dict, fallback_url: str, image_map: dict) -> CarList
 
     # Listing URL
     slug = item.get("slug", "")
-    external_id = item.get("externalID", "")
+    external_id = str(item.get("externalID", ""))
+    
     if slug and external_id:
         listing_url = f"https://www.olx.com.pk/item/{slug}-iid-{external_id}"
     else:
         listing_url = fallback_url
 
     # ------------------------------------------------------------------ #
-    # IMAGE: DOM lookup first, CDN reconstruction as last resort
+    # IMAGE: Exact ID DOM lookup first, CDN reconstruction as last resort
     # ------------------------------------------------------------------ #
-    image_url = _lookup_dom_image(title, image_map)
+    image_url = image_map.get(external_id, "")
 
     if not image_url:
         # Last-resort CDN reconstruction (consistently failed in testing,
@@ -478,9 +445,13 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
                 )
                 city = loc_el.get_text(strip=True) if loc_el else "Unknown"
 
-                # DOM fallback can use image_map directly since titles
-                # come from the same cards we scanned to build it
-                image_url = image_map.get(title.strip().lower(), "")
+                # ID Extraction for exact map lookup
+                listing_id = ""
+                match = re.search(r'-iid-(\d+)', link)
+                if match:
+                    listing_id = match.group(1)
+
+                image_url = image_map.get(listing_id, "")
 
                 cars.append(CarListing(
                     title=title,

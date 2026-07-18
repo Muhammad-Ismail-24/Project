@@ -29,7 +29,16 @@ def _extract_image(item) -> str:
     """
     Lazy-load resilient image extraction.
     Checks data-src / data-original first; falls back to src.
+    Enhanced to check li tags based on PakWheels lightSlider structure.
     """
+    # Check if the listing item container itself or a child li holds the data-src
+    li_target = item if item.name == 'li' else item.find('li', attrs={"data-src": True})
+    if li_target and li_target.get('data-src'):
+        val = li_target.get('data-src').strip()
+        if val.startswith('http'):
+            return val
+
+    # Fallback to checking img elements inside the card
     img = item.find('img')
     if img:
         for attr in ('data-src', 'data-original', 'data-lazy-src', 'src'):
