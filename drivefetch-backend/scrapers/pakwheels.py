@@ -52,7 +52,7 @@ def _time_str_to_days(text: str) -> int:
     """Converts a relative time string to an integer day count."""
     t = text.lower()
 
-    if re.search(r"\b(minute|min|hour|hr|just now|today|moments?)s?\b", t):
+    if re.search(r"\b(minute|min|hour|hr|just now|today|moments?)\b", t):
         return 0
     if "yesterday" in t:
         return 1
