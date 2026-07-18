@@ -49,20 +49,36 @@ async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> 
 
     soup = BeautifulSoup(html, 'html.parser')
 
-    # --- Find listing containers using a broad selector ---
-    items = soup.find_all('div', class_=re.compile(r'(listing|car-card|item|col-|card)', re.I))
+    # --- Container Isolation ---
+    # Find the main wrapper to avoid parsing navbars and footers
+    main_container = soup.find(['div', 'ul', 'section'], class_=re.compile(r'(search-results|listing-grid|row|ad-list)', re.I))
+    search_root = main_container if main_container else soup
+
+    # --- Tighter Card Selector ---
+    # Replaced 'item' and 'col-' with stricter layout definitions
+    items = search_root.find_all(['div', 'li', 'article'], class_=re.compile(r'(car-card|listing|col-md-[34]|col-lg-[34]|ad-container|search-item)', re.I))
 
     if not items:
         print(f"[WiseWheels Scraper] ⚠ 0 card elements found for {url}")
         return []
 
-    if len(items) > MAX_ORGANIC_CARDS:
-        items = items[:MAX_ORGANIC_CARDS]
+    # --- Pre-Slice Filtering ---
+    # Filter out obvious non-card elements before slicing
+    valid_items = []
+    for el in items:
+        class_str = " ".join(el.get('class', [])).lower()
+        if 'nav' in class_str or 'menu' in class_str or 'widget' in class_str:
+            continue
+        valid_items.append(el)
+
+    # Now slice the array safely
+    if len(valid_items) > MAX_ORGANIC_CARDS:
+        valid_items = valid_items[:MAX_ORGANIC_CARDS]
 
     cars = []
     seen_urls = set()  # For deduplication by listing_url
 
-    for item in items:
+    for item in valid_items:
         try:
             text_content = item.get_text(separator=' ')
 
