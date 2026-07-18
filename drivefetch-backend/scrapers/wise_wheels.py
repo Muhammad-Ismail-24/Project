@@ -1,16 +1,17 @@
 """
 scrapers/wise_wheels.py (WiseWheels.com.pk)
 
-REVERTING CLAUDE'S GOOGLE PROXY MISTAKE:
-The Google Translate proxy strips out React/Mantine JavaScript, leaving a blank 
-HTML skeleton. This version reverts to the native curl_cffi fetch (which works perfectly) 
-and applies the true fix: DOM Bleed Container Isolation.
-
-AGE FIX:
-Includes the plural `s?` check to prevent fresh cars from scoring 999.
+MANTINE UI / NEXT.JS DOM TARGETING:
+This scraper has been precision-mapped to WiseWheels' Next.js frontend.
+- Targets specific Tailwind utility classes (e.g., shadow-card, line-clamp-1).
+- Extracts Year, Mileage, and City from un-labeled spans using index positioning
+  (0 = Year, 1 = Mileage, 5 = Location).
+- Decodes high-res S3 image URLs trapped behind Next.js /_next/image?url= routing.
+- Uses strict <h3> and <h5> selectors for Title and Date parsing.
 """
 from bs4 import BeautifulSoup
 import re
+import urllib.parse
 from models.car_schema import CarListing
 from datetime import datetime
 
@@ -68,94 +69,97 @@ async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> 
 
     soup = BeautifulSoup(html, 'html.parser')
 
-    # --- Container Isolation (The DOM Bleed Fix) ---
-    main_container = soup.find(['div', 'ul', 'section'], class_=re.compile(r'(search-results|listing-grid|row|ad-list)', re.I))
+    # --- Container Isolation ---
+    # Target the Tailwind flexbox wrapper specific to the search grid
+    main_container = soup.find('div', class_=re.compile(r'gap-\[1rem\]', re.I))
     search_root = main_container if main_container else soup
 
-    items = search_root.find_all(['div', 'li', 'article'], class_=re.compile(r'(car-card|listing|col-md-[34]|col-lg-[34]|ad-container|search-item)', re.I))
+    # --- Card Wrapper Selector ---
+    # Target the specific Mantine interactive div card 
+    items = search_root.find_all('div', class_=re.compile(r'shadow-card', re.I))
 
     if not items:
         return []
 
-    # --- Pre-Slice Filtering ---
-    valid_items = []
-    for el in items:
-        class_str = " ".join(el.get('class', [])).lower()
-        if 'nav' in class_str or 'menu' in class_str or 'widget' in class_str:
-            continue
-        valid_items.append(el)
-
-    if len(valid_items) > MAX_ORGANIC_CARDS:
-        valid_items = valid_items[:MAX_ORGANIC_CARDS]
+    if len(items) > MAX_ORGANIC_CARDS:
+        items = items[:MAX_ORGANIC_CARDS]
 
     cars = []
     seen_urls = set()
 
-    for item in valid_items:
+    for item in items:
         try:
             text_content = item.get_text(separator=' ')
 
             if re.search(r'\bsold\b', text_content, re.I):
                 continue
 
-            title_el = item.find(['h2', 'h3', 'h4'])
-            if not title_el:
-                title_el = item.find('a', string=re.compile(r'\w+'))
+            # --- Title ---
+            title_el = item.find('h3', class_=re.compile(r'line-clamp-1', re.I))
             title = title_el.get_text(strip=True) if title_el else ""
             if not title or len(title) < 4:
                 continue
 
-            a_tag = item.find('a', href=True)
+            # --- Link ---
+            a_tag = item.find('a', href=re.compile(r'/used-cars/', re.I))
             link = a_tag['href'] if a_tag else ""
             if link and not link.startswith('http'):
-                link = 'https://wisewheels.com.pk' + (link if link.startswith('/') else '/' + link)
+                link = 'https://wisewheels.com.pk' + link
 
             if link in seen_urls:
                 continue
             if link:
                 seen_urls.add(link)
 
+            # --- Price ---
             price = '0'
-            price_match = re.search(r'(PKR|Rs\.?|₨)\s*([\d,.]+)\s*(Lacs?|Crores?)?', text_content, re.I)
-            if price_match:
-                price = price_match.group(0).strip()
-            else:
-                price_el = item.find(class_=re.compile(r'price', re.I))
-                if price_el:
-                    price = price_el.get_text(strip=True)
+            price_span = item.find('span', string=re.compile(r'PKR|Rs|₨', re.I))
+            if price_span:
+                price = price_span.get_text(strip=True)
 
+            # --- Specs (Year, Mileage, City via Index Positioning) ---
             year = '0'
-            year_match = re.search(r'\b(19[89]\d|20[0-2]\d)\b', text_content)
-            if year_match:
-                year = year_match.group(1)
-
             mileage = '0'
-            mileage_match = re.search(r'\b([\d,]+)\s*KM\b', text_content, re.I)
-            if mileage_match:
-                mileage = mileage_match.group(1).replace(',', '')
-
             city = 'Unknown'
-            city_el = item.find(class_=re.compile(r'(location|city|area)', re.I))
-            if city_el:
-                city = city_el.get_text(strip=True).split(',')[0].strip()
-            else:
-                text_lower = text_content.lower()
-                for known_city in PAKISTANI_CITIES:
-                    if known_city in text_lower:
-                        city = known_city.title()
-                        break
+            
+            # Locate the flex container holding the SVG-divided specs
+            spec_wrapper = item.find('div', class_=re.compile(r'text-muted-foreground|gap-2', re.I))
+            if spec_wrapper:
+                spans = spec_wrapper.find_all('span')
+                if len(spans) >= 6:
+                    year = spans[0].get_text(strip=True)
+                    
+                    # Clean the mileage string (e.g. "45000 KM")
+                    raw_mileage = spans[1].get_text(strip=True)
+                    mileage = re.sub(r'[^\d]', '', raw_mileage)
+                    
+                    city = spans[5].get_text(strip=True)
+                elif len(spans) > 0:
+                    # Failsafe fallback if lengths vary
+                    year_match = re.search(r'\b(19[89]\d|20[0-2]\d)\b', text_content)
+                    if year_match: year = year_match.group(1)
+                    
+                    mileage_match = re.search(r'\b([\d,]+)\s*KM\b', text_content, re.I)
+                    if mileage_match: mileage = mileage_match.group(1).replace(',', '')
 
-            # Use the robust age parser
-            age_days = _time_str_to_days(text_content)
+            # --- Date/Time Posted ---
+            age_days = 999
+            date_el = item.find('h5', class_=re.compile(r'text-\[8px\]', re.I))
+            if date_el:
+                age_days = _time_str_to_days(date_el.get_text(strip=True))
 
+            # --- Image (Next.js Optimization Decoder) ---
             image_url = ''
             img = item.find('img')
             if img:
-                for attr in ('data-src', 'data-original', 'data-lazy-src', 'src'):
-                    val = img.get(attr, '').strip()
-                    if val and val.startswith('http') and 'placeholder' not in val.lower():
-                        image_url = val
-                        break
+                src = img.get('src', '')
+                if '/_next/image?url=' in src:
+                    # Unquote the high-res S3 parameter from the Next.js routing
+                    match = re.search(r'url=([^&]+)', src)
+                    if match:
+                        image_url = urllib.parse.unquote(match.group(1))
+                else:
+                    image_url = src
 
             if price == '0' and year == '0':
                 continue
