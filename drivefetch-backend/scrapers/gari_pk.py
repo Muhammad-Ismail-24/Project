@@ -25,6 +25,7 @@ AGE & SOLD FIX:
   - Sold filter now checks image src/alt tags and DOM classes for visual badges.
   - Age Strategy 2 now includes <div> tags with a strict 50-character limit 
     to successfully target <div class="desc2"> date elements.
+  - Plural time parsing ('hours', 'minutes') fixed.
 """
 from bs4 import BeautifulSoup
 import re
@@ -178,7 +179,7 @@ def _time_str_to_days(text: str) -> int:
         return int(m.group(1)) * 365
 
     # Same-day signals
-    if re.search(r'\b(minute|min|hour|hr|just now|today|moments?|ابھی|گھنٹ|منٹ)\b', t):
+    if re.search(r'\b(minute|min|hour|hr|just now|today|moments?)s?\b|ابھی|گھنٹ|منٹ', t):
         return 0
 
     if 'yesterday' in t or 'کل' in t:
