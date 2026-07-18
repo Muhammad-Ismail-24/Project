@@ -1,19 +1,17 @@
 """
 scrapers/normalizer.py
-GaariGuru — API-Free Heuristic Scoring Normalizer v3.1
+GaariGuru — API-Free Heuristic Scoring Normalizer v3.2
 
-Upgrade log over v3.0:
-  - Preserved ALL v3.0 features: Global Master Sort, Hard Bucketing, Cascade
-    Backfill, Garbage City Rescuer, Hard Veto 6 (Trim), Hard Veto 7 (Stale),
-    Strict Year enforcement, word-boundary fuzzy matcher, identity threshold 0.75.
-  - ADDED (v3.1): Daihatsu/Hijet support.
-    - MAKE_INFERENCE_MAP: added Hijet, Cuore, Charade, Mira, Move → Daihatsu.
-    - MAKE_ALIAS_MAP: maps Daihatsu → "toyota" for PakWheels URL slug generation
-      (runner.py imports this to build the correct mk_ path segment).
-    - MAKE_VETO_ALIASES: relaxes Hard Veto 2 so searching "Daihatsu" does NOT
-      drop listings titled "Toyota Hijet" — same physical car, two badges.
-    - TYPO_CORRECTIONS: added dihatsu / daihtsu / daihutsu misspellings.
-    - MODEL_ALIAS_MAP: added civick/civec aliases for civic (was missing in v3.0).
+Upgrade log over v3.1:
+  - Preserved ALL v3.1 features.
+  - ADDED (v3.2): Suzuki Every + phone strip + identity false-positive fix.
+    - MAKE_INFERENCE_MAP: added "every" → ("Suzuki", "Every").
+      Root cause of identity false positives: orchestrator returning model=None
+      for "Every" queries caused _calculate_identity_score to return 1.0
+      for ALL listings (including Civic, Corolla, etc.).
+    - Phone number strip: _calculate_relevance_score now strips 7+ digit
+      sequences from the title before any scoring, fixing titles like
+      "Suzuki Every 2017.03075321121" polluting identity matching.
 """
 
 import re
@@ -64,6 +62,11 @@ MAKE_INFERENCE_MAP: dict[str, tuple[str, str]] = {
     "charade":  ("Daihatsu", "Charade"),
     "mira":     ("Daihatsu", "Mira"),
     "move":     ("Daihatsu", "Move"),
+    # --- Suzuki Every (v3.2) ---
+    # "Every" is always a Suzuki model. Without this entry the orchestrator
+    # can return model=None and _calculate_identity_score returns 1.0 for
+    # all listings including irrelevant Civics, Corollas, etc.
+    "every":    ("Suzuki",   "Every"),
 }
 
 MODEL_ALIAS_MAP: dict[str, list[str]] = {
@@ -381,19 +384,23 @@ def _calculate_relevance_score(
       7. Year outside requested bounds (only when year is known)
       8. Listing confirmed stale (age_days > 14, excluding age_days == 999)
     """
-    title_lower = car.title.lower()
+    # Strip phone numbers from title before any scoring — prevents strings like
+    # "Suzuki Every 2017.03075321121" from polluting identity + make matching.
+    clean_title = re.sub(r'\b\d{7,}\b', '', car.title).strip()
+    title_lower = clean_title.lower()
 
     def veto(reason: str) -> float:
         if debug:
-            print(f"  [VETO] '{car.title[:50]}' — {reason}")
+            print(f"  [VETO] '{clean_title[:50]}' — {reason}")
         return 0.0
 
     # --- HARD VETO 1: Identity ---
-    identity_score = _calculate_identity_score(requested_make, requested_model, car.title)
+    identity_score = _calculate_identity_score(requested_make, requested_model, clean_title)
     if identity_score < 0.75:
         return veto(f"Identity too low ({identity_score:.2f}) for model='{requested_model}'")
 
     # --- HARD VETO 2: Make not in title (with Daihatsu/Toyota alias relaxation) ---
+    # Uses title_lower which is already phone-stripped.
     if requested_make:
         req_make_lower = requested_make.lower()
         acceptable_makes = MAKE_VETO_ALIASES.get(req_make_lower, [req_make_lower])
