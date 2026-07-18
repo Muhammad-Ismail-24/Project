@@ -6,49 +6,25 @@ Since Gari.pk has strictly enforced Cloudflare JS Challenges against data
 center IPs, we use Google's own servers to fetch the HTML for us.
 Cloudflare never blocks Google.
 
-PRICE FIX (this patch):
+PRICE FIX:
   Root cause of "PKR 0" on all Gari.pk listings:
-    The class-based price selector (class_=re.compile(r'price')) fails when
-    Google Translate renames or restructures the price element's class.
-    The price text IS present in the card's text_content (confirmed — mileage
-    and year regex work fine on the same string), but the class lookup returns
-    None or an element with just "0".
+    The class-based price selector fails when Google Translate renames classes.
+  Fix: Add a PRICE_RE regex fallback that runs on text_content.
 
-  Fix: Add a PRICE_RE regex fallback that runs on text_content, identical
-  in philosophy to how year and mileage are already extracted. The regex
-  covers every Pakistani price format observed in production:
-    - "PKR 28 Lac"  /  "PKR 28.5 Lacs"  /  "PKR 28.5 Lakh"
-    - "Rs. 45.5 Lacs"
-    - "PKR 2,200,000"  (raw numeric)
-    - "14 Lac"  (no currency prefix)
-  The class-based selector is kept as the first attempt; regex kicks in
-  only when the selector returns '0' or nothing.
+IMAGE FIX:
+  Add _extract_image() with lazy-load resilience.
 
-IMAGE FIX (this patch):
-  The previous scraper had zero image extraction code — images were simply
-  never populated, causing every Gari.pk card to show "No Image Provided".
+CITY FIX:
+  Multi-strategy city extraction with search_filters fallback.
 
-  Fix: Add _extract_image() with lazy-load resilience:
-    - Checks data-src / data-original / data-lazy-src before falling back to src
-    - Skips placeholder/blank/1x1 URLs
-    - Google Translate proxy preserves <img> tags and their src attributes
-      intact (Google only rewrites <a href> and injects <font> for text).
+PRICE FORMAT FIX:
+  Normalize the "Rs." prefix to "PKR " so the normalizer parses correctly.
 
-CITY FIX (from previous patch, retained):
-  Multi-strategy city extraction with search_filters fallback so
-  city is never 'Unknown'.
-
-PRICE FORMAT FIX (this patch):
-  Root cause of "PKR 32,000" instead of "PKR 3,200,000":
-    Gari.pk shows prices as "Rs. 32 Lacs". The normalizer's _clean_price()
-    strips all non-digit/dot characters from the string. On "rs. 32 lacs"
-    this produces ".32" (the dot in "Rs." survives the strip), which
-    float(".32") = 0.32, then × 100,000 = 32,000 instead of 3,200,000.
-
-    The normalizer works correctly for "PKR 32 Lacs" — that dot doesn't exist.
-    Fix: normalize the "Rs." prefix to "PKR" in the scraper before returning,
-    so the normalizer always receives the format it handles correctly.
-    One regex substitution: r'^Rs\\.?\\s*' → 'PKR '.
+AGE & SOLD FIX:
+  - Docstring regex references updated to \\d to prevent SyntaxWarnings.
+  - Sold filter now checks image src/alt tags and DOM classes for visual badges.
+  - Age Strategy 2 now includes <div> tags with a strict 50-character limit 
+    to successfully target <div class="desc2"> date elements.
 """
 from bs4 import BeautifulSoup
 import re
@@ -64,10 +40,6 @@ KNOWN_CITIES = (
 )
 CITY_RE = re.compile(KNOWN_CITIES, re.I)
 
-# Pakistani price formats — covers every variant seen in production
-# Examples matched:
-#   "PKR 28 Lac", "PKR 28.5 Lacs", "PKR 28.5 Lakh", "Rs. 45.5 Lacs",
-#   "PKR 2,200,000", "14 Lac", "2.8 Crore"
 PRICE_RE = re.compile(
     r'(?:PKR|Rs\.?)\s*[\d,\.]+\s*(?:Lac(?:s|hs?)?|Lakh?|Crore|Million|CR)?'
     r'|[\d,\.]+\s*(?:Lac(?:s|hs?)?|Lakh?|Crore|Million|CR)\b',
@@ -76,50 +48,14 @@ PRICE_RE = re.compile(
 
 
 def _normalize_price_prefix(price: str) -> str:
-    """
-    Converts "Rs. 40 Lacs" → "PKR 40 Lacs" so the normalizer parses it correctly.
-
-    The normalizer's _clean_price strips all non-digit/dot chars. "Rs. 40" becomes
-    ".40" → float 0.4 → × 100,000 = 40,000 (wrong). "PKR 40" becomes "40" → 40.0
-    → × 100,000 = 4,000,000 (correct). This one substitution fixes all Rs. variants:
-    "Rs. 40", "Rs 40", "Rs.40" all become "PKR 40".
-    """
+    """Converts "Rs. 40 Lacs" → "PKR 40 Lacs" so the normalizer parses it correctly."""
     return re.sub(r'^Rs\.?\s*', 'PKR ', price.strip(), flags=re.I)
 
 
 def _parse_age_days(item, debug: bool = False) -> int:
-    """
-    Extracts listing age in days from a Gari.pk card.
-
-    FIX (this patch): Previous version returned 999 (stale) for 0/30 cards
-    on some searches (e.g. "Suzuki Every"). Three root causes found:
-
-    1. Google Translate renders Urdu time strings INCONSISTENTLY across
-       searches — sometimes "2 days ago" (full English), sometimes "2 دن"
-       (Urdu days word without translation), sometimes an ABSOLUTE date
-       like "12 July 2025" or "Jul 12" instead of a relative string at
-       all. The old code only handled relative English strings.
-
-    2. Pakistani platforms (Gari.pk AND PakWheels confirmed) use the word
-       "about" before the number: "about 6 hours ago", "about 2 days ago".
-       The old regex r'(\d+)\s*day' required the digit to come first, so
-       "about 2 days" never matched.
-
-    3. Strategy 2 (full card text scan) was picking up spec text numbers
-       (engine cc, horsepower, mileage figures) BEFORE the date string
-       because it scanned the entire concatenated card text without any
-       preference ordering.
-
-    Fix strategy:
-    - Add 'about' tolerance to all relative-time patterns.
-    - Add Urdu partial-translation patterns (دن, ہفتے, مہینے, سال).
-    - Add absolute-date parsing (12 July / Jul 12 / DD-MM-YYYY).
-    - Prioritize the dedicated date element (Strategy 1) over full-text
-      scan (Strategy 2) to avoid spec-text number collisions.
-    - Add per-card debug output (enabled via debug=True) so future
-      failures show the exact text being fed to the parser.
-    """
-    # Strategy 1: dedicated time/date element (fastest and most precise)
+    """Extracts listing age in days from a Gari.pk card."""
+    
+    # Strategy 1: dedicated time/date element
     time_el = item.find(
         class_=re.compile(r'(ago|date|time|posted|fresh|listing.?date|new|updated)', re.I)
     )
@@ -128,24 +64,21 @@ def _parse_age_days(item, debug: bool = False) -> int:
 
     time_text = time_el.get_text(strip=True) if time_el else ''
 
-    if debug and time_text:
-        print(f"[Gari.pk Age DEBUG] Strategy 1 text: {repr(time_text[:80])}")
-
     if time_text:
         result = _time_str_to_days(time_text)
         if result != 999:
             return result
 
-    # Strategy 2: scan only small inline elements (spans/li/p) — avoids
-    # collisions with spec text in the larger card body.
-    for tag in item.find_all(['span', 'p', 'small', 'li']):
+    # Strategy 2: scan small inline elements (now includes 'div' to catch desc2)
+    for tag in item.find_all(['span', 'p', 'small', 'li', 'div', 'td']):
         text = tag.get_text(strip=True)
-        if len(text) > 60:          # skip long spec-text blobs
+        # Strict length check prevents parsing entire layout wrappers
+        if not text or len(text) > 50:          
             continue
         result = _time_str_to_days(text)
         if result != 999:
             if debug:
-                print(f"[Gari.pk Age DEBUG] Strategy 2 match in <{tag.name}>: {repr(text[:60])}")
+                print(f"[Gari.pk Age DEBUG] Strategy 2 match in <{tag.name}>: {repr(text[:50])}")
             return result
 
     # Strategy 3: full card text as last resort
@@ -156,8 +89,6 @@ def _parse_age_days(item, debug: bool = False) -> int:
     if result != 999:
         return result
 
-    if debug:
-        print(f"[Gari.pk Age DEBUG] All strategies failed — returning 999 (stale fallback)")
     return 999
 
 
@@ -174,11 +105,9 @@ def _time_str_to_days(text: str) -> int:
     import datetime
 
     t = text.lower().strip()
-
-    # --- Absolute date parsing FIRST to avoid being shadowed by 'hr'/'min' in full text ---
     today = datetime.date.today()
 
-    # Try strptime for absolute dates first (e.g., Oct 12, 2023)
+    # Absolute: Month Day, Year (e.g., Jul 28, 2023)
     date_match = re.search(r'([a-z]{3,9})\s+(\d{1,2}),?\s+(\d{4})', t)
     if date_match:
         try:
@@ -189,7 +118,18 @@ def _time_str_to_days(text: str) -> int:
         except Exception:
             pass
 
-    # "DD-MM-YYYY" or "YYYY-MM-DD"
+    # Absolute: Day Month Year (e.g., 28 Jul 2023)
+    dmy_match = re.search(r'(\d{1,2})\s+([a-z]{3,9}),?\s+(\d{4})', t)
+    if dmy_match:
+        try:
+            month_str = dmy_match.group(2)[:3].capitalize()
+            clean_date = f"{month_str} {dmy_match.group(1)}, {dmy_match.group(3)}"
+            posted = datetime.datetime.strptime(clean_date, "%b %d, %Y").date()
+            return max(0, (today - posted).days)
+        except Exception:
+            pass
+
+    # DD-MM-YYYY or YYYY-MM-DD
     m = re.search(r'(\d{4})-(\d{2})-(\d{2})', t)
     if m:
         try:
@@ -206,7 +146,7 @@ def _time_str_to_days(text: str) -> int:
         except ValueError:
             pass
 
-    # --- Relative English (with optional 'about' prefix) ---
+    # Relative English
     m = re.search(r'(?:about\s+)?(\d+)\s*day', t)
     if m:
         return int(m.group(1))
@@ -223,59 +163,45 @@ def _time_str_to_days(text: str) -> int:
     if m:
         return int(m.group(1)) * 365
 
-    # --- Urdu partial-translation patterns ---
-    m = re.search(r'(\d+)\s*دن', t)       # Urdu "days"
+    # Urdu partial-translation patterns
+    m = re.search(r'(\d+)\s*دن', t)
     if m:
         return int(m.group(1))
-    m = re.search(r'(\d+)\s*ہفتے', t)     # Urdu "weeks"
+    m = re.search(r'(\d+)\s*ہفتے', t)
     if m:
         return int(m.group(1)) * 7
-    m = re.search(r'(\d+)\s*مہینے', t)    # Urdu "months"
+    m = re.search(r'(\d+)\s*مہینے', t)
     if m:
         return int(m.group(1)) * 30
-    m = re.search(r'(\d+)\s*سال', t)      # Urdu "years"
+    m = re.search(r'(\d+)\s*سال', t)
     if m:
         return int(m.group(1)) * 365
 
-    # --- Same-day signals (put LAST to prevent 'hr'/'min' in full text from overwriting actual dates) ---
+    # Same-day signals
     if re.search(r'\b(minute|min|hour|hr|just now|today|moments?|ابھی|گھنٹ|منٹ)\b', t):
         return 0
 
     if 'yesterday' in t or 'کل' in t:
         return 1
 
-    return 999  # unparseable → treated as stale by scorer
+    return 999
 
 
 def _extract_city(item, fallback_city: str) -> str:
-    """
-    Multi-strategy city extraction. Falls back to searched city (never 'Unknown').
-    Strategy order:
-      1. Class-name match ('location', 'city', 'area')
-      2. <li>/<span> containing a known Pakistani city name
-      3. Icon sibling scan (Font Awesome / custom map-pin icons)
-      4. Full card text scan for any known city name
-      5. search_filters city (guaranteed fallback)
-    """
-    # Strategy 1: class-name match
+    """Multi-strategy city extraction."""
     city_el = item.find(class_=re.compile(r'(location|city|area)', re.I))
     if city_el:
         text = city_el.get_text(strip=True).split(',')[0].strip()
         if text and len(text) > 2:
             return text
 
-    # Strategy 2: <li>/<span> containing a known city name
     for tag in item.find_all(['li', 'span']):
         text = tag.get_text(strip=True)
         m = CITY_RE.search(text)
         if m and len(text) < 60:
             return m.group(0).capitalize()
 
-    # Strategy 3: icon sibling scan
-    for icon in item.find_all(
-        ['i', 'img'],
-        class_=re.compile(r'(location|map|pin|place|geo)', re.I)
-    ):
+    for icon in item.find_all(['i', 'img'], class_=re.compile(r'(location|map|pin|place|geo)', re.I)):
         parent = icon.parent
         if parent:
             text = parent.get_text(strip=True).split(',')[0].strip()
@@ -283,32 +209,22 @@ def _extract_city(item, fallback_city: str) -> str:
             if m:
                 return m.group(0).capitalize()
 
-    # Strategy 4: full text scan
     full_text = item.get_text(separator=' ')
     m = CITY_RE.search(full_text)
     if m:
         return m.group(0).capitalize()
 
-    # Strategy 5: guaranteed fallback
     return fallback_city
 
 
 def _extract_price(item, text_content: str) -> str:
-    """
-    Two-stage price extraction:
-      Stage 1: class-based selector (fast, accurate when class survives proxy)
-      Stage 2: PRICE_RE regex on full card text (resilient fallback)
-    Returns '0' only if both stages fail.
-    """
-    # Stage 1: class-based
+    """Two-stage price extraction."""
     price_el = item.find(class_=re.compile(r'price', re.I))
     if price_el:
         raw = price_el.get_text(separator=' ', strip=True)
-        # Reject '0', empty, or pure-digit-zero values
         if raw and raw.strip('0 ') != '':
             return raw
 
-    # Stage 2: regex on full text
     m = PRICE_RE.search(text_content)
     if m:
         return m.group(0).strip()
@@ -317,12 +233,7 @@ def _extract_price(item, text_content: str) -> str:
 
 
 def _extract_image(item) -> str:
-    """
-    Lazy-load resilient image extraction.
-    Google Translate proxy preserves <img> tags and their src attributes intact.
-    Checks data-src / data-original / data-lazy-src before falling back to src.
-    Skips placeholder / blank / 1x1 pixel URLs.
-    """
+    """Lazy-load resilient image extraction."""
     img = item.find('img')
     if not img:
         return ''
@@ -346,17 +257,10 @@ async def scrape_gari_pk(
     session,
     search_filters: dict = None
 ) -> list[CarListing]:
-    """
-    Fetches Gari.pk via the Google Translate proxy (bypasses Cloudflare),
-    then parses the returned HTML for car listings.
-    """
+    """Fetches Gari.pk via the Google Translate proxy."""
     filters = search_filters or {}
-    # City the user searched for — guaranteed fallback so city is never 'Unknown'
     searched_city = filters.get('city', '').replace('-', ' ').title() or 'Unknown'
 
-    # ------------------------------------------------------------------ #
-    # Step 1: Transform Gari.pk URL → Google Translate proxy URL
-    # ------------------------------------------------------------------ #
     path = url.replace("https://www.gari.pk", "")
     proxy_url = (
         f"https://www-gari-pk.translate.goog{path}"
@@ -373,9 +277,6 @@ async def scrape_gari_pk(
         print(f"[Gari.pk Scraper] Proxy connection error: {e}")
         return []
 
-    # ------------------------------------------------------------------ #
-    # Step 2: Parse HTML — card selectors in priority order
-    # ------------------------------------------------------------------ #
     soup = BeautifulSoup(html, 'html.parser')
 
     items = soup.find_all('div', class_=re.compile(r'car-item', re.I))
@@ -393,23 +294,23 @@ async def scrape_gari_pk(
         )
         return []
 
-    # ------------------------------------------------------------------ #
-    # Step 3: Extract fields from each card
-    # ------------------------------------------------------------------ #
     cars = []
     city_dom_hits = 0
     price_class_hits = 0
     price_regex_hits = 0
     image_hits = 0
-    age_found = 0       # how many cards had a parseable date
+    age_found = 0
 
     for item in items[:MAX_CARDS]:
         try:
-            # --- Text content (shared by price / year / mileage regex) ---
             text_content = item.get_text(separator=' ')
 
-            # TASK 1: Filter SOLD listings
+            # TASK 1: Filter SOLD listings (Text + Visual Badges)
             if re.search(r'\bsold\b', text_content, re.I):
+                continue
+            if item.find(class_=re.compile(r'sold', re.I)) or \
+               item.find('img', src=re.compile(r'sold', re.I)) or \
+               item.find('img', alt=re.compile(r'sold', re.I)):
                 continue
 
             # --- Title ---
@@ -433,15 +334,13 @@ async def scrape_gari_pk(
                 if not link.startswith('http'):
                     link = 'https://www.gari.pk' + link
 
-            # --- Price (two-stage, with Rs. → PKR normalization) ---
-            # Stage 1: class selector
+            # --- Price ---
             price_el = item.find(class_=re.compile(r'price', re.I))
             raw_price = price_el.get_text(separator=' ', strip=True) if price_el else ''
             if raw_price and raw_price.strip('0 ') != '':
                 price = _normalize_price_prefix(raw_price)
                 price_class_hits += 1
             else:
-                # Stage 2: regex on full card text
                 m = PRICE_RE.search(text_content)
                 if m:
                     price = _normalize_price_prefix(m.group(0).strip())
@@ -461,7 +360,7 @@ async def scrape_gari_pk(
             if mileage_match:
                 mileage = mileage_match.group(1).replace(',', '')
 
-            # --- City (multi-strategy with guaranteed fallback) ---
+            # --- City ---
             city = _extract_city(item, fallback_city=searched_city)
             if city != searched_city:
                 city_dom_hits += 1
@@ -471,10 +370,8 @@ async def scrape_gari_pk(
             if image_url:
                 image_hits += 1
 
-            # --- Age (days since posted) ---
-            # debug=True on first 3 cards to confirm which strategy fires
-            # after the fix — remove once age parsing is confirmed working.
-            age_days = _parse_age_days(item, debug=(len(cars) < 3))
+            # --- Age ---
+            age_days = _parse_age_days(item, debug=False)
             if age_days != 999:
                 age_found += 1
 
