@@ -1,37 +1,46 @@
 """
-scrapers/gari_pk.py  (was wise_wheels.py)
+scrapers/gari_pk.py
 
 HACKER BYPASS: The Google Translate Proxy.
 Since Gari.pk has strictly enforced Cloudflare JS Challenges against data
 center IPs, we use Google's own servers to fetch the HTML for us.
 Cloudflare never blocks Google.
 
-PRICE FIX:
-  Root cause of "PKR 0" on all Gari.pk listings:
-    The class-based price selector fails when Google Translate renames classes.
-  Fix: Add a PRICE_RE regex fallback that runs on text_content.
+FIXES (2026-07-19):
+  OLD LISTING BLEED:
+    Root cause: Gari.pk search result cards don't show the posting date —
+    only the individual listing detail page does. The scraper was returning
+    age_days=999 for all undated cards, and the normalizer treated 999 as
+    "unknown" with a neutral middle score, letting 600+ day old cars through.
 
-IMAGE FIX:
-  Add _extract_image() with lazy-load resilience.
+    Fix 1: Added DATE_RE which catches absolute date strings like
+    "Oct 15, 2023" or "Sep 3, 2023" embedded anywhere in the card text
+    (sometimes present in hidden elements, data attributes, or alt text).
 
-CITY FIX:
-  Multi-strategy city extraction with search_filters fallback.
+    Fix 2: Added a GARI_MAX_AGE_DAYS cap (90 days). Any Gari.pk listing
+    that returns age_days=999 (no date found on card) is treated as
+    potentially stale and capped at 90 days for scoring purposes.
+    This means undated listings score lower than fresh dated listings,
+    preventing ancient cars from floating to the top.
 
-PRICE FORMAT FIX:
-  Normalize the "Rs." prefix to "PKR " so the normalizer parses correctly.
+    Fix 3: Broadened Strategy 2 to also scan <td> and <label> elements
+    and increased the char limit to 60 to catch more date containers.
 
-AGE & SOLD FIX:
-  - Docstring regex references updated to \\d to prevent SyntaxWarnings.
-  - Sold filter now checks image src/alt tags and DOM classes for visual badges.
-  - Age Strategy 2 now includes <div> tags with a strict 50-character limit 
-    to successfully target <div class="desc2"> date elements.
-  - Plural time parsing ('hours', 'minutes') fixed.
+  WISEWHEELS DATE NOTE (separate file):
+    WiseWheels age=0.0 is correct — those listings were just posted today.
+    The created_at field is accurate. No fix needed there.
 """
 from bs4 import BeautifulSoup
 import re
+import datetime
 from models.car_schema import CarListing
 
 MAX_CARDS = 40
+
+# If a Gari.pk card has no detectable date, treat it as this many days old
+# for scoring. High enough to deprioritize but not trigger the 14-day stale veto
+# (which is reserved for listings WITH a confirmed old date).
+GARI_UNDATED_AGE_DAYS = 90
 
 # Known Pakistani cities for text-scan city detection
 KNOWN_CITIES = (
@@ -47,50 +56,21 @@ PRICE_RE = re.compile(
     re.I
 )
 
+# Matches absolute dates like "Oct 15, 2023" or "15 Oct 2023" or "2023-10-15"
+DATE_RE = re.compile(
+    r'\b(?:'
+    r'(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}'  # Oct 15, 2023
+    r'|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?,?\s+\d{4}'  # 15 Oct 2023
+    r'|\d{4}-\d{2}-\d{2}'                                                                   # 2023-10-15
+    r'|\d{2}-\d{2}-\d{4}'                                                                   # 15-10-2023
+    r')\b',
+    re.I
+)
+
 
 def _normalize_price_prefix(price: str) -> str:
-    """Converts "Rs. 40 Lacs" → "PKR 40 Lacs" so the normalizer parses it correctly."""
+    """Converts "Rs. 40 Lacs" → "PKR 40 Lacs" so the normalizer parses it."""
     return re.sub(r'^Rs\.?\s*', 'PKR ', price.strip(), flags=re.I)
-
-
-def _parse_age_days(item, debug: bool = False) -> int:
-    """Extracts listing age in days from a Gari.pk card."""
-    
-    # Strategy 1: dedicated time/date element
-    time_el = item.find(
-        class_=re.compile(r'(ago|date|time|posted|fresh|listing.?date|new|updated)', re.I)
-    )
-    if not time_el:
-        time_el = item.find('time')
-
-    time_text = time_el.get_text(strip=True) if time_el else ''
-
-    if time_text:
-        result = _time_str_to_days(time_text)
-        if result != 999:
-            return result
-
-    # Strategy 2: scan small inline elements (now includes 'div' to catch desc2)
-    for tag in item.find_all(['span', 'p', 'small', 'li', 'div', 'td']):
-        text = tag.get_text(strip=True)
-        # Strict length check prevents parsing entire layout wrappers
-        if not text or len(text) > 50:          
-            continue
-        result = _time_str_to_days(text)
-        if result != 999:
-            if debug:
-                print(f"[Gari.pk Age DEBUG] Strategy 2 match in <{tag.name}>: {repr(text[:50])}")
-            return result
-
-    # Strategy 3: full card text as last resort
-    full_text = item.get_text(separator=' ')
-    if debug:
-        print(f"[Gari.pk Age DEBUG] Strategy 3 full text (first 200): {repr(full_text[:200])}")
-    result = _time_str_to_days(full_text)
-    if result != 999:
-        return result
-
-    return 999
 
 
 MONTH_MAP = {
@@ -103,12 +83,10 @@ MONTH_MAP = {
 
 
 def _time_str_to_days(text: str) -> int:
-    import datetime
-
     t = text.lower().strip()
     today = datetime.date.today()
 
-    # Absolute: Month Day, Year (e.g., Jul 28, 2023)
+    # Absolute: Month Day, Year (e.g., Oct 15, 2023)
     date_match = re.search(r'([a-z]{3,9})\s+(\d{1,2}),?\s+(\d{4})', t)
     if date_match:
         try:
@@ -130,7 +108,7 @@ def _time_str_to_days(text: str) -> int:
         except Exception:
             pass
 
-    # DD-MM-YYYY or YYYY-MM-DD
+    # YYYY-MM-DD
     m = re.search(r'(\d{4})-(\d{2})-(\d{2})', t)
     if m:
         try:
@@ -139,6 +117,7 @@ def _time_str_to_days(text: str) -> int:
         except ValueError:
             pass
 
+    # DD-MM-YYYY
     m = re.search(r'(\d{2})-(\d{2})-(\d{4})', t)
     if m:
         try:
@@ -164,7 +143,7 @@ def _time_str_to_days(text: str) -> int:
     if m:
         return int(m.group(1)) * 365
 
-    # Urdu partial-translation patterns
+    # Urdu relative
     m = re.search(r'(\d+)\s*دن', t)
     if m:
         return int(m.group(1))
@@ -188,8 +167,67 @@ def _time_str_to_days(text: str) -> int:
     return 999
 
 
+def _parse_age_days(item, debug: bool = False) -> int:
+    """
+    Extracts listing age in days from a Gari.pk card.
+
+    Strategy order:
+      1. Dedicated date/time CSS class element
+      2. Small inline elements (span, p, small, li, div, td, label) < 60 chars
+      3. Data attributes and alt text (catches hidden date metadata)
+      4. Full card text scan (last resort — picks up "Oct 15, 2023" style dates)
+
+    Returns 999 if no date found. Caller should treat 999 as undated
+    and apply GARI_UNDATED_AGE_DAYS as the scoring fallback.
+    """
+    # Strategy 1: dedicated time/date element
+    time_el = item.find(
+        class_=re.compile(r'(ago|date|time|posted|fresh|listing.?date|new|updated)', re.I)
+    )
+    if not time_el:
+        time_el = item.find('time')
+
+    time_text = time_el.get_text(strip=True) if time_el else ''
+    if time_text:
+        result = _time_str_to_days(time_text)
+        if result != 999:
+            return result
+
+    # Strategy 2: scan small inline elements
+    for tag in item.find_all(['span', 'p', 'small', 'li', 'div', 'td', 'label']):
+        text = tag.get_text(strip=True)
+        if not text or len(text) > 60:
+            continue
+        result = _time_str_to_days(text)
+        if result != 999:
+            if debug:
+                print(f"[Gari.pk Age DEBUG] Strategy 2 match in <{tag.name}>: {repr(text[:60])}")
+            return result
+
+    # Strategy 3: scan data-* attributes and img alt text for hidden date metadata
+    for tag in item.find_all(True):
+        for attr_name, attr_val in tag.attrs.items():
+            if not isinstance(attr_val, str):
+                continue
+            if DATE_RE.search(attr_val):
+                result = _time_str_to_days(attr_val)
+                if result != 999:
+                    if debug:
+                        print(f"[Gari.pk Age DEBUG] Strategy 3 attr match [{attr_name}]: {repr(attr_val[:60])}")
+                    return result
+
+    # Strategy 4: full card text — catches "Date Posted: Oct 15, 2023" style
+    full_text = item.get_text(separator=' ')
+    if debug:
+        print(f"[Gari.pk Age DEBUG] Strategy 4 full text (first 300): {repr(full_text[:300])}")
+    result = _time_str_to_days(full_text)
+    if result != 999:
+        return result
+
+    return 999
+
+
 def _extract_city(item, fallback_city: str) -> str:
-    """Multi-strategy city extraction."""
     city_el = item.find(class_=re.compile(r'(location|city|area)', re.I))
     if city_el:
         text = city_el.get_text(strip=True).split(',')[0].strip()
@@ -202,7 +240,10 @@ def _extract_city(item, fallback_city: str) -> str:
         if m and len(text) < 60:
             return m.group(0).capitalize()
 
-    for icon in item.find_all(['i', 'img'], class_=re.compile(r'(location|map|pin|place|geo)', re.I)):
+    for icon in item.find_all(
+        ['i', 'img'],
+        class_=re.compile(r'(location|map|pin|place|geo)', re.I)
+    ):
         parent = icon.parent
         if parent:
             text = parent.get_text(strip=True).split(',')[0].strip()
@@ -218,23 +259,7 @@ def _extract_city(item, fallback_city: str) -> str:
     return fallback_city
 
 
-def _extract_price(item, text_content: str) -> str:
-    """Two-stage price extraction."""
-    price_el = item.find(class_=re.compile(r'price', re.I))
-    if price_el:
-        raw = price_el.get_text(separator=' ', strip=True)
-        if raw and raw.strip('0 ') != '':
-            return raw
-
-    m = PRICE_RE.search(text_content)
-    if m:
-        return m.group(0).strip()
-
-    return '0'
-
-
 def _extract_image(item) -> str:
-    """Lazy-load resilient image extraction."""
     img = item.find('img')
     if not img:
         return ''
@@ -290,28 +315,29 @@ async def scrape_gari_pk(
 
     if not items:
         print(
-            f"[Gari.pk Scraper] ❌ 0 card elements found via Google Proxy. "
+            f"[Gari.pk Scraper] 0 card elements found via Google Proxy. "
             f"Raw HTML (first 1000 chars):\n{html[:1000]}"
         )
         return []
 
     cars = []
-    city_dom_hits = 0
+    city_dom_hits  = 0
     price_class_hits = 0
     price_regex_hits = 0
-    image_hits = 0
-    age_found = 0
+    image_hits     = 0
+    age_found      = 0
+    age_undated    = 0
 
     for item in items[:MAX_CARDS]:
         try:
             text_content = item.get_text(separator=' ')
 
-            # TASK 1: Filter SOLD listings (Text + Visual Badges)
+            # Filter SOLD listings
             if re.search(r'\bsold\b', text_content, re.I):
                 continue
-            if item.find(class_=re.compile(r'sold', re.I)) or \
-               item.find('img', src=re.compile(r'sold', re.I)) or \
-               item.find('img', alt=re.compile(r'sold', re.I)):
+            if (item.find(class_=re.compile(r'sold', re.I)) or
+                    item.find('img', src=re.compile(r'sold', re.I)) or
+                    item.find('img', alt=re.compile(r'sold', re.I))):
                 continue
 
             # --- Title ---
@@ -372,9 +398,17 @@ async def scrape_gari_pk(
                 image_hits += 1
 
             # --- Age ---
+            # age_days=999 means no date found on the card.
+            # We replace 999 with GARI_UNDATED_AGE_DAYS so these listings:
+            #   (a) don't get vetoed by the stale-listing rule (that needs a real date)
+            #   (b) score lower than fresh dated listings
+            #   (c) can still appear if there's nothing better
             age_days = _parse_age_days(item, debug=False)
             if age_days != 999:
                 age_found += 1
+            else:
+                age_undated += 1
+                age_days = GARI_UNDATED_AGE_DAYS
 
             cars.append(CarListing(
                 title=title,
@@ -396,6 +430,6 @@ async def scrape_gari_pk(
         f"{len(cars) - price_class_hits - price_regex_hits} missing. "
         f"Images: {image_hits}/{len(cars)}. "
         f"City: {city_dom_hits} DOM / {len(cars) - city_dom_hits} fallback. "
-        f"Age: {age_found}/{len(cars)} parsed."
+        f"Age: {age_found}/{len(cars)} parsed, {age_undated} undated→{GARI_UNDATED_AGE_DAYS}d."
     )
     return cars
