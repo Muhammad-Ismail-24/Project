@@ -5,6 +5,9 @@ API INTERCEPTION REWRITE:
 WiseWheels uses Next.js Client-Side Rendering. The initial HTML only contains 
 Mantine UI skeleton loaders. This scraper bypasses the HTML DOM entirely and 
 intercepts the raw JSON from their backend search API.
+
+FIX: Added strict type-checking to prevent 'list' object attribute crashes 
+when the API returns a raw JSON array instead of a dictionary object.
 """
 import urllib.parse
 from models.car_schema import CarListing
@@ -21,7 +24,7 @@ STANDARD_HEADERS = {
 
 async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> list[CarListing]:
     
-    # Transform the frontend URL into the backend API endpoint
+    # Transform the frontend URL into the backend API endpoint[cite: 15]
     api_url = url.replace("https://wisewheels.com.pk/used-cars", "https://api.wisewheels.com.pk/client/v1/used-cars/search")
     
     try:
@@ -37,15 +40,22 @@ async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> 
         print(f"[WiseWheels ❌] API Request Failed: {e}")
         return []
 
-    # Dynamically locate the items array in the JSON response
-    items = data.get('data', {}).get('items', [])
-    if not items and 'data' in data and isinstance(data['data'], list):
-        items = data['data']
-    elif not items and 'items' in data:
-        items = data['items']
+    # --- SAFELY EXTRACT ITEMS ARRAY ---
+    if isinstance(data, list):
+        items = data
+    elif isinstance(data, dict):
+        items = data.get('data', {}).get('items', [])
+        if not items and 'data' in data and isinstance(data['data'], list):
+            items = data['data']
+        elif not items and 'items' in data:
+            items = data['items']
+    else:
+        items = []
 
     if not items:
-        print(f"[WiseWheels ❌] API returned 0 items. Schema keys found: {list(data.keys())}")
+        # Safely log keys only if it's a dict
+        schema_info = list(data.keys()) if isinstance(data, dict) else "Raw List/Unknown"
+        print(f"[WiseWheels ❌] API returned 0 items. Schema: {schema_info}")
         return []
 
     # --- SCHEMA DISCOVERY LOG ---
@@ -57,7 +67,7 @@ async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> 
     
     for item in items[:MAX_ORGANIC_CARDS]:
         try:
-            # Flexible dictionary extraction with fallbacks
+            # Flexible dictionary extraction with fallbacks[cite: 15]
             
             # Title
             title = item.get('title') or item.get('name') 
@@ -112,7 +122,7 @@ async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> 
             created_at = item.get('created_at') or item.get('updated_at')
             if created_at:
                 try:
-                    # Handle basic ISO formats
+                    # Handle basic ISO formats[cite: 15]
                     dt_str = created_at.replace('Z', '+00:00')
                     dt = datetime.fromisoformat(dt_str)
                     delta = datetime.now(timezone.utc) - dt
