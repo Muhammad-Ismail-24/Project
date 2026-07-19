@@ -1,24 +1,21 @@
 """
 scrapers/wise_wheels.py (WiseWheels.com.pk)
 
-API INTERCEPTION — PRODUCTION BUILD
+API INTERCEPTION — v2 PRODUCTION BUILD
 
-Root cause (diagnosed 2026-07-19):
-  The WiseWheels API returns each listing with a `thumbnail` field
-  (a direct S3 URL) rather than an `images[]` or `media[]` array.
-  The old code searched for those arrays, found nothing, resolved
-  image_url to '', passed `image_url or None` → None to CarListing,
-  and Pydantic rejected it (image_url requires str, not NoneType).
+Fixes applied 2026-07-19:
+  1. image_url: read `thumbnail` directly (flat S3 URL in API response).
+     Old code searched for images[]/media[] which don't exist → None → Pydantic crash.
 
-  Fix: read `item['thumbnail']` directly.
-  Fallback chain: thumbnail → '' (never None, keeps Pydantic happy).
+  2. City post-filter: WiseWheels API returns nationwide results regardless of
+     city_id parameter (confirmed from logs — city_id=257 returned Lahore listings).
+     Solution: after extraction, filter by requested city using the `city` string
+     in each item. Accepts both exact match and the twin-city expansion
+     ("Islamabad and Rawalpindi" → accept Islamabad OR Rawalpindi).
 
-Also confirmed from debug logs:
-  - Envelope: {"dealer": null, "data": [...], "pagination": {...}}
-  - city is a plain string (not a nested dict)
-  - url field contains a ready-made relative path
-  - price is already an integer (no lac conversion needed)
-  - created_at is ISO 8601 with microseconds + Z suffix
+  3. price is already full rupees integer (e.g. 4600000) — no lac conversion needed.
+
+  4. `url` field is a ready-made relative path — just prepend domain.
 """
 from models.car_schema import CarListing
 from datetime import datetime, timezone
@@ -32,6 +29,38 @@ STANDARD_HEADERS = {
     "Referer": "https://wisewheels.com.pk/",
 }
 
+# Maps twin-city search strings → list of city names to accept
+# Keeps WiseWheels city post-filter in sync with orchestrator twin-city logic
+TWIN_CITY_MAP = {
+    "islamabad and rawalpindi": ["islamabad", "rawalpindi"],
+    "rawalpindi and islamabad": ["islamabad", "rawalpindi"],
+    "lahore":                   ["lahore"],
+    "karachi":                  ["karachi"],
+    "islamabad":                ["islamabad"],
+    "rawalpindi":               ["rawalpindi"],
+}
+
+
+def _city_matches(item_city: str, requested_city: str) -> bool:
+    """
+    Returns True if the listing's city is acceptable for the requested city.
+    requested_city comes from the runner (lowercased search string).
+    item_city comes directly from the API response.
+    """
+    if not requested_city:
+        return True  # no city filter requested
+
+    item_city_lower = item_city.lower().strip()
+    requested_lower = requested_city.lower().strip()
+
+    # Check twin-city map first
+    accepted = TWIN_CITY_MAP.get(requested_lower)
+    if accepted:
+        return item_city_lower in accepted
+
+    # Fallback: simple substring match
+    return requested_lower in item_city_lower or item_city_lower in requested_lower
+
 
 async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> list[CarListing]:
 
@@ -40,6 +69,11 @@ async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> 
         "https://wisewheels.com.pk/used-cars",
         "https://api.wisewheels.com.pk/client/v1/used-cars/search"
     )
+
+    # Extract requested city from search_filters for post-filtering
+    requested_city = ""
+    if search_filters:
+        requested_city = (search_filters.get("city") or "").strip()
 
     try:
         print(f"[WiseWheels API] Intercepting: {api_url}")
@@ -66,12 +100,21 @@ async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> 
         print(f"[WiseWheels ❌] No items in response. Keys: {list(data.keys())}")
         return []
 
-    print(f"[WiseWheels API] Fetched {len(items)} raw items.")
-
     cars = []
+    skipped_city = 0
 
     for item in items[:MAX_ORGANIC_CARDS]:
         try:
+            # ── City ───────────────────────────────────────────────────────────
+            # city is a plain string in the API (e.g. "Lahore", "Islamabad")
+            city_raw = item.get("city") or item.get("registered_city") or "Unknown"
+            city = city_raw if isinstance(city_raw, str) else city_raw.get("name", "Unknown")
+
+            # Post-filter: WiseWheels API ignores city_id — filter manually
+            if requested_city and not _city_matches(city, requested_city):
+                skipped_city += 1
+                continue
+
             # ── Title ──────────────────────────────────────────────────────────
             title = (
                 item.get("title") or
@@ -81,7 +124,7 @@ async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> 
             )
 
             # ── Price ──────────────────────────────────────────────────────────
-            # Already an integer in rupees (e.g. 4600000). Skip lac conversion.
+            # Already an integer in rupees (e.g. 4600000). No lac conversion.
             price_raw = item.get("price") or item.get("price_pkr") or 0
             price = str(price_raw)
 
@@ -89,13 +132,8 @@ async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> 
             year = str(item.get("year") or item.get("model_year") or "0")
             mileage = str(item.get("mileage") or item.get("milage") or "0")
 
-            # ── City ───────────────────────────────────────────────────────────
-            # city is a plain string in this API (e.g. "Lahore")
-            city_raw = item.get("city") or item.get("registered_city") or "Unknown"
-            city = city_raw if isinstance(city_raw, str) else city_raw.get("name", "Unknown")
-
             # ── Listing URL ────────────────────────────────────────────────────
-            # `url` field is already a valid relative path: /used-cars/slug-AD-id
+            # `url` field is a ready-made relative path: /used-cars/slug-AD-id
             relative_url = item.get("url", "")
             if relative_url:
                 link = f"https://wisewheels.com.pk{relative_url}"
@@ -105,8 +143,8 @@ async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> 
                 link = f"https://wisewheels.com.pk/used-cars/{slug}-AD-{ad_id}" if slug else url
 
             # ── Image URL ──────────────────────────────────────────────────────
-            # The API provides `thumbnail` as a direct S3 URL — use it.
-            # No images[] or media[] array exists in this response.
+            # API provides `thumbnail` as a direct full S3 URL.
+            # No images[]/media[] array exists in the search response.
             image_url = item.get("thumbnail") or ""
 
             # ── Age ────────────────────────────────────────────────────────────
@@ -139,5 +177,8 @@ async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> 
             print(f"[WiseWheels Mapping Error] {e}")
             continue
 
-    print(f"[WiseWheels Scraper] Extracted {len(cars)} formatted listings from API.")
+    print(
+        f"[WiseWheels Scraper] Extracted {len(cars)} formatted listings from API. "
+        f"(city-filtered: {skipped_city} skipped)"
+    )
     return cars
