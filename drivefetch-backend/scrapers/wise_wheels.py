@@ -24,7 +24,7 @@ STANDARD_HEADERS = {
 
 async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> list[CarListing]:
     
-    # Transform the frontend URL into the backend API endpoint[cite: 15]
+    # Transform the frontend URL into the backend API endpoint
     api_url = url.replace("https://wisewheels.com.pk/used-cars", "https://api.wisewheels.com.pk/client/v1/used-cars/search")
     
     try:
@@ -53,21 +53,22 @@ async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> 
         items = []
 
     if not items:
-        # Safely log keys only if it's a dict
-        schema_info = list(data.keys()) if isinstance(data, dict) else "Raw List/Unknown"
+        # Safely log keys only if it's a dict to prevent further list crashes
+        schema_info = list(data.keys()) if isinstance(data, dict) else f"Raw type: {type(data)}"
         print(f"[WiseWheels ❌] API returned 0 items. Schema: {schema_info}")
         return []
 
     # --- SCHEMA DISCOVERY LOG ---
     # This prints the dictionary structure of the first car so we can map exact keys
     print(f"[WiseWheels API] Successfully fetched {len(items)} raw JSON listings.")
-    print(f"[WiseWheels Schema] First item keys: {list(items[0].keys())}")
+    if isinstance(items[0], dict):
+        print(f"[WiseWheels Schema] First item keys: {list(items[0].keys())}")
     
     cars = []
     
     for item in items[:MAX_ORGANIC_CARDS]:
         try:
-            # Flexible dictionary extraction with fallbacks[cite: 15]
+            # Flexible dictionary extraction with fallbacks
             
             # Title
             title = item.get('title') or item.get('name') 
@@ -122,7 +123,7 @@ async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> 
             created_at = item.get('created_at') or item.get('updated_at')
             if created_at:
                 try:
-                    # Handle basic ISO formats[cite: 15]
+                    # Handle basic ISO formats
                     dt_str = created_at.replace('Z', '+00:00')
                     dt = datetime.fromisoformat(dt_str)
                     delta = datetime.now(timezone.utc) - dt
