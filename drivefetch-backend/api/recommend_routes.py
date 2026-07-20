@@ -4,6 +4,11 @@ api/recommend_routes.py
 The AI Matchmaker — Feature-Based Car Recommender
 ===================================================
 Route: POST /api/recommend
+
+Pipeline:
+  Stage 1 — Semantic Mapper (Gemini via google-genai)
+  Stage 2 — Async Multi-Pipeline
+  Stage 3 — Aggregation
 """
 
 import asyncio
@@ -12,7 +17,8 @@ import re
 import traceback
 from typing import AsyncGenerator
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
@@ -22,10 +28,11 @@ from scrapers.normalizer import normalize_listings
 
 router = APIRouter()
 
-genai.configure(api_key=GEMINI_API_KEY)
+# Initialize the modern google-genai client
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Stage 1: Semantic Mapper System Prompt
+# Stage 1: Semantic Mapper
 # ─────────────────────────────────────────────────────────────────────────────
 
 SEMANTIC_MAPPER_PROMPT = """
@@ -85,20 +92,21 @@ If budget is not mentioned, set max_budget to null.
 
 async def semantic_mapper(user_prompt: str) -> list[dict]:
     """
-    Calls Gemini to translate a natural language requirement into
-    a list of structured car search queries.
+    Calls Gemini using the modern google-genai SDK to translate a natural 
+    language requirement into a list of structured car search queries.
     """
-    model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
-        generation_config=genai.GenerationConfig(
-            temperature=0.3,
-            max_output_tokens=1000,
-        ),
-        system_instruction=SEMANTIC_MAPPER_PROMPT,
-    )
-
     try:
-        response = model.generate_content(user_prompt)
+        # Use the native async client (client.aio)
+        response = await client.aio.models.generate_content(
+            model='gemini-1.5-flash',
+            contents=user_prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.3,
+                max_output_tokens=1000,
+                system_instruction=SEMANTIC_MAPPER_PROMPT,
+            ),
+        )
+        
         raw = response.text.strip()
 
         # Strip markdown code fences if present
@@ -126,6 +134,10 @@ def _sse(event: str, data: dict) -> str:
     """Formats a server-sent event string."""
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 2 + 3: Pipeline Orchestrator + Aggregator
+# ─────────────────────────────────────────────────────────────────────────────
 
 async def run_recommend_pipeline(
     user_prompt: str,
@@ -209,7 +221,7 @@ async def run_recommend_pipeline(
 
     clean_listings, is_empty = normalize_listings(
         raw_listings=all_raw,
-        requested_make="",          # Set to empty so multi-model results aren't vetoed
+        requested_make="",          
         requested_model="",
         requested_city=city_for_norm,
         requested_budget=budget_for_norm,
