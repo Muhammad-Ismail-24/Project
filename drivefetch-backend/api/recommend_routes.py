@@ -51,14 +51,14 @@ async def run_recommend_pipeline(
         budget = override_budget or rec.get("max_budget")
 
         try:
-            # Unpack the tuple returned by execute_search_pipeline
+            # We send the trim to the scraper normally
             listings, _ = await execute_search_pipeline(
                 make=make, 
                 model=model, 
                 city=city, 
                 max_budget=budget,
                 color="", 
-                trim=trim or "", 
+                trim=trim, 
                 min_year=0, 
                 max_year=0,
             )
@@ -67,64 +67,56 @@ async def run_recommend_pipeline(
             print(f"[Recommender] Pipeline failed for {make} {model}: {e}")
             return [], rec
 
+    # Run scrapers for all recommended cars in parallel
     results = await asyncio.gather(*[_run_one(rec) for rec in recommendations])
 
-    # ── Stage 3: Aggregation ───────────────────────────────────────────────
+    # ── Stage 3: Aggregation (Per-Model Normalization) ─────────────────────
     yield _sse("status", {"message": "⚡ Ranking and deduplicating results...", "stage": "aggregating"})
-
-    rationale_map: dict[str, str] = {}
-    target_label_map: dict[str, str] = {}
-    all_raw: list = []
-
-    for listings, rec in results:
-        rationale = rec.get("rationale", "")
-        target_label = f"{rec.get('make','')} {rec.get('model','')}".strip()
-
-        for listing in listings:
-            url = listing.listing_url
-            if url not in rationale_map:
-                rationale_map[url] = rationale
-                target_label_map[url] = target_label
-            all_raw.append(listing)
-
-    if not all_raw:
-        yield _sse("error", {"message": "No listings found matching your requirements. Try adjusting your budget or location."})
-        return
-
-    first_rec = recommendations[0]
-    city_for_norm = override_city or first_rec.get("city") or ""
-    budget_for_norm = override_budget or first_rec.get("max_budget")
-
-    clean_listings, is_empty = normalize_listings(
-        raw_listings=all_raw, 
-        requested_make="", 
-        requested_model="",
-        requested_city=city_for_norm, 
-        requested_budget=budget_for_norm,
-        requested_color="", 
-        requested_trim="", 
-        min_year=0, 
-        max_year=0, 
-        debug=False,
-    )
-
-    if not clean_listings:
-        yield _sse("error", {"message": "Listings were found but failed quality/age checks. Try a broader search."})
-        return
 
     output = []
     seen_urls: set[str] = set()
 
-    for listing in clean_listings:
-        url = listing.listing_url
-        if url in seen_urls: continue
-        seen_urls.add(url)
+    # Loop through the results for EACH recommended model individually
+    for raw_listings, rec in results:
+        if not raw_listings:
+            continue
 
-        listing_dict = listing.model_dump()
-        listing_dict["ai_rationale"] = rationale_map.get(url, "")
-        listing_dict["matched_target"] = target_label_map.get(url, "")
-        listing_dict["image_url"] = listing_dict.get("image_url") or ""
-        output.append(listing_dict)
+        rationale = rec.get("rationale", "")
+        target_label = f"{rec.get('make','')} {rec.get('model','')}".strip()
+        
+        # Normalize specifically for this target car!
+        # This gives the Normalizer the correct context (make, model, trim) to score accurately.
+        clean_target_listings, _ = normalize_listings(
+            raw_listings=raw_listings,
+            requested_make=rec.get("make", ""),
+            requested_model=rec.get("model", ""),
+            requested_city=override_city or rec.get("city") or "",
+            requested_budget=override_budget or rec.get("max_budget"),
+            requested_color="",
+            requested_trim=rec.get("trim", ""),
+            min_year=0,
+            max_year=0,
+            debug=False,
+        )
+
+        # Slice the absolute top 5 mixed-platform cars for this specific model
+        top_5_for_target = clean_target_listings[:5]
+
+        for listing in top_5_for_target:
+            url = listing.listing_url
+            if url in seen_urls:
+                continue
+            seen_urls.add(url)
+
+            listing_dict = listing.model_dump()
+            listing_dict["ai_rationale"] = rationale
+            listing_dict["matched_target"] = target_label
+            listing_dict["image_url"] = listing_dict.get("image_url") or ""
+            output.append(listing_dict)
+
+    if not output:
+        yield _sse("error", {"message": "No listings found matching your exact requirements. Try adjusting your budget."})
+        return
 
     yield _sse("status", {"message": f"✅ Found {len(output)} matching listings", "stage": "complete"})
     yield _sse("results", {
