@@ -68,7 +68,7 @@ async def semantic_mapper(user_prompt: str) -> list[dict]:
     """
     try:
         response = await client.aio.models.generate_content(
-            model='gemini-1.5-flash',
+            model='gemini-3.1-flash-lite',
             contents=user_prompt,
             config=types.GenerateContentConfig(
                 temperature=0.3,
