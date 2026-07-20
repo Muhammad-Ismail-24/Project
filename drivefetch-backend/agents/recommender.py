@@ -1,6 +1,6 @@
 """
 agents/recommender.py
-LLM logic for mapping user features to specific car models.
+LLM logic for mapping user features to specific car models using google-genai.
 """
 import os
 import json
@@ -63,12 +63,12 @@ If budget is not mentioned, set max_budget to null.
 
 async def semantic_mapper(user_prompt: str) -> list[dict]:
     """
-    Calls Gemini using the modern google-genai SDK to translate a natural 
-    language requirement into a list of structured car search queries.
+    Calls Gemini to translate a natural language requirement into
+    a list of structured car search queries.
     """
     try:
         response = await client.aio.models.generate_content(
-            model='gemini-3.1-flash-lite',
+            model='gemini-1.5-flash',
             contents=user_prompt,
             config=types.GenerateContentConfig(
                 temperature=0.3,

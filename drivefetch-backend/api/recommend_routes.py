@@ -10,10 +10,8 @@ from typing import AsyncGenerator
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
-# Import the brain from your new agents folder
 from agents.recommender import semantic_mapper
-
-from scrapers.runner import run_pipeline
+from scrapers.runner import execute_search_pipeline
 from scrapers.normalizer import normalize_listings
 
 router = APIRouter()
@@ -53,9 +51,16 @@ async def run_recommend_pipeline(
         budget = override_budget or rec.get("max_budget")
 
         try:
-            listings = await run_pipeline(
-                make=make, model=model, city=city, max_budget=budget,
-                color="", trim=trim or "", min_year=0, max_year=0,
+            # Unpack the tuple returned by execute_search_pipeline
+            listings, _ = await execute_search_pipeline(
+                make=make, 
+                model=model, 
+                city=city, 
+                max_budget=budget,
+                color="", 
+                trim=trim or "", 
+                min_year=0, 
+                max_year=0,
             )
             return listings, rec
         except Exception as e:
@@ -91,9 +96,16 @@ async def run_recommend_pipeline(
     budget_for_norm = override_budget or first_rec.get("max_budget")
 
     clean_listings, is_empty = normalize_listings(
-        raw_listings=all_raw, requested_make="", requested_model="",
-        requested_city=city_for_norm, requested_budget=budget_for_norm,
-        requested_color="", requested_trim="", min_year=0, max_year=0, debug=False,
+        raw_listings=all_raw, 
+        requested_make="", 
+        requested_model="",
+        requested_city=city_for_norm, 
+        requested_budget=budget_for_norm,
+        requested_color="", 
+        requested_trim="", 
+        min_year=0, 
+        max_year=0, 
+        debug=False,
     )
 
     if not clean_listings:
