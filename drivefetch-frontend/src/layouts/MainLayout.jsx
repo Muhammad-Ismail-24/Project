@@ -35,7 +35,6 @@ export default function MainLayout() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // PROXY FIX: Now using relative path
         const response = await fetch('/auth/me', {
           method: 'GET',
           credentials: 'include', 
@@ -83,34 +82,22 @@ export default function MainLayout() {
             </Link>
           </div>
 
-          <div className="hidden md:flex space-x-8 absolute left-1/2 -translate-x-1/2">
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex space-x-7 absolute left-1/2 -translate-x-1/2">
             <NavLink to="/" className={({ isActive }) => `relative flex flex-col items-center font-medium transition-all duration-200 after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-[1.5px] after:bg-black after:transition-all after:duration-200 ${isActive ? 'text-black after:w-full' : 'text-black/60 hover:text-black after:w-0 hover:after:w-full'}`}>
-              {({ isActive }) => (
-                <>
-                  <span>Discover</span>
-                </>
-              )}
+              <span>Discover</span>
+            </NavLink>
+            <NavLink to="/recommend" className={({ isActive }) => `relative flex flex-col items-center font-medium transition-all duration-200 after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-[1.5px] after:bg-black after:transition-all after:duration-200 ${isActive ? 'text-black after:w-full' : 'text-black/60 hover:text-black after:w-0 hover:after:w-full'}`}>
+              <span>Matchmaker</span>
             </NavLink>
             <NavLink to="/calculators" className={({ isActive }) => `relative flex flex-col items-center font-medium transition-all duration-200 after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-[1.5px] after:bg-black after:transition-all after:duration-200 ${isActive ? 'text-black after:w-full' : 'text-black/60 hover:text-black after:w-0 hover:after:w-full'}`}>
-              {({ isActive }) => (
-                <>
-                  <span>Calculators</span>
-                </>
-              )}
+              <span>Calculators</span>
             </NavLink>
             <NavLink to="/chat" className={({ isActive }) => `relative flex flex-col items-center font-medium transition-all duration-200 after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-[1.5px] after:bg-black after:transition-all after:duration-200 ${isActive ? 'text-black after:w-full' : 'text-black/60 hover:text-black after:w-0 hover:after:w-full'}`}>
-              {({ isActive }) => (
-                <>
-                  <span>Assistant</span>
-                </>
-              )}
+              <span>Assistant</span>
             </NavLink>
             <NavLink to="/about" className={({ isActive }) => `relative flex flex-col items-center font-medium transition-all duration-200 after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-[1.5px] after:bg-black after:transition-all after:duration-200 ${isActive ? 'text-black after:w-full' : 'text-black/60 hover:text-black after:w-0 hover:after:w-full'}`}>
-              {({ isActive }) => (
-                <>
-                  <span>About</span>
-                </>
-              )}
+              <span>About</span>
             </NavLink>
           </div>
 
@@ -119,7 +106,6 @@ export default function MainLayout() {
               <div className="w-8 h-8 rounded-full border-2 border-black/30 border-t-black animate-spin"></div>
             ) : !isAuthenticated || !user ? (
               <button 
-                // PROXY FIX: Now using relative path for redirect
                 onClick={() => window.location.href = '/auth/login'}
                 className="flex items-center px-4 py-2 bg-black text-white rounded-xl hover:bg-neutral-800 transition-colors font-medium text-sm whitespace-nowrap"
               >
@@ -150,6 +136,9 @@ export default function MainLayout() {
           <div className="md:hidden absolute top-20 left-0 w-full bg-[#b0b0b0]/90 backdrop-blur-xl border-b border-white/20 shadow-lg flex flex-col py-4 px-6 space-y-5 z-40">
             <NavLink to="/" className={({ isActive }) => `font-semibold text-xl flex items-center gap-3 transition-colors duration-200 ${isActive ? 'text-black' : 'text-black/60'}`}>
               {({ isActive }) => <><span className={`w-2 h-2 rounded-full transition-colors ${isActive ? 'bg-black' : 'bg-transparent'}`}></span> Discover</>}
+            </NavLink>
+            <NavLink to="/recommend" className={({ isActive }) => `font-semibold text-xl flex items-center gap-3 transition-colors duration-200 ${isActive ? 'text-black' : 'text-black/60'}`}>
+              {({ isActive }) => <><span className={`w-2 h-2 rounded-full transition-colors ${isActive ? 'bg-black' : 'bg-transparent'}`}></span> Matchmaker</>}
             </NavLink>
             <NavLink to="/calculators" className={({ isActive }) => `font-semibold text-xl flex items-center gap-3 transition-colors duration-200 ${isActive ? 'text-black' : 'text-black/60'}`}>
               {({ isActive }) => <><span className={`w-2 h-2 rounded-full transition-colors ${isActive ? 'bg-black' : 'bg-transparent'}`}></span> Calculators</>}
