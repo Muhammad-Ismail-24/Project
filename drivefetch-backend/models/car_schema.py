@@ -15,3 +15,4 @@ class CarListing(BaseModel):
     platform: str
     age_days: int = Field(default=0)
     scraped_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    matched_target: str = ""
