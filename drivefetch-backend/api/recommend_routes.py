@@ -2,22 +2,12 @@
 api/recommend_routes.py
 Route: POST /api/recommend
 
-Pipeline: Semantic Mapper → Parallel Scrapers → Per-Model Normalization → SSE stream
+Pipeline: Semantic Mapper → Parallel Scrapers → Per-Model Recommendation Normalization → SSE stream
 
-v3.0 changes:
-  - min_year is now read from each recommendation and forwarded to both
-    execute_search_pipeline and normalize_listings. When the user gives no
-    budget the LLM sets min_year to the current generation's launch year,
-    ensuring only fresh/modern listings are returned.
-  - _resolve_year() helper mirrors _resolve_budget() — treats 0 as "no floor".
-
-v2.0 fixes (preserved):
-  - Budget zero-sentinel: explicit None checks instead of `or` operator.
-  - Trim isolation: normalizer always receives trim="" — trim from the LLM
-    only influences the scraper URL, never the normalizer Hard Veto 6.
-  - Per-model diagnostic logging.
-  - SSE ordering: results before complete.
-  - Partial-result resilience.
+v4.1 changes:
+  - Scraper pipeline call now receives city="" and budget*1.05 to prevent runner's
+    strict normalizer from prematurely hard-vetoing listings before recommend_normalizer.py
+    can apply soft city scoring and the +5% negotiation ceiling.
 """
 
 import asyncio
@@ -29,7 +19,6 @@ from fastapi.responses import StreamingResponse
 
 from agents.recommender import semantic_mapper
 from scrapers.runner import execute_search_pipeline
-from scrapers.normalizer import normalize_listings
 from scrapers.recommend_normalizer import normalize_recommendation_target
 
 router = APIRouter()
@@ -44,7 +33,7 @@ def _resolve_budget(override: int | None, rec_budget: int) -> int | None:
     """
     Resolves the effective budget ceiling in PKR.
       Returns None  → no ceiling (scraper fetches all prices)
-      Returns int   → hard ceiling in PKR
+      Returns int   → base target budget in PKR
     Priority: explicit override (>0) > rec budget (>0) > None
     """
     if override is not None and override > 0:
@@ -59,10 +48,6 @@ def _resolve_year(rec_min_year: int) -> int:
     Resolves the effective minimum year floor for the scraper and normalizer.
       Returns 0    → no year floor (all model years accepted)
       Returns int  → only listings from this year onward are returned
-
-    The LLM sets min_year = 0 when a budget is given (budget already constrains
-    age indirectly). When no budget is given it sets min_year to the current
-    generation's first model year so only the newest shape is surfaced.
     """
     try:
         year = int(rec_min_year)
@@ -104,19 +89,21 @@ async def run_recommend_pipeline(
         budget   = _resolve_budget(override_budget, rec.get("max_budget", 0))
         min_year = _resolve_year(rec.get("min_year", 0))
 
-        # trim goes to the URL builder only — NOT to the normalizer.
-        # See normalize_listings call in Stage 3 for the full explanation.
         trim_for_url = rec.get("trim") or ""
 
+        # Allow +5% budget headroom for raw scraper fetch so runner's normalizer doesn't veto negotiation candidates
+        scraper_budget = int(budget * 1.05) if budget else None
+
         try:
+            # Pass city="" to runner so runner's strict normalizer doesn't hard-veto out-of-city options
             listings, _ = await execute_search_pipeline(
                 make=make,
                 model=model,
-                city=city,
-                max_budget=budget,
+                city="",                     # Handled as soft signal by recommend_normalizer
+                max_budget=scraper_budget,   # Handled with +5% headroom
                 color="",
                 trim=trim_for_url,
-                min_year=min_year,   # ← was hardcoded 0
+                min_year=min_year,
                 max_year=0,
             )
             return listings, rec
@@ -145,8 +132,8 @@ async def run_recommend_pipeline(
             print(f"[Recommend] {target_label}: 0 raw listings from scrapers")
             continue
 
-        # Use the AI-specific normalizer which applies the +5% budget buffer
-        # and the lazy-seller trim logic instead of the strict keyword veto.
+        # Use the AI-specific normalizer which applies soft city scoring,
+        # +5% negotiation buffer, and smart trim logic
         clean_listings = normalize_recommendation_target(
             raw_listings=raw_listings,
             requested_make=make,
@@ -154,7 +141,7 @@ async def run_recommend_pipeline(
             requested_city=city,
             requested_budget=budget,
             requested_color="",
-            requested_trim=rec.get("trim") or "",   # passed for boost/conflict, not hard veto
+            requested_trim=rec.get("trim") or "",
             min_year=min_year,
             max_year=0,
             top_k=5,
@@ -168,8 +155,7 @@ async def run_recommend_pipeline(
 
         print(f"[Recommend] {target_label}{year_label}: {len(raw_listings)} raw → {len(clean_listings)} clean")
 
-        # Take top 5 for this specific model — already globally sorted by
-        # normalizer score, so [:5] gives the absolute best listings
+        # Take top 5 for this specific model — already globally sorted by score
         for listing in clean_listings[:5]:
             url = listing.listing_url
             if url in seen_urls:
@@ -192,7 +178,7 @@ async def run_recommend_pipeline(
         })
         return
 
-    # Results first, then completion signal — frontend renders data immediately
+    # Results first, then completion signal
     yield _sse("results", {
         "listings": output,
         "targets": [
@@ -221,7 +207,6 @@ async def recommend_cars(request: Request):
 
     user_prompt     = (body.get("prompt") or "").strip()
     city_override   = (body.get("city") or "").strip() or None
-    # Treat 0 and None both as "no override" — use explicit None check
     raw_budget      = body.get("max_budget")
     budget_override = int(raw_budget) if raw_budget and int(raw_budget) > 0 else None
 
