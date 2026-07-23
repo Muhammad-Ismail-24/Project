@@ -76,7 +76,7 @@ async def _execute_gemini_fallback_chat(formatted_messages: list) -> str:
         return ""
 
     response = await client.aio.models.generate_content(
-        model="gemini-3.1-flash-lite",
+        model="gemini-3.5-flash-lite",
         contents=gemini_history,
         config=types.GenerateContentConfig(
             system_instruction=system_instruction

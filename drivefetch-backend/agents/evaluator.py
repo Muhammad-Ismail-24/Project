@@ -64,7 +64,7 @@ def _sanitize_json_response(raw_text: str) -> str:
 async def _execute_gemini_call(client: genai.Client, system_instruction: str, prompt: str):
     """Executes the async Gemini call wrapped inside the retry handler."""
     return await client.aio.models.generate_content(
-        model="gemini-3.1-flash-lite",
+        model="gemini-3.5-flash-lite",
         contents=prompt,
         config=types.GenerateContentConfig(
             system_instruction=system_instruction,
@@ -236,7 +236,7 @@ async def evaluate_single_listing(listing: dict, original_user_query: str) -> di
         )
 
         response = await client.aio.models.generate_content(
-            model="gemini-3.1-flash-lite",
+            model="gemini-3.5-flash-lite",
             contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,

@@ -376,7 +376,7 @@ async def _execute_gemini_primary_orchestrate(user_input: str) -> str:
     system_prompt = _build_system_prompt()
 
     response = await client.aio.models.generate_content(
-        model="gemini-3.1-flash-lite",
+        model="gemini-3.5-flash-lite",
         contents=user_input,
         config=types.GenerateContentConfig(
             system_instruction=system_prompt,

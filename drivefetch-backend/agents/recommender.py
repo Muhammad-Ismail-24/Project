@@ -258,7 +258,7 @@ async def semantic_mapper(user_prompt: str) -> list[dict]:
     raw = ""
     try:
         response = await client.aio.models.generate_content(
-            model="gemini-2.0-flash-lite",
+            model="gemini-3.5-flash-lite",
             contents=user_prompt,
             config=types.GenerateContentConfig(
                 temperature=0.25,        # Low temp → tight, consistent JSON
@@ -348,7 +348,7 @@ async def get_fallback_recommendations(
     raw = ""
     try:
         response = await client.aio.models.generate_content(
-            model="gemini-2.0-flash-lite",
+            model="gemini-3.5-flash-lite",
             contents=fallback_prompt,
             config=types.GenerateContentConfig(
                 temperature=0.20,                    # Tighter than mapper — follow exclusions strictly
