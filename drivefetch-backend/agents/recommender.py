@@ -170,16 +170,95 @@ Q4: trim="" (sedans don’t need trim filtering). Q5: 5 different makes ✓.
 ]
 """
 
+# ---------------------------------------------------------------------------
+# FALLBACK PROMPT — used only by get_fallback_recommendations()
+# ---------------------------------------------------------------------------
+# Intentionally compact. The full CoT SEMANTIC_MAPPER_PROMPT is 170+ lines;
+# the fallback is a repair call, not a fresh mapping. We give Gemini just
+# enough context to pick intelligent alternatives without re-explaining all
+# rules. The same JSON schema and sanitizer are shared with semantic_mapper.
+# ---------------------------------------------------------------------------
+_FALLBACK_PROMPT = """\
+You are GaariGuru, a Pakistani used-car expert. Some car models returned zero \
+available listings. Your job is to generate replacement search targets.
+
+STRICT RULES:
+1. Output ONLY a raw JSON array — no preamble, no markdown.
+2. Return EXACTLY the requested number of replacement objects.
+3. NEVER repeat any model in the excluded list.
+4. Apply the same logic as the original search (same drivetrain, budget, city, intent).
+5. Use the same 7-key schema: make, model, trim, city, max_budget, min_year, rationale.
+6. "trim" rules: "" by default. Only "AWD"/"Hybrid"/"EV"/"Diesel"/"Manual" when 
+   the user's original intent explicitly required it.
+7. "min_year": 0 if budget given, current-gen first year if no budget.
+8. "max_budget": 0 means no ceiling. Never null.
+9. Pick models with GOOD inventory depth on PakWheels/OLX in Pakistan — avoid 
+   ultra-rare imports that will also return 0 results.
+"""
+
+
+# ---------------------------------------------------------------------------
+# SHARED SANITIZER
+# ---------------------------------------------------------------------------
+def _sanitize_recommendations(raw_list: list, caller: str = "Recommender") -> list[dict]:
+    """
+    Validates and normalises a list of recommendation dicts from the LLM.
+    Shared between semantic_mapper() and get_fallback_recommendations()
+    to guarantee identical downstream contracts.
+
+    Guarantees:
+      - trim     → always str  (None → "")
+      - max_budget → always int  (None → 0,  0 = no ceiling)
+      - city     → always str  (None → "")
+      - min_year → always int  (None → 0,  0 = no floor)
+      - make + model → both non-empty (malformed entries are dropped with a log)
+    """
+    sanitized = []
+    for r in raw_list:
+        if r.get("trim") is None:
+            r["trim"] = ""
+        if r.get("max_budget") is None:
+            r["max_budget"] = 0
+        if r.get("city") is None:
+            r["city"] = ""
+
+        raw_year = r.get("min_year")
+        try:
+            r["min_year"] = int(raw_year) if raw_year else 0
+        except (TypeError, ValueError):
+            r["min_year"] = 0
+
+        if not r.get("make") or not r.get("model"):
+            print(f"[{caller}] Skipping malformed entry (no make/model): {r}")
+            continue
+
+        sanitized.append(r)
+
+    return sanitized
+
+
+# ---------------------------------------------------------------------------
+# SHARED RAW-RESPONSE PARSER
+# ---------------------------------------------------------------------------
+def _parse_llm_json(raw_text: str) -> list:
+    """Strips markdown fences and parses the LLM's JSON array response."""
+    raw = raw_text.strip()
+    raw = re.sub(r'^```(?:json)?\s*', '', raw, flags=re.MULTILINE)
+    raw = re.sub(r'\s*```$', '', raw, flags=re.MULTILINE)
+    return json.loads(raw.strip())
+
+
 async def semantic_mapper(user_prompt: str) -> list[dict]:
     """
     Calls Gemini Flash Lite to translate a natural language requirement into
     exactly 5 structured car search targets.
 
-    Returns an empty list on any failure — the route handles fallback.
+    Returns an empty list on any failure — the route handles the fallback.
     """
+    raw = ""
     try:
         response = await client.aio.models.generate_content(
-            model="gemini-3.1-flash-lite",
+            model="gemini-2.0-flash-lite",
             contents=user_prompt,
             config=types.GenerateContentConfig(
                 temperature=0.25,        # Low temp → tight, consistent JSON
@@ -188,51 +267,18 @@ async def semantic_mapper(user_prompt: str) -> list[dict]:
             ),
         )
 
-        raw = response.text.strip()
-
-        # Strip any accidental markdown fences
-        raw = re.sub(r'^```(?:json)?\s*', '', raw, flags=re.MULTILINE)
-        raw = re.sub(r'\s*```$', '', raw, flags=re.MULTILINE)
-        raw = raw.strip()
-
-        recommendations = json.loads(raw)
+        raw = response.text
+        recommendations = _parse_llm_json(raw)
 
         if not isinstance(recommendations, list):
             raise ValueError("Expected JSON array, got: " + type(recommendations).__name__)
 
-        # --- Sanitize each recommendation against downstream requirements ---
-        sanitized = []
-        for r in recommendations:
-            # Guarantee trim is always a string (never null/None)
-            if r.get("trim") is None:
-                r["trim"] = ""
-
-            # Guarantee max_budget is always int (never null — 0 = no ceiling)
-            if r.get("max_budget") is None:
-                r["max_budget"] = 0
-
-            # Guarantee city is always a string
-            if r.get("city") is None:
-                r["city"] = ""
-
-            # Guarantee min_year is always int (never null — 0 = no floor)
-            raw_year = r.get("min_year")
-            try:
-                r["min_year"] = int(raw_year) if raw_year else 0
-            except (TypeError, ValueError):
-                r["min_year"] = 0
-
-            # Require make and model — skip malformed entries
-            if not r.get("make") or not r.get("model"):
-                print(f"[Recommender] Skipping malformed entry (no make/model): {r}")
-                continue
-
-            sanitized.append(r)
+        sanitized = _sanitize_recommendations(recommendations, caller="SemanticMapper")
 
         if not sanitized:
             raise ValueError("All recommendations were malformed after sanitization")
 
-        print(f"[Recommender] Semantic Mapper → {len(sanitized)} targets:")
+        print(f"[SemanticMapper] → {len(sanitized)} targets:")
         for r in sanitized:
             trim_label   = f" [{r['trim']}]" if r["trim"] else ""
             budget_label = f"PKR {r['max_budget']:,}" if r["max_budget"] else "no limit"
@@ -242,10 +288,105 @@ async def semantic_mapper(user_prompt: str) -> list[dict]:
         return sanitized
 
     except json.JSONDecodeError as e:
-        print(f"[Recommender] JSON parse error: {e}")
-        print(f"[Recommender] Raw output was: {raw[:500]}")
+        print(f"[SemanticMapper] JSON parse error: {e}")
+        print(f"[SemanticMapper] Raw output was: {raw[:500]}")
         return []
     except Exception as e:
-        print(f"[Recommender] Semantic Mapper failed: {e}")
+        print(f"[SemanticMapper] Failed: {e}")
+        traceback.print_exc()
+        return []
+
+
+async def get_fallback_recommendations(
+    user_prompt: str,
+    failed_targets: list[str],
+    tried_models: list[str],
+    city: str,
+    budget: int | None,
+    count: int,
+) -> list[dict]:
+    """
+    Asks Gemini Flash Lite to generate `count` replacement search targets for
+    models that returned zero listings.
+
+    Args:
+        user_prompt:    The original user query (for intent context).
+        failed_targets: Human-readable labels of failed targets, e.g.
+                        ["Haval H6 [AWD]", "Kia Sorento [AWD]"].
+        tried_models:   All make+model strings already tried (initial + any
+                        prior fallbacks), used as a hard exclusion list.
+        city:           Effective city from the search (may be "" for any city).
+        budget:         Effective budget in PKR, or None for no ceiling.
+        count:          How many replacement targets to generate (1–3).
+
+    Returns:
+        A sanitized list of recommendation dicts (may be shorter than `count`
+        if the LLM returns malformed entries). Returns [] on any error.
+    """
+    if count < 1:
+        return []
+
+    budget_str   = f"PKR {budget:,}" if budget else "no budget limit"
+    city_str     = city or "any city"
+    excluded_str = ", ".join(tried_models) if tried_models else "none"
+    failed_str   = ", ".join(failed_targets)
+
+    fallback_prompt = (
+        f"Original user request: \"{user_prompt}\"\n"
+        f"City: {city_str} | Budget: {budget_str}\n\n"
+        f"These targets returned ZERO active listings and need replacements:\n"
+        f"  {failed_str}\n\n"
+        f"EXCLUDED models (already tried — do not repeat these):\n"
+        f"  {excluded_str}\n\n"
+        f"Generate EXACTLY {count} replacement target(s) that:\n"
+        f"  - Match the same user intent as the original request\n"
+        f"  - Have good inventory depth on PakWheels/OLX in Pakistan\n"
+        f"  - Are NOT any model in the excluded list above\n"
+        f"Output a raw JSON array of EXACTLY {count} object(s). No preamble."
+    )
+
+    raw = ""
+    try:
+        response = await client.aio.models.generate_content(
+            model="gemini-2.0-flash-lite",
+            contents=fallback_prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.20,                    # Tighter than mapper — follow exclusions strictly
+                max_output_tokens=count * 350,       # ~350 tokens per replacement object
+                system_instruction=_FALLBACK_PROMPT,
+            ),
+        )
+
+        raw = response.text
+        replacements = _parse_llm_json(raw)
+
+        if not isinstance(replacements, list):
+            raise ValueError("Expected JSON array from fallback, got: " + type(replacements).__name__)
+
+        sanitized = _sanitize_recommendations(replacements, caller="FallbackMapper")
+
+        # Hard-enforce exclusion list — the LLM sometimes ignores it
+        tried_lower = {m.lower().replace(" ", "") for m in tried_models}
+        enforced = []
+        for r in sanitized:
+            key = f"{r['make']}{r['model']}".lower().replace(" ", "")
+            if key in tried_lower:
+                print(f"[FallbackMapper] LLM ignored exclusion for {r['make']} {r['model']} — dropping")
+                continue
+            enforced.append(r)
+
+        print(f"[FallbackMapper] Generated {len(enforced)} replacement(s) for: {failed_str}")
+        for r in enforced:
+            trim_label = f" [{r['trim']}]" if r["trim"] else ""
+            print(f"  ↳ {r['make']} {r['model']}{trim_label}")
+
+        return enforced
+
+    except json.JSONDecodeError as e:
+        print(f"[FallbackMapper] JSON parse error: {e}")
+        print(f"[FallbackMapper] Raw output was: {raw[:400]}")
+        return []
+    except Exception as e:
+        print(f"[FallbackMapper] Failed: {e}")
         traceback.print_exc()
         return []
