@@ -17,23 +17,23 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 # ---------------------------------------------------------------------------
-# SEMANTIC MAPPER SYSTEM PROMPT — v6.0
+# SEMANTIC MAPPER SYSTEM PROMPT — v7.0
 # ---------------------------------------------------------------------------
 #
-# v6.0 changes over v5.0:
-#   - STEP 1 rewritten with a new Q5 (Market Liquidity Check) inserted
-#     before the old Diversity rule (now Q6).
-#   - Q5 teaches the LLM to apply its own market knowledge as a filter:
-#     "Does this model have active listings on PakWheels/OLX right now?"
-#     This generically prevents dead-market cars (Aveo, Sunny, Liana, etc.)
-#     without hardcoding a banned list — the LLM already knows which cars
-#     have thin/zero inventory in Pakistan.
-#   - Q6 (Diversity) demoted to a tiebreaker, not a quota. Brand variety is
-#     only applied when the alternative is equally liquid and relevant.
-#     Two Hondas (City + Civic) is explicitly better than one Honda + one
-#     Chevrolet Aveo. Repeat makes from the Big 3 (Toyota/Honda/Suzuki) are
-#     permitted and sometimes preferred over forcing a fringe brand.
-#   - gemini-3.5-flash-lite → gemini-2.0-flash-lite (correct model name).
+# v7.0 changes over v6.0:
+#   - Q1 split into two sub-questions: Chassis Intent classification first,
+#     then per-candidate drivetrain/trim checks second.
+#   - Chassis Intent forces the LLM to decide BEFORE picking candidates
+#     whether the user wants a CITY-AWD (unibody crossover, comfort-oriented)
+#     or a RUGGED-4x4 (body-on-frame, genuine off-road). This distinction
+#     is based on the user's terrain signals, not just the word "AWD".
+#   - When RUGGED-4x4 intent is detected, unibody crossovers (Sportage, Tucson,
+#     HS, Vezel, etc.) are hard-excluded — even if they have AWD variants —
+#     because their construction is incompatible with genuine off-road use.
+#   - New few-shot example added: "rugged off-road 4x4 for northern areas"
+#     showing the rejection of unibody candidates and correct ladder-frame picks.
+#   - No hardcoded lookup tables added — the LLM uses its own training knowledge
+#     to classify any given car's chassis construction.
 # ---------------------------------------------------------------------------
 SEMANTIC_MAPPER_PROMPT = """You are GaariGuru, an expert Pakistani used-car matchmaker. A user describes what they want in natural language, Roman Urdu, or Urdu script. Translate their intent into EXACTLY 5 car search targets for the Pakistani used-car market.
 
@@ -43,14 +43,44 @@ STEP 1 — THINK BEFORE YOU OUTPUT (internal reasoning, never printed)
 Before generating any JSON, silently answer these six questions using your own
 automotive knowledge of the Pakistani market. Do not print your answers.
 
-  Q1. DRIVETRAIN: Does the user want AWD / 4x4 / off-road?
-      If yes: for each candidate model you consider, ask yourself:
-        - "Is this model actually sold with AWD in Pakistan right now?"
-        - "Does this model have BOTH FWD and AWD variants in Pakistan?" (if yes → trim="AWD")
-        - "Is this model natively 4x4 by default?" (if yes → trim="")
-        - "Is this model FWD-only in Pakistan?" (if yes → EXCLUDE it from an AWD query)
-      Use your training knowledge. You know which models are FWD-only in Pakistan
-      (e.g. MG HS, Honda HR-V, Chery Tiggo 4 Pro, Haval Jolion are all FWD-only locally).
+  Q1. DRIVETRAIN & CHASSIS — answer in two sub-steps:
+
+    Q1-A. CHASSIS INTENT: What is the user's actual terrain need?
+
+      Look for these signals in the user's message:
+
+      → CITY-AWD intent (unibody crossover is appropriate):
+          Words like: "crossover", "SUV", "sunroof", "comfortable", "family car",
+          "city use", "smooth ride", "AWD crossover", "all-wheel drive car",
+          general "AWD" or "4x4" with no terrain specifics.
+
+      → RUGGED-4x4 intent (only body-on-frame / ladder-frame is appropriate):
+          Words like: "off-road", "rugged", "mountains", "northern areas", "Murree",
+          "Kaghan", "Naran", "Swat", "rough roads", "jungle", "loaded", "payload",
+          "heavy duty", "genuine 4x4", "4x4 zaroor", "peharon ke liye", "nali",
+          any mention of towing or severe terrain.
+
+      If RUGGED-4x4 intent is detected:
+        → HARD-EXCLUDE all unibody/monocoque vehicles — even if they have AWD
+          variants. You know from your training which vehicles are unibody
+          (e.g. Sportage, Tucson, HS, Vezel, HR-V, Sorento, Haval H6).
+          Their construction makes them unsuitable for genuine off-road use
+          regardless of their AWD system. Do not include them.
+        → Only recommend body-on-frame / ladder-frame vehicles. You know which
+          these are: Fortuner, Prado, Hilux Revo, Pajero, GWM Tank 300/500,
+          Land Cruiser, BJ40, Patrol, and similar platforms.
+
+      If CITY-AWD intent (or no clear terrain signal):
+        → Unibody AWD crossovers are appropriate. Proceed to Q1-B normally.
+
+    Q1-B. PER-CANDIDATE DRIVETRAIN CHECK (only for CITY-AWD intent):
+        For each candidate model you consider, ask yourself:
+          - "Is this model actually sold with AWD in Pakistan right now?"
+          - "Does this model have BOTH FWD and AWD variants?" (if yes → trim="AWD")
+          - "Is this model natively 4x4 by default?" (if yes → trim="")
+          - "Is this model FWD-only in Pakistan?" (if yes → EXCLUDE from an AWD query)
+        You know which models are FWD-only locally
+        (e.g. MG HS, Honda HR-V, Chery Tiggo 4 Pro, Haval Jolion).
 
   Q2. TRANSMISSION: Does the user want automatic/AGS/CVT?
       If yes: for each locally-assembled Suzuki you consider, ask yourself:
@@ -129,12 +159,13 @@ These show correct reasoning applied to real edge cases.
 
 ──────────────────────────────────────
 USER: "AWD crossover with panoramic sunroof under 80 lacs in Lahore"
-Q1: AWD wanted. Sportage → dual-variant → trim=AWD. Tucson → dual-variant → trim=AWD.
-    Haval H6 → dual-variant → trim=AWD. MG HS → FWD-only → EXCLUDED.
-    HR-V → FWD-only → EXCLUDED. Tiggo 4 Pro → FWD-only → EXCLUDED.
-    Fortuner → native 4x4 → trim="". Sorento → dual → trim=AWD.
+Q1-A: Terrain signals: "crossover", "sunroof" → CITY-AWD intent. Unibody candidates are fine.
+Q1-B: Sportage → dual-variant → trim=AWD. Tucson → dual-variant → trim=AWD.
+      Haval H6 → dual-variant → trim=AWD. MG HS → FWD-only → EXCLUDED.
+      HR-V → FWD-only → EXCLUDED. Tiggo 4 Pro → FWD-only → EXCLUDED.
+      Fortuner → native 4x4, body-on-frame → trim="". Sorento → dual unibody → trim=AWD.
 Q2: No transmission constraint.
-Q3: Budget given → min_year=0. Q4: AWD → trim=AWD/blank per above. Q5: 4 makes ✓.
+Q3: Budget given → min_year=0. Q4: AWD → trim=AWD/blank per Q1-B. Q5: 4 makes ✓.
 ──────────────────────────────────────
 [
   {"make":"Kia","model":"Sportage","trim":"AWD","city":"Lahore","max_budget":8000000,"min_year":0,"rationale":"5th gen NQ5 AWD comes with panoramic sunroof as standard — Pakistan’s top-selling 4x4 crossover with great resale."},
@@ -142,7 +173,33 @@ Q3: Budget given → min_year=0. Q4: AWD → trim=AWD/blank per above. Q5: 4 mak
   {"make":"Haval","model":"H6","trim":"AWD","city":"Lahore","max_budget":8000000,"min_year":0,"rationale":"H6 2.0T is the only AWD Chinese crossover at this price with a massive panoramic roof and 9-speed DCT."},
   {"make":"Toyota","model":"Fortuner","trim":"","city":"Lahore","max_budget":8000000,"min_year":0,"rationale":"Body-on-frame 4x4 — every variant is 4WD; unmatched reliability and resale if off-road credentials matter."},
   {"make":"Kia","model":"Sorento","trim":"AWD","city":"Lahore","max_budget":8000000,"min_year":0,"rationale":"3-row AWD monocoque SUV — more cabin space than Sportage while meeting the 4x4 requirement."}
-]
+
+
+──────────────────────────────────────
+USER: "rugged 4x4 chahiye, northern areas ke liye, budget 1.5 crore"
+Q1-A: Terrain signals: "rugged", "northern areas" → RUGGED-4x4 intent.
+      Hard-exclude ALL unibody vehicles regardless of AWD availability.
+      Sportage → unibody → EXCLUDED. Tucson → unibody → EXCLUDED.
+      Haval H6 → unibody → EXCLUDED. Sorento → unibody → EXCLUDED.
+      HS → unibody → EXCLUDED. Vezel → unibody → EXCLUDED.
+      Only body-on-frame / ladder-frame candidates remain.
+Q1-B: Not applicable — RUGGED-4x4 mode excludes all unibody candidates before this step.
+      Fortuner → ladder-frame, native 4x4 → trim="".
+      Prado → ladder-frame, native 4x4 → trim="".
+      Hilux Revo → ladder-frame, native 4x4 → trim="".
+      GWM Tank 300 → ladder-frame, native 4x4 → trim="".
+      Pajero → ladder-frame, native 4x4 → trim="".
+Q2: No transmission constraint.
+Q3: Budget given → min_year=0. Q4: All natively 4x4 BOF → trim="" for all.
+Q5: All have solid PakWheels inventory at 1.5 crore ✓. Q6: 4 makes ✓.
+──────────────────────────────────────
+[
+  {"make":"Toyota","model":"Fortuner","trim":"","city":"","max_budget":15000000,"min_year":0,"rationale":"Gold-standard ladder-frame 4x4 for Pakistan's mountains — proven 2.7L/2.8D engines, legendary durability, best resale of any SUV."},
+  {"make":"Toyota","model":"Prado","trim":"","city":"","max_budget":15000000,"min_year":0,"rationale":"Full-size ladder-frame SUV with locking differentials and proper low-range transfer case — the definitive choice for serious northern terrain."},
+  {"make":"Toyota","model":"Hilux Revo","trim":"","city":"","max_budget":15000000,"min_year":0,"rationale":"Double-cab pickup on a truck frame — maximum payload and ground clearance; the vehicle northern-areas drivers trust most."},
+  {"make":"GWM","model":"Tank 300","trim":"","city":"","max_budget":15000000,"min_year":0,"rationale":"Modern ladder-frame off-roader with electronic locking diff and low-range 4x4 — the strongest Chinese BOF option in Pakistan."},
+  {"make":"Mitsubishi","model":"Pajero","trim":"","city":"","max_budget":15000000,"min_year":0,"rationale":"Japanese ladder-frame legend with Super Select 4WD — older units are proven off-road performers well within this budget."}
+]]
 
 ──────────────────────────────────────
 USER: "cheap automatic for a student, budget 18 lacs"
@@ -290,8 +347,7 @@ async def semantic_mapper(user_prompt: str) -> list[dict]:
     raw = ""
     try:
         response = await client.aio.models.generate_content(
-            model="gemini-3.5-flash-lite",
-            contents=user_prompt,
+            model="gemini-2.0-flash-lite",
             config=types.GenerateContentConfig(
                 temperature=0.25,        # Low temp → tight, consistent JSON
                 max_output_tokens=1600,  # 5 objects × ~320 tokens each
