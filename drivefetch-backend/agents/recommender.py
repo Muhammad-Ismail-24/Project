@@ -17,33 +17,33 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 # ---------------------------------------------------------------------------
-# SEMANTIC MAPPER SYSTEM PROMPT — v5.0
+# SEMANTIC MAPPER SYSTEM PROMPT — v6.0
 # ---------------------------------------------------------------------------
 #
-# v3.0 changes over v2.0:
-#   - Added "min_year" field to the JSON schema.
-#     When the user gives NO budget, set min_year to the launch year of the
-#     current generation of that model. This forces the scraper to surface
-#     the newest units rather than flooding results with decade-old listings.
-#     When the user gives a budget, set min_year = 0 (no year floor).
-#   - Expanded GENERATION GROUND TRUTH section so the LLM knows exactly
-#     which year = current gen for every major Pakistani market model.
-#   - Expanded and rebalanced intent→car mappings for Chinese brands, EVs,
-#     and the new 2022–2025 wave of models now common in the used market.
-#   - Replaced the "stretch budget" diversity rule with a clearer instruction:
-#     if no budget, prioritise newest shape over cheapest/most common variant.
-#   - Added a 5th few-shot example specifically demonstrating the no-budget
-#     newest-model behaviour.
+# v6.0 changes over v5.0:
+#   - STEP 1 rewritten with a new Q5 (Market Liquidity Check) inserted
+#     before the old Diversity rule (now Q6).
+#   - Q5 teaches the LLM to apply its own market knowledge as a filter:
+#     "Does this model have active listings on PakWheels/OLX right now?"
+#     This generically prevents dead-market cars (Aveo, Sunny, Liana, etc.)
+#     without hardcoding a banned list — the LLM already knows which cars
+#     have thin/zero inventory in Pakistan.
+#   - Q6 (Diversity) demoted to a tiebreaker, not a quota. Brand variety is
+#     only applied when the alternative is equally liquid and relevant.
+#     Two Hondas (City + Civic) is explicitly better than one Honda + one
+#     Chevrolet Aveo. Repeat makes from the Big 3 (Toyota/Honda/Suzuki) are
+#     permitted and sometimes preferred over forcing a fringe brand.
+#   - gemini-3.5-flash-lite → gemini-2.0-flash-lite (correct model name).
 # ---------------------------------------------------------------------------
 SEMANTIC_MAPPER_PROMPT = """You are GaariGuru, an expert Pakistani used-car matchmaker. A user describes what they want in natural language, Roman Urdu, or Urdu script. Translate their intent into EXACTLY 5 car search targets for the Pakistani used-car market.
 
 ═══════════════════════════════════════════════════════
 STEP 1 — THINK BEFORE YOU OUTPUT (internal reasoning, never printed)
 ═══════════════════════════════════════════════════════
-Before generating any JSON, silently answer these five questions using your own
+Before generating any JSON, silently answer these six questions using your own
 automotive knowledge of the Pakistani market. Do not print your answers.
 
-  Q1. DRIVETRAIN: Does the user want AWD / 4x4 / off-road? 
+  Q1. DRIVETRAIN: Does the user want AWD / 4x4 / off-road?
       If yes: for each candidate model you consider, ask yourself:
         - "Is this model actually sold with AWD in Pakistan right now?"
         - "Does this model have BOTH FWD and AWD variants in Pakistan?" (if yes → trim="AWD")
@@ -73,8 +73,40 @@ automotive knowledge of the Pakistani market. Do not print your answers.
       trim = ""       → ALL other cases, including sunroof, leather, turbo, panoramic roof.
                          For those, pick the MODEL that has them as standard.
 
-  Q5. DIVERSITY: Do my 5 picks span at least 3 different makes?
-      If not, swap one of the duplicates for an equally strong alternative.
+  Q5. MARKET LIQUIDITY — apply this filter to EVERY candidate before accepting it:
+      Ask yourself: "If I searched this exact model on PakWheels Pakistan today,
+      would I find at least 10 active listings?"
+
+      If the answer is NO or UNCERTAIN → reject this candidate and pick another.
+
+      You already know from your training which models have thin/dead inventory
+      in Pakistan as of 2024–2025. Apply that knowledge now. Examples of what
+      you know (not a complete list — use your full knowledge):
+        - HIGH inventory: Toyota Corolla, Honda Civic, Suzuki Alto, Suzuki Cultus,
+          Kia Sportage, Honda City, Toyota Vitz, Toyota Aqua, Honda Vezel,
+          Suzuki WagonR, Toyota Fortuner, Hyundai Tucson, MG HS, Haval Jolion
+        - LOW/DEAD inventory: Chevrolet Aveo, Nissan Sunny (Pakistan-spec),
+          Suzuki Liana, Nissan Clipper, Mitsubishi Colt, Proton Saga (older),
+          Chevrolet Optra, Hyundai Santro (older), Daihatsu Charade
+
+      This question must be answered for EVERY pick, including picks 4 and 5.
+      A car that fails Q5 must be replaced with a high-inventory alternative,
+      even if it means repeating a make you already used.
+
+  Q6. DIVERSITY — a tiebreaker, not a quota:
+      After Q5 has filtered your 5 candidates to only high-liquidity options,
+      check: do they span at least 2 different makes?
+
+      If yes → you are done. Output as-is, even if 3 or 4 picks share a make.
+      If no (all 5 are the same brand) → swap one for the best high-liquidity
+      alternative from a different make.
+
+      CRITICAL: Never sacrifice a high-inventory car to satisfy a brand quota.
+      Two Hondas (City + Civic) is ALWAYS better than one Honda + one Chevrolet Aveo.
+      Repeat picks from Toyota, Honda, or Suzuki are correct and expected when
+      the user's budget or intent naturally favors those brands.
+      Brand diversity is only applied when an equally relevant, equally liquid
+      alternative from another brand genuinely exists.
 
 ═══════════════════════════════════════════════════════
 STEP 2 — OUTPUT CONTRACT (non-negotiable)
@@ -258,8 +290,7 @@ async def semantic_mapper(user_prompt: str) -> list[dict]:
     raw = ""
     try:
         response = await client.aio.models.generate_content(
-            model="gemini-3.5-flash-lite",
-            contents=user_prompt,
+            model="gemini-2.0-flash-lite",
             config=types.GenerateContentConfig(
                 temperature=0.25,        # Low temp → tight, consistent JSON
                 max_output_tokens=1600,  # 5 objects × ~320 tokens each
@@ -348,8 +379,7 @@ async def get_fallback_recommendations(
     raw = ""
     try:
         response = await client.aio.models.generate_content(
-            model="gemini-3.5-flash-lite",
-            contents=fallback_prompt,
+            model="gemini-2.0-flash-lite",
             config=types.GenerateContentConfig(
                 temperature=0.20,                    # Tighter than mapper — follow exclusions strictly
                 max_output_tokens=count * 350,       # ~350 tokens per replacement object
