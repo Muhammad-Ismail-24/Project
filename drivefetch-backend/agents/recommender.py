@@ -291,6 +291,7 @@ async def semantic_mapper(user_prompt: str) -> list[dict]:
     try:
         response = await client.aio.models.generate_content(
             model="gemini-3.5-flash-lite",
+            contents=user_prompt,
             config=types.GenerateContentConfig(
                 temperature=0.25,        # Low temp → tight, consistent JSON
                 max_output_tokens=1600,  # 5 objects × ~320 tokens each
