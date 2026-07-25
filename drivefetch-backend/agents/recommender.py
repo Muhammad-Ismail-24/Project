@@ -436,7 +436,8 @@ async def get_fallback_recommendations(
     raw = ""
     try:
         response = await client.aio.models.generate_content(
-            model="gemini-2.0-flash-lite",
+            model="gemini-3.5-flash-lite",
+            contents=fallback_prompt,
             config=types.GenerateContentConfig(
                 temperature=0.20,                    # Tighter than mapper — follow exclusions strictly
                 max_output_tokens=count * 350,       # ~350 tokens per replacement object
