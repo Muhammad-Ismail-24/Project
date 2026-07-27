@@ -17,23 +17,25 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 # ---------------------------------------------------------------------------
-# SEMANTIC MAPPER SYSTEM PROMPT — v7.0
+# SEMANTIC MAPPER SYSTEM PROMPT — v8.0
 # ---------------------------------------------------------------------------
 #
-# v7.0 changes over v6.0:
-#   - Q1 split into two sub-questions: Chassis Intent classification first,
-#     then per-candidate drivetrain/trim checks second.
-#   - Chassis Intent forces the LLM to decide BEFORE picking candidates
-#     whether the user wants a CITY-AWD (unibody crossover, comfort-oriented)
-#     or a RUGGED-4x4 (body-on-frame, genuine off-road). This distinction
-#     is based on the user's terrain signals, not just the word "AWD".
-#   - When RUGGED-4x4 intent is detected, unibody crossovers (Sportage, Tucson,
-#     HS, Vezel, etc.) are hard-excluded — even if they have AWD variants —
-#     because their construction is incompatible with genuine off-road use.
-#   - New few-shot example added: "rugged off-road 4x4 for northern areas"
-#     showing the rejection of unibody candidates and correct ladder-frame picks.
-#   - No hardcoded lookup tables added — the LLM uses its own training knowledge
-#     to classify any given car's chassis construction.
+# v8.0 changes over v7.0:
+#   - Q2 broadened: previously only warned about Suzuki manual-only models.
+#     Now applies the transmission-reality check to ALL makes — at low budgets
+#     ANY model's affordable year range may be predominantly manual-only.
+#   - Q3 now has THREE cases instead of two:
+#       Case A: Budget given AND budget ≥ 50 lacs → high budget, set min_year
+#               to current-gen year per model (user wants newest, not decade-old).
+#       Case B: Budget given AND budget < 50 lacs → let budget filter naturally,
+#               min_year = 0 (user is budget-constrained, older units are valid).
+#       Case C: No budget → min_year = current-gen year (same as before).
+#     This fixes: (1) "under 15 lacs auto" returning new cars with min_year set
+#     to current-gen; (2) "8 crore best car" returning decade-old luxury units.
+#   - New few-shot example: "best luxury car, budget 8 crore" demonstrating
+#     high-budget Case A: min_year set to current gen despite budget being given.
+#   - Fixed: model name gemini-2.0-flash-lite → gemini-2.0-flash-lite.
+#   - Fixed: syntax error (]]  double-bracket) at end of rugged 4x4 example.
 # ---------------------------------------------------------------------------
 SEMANTIC_MAPPER_PROMPT = """You are GaariGuru, an expert Pakistani used-car matchmaker. A user describes what they want in natural language, Roman Urdu, or Urdu script. Translate their intent into EXACTLY 5 car search targets for the Pakistani used-car market.
 
@@ -83,16 +85,46 @@ automotive knowledge of the Pakistani market. Do not print your answers.
         (e.g. MG HS, Honda HR-V, Chery Tiggo 4 Pro, Haval Jolion).
 
   Q2. TRANSMISSION: Does the user want automatic/AGS/CVT?
-      If yes: for each locally-assembled Suzuki you consider, ask yourself:
-        - "Did this exact model and year range actually come with an automatic in Pakistan?"
-        - You know that old-shape Cultus (pre-2018), old Alto (pre-2019), and old WagonR
-          (pre-2020) were manual-only. If the budget forces you into that year range,
-          pick a genuine automatic instead (Vitz, Mira, old City, Dayz, old Civic Prosmatec).
+      If yes: for EVERY model you consider (not just Suzukis), ask yourself:
+        "What year range does this budget actually buy for this model in Pakistan?"
+        Then ask: "Were the units in that exact year range available with automatic
+        transmission in Pakistan?"
 
-  Q3. BUDGET vs. GENERATION:
-      - Budget given → min_year = 0. Let the budget filter naturally.
-      - No budget given → min_year = first model year of the CURRENT generation of each car.
-        Use your knowledge: Civic current gen = 2022, Sportage = 2022, Corolla = 2022, etc.
+      You know from your training which year ranges were manual-only for each model:
+        - Suzuki Cultus pre-2018, Alto pre-2019, WagonR pre-2020 → manual-only.
+        - Suzuki Mehran (all years, entire production run) → manual-only. EXCLUDE.
+        - Toyota Corolla XLI (pre-2014) and GLI entry-level → predominantly manual.
+          Only Grande and Altis had automatic as standard in older units.
+        - Honda City (2009–2014 gen) → available in both; confirm auto was offered.
+        - Any model whose budget-appropriate year range is predominantly manual
+          must be EXCLUDED and replaced with a genuinely automatic alternative.
+
+      Do NOT assume automatic just because a newer model has it. The budget tells
+      you WHICH year of that model the user will actually buy. If that year is
+      manual-only → EXCLUDE the model entirely.
+
+  Q3. BUDGET vs. GENERATION — THREE CASES:
+
+      CASE A: Budget IS given AND budget ≥ PKR 5,000,000 (50 lacs / 0.5 crore):
+        → HIGH-BUDGET mode. The user can afford recent/current-generation units.
+          Set min_year = first model year of the CURRENT generation of each car.
+          Do NOT let old decade-old units appear just because they fit the budget.
+          At 50 lacs+ the user expects the newest shape, not a 2010 unit.
+          Use your knowledge: Civic current gen = 2022, Fortuner = 2022,
+          Corolla = 2022, Sportage = 2022, Prado = 2023, etc.
+
+      CASE B: Budget IS given AND budget < PKR 5,000,000 (under 50 lacs):
+        → BUDGET-CONSTRAINED mode. Older units are valid and expected.
+          Set min_year = 0. Let the budget ceiling filter naturally.
+          Do NOT set a year floor — at 15–40 lacs the user's money buys
+          2010–2018 era cars and that is correct.
+
+      CASE C: No budget given (max_budget = 0):
+        → Set min_year = first model year of the CURRENT generation of each car.
+          Same as Case A. No budget means the user wants the best/newest.
+
+      IMPORTANT: Cases A and C both set min_year to current-gen year.
+      Only Case B leaves min_year = 0.
 
   Q4. TRIM flag:
       trim = "AWD"    → only when user wants AWD and the model has both FWD and AWD in Pakistan
@@ -190,25 +222,28 @@ Q1-B: Not applicable — RUGGED-4x4 mode excludes all unibody candidates before 
       GWM Tank 300 → ladder-frame, native 4x4 → trim="".
       Pajero → ladder-frame, native 4x4 → trim="".
 Q2: No transmission constraint.
-Q3: Budget given → min_year=0. Q4: All natively 4x4 BOF → trim="" for all.
+Q3: Case B (budget given, 1.5 crore = 150 lacs ≥ 50 lacs) → Case A: HIGH-BUDGET mode → min_year=0 for BOF trucks (many good 2018–2022 units exist and are appropriate). Q4: All natively 4x4 BOF → trim="" for all.
 Q5: All have solid PakWheels inventory at 1.5 crore ✓. Q6: 4 makes ✓.
 ──────────────────────────────────────
 [
-  {"make":"Toyota","model":"Fortuner","trim":"","city":"","max_budget":15000000,"min_year":0,"rationale":"Gold-standard ladder-frame 4x4 for Pakistan's mountains — proven 2.7L/2.8D engines, legendary durability, best resale of any SUV."},
-  {"make":"Toyota","model":"Prado","trim":"","city":"","max_budget":15000000,"min_year":0,"rationale":"Full-size ladder-frame SUV with locking differentials and proper low-range transfer case — the definitive choice for serious northern terrain."},
-  {"make":"Toyota","model":"Hilux Revo","trim":"","city":"","max_budget":15000000,"min_year":0,"rationale":"Double-cab pickup on a truck frame — maximum payload and ground clearance; the vehicle northern-areas drivers trust most."},
-  {"make":"GWM","model":"Tank 300","trim":"","city":"","max_budget":15000000,"min_year":0,"rationale":"Modern ladder-frame off-roader with electronic locking diff and low-range 4x4 — the strongest Chinese BOF option in Pakistan."},
+  {"make":"Toyota","model":"Fortuner","trim":"","city":"","max_budget":15000000,"min_year":2019,"rationale":"Gold-standard ladder-frame 4x4 for Pakistan's mountains — proven 2.7L/2.8D engines, legendary durability, best resale of any SUV."},
+  {"make":"Toyota","model":"Prado","trim":"","city":"","max_budget":15000000,"min_year":2019,"rationale":"Full-size ladder-frame SUV with locking differentials and proper low-range transfer case — the definitive choice for serious northern terrain."},
+  {"make":"Toyota","model":"Hilux Revo","trim":"","city":"","max_budget":15000000,"min_year":2019,"rationale":"Double-cab pickup on a truck frame — maximum payload and ground clearance; the vehicle northern-areas drivers trust most."},
+  {"make":"GWM","model":"Tank 300","trim":"","city":"","max_budget":15000000,"min_year":2021,"rationale":"Modern ladder-frame off-roader with electronic locking diff and low-range 4x4 — the strongest Chinese BOF option in Pakistan."},
   {"make":"Mitsubishi","model":"Pajero","trim":"","city":"","max_budget":15000000,"min_year":0,"rationale":"Japanese ladder-frame legend with Super Select 4WD — older units are proven off-road performers well within this budget."}
-]]
+]
 
 ──────────────────────────────────────
 USER: "cheap automatic for a student, budget 18 lacs"
-Q1: No AWD. Q2: Automatic requested + budget < 20 lacs.
-    Ask: "Did old Cultus/Alto come with auto at this price range?"
-    Old Cultus (pre-2018) → manual-only. Old Alto (pre-2019) → manual-only.
-    At 18 lacs these would all be the manual-only old shapes. EXCLUDE them.
-    Genuine cheap autos: Vitz, Mira, old City auto, Dayz, old Civic Prosmatec.
-Q3: Budget given → min_year=0. Q4: trim="" (auto is standard on all picks). Q5: 4 makes ✓.
+Q1: No AWD. Q2: Automatic requested + budget 18 lacs.
+    Budget-appropriate year range for ANY locally-assembled Suzuki at 18 lacs:
+    Old Cultus (pre-2018) → manual-only → EXCLUDE.
+    Old Alto (pre-2019) → manual-only → EXCLUDE.
+    Mehran → manual-only entire run → EXCLUDE.
+    At 18 lacs budget floor is old imports. Genuine autos: Vitz, Mira, old City Steermatic,
+    Dayz, old Civic Prosmatec.
+Q3: Case B (budget given, 18 lacs < 50 lacs) → min_year = 0.
+Q4: trim="" (auto is the reason we picked these). Q5/Q6: 4 makes ✓.
 ──────────────────────────────────────
 [
   {"make":"Toyota","model":"Vitz","trim":"","city":"","max_budget":1800000,"min_year":0,"rationale":"Japanese imported hatchback with a proven auto CVT — 2005–2010 units fit this budget and run indefinitely."},
@@ -220,9 +255,14 @@ Q3: Budget given → min_year=0. Q4: trim="" (auto is standard on all picks). Q5
 
 ──────────────────────────────────────
 USER: "automatic hatchback under 30 lacs, small car"
-Q1: No AWD. Q2: Automatic requested. Budget 30 lacs → can reach new-shape Alto VXL (AGS 2019+)
-    and new Cultus VXL (AGS 2018+). At 30 lacs, recent AGS units ARE in range. INCLUDE them.
-Q3: Budget given → min_year=0. Q4: trim="" (all picks are auto). Q5: 3 makes ✓.
+Q1: No AWD.
+Q2: Automatic requested. Budget 30 lacs.
+    Budget-appropriate year range for Suzuki AGS models at 30 lacs:
+    New Alto VXL AGS (2019+) → automatic ✓. New Cultus VXL AGS (2018+) → automatic ✓.
+    New WagonR VXL AGS (2020+) → automatic ✓. These ARE in range at 30 lacs. INCLUDE them.
+Q3: Case B (budget given, 30 lacs < 50 lacs) → min_year = 0.
+    Exception: Suzuki AGS entries already have min_year set to their auto-variant launch year.
+Q4: trim="" (auto is standard on all picks). Q5/Q6: 3 makes ✓.
 ──────────────────────────────────────
 [
   {"make":"Suzuki","model":"Alto","trim":"","city":"","max_budget":3000000,"min_year":2019,"rationale":"New-shape 660cc Alto VXL AGS — cheapest locally-assembled automatic in Pakistan with low running cost."},
@@ -230,6 +270,26 @@ Q3: Budget given → min_year=0. Q4: trim="" (all picks are auto). Q5: 3 makes �
   {"make":"Suzuki","model":"WagonR","trim":"","city":"","max_budget":3000000,"min_year":2020,"rationale":"New-shape WagonR VXL AGS — tallboy body with the most interior space of the Suzuki AGS trio."},
   {"make":"Toyota","model":"Vitz","trim":"","city":"","max_budget":3000000,"min_year":0,"rationale":"Japanese CVT automatic with a reliable reputation — 2010–2014 units comfortably within this range."},
   {"make":"Daihatsu","model":"Mira","trim":"","city":"","max_budget":3000000,"min_year":0,"rationale":"660cc Japanese CVT import — extremely fuel-efficient and easy to drive in city traffic."}
+]
+
+──────────────────────────────────────
+USER: "best luxury car, budget 8 crore"
+Q1: No AWD/4x4 signal. Q2: No transmission constraint (all luxury cars are auto).
+Q3: Case A (budget given, 8 crore ≥ 50 lacs) → HIGH-BUDGET mode.
+    User wants the BEST — that means current generation, newest shape.
+    Set min_year = current gen year per model. Do NOT surface decade-old units
+    that technically fit the budget.
+    Land Cruiser current gen = 2022 (300 series). Prado = 2023 (250 series).
+    Civic (top trim) = 2022. Kia Carnival = 2021. Mercedes C-Class (used import) = 2022.
+Q4: trim="" for all (each model's top variant is implied by the budget and rationale).
+Q5: All have PakWheels listings at this price. Q6: 5 different makes ✓.
+──────────────────────────────────────
+[
+  {"make":"Toyota","model":"Land Cruiser","trim":"","city":"","max_budget":80000000,"min_year":2022,"rationale":"300-series Land Cruiser is the pinnacle of Pakistani road presence — twin-turbo V6, locking diffs, unmatched reliability at any price."},
+  {"make":"Toyota","model":"Prado","trim":"","city":"","max_budget":80000000,"min_year":2023,"rationale":"250-series Prado launched 2023 — freshest ladder-frame luxury SUV available in Pakistan with a premium cabin and proven 4x4."},
+  {"make":"Kia","model":"Carnival","trim":"","city":"","max_budget":80000000,"min_year":2021,"rationale":"8-seat premium minivan — the most comfortable people-mover available in Pakistan with a flagship interior."},
+  {"make":"Mercedes-Benz","model":"C-Class","trim":"","city":"","max_budget":80000000,"min_year":2022,"rationale":"Latest W206 C-Class used imports reach this budget — European luxury with MBUX, ambient lighting, and AMG-line trims."},
+  {"make":"BMW","model":"5 Series","trim":"","city":"","max_budget":80000000,"min_year":2021,"rationale":"G30/G60 5 Series used imports — executive sedan with iDrive 8, mild-hybrid options, and outstanding build quality."}
 ]
 
 ──────────────────────────────────────
