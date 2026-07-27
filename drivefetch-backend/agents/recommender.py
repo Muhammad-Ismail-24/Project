@@ -45,6 +45,18 @@ STEP 1 — THINK BEFORE YOU OUTPUT (internal reasoning, never printed)
 Before generating any JSON, silently answer these six questions using your own
 automotive knowledge of the Pakistani market. Do not print your answers.
 
+  Q0. ORIGIN & BODY-STYLE — answer in two sub-steps:
+
+    Q0-A. ORIGIN (Brand Nationality Check):
+      - Did the user specify brand nationality or origin? (e.g., "Chinese", "Japanese", "German", "European", "Korean", "Pakistani / Local").
+      - If YES: HARD-EXCLUDE every brand outside that origin.
+      - Example: "Chinese electric crossovers" → HARD-EXCLUDE Audi, BMW, Mercedes, Porsche, Hyundai, Kia, Toyota, Honda. Only allow Chinese brands (BYD, Changan, MG, Haval, Chery, GWM, Seres, etc.).
+
+    Q0-B. BODY-STYLE (Segment Check):
+      - Did the user specify body style? (e.g., "crossover", "SUV", "sedan", "hatchback", "van", "pickup").
+      - If YES: HARD-EXCLUDE mismatched body types.
+      - Example: If user asked for "crossover", HARD-EXCLUDE sedans (e.g., BYD Seal, Changan Deepal L07) even if they are electric and Chinese.
+
   Q1. DRIVETRAIN & CHASSIS — answer in two sub-steps:
 
     Q1-A. CHASSIS INTENT: What is the user's actual terrain need?
@@ -195,6 +207,7 @@ Q4. TRIM flag & Native Powertrain Rule:
       - trim = "EV"     → ONLY for models sold in Pakistan with *both* ICE and EV variants (e.g., MG ZS → trim="EV").
       - For natively EV-only models (BYD Atto 3, BYD Seal, BYD Dolphin, Changan Deepal S07/L07, GWM Ora 03, Seres 3), set trim="" (empty string).
       - trim = "Manual" → only when user explicitly requests manual on a dual-transmission model
+      - Trim Suffix Duplication Fix: If model already ends with "EV" (e.g., "ZS EV"), set trim = "" (empty string) to prevent downstream labels like "MG ZS EV EV".
       - trim = ""       → ALL other cases.
 
   Q4.5 Canonical Model Spacing:
@@ -574,17 +587,15 @@ async def get_fallback_recommendations(
     failed_str   = ", ".join(failed_targets)
 
     fallback_prompt = (
-        f"Original user request: \"{user_prompt}\"\n"
-        f"City: {city_str} | Budget: {budget_str}\n\n"
-        f"These targets returned ZERO active listings and need replacements:\n"
-        f"  {failed_str}\n\n"
-        f"EXCLUDED models (already tried — do not repeat these):\n"
-        f"  {excluded_str}\n\n"
-        f"Generate EXACTLY {count} replacement target(s) that:\n"
-        f"  - Match the same user intent as the original request\n"
-        f"  - Have good inventory depth on PakWheels/OLX in Pakistan\n"
-        f"  - Are NOT any model in the excluded list above\n"
-        f"Output a raw JSON array of EXACTLY {count} object(s). No preamble."
+        f'Original user request: "{user_prompt}"\n'
+        f'City: {city_str} | Budget: {budget_str}\n\n'
+        f'CRITICAL: Maintain ALL constraints from original request '
+        f'(e.g., Brand Origin/Nationality, Body Type/Segment, Drivetrain).\n\n'
+        f'These targets returned ZERO active listings and need replacements:\n'
+        f'  {failed_str}\n\n'
+        f'EXCLUDED models (already tried — do not repeat these):\n'
+        f'  {excluded_str}\n\n'
+        f'Generate EXACTLY {count} replacement target(s) matching the original criteria.'
     )
 
     raw = ""

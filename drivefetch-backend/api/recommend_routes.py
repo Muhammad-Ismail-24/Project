@@ -107,9 +107,17 @@ def _resolve_year(rec_min_year: int) -> int:
 
 def _target_label(rec: dict) -> str:
     """Human-readable label, e.g. 'Kia Sportage [AWD]'."""
-    trim = rec.get("trim") or ""
-    trim_suffix = f" [{trim}]" if trim else ""
-    return f"{rec.get('make', '')} {rec.get('model', '')}".strip() + trim_suffix
+    make = (rec.get("make") or "").strip()
+    model = (rec.get("model") or "").strip()
+    trim = (rec.get("trim") or "").strip()
+    
+    # Prevent duplicate labels like "MG ZS EV [EV]" or "ZS EV EV"
+    if trim and trim.lower() not in model.lower():
+        trim_suffix = f" [{trim}]"
+    else:
+        trim_suffix = ""
+        
+    return f"{make} {model}".strip() + trim_suffix
 
 
 async def _scrape_one(
