@@ -207,6 +207,19 @@ MAKE_INFERENCE_MAP: dict[str, tuple[str, str]] = {
 }
 
 MODEL_ALIAS_MAP: dict[str, list[str]] = {
+    "zsev":      ["zs ev", "zsev", "mg zs ev", "zs-ev", "zs electric"],
+    "deepals07": ["deepal s07", "deepal s7", "s07", "s7", "deepal-s07"],
+    "deepall07": ["deepal l07", "deepal l7", "l07", "l7", "deepal-l07"],
+    "atto3":     ["atto 3", "atto3", "atto-3", "byd atto 3"],
+    "ora03":     ["ora 03", "ora 3", "ora03", "ora good cat", "gwm ora 03"],
+    "seres3":    ["seres 3", "seres3", "seres-3"],
+    "atrai":     ["atrai", "atrai wagon", "hijet atrai"],
+    "scrum":     ["scrum", "scrum wagon", "mazda scrum"],
+    "clipper":   ["clipper", "nv100", "nv100 clipper"],
+    "nbox":      ["n box", "nbox", "n-box"],
+    "nvan":      ["n van", "nvan", "n-van"],
+    "canbus":    ["canbus", "move canbus"],
+    "spacia":    ["spacia", "speshia"],
     "brv":      ["brv", "br-v", "br v", "brvcar"],
     "hrv":      ["hrv", "hr-v", "hr v"],
     "crv":      ["crv", "cr-v", "cr v"],
@@ -260,12 +273,12 @@ MAKE_ALIAS_MAP: dict[str, str] = {
 }
 
 MAKE_VETO_ALIASES: dict[str, list[str]] = {
-    "daihatsu": ["toyota", "daihatsu"],  
-    "toyota":   ["toyota", "daihatsu"],  
-    "mazda":     ["mazda", "suzuki"],     # Scrum = Every rebadge
-    "subaru":    ["subaru", "daihatsu", "toyota"],  # Sambar/Justy/Chiffon = Daihatsu rebadge
-    "nissan":    ["nissan", "suzuki", "mitsubishi"],  # Clipper = Every/Minicab platform
-    "mitsubishi":["mitsubishi", "nissan"],  # Minicab ↔ Clipper
+    "daihatsu":  ["toyota", "daihatsu"],
+    "toyota":    ["toyota", "daihatsu"],
+    "mazda":     ["mazda", "suzuki"],                 # Scrum ↔ Every
+    "subaru":    ["subaru", "daihatsu", "toyota"],      # Sambar/Justy ↔ Hijet/Thor
+    "nissan":    ["nissan", "suzuki", "mitsubishi"],   # Clipper ↔ Every/Minicab
+    "mitsubishi":["mitsubishi", "nissan", "suzuki"],
 }
 
 TYPO_CORRECTIONS: dict[str, str] = {

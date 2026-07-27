@@ -118,7 +118,12 @@ async def execute_search_pipeline(
     safe_model  = model or ""
     safe_city   = city or ""
     safe_color  = color or ""
-    safe_trim   = trim or ""
+    # --- Strip generic powertrain tags from trim for URL building ---
+    GENERIC_POWERTRAIN_TAGS = {
+        "ev", "electric", "hev", "phev", "hybrid", 
+        "petrol", "diesel", "cng", "awd", "fwd", "4x4", "4wd"
+    }
+    safe_trim = "" if (trim and trim.lower() in GENERIC_POWERTRAIN_TAGS) else (trim or "")
     safe_budget = int(max_budget) if max_budget else 0
 
     # --- Extract target cities (Multi-City Fan-Out) ---

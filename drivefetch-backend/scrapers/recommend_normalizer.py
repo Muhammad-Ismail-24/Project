@@ -146,11 +146,8 @@ def _calculate_recommendation_score(
     budget_score = 10.0 if clean_price == 0 else 40.0
 
     # ── 6. Smart trim — lazy seller fix ───────────────────────────────────
-    # Three-state logic:
-    #   a) Exact trim found in title     → +15 bonus (reward explicit match)
-    #   b) Conflicting trim found        → hard veto (wrong variant)
-    #   c) No trim info in title at all  → 0 bonus, no penalty (lazy seller)
     trim_score = 0.0
+    title_clean = title_lower.replace("-", "")
     title_clean = title_lower.replace("-", "")
 
     if requested_trim:

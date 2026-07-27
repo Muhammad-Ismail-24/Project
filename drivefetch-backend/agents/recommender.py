@@ -190,14 +190,15 @@ automotive knowledge of the Pakistani market. Do not print your answers.
       IMPORTANT: Cases A and C both set min_year to current-gen year.
       Only Case B leaves min_year = 0.
 
-  Q4. TRIM flag:
-      trim = "AWD"    → only when user wants AWD and the model has both FWD and AWD in Pakistan
-      trim = "Hybrid" → only when user explicitly requests hybrid/HEV
-      trim = "EV"     → only when user explicitly requests electric
-      trim = "Manual" → only when user explicitly requests manual on a dual-transmission model
-      trim = "Diesel" → only when user explicitly requests diesel on a dual-fuel model
-      trim = ""       → ALL other cases, including sunroof, leather, turbo, panoramic roof.
-                         For those, pick the MODEL that has them as standard.
+Q4. TRIM flag & Native Powertrain Rule:
+      - trim = "AWD"    → only when user wants AWD and the model has both FWD and AWD in Pakistan
+      - trim = "EV"     → ONLY for models sold in Pakistan with *both* ICE and EV variants (e.g., MG ZS → trim="EV").
+      - For natively EV-only models (BYD Atto 3, BYD Seal, BYD Dolphin, Changan Deepal S07/L07, GWM Ora 03, Seres 3), set trim="" (empty string).
+      - trim = "Manual" → only when user explicitly requests manual on a dual-transmission model
+      - trim = ""       → ALL other cases.
+
+  Q4.5 Canonical Model Spacing:
+      - Output properly spaced model names (e.g., "ZS EV" instead of "ZSEV", "Deepal S07" instead of "DeepalS07").
 
   Q5. FACTORY FEATURES vs AFTERMARKET:
       If the user requests features like "panoramic sunroof", "sunroof", "push start", "cruise control":

@@ -131,7 +131,12 @@ async def _scrape_one(
     model        = rec.get("model") or ""
     budget       = _resolve_budget(override_budget, rec.get("max_budget", 0))
     min_year     = _resolve_year(rec.get("min_year", 0))
-    trim_for_url = rec.get("trim") or ""
+    GENERIC_POWERTRAIN_TAGS = {
+        "ev", "electric", "hev", "phev", "hybrid", 
+        "petrol", "diesel", "cng", "awd", "fwd", "4x4", "4wd"
+    }
+    trim_raw = rec.get("trim") or ""
+    trim_for_url = trim_raw if trim_raw.lower() not in GENERIC_POWERTRAIN_TAGS else ""
 
     scraper_budget = int(budget * 1.05) if budget else None
 
