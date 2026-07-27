@@ -151,9 +151,10 @@ def _calculate_recommendation_score(
     #   b) Conflicting trim found        → hard veto (wrong variant)
     #   c) No trim info in title at all  → 0 bonus, no penalty (lazy seller)
     trim_score = 0.0
+    title_clean = title_lower.replace("-", "")
+
     if requested_trim:
         req_trim_clean = requested_trim.lower().replace("-", "")
-        title_clean    = title_lower.replace("-", "")
         GENERIC_SKIP   = {"automatic", "manual", "car", "sedan", "petrol", "hybrid"}
         trim_keywords  = req_trim_clean.split()
 
