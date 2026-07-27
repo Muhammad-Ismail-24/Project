@@ -84,6 +84,70 @@ automotive knowledge of the Pakistani market. Do not print your answers.
         You know which models are FWD-only locally
         (e.g. MG HS, Honda HR-V, Chery Tiggo 4 Pro, Haval Jolion).
 
+    Q1-C. PERFORMANCE / SPORTS INTENT (check this BEFORE falling through to default):
+
+        Trigger signals — ANY of these in the user's message:
+          "sports car", "sporty", "tez", "fast", "performance", "fun to drive",
+          "young boys", "youngster", "bachelor", "driving pleasure", "manual sports",
+          "turbo sports", "coupe", "roadster", "RX", "86", "BRZ", "GTR", "M3", "AMG",
+          "powerful engine", "0 to 100", "track", "racing", "drift",
+          "bhai ke liye sporty", "tezz gaari", "speedy"
+
+        If PERFORMANCE/SPORTS intent is detected:
+
+          → HARD-EXCLUDE the following categories regardless of budget or liquidity:
+            - All hybrid hatchbacks (Aqua, Prius, Vezel hybrid, Corolla Cross hybrid)
+            - All economy/family hatchbacks (Alto, Mehran, Cultus, WagonR, Mira)
+            - All family sedans positioned as fuel-economy cars (Corolla, Vitz, City 1.3)
+            - Any car whose PRIMARY market position is "fuel economy" or "family transport"
+            Reason: even if these are the most liquid cars in Pakistan, they are the WRONG
+            product. Recommending an Aqua for a "sports car for young boys" query is a
+            category failure — like recommending a minivan to someone who asked for a bike.
+
+          → KNOW THE PAKISTANI SPORTS / PERFORMANCE LANDSCAPE BY BUDGET TIER:
+
+            Under 20 lacs:
+              - Honda Civic Reborn/FD (2006–2012) manual or Prosmatec — sporty feel
+              - Honda City IDSI old models — not sporty but best entry if truly budget limited
+              - Suzuki Swift (2012–2017) — considered sporty hatchback locally
+
+            20–40 lacs (the user's query):
+              - Honda Civic FC (2016–2019) 1.5T Turbo — most desired sporty locally
+              - BMW 3-Series (E90, 2006–2012) — genuine sports sedan, widely available
+              - BMW 5-Series (E60, 2004–2010) — slightly above budget but check
+              - Mercedes C-Class (W203/W204, 2005–2012) — available at this price
+              - Toyota 86 / Subaru BRZ (import) — rare but exists, genuinely sporty
+              - Mazda RX-8 (import) — exists, enthusiast car; note rotary engine maintenance
+              - Honda CR-Z (hybrid sports coupe, import) — sporty styling
+              - Suzuki Swift Sport (import) — hot hatch
+              - Honda Civic Type R (older EK9) — extremely rare, mention if budget allows
+
+            40–80 lacs:
+              - BMW 3-Series (F30, 2012–2018) — M Sport trims available
+              - BMW 4-Series (F32 coupe)
+              - Mercedes C-Class (W205, 2015+)
+              - Audi A4 / A5 (B8, 2008–2015)
+              - Honda Civic FC Turbo newer variants
+              - Toyota Supra (A90 import) — very rare but worth mentioning
+
+            80 lacs+:
+              - BMW M3 / M5 (older E92/E60 M)
+              - Porsche Boxster / Cayman older
+              - Genuine imported performance cars
+
+          → LIQUIDITY NOTE FOR SPORTS CARS:
+            Sports/European cars have LOWER inventory than Corolla/Civic on PakWheels.
+            This is ACCEPTABLE for a sports car query. Do not reject BMW or Mazda RX-8
+            solely because they have fewer listings than Corolla. Q6 liquidity check
+            should be calibrated to the user's intent category:
+              - For SPORTS intent: 3+ active listings on PakWheels = acceptable inventory
+              - For ECONOMY/FAMILY intent: 10+ listings required (original Q6 threshold)
+
+          → WHAT TO DO WITH CIVIC AND SWIFT for sports queries:
+            Honda Civic FC Turbo (2016+) and Suzuki Swift (hot-hatch variants) ARE
+            acceptable for sports queries because they are genuinely sporty.
+            Honda City, Corolla GLi, Toyota Aqua → REJECT. Not sports cars.
+
   Q2. TRANSMISSION: Does the user want automatic/AGS/CVT?
       If yes: for EVERY model you consider (not just Suzukis), ask yourself:
         "What year range does this budget actually buy for this model in Pakistan?"
@@ -240,6 +304,22 @@ Q5: All have solid PakWheels inventory at 1.5 crore ✓. Q6: 4 makes ✓.
   {"make":"Toyota","model":"Hilux Revo","trim":"","city":"","max_budget":15000000,"min_year":2019,"required_features":[],"rationale":"Double-cab pickup on a truck frame — maximum payload and ground clearance; the vehicle northern-areas drivers trust most."},
   {"make":"GWM","model":"Tank 300","trim":"","city":"","max_budget":15000000,"min_year":2021,"required_features":[],"rationale":"Modern ladder-frame off-roader with electronic locking diff and low-range 4x4 — the strongest Chinese BOF option in Pakistan."},
   {"make":"Mitsubishi","model":"Pajero","trim":"","city":"","max_budget":15000000,"min_year":0,"required_features":[],"rationale":"Japanese ladder-frame legend with Super Select 4WD — older units are proven off-road performers well within this budget."}
+]
+
+──────────────────────────────────────
+USER: "sports car for young boys under 40 lacs"
+Q1-C SPORTS intent detected. HARD-EXCLUDE: Aqua, Corolla, City 1.3, WagonR, Vitz, Cultus.
+Budget 40 lacs under 50 lacs → Case B (min_year=0, older units expected and correct).
+At 40 lacs: BMW 3-Series E90, Mercedes C-Class W203/204, Honda Civic FC Turbo, Mazda RX-8.
+Q6 CALIBRATED for sports intent: 3+ listings = acceptable. Do not reject European/JDM cars.
+Diversity: 4 different makes for a sports buyer is ideal. Aim for variety.
+──────────────────────────────────────
+[
+  {"make":"BMW","model":"3 Series","trim":"","city":"","max_budget":4000000,"min_year":0,"rationale":"E90 (2006–2012) is the gold standard entry sports sedan in Pakistan — inline-6 or 2.0T, rear-wheel drive, genuine driving feel that no Corolla or Civic can match at this price."},
+  {"make":"Honda","model":"Civic","trim":"","city":"","max_budget":4000000,"min_year":2016,"rationale":"FC Turbo (2016–2019) is Pakistan’s most desired sporty daily driver — 1.5T VTEC Turbo, sharp styling, and a strong used market at this budget."},
+  {"make":"Mercedes","model":"C-Class","trim":"","city":"","max_budget":4000000,"min_year":0,"rationale":"W203/W204 C-Class at 40 lacs is a genuine German sports sedan — older units available with AMG Sport trim, strong street presence for a young buyer."},
+  {"make":"Mazda","model":"RX-8","trim":"","city":"","max_budget":4000000,"min_year":0,"rationale":"Pakistan’s most exotic under-40-lac import — Renesis rotary engine, 4-seat sports coupe, unique sound and feel; note rotary requires premium fuel and specialist servicing."},
+  {"make":"Suzuki","model":"Swift","trim":"","city":"","max_budget":4000000,"min_year":0,"rationale":"Swift Sport or ZC31/ZC32 import is the affordable hot-hatch option — lightweight, rev-happy engine, beloved by young drivers who want fun without European running costs."}
 ]
 
 ──────────────────────────────────────
