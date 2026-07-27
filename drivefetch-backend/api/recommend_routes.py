@@ -165,6 +165,7 @@ def _normalise_one(
         requested_budget=budget,
         requested_color="",
         requested_trim=rec.get("trim") or "",  # soft trim — normalizer handles lazy sellers
+        required_features=rec.get("required_features", []),
         min_year=min_year,
         max_year=0,
         top_k=5,

@@ -97,40 +97,56 @@ You think like Suneel Munj from PakWheels. You know every car sold, imported, or
 
 === MARKET TAXONOMY — YOU KNOW ALL OF THESE ===
 DOMESTIC/ESTABLISHED:
-- Toyota: Corolla, Yaris, Vitz, Prius, Aqua, Prado, Fortuner, Hilux, Land Cruiser, Hiace, Town Ace, Raize, Rush, Belta, Camry
-- Honda: Civic, City, BRV, HRV, Vezel, CRV, Freed, Fit, Jazz, Accord, Odyssey, N One, N Wgn, N Box, S660, Beat
-- Suzuki: Alto, Cultus, Swift, WagonR, Mehran, Bolan, Ravi, Every, Jimny, Vitara, Ciaz, Liana, APV, Carry
+- Toyota: Corolla, Yaris, Vitz, Prius, Aqua, Prado, Fortuner, Hilux, Land Cruiser, Hiace, Town Ace, Raize, Rush, Belta, Camry, Corolla Fielder, Probox, Succeed, Passo, Porte, Spade, Sienta, Roomy, Tank, Pixis Epoch, Pixis Mega, Wish, Voxy, Noah, Esquire, Harrier, Mark X, Crown, Land Cruiser 70, Land Cruiser 200, Land Cruiser 300, C-HR, Prius Alpha, Alphard, Vellfire, FJ Cruiser, 86/GR86
+- Honda: Civic, City, BRV, HRV, Vezel, CRV, Freed, Fit, Jazz, Accord, Odyssey, N One, N Wgn, N Box, S660, Beat, N-Van, N-Slash, Grace, Insight, CR-Z, Shuttle, Step Wagon, Elysion, Jade, Life, Zest
+- Suzuki: Alto, Cultus, Swift, WagonR, Mehran, Bolan, Ravi, Every, Jimny, Vitara, Ciaz, Liana, APV, Carry, Alto Turbo RS, Lapin, Spacia, Hustler, Ignis, XBEE, Wagon R Stingray, Solio, Escudo, Landy, Palette, Cervo
 - Kia: Sportage, Stonic, Picanto, Sorento, Carnival, Seltos, EV6
 - Hyundai: Tucson, Elantra, Sonata, Santro, Porter, Grand Starex
-- Daihatsu: Hijet, Mira, Move, Cuore, Charade, Copen, Rocky, Cast
-- Nissan: Dayz, Roox, Moco, NV350, Patrol, Navara, Note, March, Juke, X-Trail, Wingroad
-- Mitsubishi: Pajero, Lancer, Outlander, ASX, Eclipse Cross, Mirage, Canter, Rosa
+- Daihatsu: Hijet, Mira, Move, Cuore, Charade, Copen, Rocky, Cast, Atrai, Atrai Wagon, Tanto, Canbus, Move Canbus, Sonica, Wake, Taft, Boon, Thor, Esse
+- Nissan: Dayz, Roox, Moco, NV350, Patrol, Navara, Note, March, Juke, X-Trail, Wingroad, Dayz Roox, NV100 Clipper, Clipper, Kicks, Leaf, Serena, Elgrand, Skyline, Fairlady Z, AD Van
+- Mitsubishi: Pajero, Lancer, Outlander, ASX, Eclipse Cross, Mirage, Canter, Rosa, Minicab, Town Box, eK Wagon, eK Custom, eK Space, eK X, Delica, Galant, i-MiEV, Pajero Mini, Pajero IO
 - Isuzu: D-Max, MU-X, Trooper, NLR
 - FAW: V2, Carrier, X-PV, Sirius
+- Subaru: Sambar, Justy, Chiffon, XV, Levorg, Stella, Pleo, Dias, WRX, BRZ, Forester, Outback, Impreza
+- Mazda: Scrum, Scrum Wagon, Flair, Flair Wagon, Flair Crossover, CX-3, CX-5, CX-30, CX-8, Demio/Mazda2, Axela/Mazda3, Atenza/Mazda6, MX-5
+
+JDM MICRO-VANS & KEI CARS (660cc imports):
+- Daihatsu: Hijet, Atrai, Atrai Wagon, Mira, Mira e:S, Mira Tocot, Tanto, Move, Move Canbus, Cast, Sonica, Wake, Taft, Cuore, Copen, Rocky, Esse, Boon, Thor
+- Suzuki: Every, Every Wagon, Carry, Alto, Alto Turbo RS, Lapin, Spacia, Hustler, Palette, Cervo, Wagon R Stingray
+- Nissan: Clipper, NV100 Clipper, Dayz, Dayz Roox, Roox, Moco, Note e-Power
+- Honda: N-Box, N-Wgn, N-One, N-Van, N-Slash, Life, Zest, Beat, S660, Acty
+- Mitsubishi: Minicab, Town Box, eK Wagon, eK Custom, eK Space, eK X, i-MiEV, Pajero Mini
+- Subaru: Sambar, Stella, Pleo, Dias, Chiffon, R1, R2
+- Mazda: Scrum, Scrum Wagon, Flair, Flair Wagon, AZ Wagon, Carol
 
 NEW CHINESE ENTRANTS (2022–2026 wave):
-- Changan: Alsvin, Oshan X7, Uni-T, Uni-K, CS35 Plus, Hunter (pickup), Lumin (EV), F7, Deepal S7
-- MG: HS, ZS, 5, 6, RX5, Gloster, Marvel R (EV), Cyberster
-- Haval: H6, Jolion, H9, Dargo, Raptor, Shenshou, H1, H3, H5
-- Chery: Tiggo 4 Pro, Tiggo 7 Pro, Tiggo 8 Pro, Omoda 5, Arrizo 6 Pro
+- Changan: Alsvin, Oshan X7, Uni-T, Uni-K, CS35 Plus, Hunter (pickup), Lumin (EV), F7, Deepal S7, Deepal L07, CS75 Plus, Karvaan, M8, M9
+- MG: HS, ZS, 5, 6, RX5, Gloster, Marvel R (EV), Cyberster, ZS EV, 4 EV, GT, One (Hector), Extender
+- Haval: H6, Jolion, H9, Dargo, Raptor, Shenshou, H1, H3, H5, Tank 300, Tank 500, Big Dog, M6 Plus
+- Chery: Tiggo 4 Pro, Tiggo 7 Pro, Tiggo 8 Pro, Omoda 5, Arrizo 6 Pro, Omoda C5, Arrizo 5, QQ, Tiggo 2, Tiggo 9
 - BAIC: BJ40, X55, BX7, Senova D50, MZ40 Plus
 - DFSK: Glory 580, Glory 500, Seres, Prince
 - JAC: T8 Pro, JS3, S3, S4, Refine (MPV)
 - Proton: X70, X50, Saga, Persona
-- BYD: Atto 3, Seal, Dolphin, Han, Tang (EV)
-- Jetour: T2, X70 Plus, X95, Dashing
+- BYD: Atto 3, Seal, Dolphin, Han, Tang (EV), Sealion, Yuan Plus, Song Plus, Seagull
+- Jetour: T2, X70 Plus, X95, Dashing, X90
 - Geely: Coolray, Okavango, Emgrand
+- Kaiyi: E5, X3 Pro
+- Forthing: T5 Evo, Joyear X5
+- GAC: GS4, Emkoo, Aion Y
+- Tank: 300, 500
+- SsangYong: Tivoli, Korando, Rexton
 - Revo/FAW/other assemblers: Master (van), Carrier
 
 EUROPEAN / AMERICAN LUXURY (grey import and official):
-- BMW: 3 Series, 5 Series, 7 Series, X1, X3, X5, X6, X7, M2, M3, M5, iX
-- Mercedes-Benz: C-Class, E-Class, S-Class, GLC, GLE, GLS, AMG variants, EQS
-- Audi: A3, A4, A5, A6, A7, A8, Q3, Q5, Q7, Q8, RS variants
-- Porsche: Cayenne, Macan, Panamera, 911, Taycan
+- BMW: 3 Series, 5 Series, 7 Series, X1, X3, X5, X6, X7, M2, M3, M5, iX, X2, X4, Z4, i4, i7, iX3
+- Mercedes-Benz: C-Class, E-Class, S-Class, GLC, GLE, GLS, AMG variants, EQS, A-Class, B-Class, CLA, GLA, GLB, G-Class (G-Wagon), EQA, EQB, EQE
+- Audi: A3, A4, A5, A6, A7, A8, Q3, Q5, Q7, Q8, RS variants, Q2, e-tron, e-tron GT, TT
+- Porsche: Cayenne, Macan, Panamera, 911, Taycan, Boxster, Cayman, 718
 - Volkswagen: Golf, Passat, Tiguan, Touareg, Polo, Arteon
 - Land Rover: Defender, Discovery, Range Rover, Evoque, Freelander
 - Jeep: Wrangler, Cherokee, Grand Cherokee, Compass
-- Lexus: RX, ES, LX, IS, GX, NX, LS
+- Lexus: RX, ES, LX, IS, GX, NX, LS, UX, LC, RC
 - Volvo: XC40, XC60, XC90, S60, S90
 - Maserati: Ghibli, Levante, Quattroporte, GranTurismo
 - Lamborghini: Urus, Huracan, Aventador
@@ -156,6 +172,17 @@ MAKES:
 "jettur / jeetoor / jetoor" → Jetour
 "prton / protn" → Proton
 "jipu / gypu" → Jeep
+"subru / sabru / subaaru" → Subaru
+"mazada / mzda" → Mazda
+"mitsibishi / mitsubhishi / mitsbishi" → Mitsubishi
+"nisin / nisaan / nisan" → Nissan
+"honda / handa" → Honda
+"toyata / tyota" → Toyota
+"suzki / suzooki" → Suzuki
+"byd / bwaidi" → BYD
+"havel / hawaal / hwal" → Haval
+"kaiyi / kayi" → Kaiyi
+"sangyang / ssanyong" → SsangYong
 
 MODELS:
 "corola / carolla / coralla" → Corolla
@@ -169,6 +196,26 @@ MODELS:
 "aqua" → Aqua (make: Toyota)
 "prado" → Prado (make: Toyota)
 "fortuner / fortener" → Fortuner (make: Toyota)
+"atry / atrey / atri" → Atrai (make: Daihatsu)
+"scram / sakrum" → Scrum (make: Mazda)
+"speciya / speshia / spacia" → Spacia (make: Suzuki)
+"hastler / husler" → Hustler (make: Suzuki)
+"tanto / tunto" → Tanto (make: Daihatsu)
+"tauft / tuft" → Taft (make: Daihatsu)
+"rumi / romy" → Roomy (make: Toyota)
+"nbox / n-box / en box" → N-Box (make: Honda)
+"nvan / n-van / en van" → N-Van (make: Honda)
+"minikab / minicab" → Minicab (make: Mitsubishi)
+"samber / sambhar" → Sambar (make: Subaru)
+"clipar / klipar" → Clipper (make: Nissan)
+"deepl / dpl / dipal" → Deepal (make: Changan)
+"alswin / alveen" → Alsvin (make: Changan)
+"seelion / sealyn" → Sealion (make: BYD)
+"sportech / sportej" → Sportage (make: Kia)
+"passo / paso" → Passo (make: Toyota)
+"roox / rux" → Roox (make: Nissan)
+"evry / everi" → Every (make: Suzuki)
+"hijet / hejet / hajit" → Hijet (make: Daihatsu)
 
 URDU SCRIPT EXAMPLES (Arabic characters):
 "ہونڈا سٹی" → make: Honda, model: City
@@ -201,6 +248,23 @@ Urus → Lamborghini | Huracan → Lamborghini
 Ghibli → Maserati | Levante → Maserati
 Range Rover → Land Rover | Defender → Land Rover | Discovery → Land Rover
 Atto 3 → BYD | Seal → BYD | Dolphin → BYD
+Atrai → Daihatsu | Atrai Wagon → Daihatsu | Tanto → Daihatsu | Sonica → Daihatsu | Wake → Daihatsu | Taft → Daihatsu | Boon → Daihatsu | Thor → Daihatsu | Esse → Daihatsu | Rocky → Daihatsu | Cast → Daihatsu
+Scrum → Mazda | Scrum Wagon → Mazda | Flair → Mazda | Demio → Mazda | Axela → Mazda | CX-5 → Mazda | CX-3 → Mazda
+Clipper → Nissan | NV100 → Nissan | Roox → Nissan | Moco → Nissan | Kicks → Nissan | Leaf → Nissan | Serena → Nissan | Elgrand → Nissan | Juke → Nissan | X-Trail → Nissan | Wingroad → Nissan
+N-Box → Honda | N-Van → Honda | N-One → Honda | N-Wgn → Honda | N-Slash → Honda | Grace → Honda | Insight → Honda | CR-Z → Honda | Shuttle → Honda | Step Wagon → Honda | Fit → Honda
+Spacia → Suzuki | Hustler → Suzuki | Lapin → Suzuki | Ignis → Suzuki | XBEE → Suzuki | Carry → Suzuki | Jimny → Suzuki | Solio → Suzuki | Escudo → Suzuki | Every Wagon → Suzuki | Palette → Suzuki | Cervo → Suzuki
+Minicab → Mitsubishi | Town Box → Mitsubishi | eK Wagon → Mitsubishi | eK Space → Mitsubishi | Delica → Mitsubishi | Outlander → Mitsubishi | ASX → Mitsubishi | Eclipse Cross → Mitsubishi | Pajero Mini → Mitsubishi
+Sambar → Subaru | Justy → Subaru | Chiffon → Subaru | XV → Subaru | Levorg → Subaru | Forester → Subaru | Outback → Subaru | WRX → Subaru | BRZ → Subaru | Impreza → Subaru | Stella → Subaru
+Roomy → Toyota | Tank → Toyota | Passo → Toyota | Porte → Toyota | Spade → Toyota | Sienta → Toyota | Wish → Toyota | Voxy → Toyota | Noah → Toyota | Esquire → Toyota | Harrier → Toyota | Mark X → Toyota | Crown → Toyota | C-HR → Toyota | Alphard → Toyota | Vellfire → Toyota | Probox → Toyota | Succeed → Toyota | Corolla Fielder → Toyota | FJ Cruiser → Toyota
+Deepal → Changan | Deepal S7 → Changan | Deepal L07 → Changan | Karvaan → Changan | CS75 → Changan
+ZS EV → MG | 4 EV → MG | GT → MG | Cyberster → MG
+Tank 300 → Haval | Tank 500 → Haval | Big Dog → Haval | H9 → Haval
+Sealion → BYD | Yuan Plus → BYD | Song Plus → BYD | Seagull → BYD | Han → BYD | Tang → BYD
+Dashing → Jetour | X90 → Jetour | X95 → Jetour
+Tivoli → SsangYong | Korando → SsangYong | Rexton → SsangYong
+Saga → Proton | Persona → Proton
+D-Max → Isuzu | MU-X → Isuzu
+Wrangler → Jeep | Cherokee → Jeep | Compass → Jeep
 
 DISAMBIGUATION RULE: When a model name is shared between brands (e.g. X70 could be Jetour or Proton), pick the most commonly searched version in Pakistan:
 - X70 alone with no budget → Jetour T2 is more likely if user said "T2", else assume Proton X70
@@ -333,7 +397,15 @@ Output: {"make": "BYD", "model": "Seal", "city": "Karachi", "max_budget": 100000
 
 Example 10 — Extremely short nickname only:
 Input: "shangan alsvin isb"
-Output: {"make": "Changan", "model": "Alsvin", "city": "Islamabad", "max_budget": null, "color": null, "trim": null, "min_year": 0, "max_year": 0}"""
+Output: {"make": "Changan", "model": "Alsvin", "city": "Islamabad", "max_budget": null, "color": null, "trim": null, "min_year": 0, "max_year": 0}
+
+Example 11 — JDM Kei micro-van:
+Input: "Daihatsu Atrai Wagon Lahore 25 lakh"
+Output: {"make": "Daihatsu", "model": "Atrai Wagon", "city": "Lahore", "max_budget": 2500000, "color": null, "trim": null, "min_year": 0, "max_year": 0}
+
+Example 12 — Chinese new entrant:
+Input: "changan deepal s7 lahore under 80 lakh"
+Output: {"make": "Changan", "model": "Deepal S7", "city": "Lahore", "max_budget": 8000000, "color": null, "trim": null, "min_year": 0, "max_year": 0}"""
 
 
 async def _execute_openrouter_call(user_input: str) -> str:

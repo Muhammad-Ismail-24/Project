@@ -1,10 +1,11 @@
 """
 scrapers/normalizer.py
-GaariGuru — API-Free Heuristic Scoring Normalizer v3.3
+GaariGuru — API-Free Heuristic Scoring Normalizer v3.4
 
-Upgrade log over v3.2:
+Upgrade log over v3.3:
   - ADDED (v3.3): Smart Trim Normalization. Trims now use negative matching 
     (conflict veto) instead of strict positive vetoing to account for lazy titles.
+  - ADDED (v3.4): Extended taxonomy for JDM Kei cars, Chinese entrants, and premium SUVs. Fixed identity scoring for compound titles.
 """
 
 import re
@@ -52,6 +53,157 @@ MAKE_INFERENCE_MAP: dict[str, tuple[str, str]] = {
     "mira":     ("Daihatsu", "Mira"),
     "move":     ("Daihatsu", "Move"),
     "every":    ("Suzuki",   "Every"),
+    # JDM Kei / Micro-vans
+    "atrai":     ("Daihatsu", "Atrai"),
+    "tanto":     ("Daihatsu", "Tanto"),
+    "sonica":    ("Daihatsu", "Sonica"),
+    "wake":      ("Daihatsu", "Wake"),
+    "taft":      ("Daihatsu", "Taft"),
+    "cast":      ("Daihatsu", "Cast"),
+    "boon":      ("Daihatsu", "Boon"),
+    "thor":      ("Daihatsu", "Thor"),
+    "esse":      ("Daihatsu", "Esse"),
+    "rocky":     ("Daihatsu", "Rocky"),
+    "copen":     ("Daihatsu", "Copen"),
+    "scrum":     ("Mazda",    "Scrum"),
+    "flair":     ("Mazda",    "Flair"),
+    "demio":     ("Mazda",    "Demio"),
+    "axela":     ("Mazda",    "Axela"),
+    "spacia":    ("Suzuki",   "Spacia"),
+    "hustler":   ("Suzuki",   "Hustler"),
+    "lapin":     ("Suzuki",   "Lapin"),
+    "ignis":     ("Suzuki",   "Ignis"),
+    "xbee":      ("Suzuki",   "XBEE"),
+    "jimny":     ("Suzuki",   "Jimny"),
+    "carry":     ("Suzuki",   "Carry"),
+    "solio":     ("Suzuki",   "Solio"),
+    "escudo":    ("Suzuki",   "Escudo"),
+    "palette":   ("Suzuki",   "Palette"),
+    "cervo":     ("Suzuki",   "Cervo"),
+    "clipper":   ("Nissan",   "Clipper"),
+    "roox":      ("Nissan",   "Roox"),
+    "moco":      ("Nissan",   "Moco"),
+    "kicks":     ("Nissan",   "Kicks"),
+    "leaf":      ("Nissan",   "Leaf"),
+    "serena":    ("Nissan",   "Serena"),
+    "elgrand":   ("Nissan",   "Elgrand"),
+    "juke":      ("Nissan",   "Juke"),
+    "xtrail":    ("Nissan",   "X-Trail"),
+    "wingroad":  ("Nissan",   "Wingroad"),
+    "note":      ("Nissan",   "Note"),
+    "march":     ("Nissan",   "March"),
+    "patrol":    ("Nissan",   "Patrol"),
+    "dayz":      ("Nissan",   "Dayz"),
+    "nbox":      ("Honda",    "N-Box"),
+    "nvan":      ("Honda",    "N-Van"),
+    "none":      ("Honda",    "N-One"),
+    "nwgn":      ("Honda",    "N-Wgn"),
+    "nslash":    ("Honda",    "N-Slash"),
+    "grace":     ("Honda",    "Grace"),
+    "insight":   ("Honda",    "Insight"),
+    "crz":       ("Honda",    "CR-Z"),
+    "shuttle":   ("Honda",    "Shuttle"),
+    "fit":       ("Honda",    "Fit"),
+    "freed":     ("Honda",    "Freed"),
+    "jazz":      ("Honda",    "Jazz"),
+    "beat":      ("Honda",    "Beat"),
+    "s660":      ("Honda",    "S660"),
+    "life":      ("Honda",    "Life"),
+    "zest":      ("Honda",    "Zest"),
+    "minicab":   ("Mitsubishi", "Minicab"),
+    "townbox":   ("Mitsubishi", "Town Box"),
+    "ekwagon":   ("Mitsubishi", "eK Wagon"),
+    "ekspace":   ("Mitsubishi", "eK Space"),
+    "delica":    ("Mitsubishi", "Delica"),
+    "outlander": ("Mitsubishi", "Outlander"),
+    "asx":       ("Mitsubishi", "ASX"),
+    "pajero":    ("Mitsubishi", "Pajero"),
+    "lancer":    ("Mitsubishi", "Lancer"),
+    "canter":    ("Mitsubishi", "Canter"),
+    "sambar":    ("Subaru",   "Sambar"),
+    "justy":     ("Subaru",   "Justy"),
+    "chiffon":   ("Subaru",   "Chiffon"),
+    "xv":        ("Subaru",   "XV"),
+    "levorg":    ("Subaru",   "Levorg"),
+    "forester":  ("Subaru",   "Forester"),
+    "outback":   ("Subaru",   "Outback"),
+    "wrx":       ("Subaru",   "WRX"),
+    "brz":       ("Subaru",   "BRZ"),
+    "impreza":   ("Subaru",   "Impreza"),
+    "stella":    ("Subaru",   "Stella"),
+    "roomy":     ("Toyota",   "Roomy"),
+    "tank":      ("Toyota",   "Tank"),
+    "passo":     ("Toyota",   "Passo"),
+    "porte":     ("Toyota",   "Porte"),
+    "spade":     ("Toyota",   "Spade"),
+    "sienta":    ("Toyota",   "Sienta"),
+    "wish":      ("Toyota",   "Wish"),
+    "voxy":      ("Toyota",   "Voxy"),
+    "noah":      ("Toyota",   "Noah"),
+    "esquire":   ("Toyota",   "Esquire"),
+    "harrier":   ("Toyota",   "Harrier"),
+    "markx":     ("Toyota",   "Mark X"),
+    "crown":     ("Toyota",   "Crown"),
+    "chr":       ("Toyota",   "C-HR"),
+    "alphard":   ("Toyota",   "Alphard"),
+    "vellfire":  ("Toyota",   "Vellfire"),
+    "probox":    ("Toyota",   "Probox"),
+    "succeed":   ("Toyota",   "Succeed"),
+    "raize":     ("Toyota",   "Raize"),
+    "rush":      ("Toyota",   "Rush"),
+    "belta":     ("Toyota",   "Belta"),
+    "camry":     ("Toyota",   "Camry"),
+    "hiace":     ("Toyota",   "Hiace"),
+    "prius":     ("Toyota",   "Prius"),
+    "landcruiser":("Toyota",  "Land Cruiser"),
+    # Chinese entrants
+    "alsvin":    ("Changan",  "Alsvin"),
+    "oshanx7":   ("Changan",  "Oshan X7"),
+    "unit":      ("Changan",  "Uni-T"),
+    "unik":      ("Changan",  "Uni-K"),
+    "hunter":    ("Changan",  "Hunter"),
+    "lumin":     ("Changan",  "Lumin"),
+    "deepal":    ("Changan",  "Deepal"),
+    "karvaan":   ("Changan",  "Karvaan"),
+    "hs":        ("MG",       "HS"),
+    "zs":        ("MG",       "ZS"),
+    "gloster":   ("MG",       "Gloster"),
+    "jolion":    ("Haval",    "Jolion"),
+    "h6":        ("Haval",    "H6"),
+    "dargo":     ("Haval",    "Dargo"),
+    "h9":        ("Haval",    "H9"),
+    "tiggo4":    ("Chery",    "Tiggo 4 Pro"),
+    "tiggo7":    ("Chery",    "Tiggo 7 Pro"),
+    "tiggo8":    ("Chery",    "Tiggo 8 Pro"),
+    "omoda5":    ("Chery",    "Omoda 5"),
+    "atto3":     ("BYD",      "Atto 3"),
+    "seal":      ("BYD",      "Seal"),
+    "dolphin":   ("BYD",      "Dolphin"),
+    "sealion":   ("BYD",      "Sealion"),
+    "t2":        ("Jetour",   "T2"),
+    "x70plus":   ("Jetour",   "X70 Plus"),
+    "dashing":   ("Jetour",   "Dashing"),
+    "coolray":   ("Geely",    "Coolray"),
+    "okavango":  ("Geely",    "Okavango"),
+    "bj40":      ("BAIC",     "BJ40"),
+    "x55":       ("BAIC",     "X55"),
+    "glory580":  ("DFSK",     "Glory 580"),
+    "saga":      ("Proton",   "Saga"),
+    "x70":       ("Proton",   "X70"),
+    "x50":       ("Proton",   "X50"),
+    "persona":   ("Proton",   "Persona"),
+    "dmax":      ("Isuzu",    "D-Max"),
+    "mux":       ("Isuzu",    "MU-X"),
+    "cayenne":   ("Porsche",  "Cayenne"),
+    "macan":     ("Porsche",  "Macan"),
+    "urus":      ("Lamborghini","Urus"),
+    "ghibli":    ("Maserati", "Ghibli"),
+    "levante":   ("Maserati", "Levante"),
+    "defender":  ("Land Rover","Defender"),
+    "discovery": ("Land Rover","Discovery"),
+    "wrangler":  ("Jeep",     "Wrangler"),
+    "cherokee":  ("Jeep",     "Cherokee"),
+    "compass":   ("Jeep",     "Compass"),
 }
 
 MODEL_ALIAS_MAP: dict[str, list[str]] = {
@@ -60,21 +212,60 @@ MODEL_ALIAS_MAP: dict[str, list[str]] = {
     "crv":      ["crv", "cr-v", "cr v"],
     "vezel":    ["vezel", "vezal", "vesel", "vezzel"],
     "wagonr":   ["wagonr", "wagon r", "wagon-r", "wagoner"],
-    "corolla":  ["corolla", "carolla", "corola", "coralla"],
-    "civic":    ["civic", "civick", "civec"],
+    "corolla":  ["corolla", "carolla", "corola", "coralla", "corolla altis", "grande", "xli", "gli", "corolla fielder"],
+    "civic":    ["civic", "civick", "civec", "civic reborn", "civic oriel", "civic rs", "civic x"],
     "cultus":   ["cultus", "kultus", "cultis"],
     "mehran":   ["mehran", "meharan", "mehern"],
     "nwagon":   ["n wagon", "nwagon", "n-wagon"],
     "none":     ["n one", "none", "n-one"],
+    # JDM aliases
+    "atrai":     ["atrai", "atrai wagon", "hijet atrai", "atry", "atrey"],
+    "scrum":     ["scrum", "scrum wagon", "mazda scrum"],
+    "clipper":   ["clipper", "nv100", "nv100 clipper", "nv100clipper"],
+    "nbox":      ["n box", "nbox", "n-box", "en box"],
+    "nwgn":      ["n wgn", "nwgn", "n-wgn", "en wgn"],
+    "nvan":      ["n van", "nvan", "n-van", "en van"],
+    "nslash":    ["n slash", "nslash", "n-slash"],
+    "roox":      ["roox", "dayz roox", "rux"],
+    "canbus":    ["canbus", "move canbus"],
+    "stingray":  ["stingray", "wagon r stingray", "wagonr stingray"],
+    "spacia":    ["spacia", "spaciya", "speshia"],
+    "hustler":   ["hustler", "hastler", "husler"],
+    "minicab":   ["minicab", "minikab", "mini cab"],
+    "townbox":   ["town box", "townbox", "town-box"],
+    "sambar":    ["sambar", "samber", "sambhar"],
+    "ekwagon":   ["ek wagon", "ekwagon", "ek-wagon", "ek custom", "ekcustom"],
+    "ekspace":   ["ek space", "ekspace", "ek-space", "ek x", "ekx"],
+    "tanto":     ["tanto", "tunto"],
+    "taft":      ["taft", "tauft", "tuft"],
+    "roomy":     ["roomy", "rumi", "romy"],
+    "passo":     ["passo", "paso"],
+    "every":     ["every", "evry", "every wagon", "every join"],
+    "hijet":     ["hijet", "hejet", "hajit", "hi jet"],
+    "deepal":    ["deepal", "deepl", "dipal"],
+    "alsvin":    ["alsvin", "alswin", "alveen"],
+    # Local sub-model aliases
+    "city":      ["city", "city aspire", "city vario", "city steermatic"],
+    "fortuner":  ["fortuner", "fortunner", "fortener"],
+    "landcruiser":["land cruiser", "landcruiser", "lc200", "lc300", "lc70"],
+    "sealion":   ["sealion", "seelion", "sealyn", "sea lion"],
+    "xtrail":    ["x trail", "xtrail", "x-trail"],
+    "crz":       ["cr z", "crz", "cr-z"],
 }
 
 MAKE_ALIAS_MAP: dict[str, str] = {
     "daihatsu": "toyota", 
+    "mazda":     "suzuki",    # Scrum → Every
+    "subaru":    "daihatsu",  # Sambar → Hijet, Justy → Thor
 }
 
 MAKE_VETO_ALIASES: dict[str, list[str]] = {
     "daihatsu": ["toyota", "daihatsu"],  
     "toyota":   ["toyota", "daihatsu"],  
+    "mazda":     ["mazda", "suzuki"],     # Scrum = Every rebadge
+    "subaru":    ["subaru", "daihatsu", "toyota"],  # Sambar/Justy/Chiffon = Daihatsu rebadge
+    "nissan":    ["nissan", "suzuki", "mitsubishi"],  # Clipper = Every/Minicab platform
+    "mitsubishi":["mitsubishi", "nissan"],  # Minicab ↔ Clipper
 }
 
 TYPO_CORRECTIONS: dict[str, str] = {
@@ -97,6 +288,50 @@ TYPO_CORRECTIONS: dict[str, str] = {
     "daihtsu":   "daihatsu",
     "daihutsu":  "daihatsu",
     "hijet":     "hijet", 
+    "atry":      "atrai",
+    "atrey":     "atrai",
+    "atri":      "atrai",
+    "sakrum":    "scrum",
+    "scram":     "scrum",
+    "speciya":   "spacia",
+    "speshia":   "spacia",
+    "hastler":   "hustler",
+    "husler":    "hustler",
+    "tunto":     "tanto",
+    "tauft":     "taft",
+    "tuft":      "taft",
+    "rumi":      "roomy",
+    "romy":      "roomy",
+    "paso":      "passo",
+    "minikab":   "minicab",
+    "samber":    "sambar",
+    "sambhar":   "sambar",
+    "clipar":    "clipper",
+    "klipar":    "clipper",
+    "hejet":     "hijet",
+    "hajit":     "hijet",
+    "deepl":     "deepal",
+    "dipal":     "deepal",
+    "alswin":    "alsvin",
+    "alveen":    "alsvin",
+    "seelion":   "sealion",
+    "sealyn":    "sealion",
+    "sportech":  "sportage",
+    "evry":      "every",
+    "everi":     "every",
+    "rux":       "roox",
+    "fortener":  "fortuner",
+    "toyata":    "toyota",
+    "tyota":     "toyota",
+    "suzki":     "suzuki",
+    "nisin":     "nissan",
+    "nisan":     "nissan",
+    "mitsibishi":"mitsubishi",
+    "mitsbishi": "mitsubishi",
+    "mazada":    "mazda",
+    "subru":     "subaru",
+    "sabru":     "subaru",
+    "handa":     "honda",
 }
 
 CITY_ALIAS_MAP: dict[str, str] = {
@@ -173,12 +408,18 @@ def normalize_make_model(make: str, model: str) -> tuple[str, str]:
     model_clean = (model or "").strip().lower()
     model_corrected = TYPO_CORRECTIONS.get(model_clean, model_clean)
 
+    # Case 1: make itself is a known model name (user typed model as make)
     if make_clean in MAKE_INFERENCE_MAP:
         inferred_make, inferred_model = MAKE_INFERENCE_MAP[make_clean]
         if not model_corrected or model_corrected == make_clean:
             return inferred_make, inferred_model
         else:
             return inferred_make, model_corrected.title()
+
+    # Case 2: make is empty/unknown, but model is a known standalone name
+    if not make_clean and model_corrected in MAKE_INFERENCE_MAP:
+        inferred_make, inferred_model = MAKE_INFERENCE_MAP[model_corrected]
+        return inferred_make, inferred_model
 
     return (make or "").strip(), model_corrected.title() if model_corrected else ""
 
@@ -269,6 +510,15 @@ def _calculate_identity_score(requested_make: str, requested_model: str, title: 
     for alias in aliases:
         if alias in target_clean:
             return 1.0
+
+    # Token-level intersection for compound model names
+    model_tokens = set(requested_model.lower().replace("-", " ").split())
+    title_tokens = set(title.lower().replace("-", " ").split())
+    if model_tokens:
+        overlap = model_tokens & title_tokens
+        token_ratio = len(overlap) / len(model_tokens)
+        if token_ratio >= 0.75:
+            return max(0.85, token_ratio)
 
     best_ratio = 0.0
     title_words = title.lower().replace("-", " ").replace(".", " ").replace("_", " ").split()

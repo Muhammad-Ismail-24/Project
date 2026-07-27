@@ -135,7 +135,15 @@ automotive knowledge of the Pakistani market. Do not print your answers.
       trim = ""       → ALL other cases, including sunroof, leather, turbo, panoramic roof.
                          For those, pick the MODEL that has them as standard.
 
-  Q5. MARKET LIQUIDITY — apply this filter to EVERY candidate before accepting it:
+  Q5. FACTORY FEATURES vs AFTERMARKET:
+      If the user requests features like "panoramic sunroof", "sunroof", "push start", "cruise control":
+      - Understand what trims/generations actually have these.
+      - If a user wants a sunroof on a Civic, output trim="Oriel".
+      - If they want a panoramic sunroof on a Vezel, output min_year=2021 and trim="Play".
+      - Reject or clarify "Aftermarket Only" features (like remote engine start in Pakistan) in the rationale.
+      - Output these standardized features in the required_features array.
+
+  Q6. MARKET LIQUIDITY — apply this filter to EVERY candidate before accepting it:
       Ask yourself: "If I searched this exact model on PakWheels Pakistan today,
       would I find at least 10 active listings?"
 
@@ -152,11 +160,11 @@ automotive knowledge of the Pakistani market. Do not print your answers.
           Chevrolet Optra, Hyundai Santro (older), Daihatsu Charade
 
       This question must be answered for EVERY pick, including picks 4 and 5.
-      A car that fails Q5 must be replaced with a high-inventory alternative,
+      A car that fails Q6 must be replaced with a high-inventory alternative,
       even if it means repeating a make you already used.
 
-  Q6. DIVERSITY — a tiebreaker, not a quota:
-      After Q5 has filtered your 5 candidates to only high-liquidity options,
+  Q7. DIVERSITY — a tiebreaker, not a quota:
+      After Q6 has filtered your 5 candidates to only high-liquidity options,
       check: do they span at least 2 different makes?
 
       If yes → you are done. Output as-is, even if 3 or 4 picks share a make.
@@ -174,7 +182,7 @@ automotive knowledge of the Pakistani market. Do not print your answers.
 STEP 2 — OUTPUT CONTRACT (non-negotiable)
 ═══════════════════════════════════════════════════════
 Output ONLY a raw JSON array. Zero preamble. Zero explanation. Zero markdown.
-The array must contain EXACTLY 5 objects, each with these EXACT 7 keys:
+The array must contain EXACTLY 5 objects, each with these EXACT 8 keys:
 
   "make"       → String. Brand name exactly as listed on PakWheels.
   "model"      → String. Model name exactly as listed on PakWheels.
@@ -182,6 +190,7 @@ The array must contain EXACTLY 5 objects, each with these EXACT 7 keys:
   "city"       → String. User’s city if mentioned, else "" (never null).
   "max_budget" → Integer. Budget in PKR. 0 if not mentioned (never null).
   "min_year"   → Integer. Set via Q3 reasoning above. 0 means no floor.
+  "required_features" → Array of Strings. Standardized factory features requested (e.g. ["sunroof", "push_start"]). Empty array if none.
   "rationale"  → String. 1–2 punchy sentences: why this specific car for this user.
 
 ═══════════════════════════════════════════════════════
@@ -200,11 +209,11 @@ Q2: No transmission constraint.
 Q3: Budget given → min_year=0. Q4: AWD → trim=AWD/blank per Q1-B. Q5: 4 makes ✓.
 ──────────────────────────────────────
 [
-  {"make":"Kia","model":"Sportage","trim":"AWD","city":"Lahore","max_budget":8000000,"min_year":0,"rationale":"5th gen NQ5 AWD comes with panoramic sunroof as standard — Pakistan’s top-selling 4x4 crossover with great resale."},
-  {"make":"Hyundai","model":"Tucson","trim":"AWD","city":"Lahore","max_budget":8000000,"min_year":0,"rationale":"AWD Tucson pairs European ride quality with a panoramic roof and ADAS — polished family crossover at this budget."},
-  {"make":"Haval","model":"H6","trim":"AWD","city":"Lahore","max_budget":8000000,"min_year":0,"rationale":"H6 2.0T is the only AWD Chinese crossover at this price with a massive panoramic roof and 9-speed DCT."},
-  {"make":"Toyota","model":"Fortuner","trim":"","city":"Lahore","max_budget":8000000,"min_year":0,"rationale":"Body-on-frame 4x4 — every variant is 4WD; unmatched reliability and resale if off-road credentials matter."},
-  {"make":"Kia","model":"Sorento","trim":"AWD","city":"Lahore","max_budget":8000000,"min_year":0,"rationale":"3-row AWD monocoque SUV — more cabin space than Sportage while meeting the 4x4 requirement."}
+  {"make":"Kia","model":"Sportage","trim":"AWD","city":"Lahore","max_budget":8000000,"min_year":0,"required_features":["panoramic_sunroof"],"rationale":"5th gen NQ5 AWD comes with panoramic sunroof as standard — Pakistan’s top-selling 4x4 crossover with great resale."},
+  {"make":"Hyundai","model":"Tucson","trim":"AWD","city":"Lahore","max_budget":8000000,"min_year":0,"required_features":["panoramic_sunroof"],"rationale":"AWD Tucson pairs European ride quality with a panoramic roof and ADAS — polished family crossover at this budget."},
+  {"make":"Haval","model":"H6","trim":"AWD","city":"Lahore","max_budget":8000000,"min_year":0,"required_features":["panoramic_sunroof"],"rationale":"H6 2.0T is the only AWD Chinese crossover at this price with a massive panoramic roof and 9-speed DCT."},
+  {"make":"Toyota","model":"Fortuner","trim":"","city":"Lahore","max_budget":8000000,"min_year":0,"required_features":[],"rationale":"Body-on-frame 4x4 — every variant is 4WD; unmatched reliability and resale if off-road credentials matter."},
+  {"make":"Kia","model":"Sorento","trim":"AWD","city":"Lahore","max_budget":8000000,"min_year":0,"required_features":[],"rationale":"3-row AWD monocoque SUV — more cabin space than Sportage while meeting the 4x4 requirement."}
 
 
 ──────────────────────────────────────
@@ -226,11 +235,11 @@ Q3: Case B (budget given, 1.5 crore = 150 lacs ≥ 50 lacs) → Case A: HIGH-BUD
 Q5: All have solid PakWheels inventory at 1.5 crore ✓. Q6: 4 makes ✓.
 ──────────────────────────────────────
 [
-  {"make":"Toyota","model":"Fortuner","trim":"","city":"","max_budget":15000000,"min_year":2019,"rationale":"Gold-standard ladder-frame 4x4 for Pakistan's mountains — proven 2.7L/2.8D engines, legendary durability, best resale of any SUV."},
-  {"make":"Toyota","model":"Prado","trim":"","city":"","max_budget":15000000,"min_year":2019,"rationale":"Full-size ladder-frame SUV with locking differentials and proper low-range transfer case — the definitive choice for serious northern terrain."},
-  {"make":"Toyota","model":"Hilux Revo","trim":"","city":"","max_budget":15000000,"min_year":2019,"rationale":"Double-cab pickup on a truck frame — maximum payload and ground clearance; the vehicle northern-areas drivers trust most."},
-  {"make":"GWM","model":"Tank 300","trim":"","city":"","max_budget":15000000,"min_year":2021,"rationale":"Modern ladder-frame off-roader with electronic locking diff and low-range 4x4 — the strongest Chinese BOF option in Pakistan."},
-  {"make":"Mitsubishi","model":"Pajero","trim":"","city":"","max_budget":15000000,"min_year":0,"rationale":"Japanese ladder-frame legend with Super Select 4WD — older units are proven off-road performers well within this budget."}
+  {"make":"Toyota","model":"Fortuner","trim":"","city":"","max_budget":15000000,"min_year":2019,"required_features":[],"rationale":"Gold-standard ladder-frame 4x4 for Pakistan's mountains — proven 2.7L/2.8D engines, legendary durability, best resale of any SUV."},
+  {"make":"Toyota","model":"Prado","trim":"","city":"","max_budget":15000000,"min_year":2019,"required_features":[],"rationale":"Full-size ladder-frame SUV with locking differentials and proper low-range transfer case — the definitive choice for serious northern terrain."},
+  {"make":"Toyota","model":"Hilux Revo","trim":"","city":"","max_budget":15000000,"min_year":2019,"required_features":[],"rationale":"Double-cab pickup on a truck frame — maximum payload and ground clearance; the vehicle northern-areas drivers trust most."},
+  {"make":"GWM","model":"Tank 300","trim":"","city":"","max_budget":15000000,"min_year":2021,"required_features":[],"rationale":"Modern ladder-frame off-roader with electronic locking diff and low-range 4x4 — the strongest Chinese BOF option in Pakistan."},
+  {"make":"Mitsubishi","model":"Pajero","trim":"","city":"","max_budget":15000000,"min_year":0,"required_features":[],"rationale":"Japanese ladder-frame legend with Super Select 4WD — older units are proven off-road performers well within this budget."}
 ]
 
 ──────────────────────────────────────
@@ -246,11 +255,11 @@ Q3: Case B (budget given, 18 lacs < 50 lacs) → min_year = 0.
 Q4: trim="" (auto is the reason we picked these). Q5/Q6: 4 makes ✓.
 ──────────────────────────────────────
 [
-  {"make":"Toyota","model":"Vitz","trim":"","city":"","max_budget":1800000,"min_year":0,"rationale":"Japanese imported hatchback with a proven auto CVT — 2005–2010 units fit this budget and run indefinitely."},
-  {"make":"Daihatsu","model":"Mira","trim":"","city":"","max_budget":1800000,"min_year":0,"rationale":"660cc Japanese automatic — ultra-light, excellent city fuel average, smooth CVT, easy to park."},
-  {"make":"Honda","model":"City","trim":"","city":"","max_budget":1800000,"min_year":0,"rationale":"2004–2008 i-DSI Steermatic — spacious sedan with a genuine automatic, comfortable for daily commutes."},
-  {"make":"Nissan","model":"Dayz","trim":"","city":"","max_budget":1800000,"min_year":0,"rationale":"Feature-rich 660cc Japanese auto with push-start and modern interior at a very accessible price."},
-  {"make":"Honda","model":"Civic","trim":"","city":"","max_budget":1800000,"min_year":0,"rationale":"2004–2006 EXi Prosmatec — true automatic gearbox in a comfortable sedan; solid build, widely available."}
+  {"make":"Toyota","model":"Vitz","trim":"","city":"","max_budget":1800000,"min_year":0,"required_features":[],"rationale":"Japanese imported hatchback with a proven auto CVT — 2005–2010 units fit this budget and run indefinitely."},
+  {"make":"Daihatsu","model":"Mira","trim":"","city":"","max_budget":1800000,"min_year":0,"required_features":[],"rationale":"660cc Japanese automatic — ultra-light, excellent city fuel average, smooth CVT, easy to park."},
+  {"make":"Honda","model":"City","trim":"","city":"","max_budget":1800000,"min_year":0,"required_features":[],"rationale":"2004–2008 i-DSI Steermatic — spacious sedan with a genuine automatic, comfortable for daily commutes."},
+  {"make":"Nissan","model":"Dayz","trim":"","city":"","max_budget":1800000,"min_year":0,"required_features":[],"rationale":"Feature-rich 660cc Japanese auto with push-start and modern interior at a very accessible price."},
+  {"make":"Honda","model":"Civic","trim":"","city":"","max_budget":1800000,"min_year":0,"required_features":[],"rationale":"2004–2006 EXi Prosmatec — true automatic gearbox in a comfortable sedan; solid build, widely available."}
 ]
 
 ──────────────────────────────────────
@@ -265,11 +274,11 @@ Q3: Case B (budget given, 30 lacs < 50 lacs) → min_year = 0.
 Q4: trim="" (auto is standard on all picks). Q5/Q6: 3 makes ✓.
 ──────────────────────────────────────
 [
-  {"make":"Suzuki","model":"Alto","trim":"","city":"","max_budget":3000000,"min_year":2019,"rationale":"New-shape 660cc Alto VXL AGS — cheapest locally-assembled automatic in Pakistan with low running cost."},
-  {"make":"Suzuki","model":"Cultus","trim":"","city":"","max_budget":3000000,"min_year":2018,"rationale":"New Celerio-shape Cultus VXL AGS — slightly roomier than Alto with the same automatic gearbox."},
-  {"make":"Suzuki","model":"WagonR","trim":"","city":"","max_budget":3000000,"min_year":2020,"rationale":"New-shape WagonR VXL AGS — tallboy body with the most interior space of the Suzuki AGS trio."},
-  {"make":"Toyota","model":"Vitz","trim":"","city":"","max_budget":3000000,"min_year":0,"rationale":"Japanese CVT automatic with a reliable reputation — 2010–2014 units comfortably within this range."},
-  {"make":"Daihatsu","model":"Mira","trim":"","city":"","max_budget":3000000,"min_year":0,"rationale":"660cc Japanese CVT import — extremely fuel-efficient and easy to drive in city traffic."}
+  {"make":"Suzuki","model":"Alto","trim":"","city":"","max_budget":3000000,"min_year":2019,"required_features":[],"rationale":"New-shape 660cc Alto VXL AGS — cheapest locally-assembled automatic in Pakistan with low running cost."},
+  {"make":"Suzuki","model":"Cultus","trim":"","city":"","max_budget":3000000,"min_year":2018,"required_features":[],"rationale":"New Celerio-shape Cultus VXL AGS — slightly roomier than Alto with the same automatic gearbox."},
+  {"make":"Suzuki","model":"WagonR","trim":"","city":"","max_budget":3000000,"min_year":2020,"required_features":[],"rationale":"New-shape WagonR VXL AGS — tallboy body with the most interior space of the Suzuki AGS trio."},
+  {"make":"Toyota","model":"Vitz","trim":"","city":"","max_budget":3000000,"min_year":0,"required_features":[],"rationale":"Japanese CVT automatic with a reliable reputation — 2010–2014 units comfortably within this range."},
+  {"make":"Daihatsu","model":"Mira","trim":"","city":"","max_budget":3000000,"min_year":0,"required_features":[],"rationale":"660cc Japanese CVT import — extremely fuel-efficient and easy to drive in city traffic."}
 ]
 
 ──────────────────────────────────────
@@ -285,11 +294,11 @@ Q4: trim="" for all (each model's top variant is implied by the budget and ratio
 Q5: All have PakWheels listings at this price. Q6: 5 different makes ✓.
 ──────────────────────────────────────
 [
-  {"make":"Toyota","model":"Land Cruiser","trim":"","city":"","max_budget":80000000,"min_year":2022,"rationale":"300-series Land Cruiser is the pinnacle of Pakistani road presence — twin-turbo V6, locking diffs, unmatched reliability at any price."},
-  {"make":"Toyota","model":"Prado","trim":"","city":"","max_budget":80000000,"min_year":2023,"rationale":"250-series Prado launched 2023 — freshest ladder-frame luxury SUV available in Pakistan with a premium cabin and proven 4x4."},
-  {"make":"Kia","model":"Carnival","trim":"","city":"","max_budget":80000000,"min_year":2021,"rationale":"8-seat premium minivan — the most comfortable people-mover available in Pakistan with a flagship interior."},
-  {"make":"Mercedes-Benz","model":"C-Class","trim":"","city":"","max_budget":80000000,"min_year":2022,"rationale":"Latest W206 C-Class used imports reach this budget — European luxury with MBUX, ambient lighting, and AMG-line trims."},
-  {"make":"BMW","model":"5 Series","trim":"","city":"","max_budget":80000000,"min_year":2021,"rationale":"G30/G60 5 Series used imports — executive sedan with iDrive 8, mild-hybrid options, and outstanding build quality."}
+  {"make":"Toyota","model":"Land Cruiser","trim":"","city":"","max_budget":80000000,"min_year":2022,"required_features":[],"rationale":"300-series Land Cruiser is the pinnacle of Pakistani road presence — twin-turbo V6, locking diffs, unmatched reliability at any price."},
+  {"make":"Toyota","model":"Prado","trim":"","city":"","max_budget":80000000,"min_year":2023,"required_features":[],"rationale":"250-series Prado launched 2023 — freshest ladder-frame luxury SUV available in Pakistan with a premium cabin and proven 4x4."},
+  {"make":"Kia","model":"Carnival","trim":"","city":"","max_budget":80000000,"min_year":2021,"required_features":[],"rationale":"8-seat premium minivan — the most comfortable people-mover available in Pakistan with a flagship interior."},
+  {"make":"Mercedes-Benz","model":"C-Class","trim":"","city":"","max_budget":80000000,"min_year":2022,"required_features":[],"rationale":"Latest W206 C-Class used imports reach this budget — European luxury with MBUX, ambient lighting, and AMG-line trims."},
+  {"make":"BMW","model":"5 Series","trim":"","city":"","max_budget":80000000,"min_year":2021,"required_features":[],"rationale":"G30/G60 5 Series used imports — executive sedan with iDrive 8, mild-hybrid options, and outstanding build quality."}
 ]
 
 ──────────────────────────────────────
@@ -298,11 +307,11 @@ Q1: No AWD. Q2: No transmission constraint (hybrid implies auto). Q3: No budget 
 Q4: User said hybrid → trim="Hybrid". Q5: Spread across Toyota/Honda – add variety.
 ──────────────────────────────────────
 [
-  {"make":"Toyota","model":"Aqua","trim":"Hybrid","city":"Islamabad","max_budget":0,"min_year":2021,"rationale":"Most common hybrid in Pakistan — 25–28 km/l city average, parts everywhere, proven 2nd gen reliability."},
-  {"make":"Toyota","model":"Prius","trim":"Hybrid","city":"Islamabad","max_budget":0,"min_year":2023,"rationale":"Roomier than Aqua with a smoother system — 20–24 km/l; ideal for families wanting hybrid comfort."},
-  {"make":"Honda","model":"Vezel","trim":"Hybrid","city":"Islamabad","max_budget":0,"min_year":2022,"rationale":"3rd gen crossover hybrid — more ground clearance and cargo room than Aqua; great for Islamabad’s roads."},
-  {"make":"Toyota","model":"Corolla Cross","trim":"Hybrid","city":"Islamabad","max_budget":0,"min_year":2022,"rationale":"Locally assembled hybrid SUV — Corolla reliability with crossover stance and factory economy."},
-  {"make":"Toyota","model":"Fielder","trim":"Hybrid","city":"Islamabad","max_budget":0,"min_year":2015,"rationale":"Wagon-body hybrid with a massive boot — preferred by families needing practicality over SUV styling."}
+  {"make":"Toyota","model":"Aqua","trim":"Hybrid","city":"Islamabad","max_budget":0,"min_year":2021,"required_features":[],"rationale":"Most common hybrid in Pakistan — 25–28 km/l city average, parts everywhere, proven 2nd gen reliability."},
+  {"make":"Toyota","model":"Prius","trim":"Hybrid","city":"Islamabad","max_budget":0,"min_year":2023,"required_features":[],"rationale":"Roomier than Aqua with a smoother system — 20–24 km/l; ideal for families wanting hybrid comfort."},
+  {"make":"Honda","model":"Vezel","trim":"Hybrid","city":"Islamabad","max_budget":0,"min_year":2022,"required_features":[],"rationale":"3rd gen crossover hybrid — more ground clearance and cargo room than Aqua; great for Islamabad’s roads."},
+  {"make":"Toyota","model":"Corolla Cross","trim":"Hybrid","city":"Islamabad","max_budget":0,"min_year":2022,"required_features":[],"rationale":"Locally assembled hybrid SUV — Corolla reliability with crossover stance and factory economy."},
+  {"make":"Toyota","model":"Fielder","trim":"Hybrid","city":"Islamabad","max_budget":0,"min_year":2015,"required_features":[],"rationale":"Wagon-body hybrid with a massive boot — preferred by families needing practicality over SUV styling."}
 ]
 
 ──────────────────────────────────────
@@ -311,11 +320,11 @@ Q1: No AWD. Q2: No transmission constraint. Q3: No budget → min_year=current g
 Q4: trim="" (sedans don’t need trim filtering). Q5: 5 different makes ✓.
 ──────────────────────────────────────
 [
-  {"make":"Honda","model":"Civic","trim":"","city":"","max_budget":0,"min_year":2022,"rationale":"11th gen FE Civic — 1.5T turbo, Honda Sensing ADAS, sharpest-looking sedan on Pakistan’s roads right now."},
-  {"make":"Toyota","model":"Corolla","trim":"","city":"","max_budget":0,"min_year":2022,"rationale":"12th gen on TNGA platform — better handling, refined cabin, and unbeatable Corolla resale value nationwide."},
-  {"make":"Hyundai","model":"Elantra","trim":"","city":"","max_budget":0,"min_year":2021,"rationale":"7th gen CN7 — most striking exterior in class, turbocharged options, and genuinely premium interior feel."},
-  {"make":"Changan","model":"Alsvin","trim":"","city":"","max_budget":0,"min_year":2021,"rationale":"Best-value Chinese sedan — turbo engine, touchscreen, competitive build quality at a price below Korean rivals."},
-  {"make":"Kia","model":"Stonic","trim":"","city":"","max_budget":0,"min_year":2021,"rationale":"Locally assembled compact crossover-sedan — turbocharged with premium finishes usually above its price bracket."}
+  {"make":"Honda","model":"Civic","trim":"","city":"","max_budget":0,"min_year":2022,"required_features":[],"rationale":"11th gen FE Civic — 1.5T turbo, Honda Sensing ADAS, sharpest-looking sedan on Pakistan’s roads right now."},
+  {"make":"Toyota","model":"Corolla","trim":"","city":"","max_budget":0,"min_year":2022,"required_features":[],"rationale":"12th gen on TNGA platform — better handling, refined cabin, and unbeatable Corolla resale value nationwide."},
+  {"make":"Hyundai","model":"Elantra","trim":"","city":"","max_budget":0,"min_year":2021,"required_features":[],"rationale":"7th gen CN7 — most striking exterior in class, turbocharged options, and genuinely premium interior feel."},
+  {"make":"Changan","model":"Alsvin","trim":"","city":"","max_budget":0,"min_year":2021,"required_features":[],"rationale":"Best-value Chinese sedan — turbo engine, touchscreen, competitive build quality at a price below Korean rivals."},
+  {"make":"Kia","model":"Stonic","trim":"","city":"","max_budget":0,"min_year":2021,"required_features":[],"rationale":"Locally assembled compact crossover-sedan — turbocharged with premium finishes usually above its price bracket."}
 ]
 """
 
@@ -336,7 +345,7 @@ STRICT RULES:
 2. Return EXACTLY the requested number of replacement objects.
 3. NEVER repeat any model in the excluded list.
 4. Apply the same logic as the original search (same drivetrain, budget, city, intent).
-5. Use the same 7-key schema: make, model, trim, city, max_budget, min_year, rationale.
+5. Use the same 8-key schema: make, model, trim, city, max_budget, min_year, required_features, rationale.
 6. "trim" rules: "" by default. Only "AWD"/"Hybrid"/"EV"/"Diesel"/"Manual" when 
    the user's original intent explicitly required it.
 7. "min_year": 0 if budget given, current-gen first year if no budget.
@@ -376,6 +385,9 @@ def _sanitize_recommendations(raw_list: list, caller: str = "Recommender") -> li
             r["min_year"] = int(raw_year) if raw_year else 0
         except (TypeError, ValueError):
             r["min_year"] = 0
+
+        if not isinstance(r.get("required_features"), list):
+            r["required_features"] = []
 
         if not r.get("make") or not r.get("model"):
             print(f"[{caller}] Skipping malformed entry (no make/model): {r}")

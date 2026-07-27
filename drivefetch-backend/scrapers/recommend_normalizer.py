@@ -80,6 +80,7 @@ def _calculate_recommendation_score(
     clean_year: int,
     clean_mileage: int,
     requested_trim: str = None,
+    required_features: list[str] = None,
     min_year: int = 0,
     max_year: int = 0,
     debug: bool = False,
@@ -183,6 +184,31 @@ def _calculate_recommendation_score(
             # (c) No trim, no conflict → lazy seller, keep the listing
             trim_score = 0.0
 
+
+    # ── 6.5. Feature Matcher (Hard Vetoes & Boosting) ────────────────────────────
+    feature_score = 0.0
+    if required_features:
+        for feature in required_features:
+            feat_lower = feature.lower().replace("_", " ")
+            
+            # 1. Trim-to-Feature Hardcoding
+            if "sunroof" in feat_lower and requested_model.lower() == "corolla":
+                if "gli" in title_lower or "xli" in title_lower:
+                    return veto("Corolla GLi/XLi do not have factory sunroofs")
+                if "grande" in title_lower or "altis" in title_lower:
+                    feature_score += 20.0
+            
+            # 2. Year-to-Feature Hardcoding
+            if "panoramic" in feat_lower and requested_model.lower() == "vezel":
+                if clean_year > 0 and clean_year < 2021:
+                    return veto("Vezel panoramic sunroof only available 2021+")
+                    
+            # 3. Keyword Scanning
+            if feat_lower in title_lower or feat_lower.replace(" ", "") in title_clean:
+                feature_score += 15.0
+            elif "push start" in feat_lower and ("push" in title_lower or "start" in title_lower):
+                feature_score += 10.0
+
     # ── 7. Year bounds ─────────────────────────────────────────────────────
     if clean_year > 0:
         if min_year > 0 and clean_year < min_year:
@@ -203,7 +229,7 @@ def _calculate_recommendation_score(
     quality_score = year_score + mileage_score
 
     # ── Total ──────────────────────────────────────────────────────────────
-    raw_total   = budget_score + city_score + age_score + quality_score + trim_score
+    raw_total   = budget_score + city_score + age_score + quality_score + trim_score + feature_score
     total_score = round(raw_total * identity_score, 2)
 
     if debug:
@@ -211,7 +237,7 @@ def _calculate_recommendation_score(
             f"  [REC-SCORE] '{car.title[:45]}' | "
             f"id={identity_score:.2f} budget={budget_score:.1f} "
             f"city={city_score:.1f} age={age_score:.1f} "
-            f"quality={quality_score:.1f} trim={trim_score:.1f} "
+            f"quality={quality_score:.1f} trim={trim_score:.1f} feat={feature_score:.1f} "
             f"→ {total_score:.2f}"
         )
 
@@ -230,6 +256,7 @@ def normalize_recommendation_target(
     requested_budget: int,
     requested_color: str,
     requested_trim: str,
+    required_features: list[str] = None,
     min_year: int = 0,
     max_year: int = 0,
     top_k: int = 5,
@@ -273,6 +300,7 @@ def normalize_recommendation_target(
             clean_year=clean_year,
             clean_mileage=clean_mileage,
             requested_trim=requested_trim,
+            required_features=required_features,
             min_year=min_year,
             max_year=max_year,
             debug=debug,
