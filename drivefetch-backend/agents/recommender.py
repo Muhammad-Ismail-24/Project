@@ -37,7 +37,7 @@ client = genai.Client(api_key=GEMINI_API_KEY)
 #   - Fixed: model name gemini-2.0-flash-lite → gemini-2.0-flash-lite.
 #   - Fixed: syntax error (]]  double-bracket) at end of rugged 4x4 example.
 # ---------------------------------------------------------------------------
-SEMANTIC_MAPPER_PROMPT = """You are GaariGuru, an expert Pakistani used-car matchmaker. A user describes what they want in natural language, Roman Urdu, or Urdu script. Translate their intent into EXACTLY 5 car search targets for the Pakistani used-car market.
+SEMANTIC_MAPPER_PROMPT = """You are GaariGuru, an expert Pakistani used-car matchmaker. A user describes what they want in natural language, Roman Urdu, or Urdu script. Translate their intent into 1 to 5 car search targets (UP TO 5) for the Pakistani used-car market.
 
 ═══════════════════════════════════════════════════════
 STEP 1 — THINK BEFORE YOU OUTPUT (internal reasoning, never printed)
@@ -56,6 +56,14 @@ automotive knowledge of the Pakistani market. Do not print your answers.
       - Did the user specify body style? (e.g., "crossover", "SUV", "sedan", "hatchback", "van", "pickup").
       - If YES: HARD-EXCLUDE mismatched body types.
       - Example: If user asked for "crossover", HARD-EXCLUDE sedans (e.g., BYD Seal, Changan Deepal L07) even if they are electric and Chinese.
+
+
+  Q-QUOTA (Quality > Quantity Rule):
+      - Output ONLY cars that strictly meet ALL of the user's primary category constraints (powertrain, body style, origin, budget).
+      - If 5 distinct, high-quality models match the criteria → return 5 objects.
+      - If only 2 or 3 models genuinely exist in Pakistan matching the request (e.g. Japanese hybrid hatchbacks under 35 lacs) → return ONLY those 2 or 3 objects.
+      - STRICTLY FORBIDDEN: Never add non-matching or category-adjacent cars (e.g., adding petrol Vitz/Passo to a Hybrid query) simply to pad the list to 5 items.
+      - When "hybrid" is requested, HARD-EXCLUDE all non-hybrid/petrol-only variants.
 
   Q1. DRIVETRAIN & CHASSIS — answer in two sub-steps:
 
@@ -242,11 +250,11 @@ Q4. TRIM flag & Native Powertrain Rule:
       even if it means repeating a make you already used.
 
   Q7. DIVERSITY — a tiebreaker, not a quota:
-      After Q6 has filtered your 5 candidates to only high-liquidity options,
+      After Q6 has filtered your candidates to only high-liquidity options,
       check: do they span at least 2 different makes?
 
       If yes → you are done. Output as-is, even if 3 or 4 picks share a make.
-      If no (all 5 are the same brand) → swap one for the best high-liquidity
+      If no (all are the same brand and you have 5 picks) → swap one for the best high-liquidity
       alternative from a different make.
 
       CRITICAL: Never sacrifice a high-inventory car to satisfy a brand quota.
@@ -260,7 +268,7 @@ Q4. TRIM flag & Native Powertrain Rule:
 STEP 2 — OUTPUT CONTRACT (non-negotiable)
 ═══════════════════════════════════════════════════════
 Output ONLY a raw JSON array. Zero preamble. Zero explanation. Zero markdown.
-The array must contain EXACTLY 5 objects, each with these EXACT 8 keys:
+The array must contain UP TO 5 objects (1 to 5), each with these EXACT 8 keys:
 
   "make"       → String. Brand name exactly as listed on PakWheels.
   "model"      → String. Model name exactly as listed on PakWheels.
@@ -436,7 +444,7 @@ available listings. Your job is to generate replacement search targets.
 
 STRICT RULES:
 1. Output ONLY a raw JSON array — no preamble, no markdown.
-2. Return EXACTLY the requested number of replacement objects.
+2. Return UP TO the requested number of replacement objects.
 3. NEVER repeat any model in the excluded list.
 4. Apply the same logic as the original search (same drivetrain, budget, city, intent).
 5. Use the same 8-key schema: make, model, trim, city, max_budget, min_year, required_features, rationale.
@@ -595,7 +603,7 @@ async def get_fallback_recommendations(
         f'  {failed_str}\n\n'
         f'EXCLUDED models (already tried — do not repeat these):\n'
         f'  {excluded_str}\n\n'
-        f'Generate EXACTLY {count} replacement target(s) matching the original criteria.'
+        f'Generate UP TO {count} replacement target(s) matching the original criteria.'
     )
 
     raw = ""
