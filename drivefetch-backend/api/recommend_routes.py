@@ -467,3 +467,85 @@ async def recommend_cars(request: Request):
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+# ---------------------------------------------------------------------------
+# ON-DEMAND EXTENSION: "Show More Options" (targets 4-6)
+# ---------------------------------------------------------------------------
+@router.post("/api/recommend/more")
+async def recommend_more_cars(request: Request):
+    """
+    Fetches additional recommendations (targets 4-6) for a query where the
+    initial 3 targets have already been displayed. The frontend sends the
+    original prompt plus the list of models already shown.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    user_prompt  = (body.get("prompt") or "").strip()
+    tried_models = body.get("tried_models") or []
+    city         = (body.get("city") or "").strip() or None
+
+    raw_budget = body.get("max_budget")
+    try:
+        budget = int(raw_budget) if raw_budget is not None else None
+        if budget is not None and budget <= 0:
+            budget = None
+    except (ValueError, TypeError):
+        budget = None
+
+    if not user_prompt:
+        async def _err():
+            yield _sse("error", {"message": "Missing original prompt for extension."})
+        return StreamingResponse(_err(), media_type="text/event-stream")
+
+    async def _stream():
+        yield _sse("status", {"message": "Finding more options...", "stage": "extending"})
+
+        tried_labels = [m if isinstance(m, str) else f"{m.get('make','')} {m.get('model','')}".strip() for m in tried_models]
+
+        extra_recs = await get_fallback_recommendations(
+            user_prompt=user_prompt,
+            failed_targets=[],
+            tried_models=tried_labels,
+            city=city or "",
+            budget=budget,
+            count=3,
+        )
+
+        if not extra_recs:
+            yield _sse("status", {"message": "No additional options found.", "stage": "complete"})
+            return
+
+        scrape_results = await asyncio.gather(
+            *[_scrape_one(rec, city, budget) for rec in extra_recs]
+        )
+
+        output: list[dict] = []
+        seen_urls: set[str] = set()
+
+        for raw_listings, rec in scrape_results:
+            _normalise_one(raw_listings, rec, city, budget, seen_urls, output)
+
+        if not output:
+            yield _sse("status", {"message": "No additional listings found.", "stage": "complete"})
+            return
+
+        yield _sse("results", {
+            "listings": output,
+            "targets": [
+                {"make": r.get("make"), "model": r.get("model"),
+                 "trim": r.get("trim"), "rationale": r.get("rationale")}
+                for r in extra_recs
+            ],
+            "total": len(output),
+            "is_extension": True,
+        })
+        yield _sse("status", {"message": f"Found {len(output)} more listing(s)", "stage": "complete"})
+
+    return StreamingResponse(
+        _stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
