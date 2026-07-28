@@ -243,6 +243,15 @@ Q4. TRIM flag & Native Powertrain Rule:
       A car that fails Q6 must be replaced with a high-inventory alternative,
       even if it means repeating a make you already used.
 
+  Q-TIER (Market Hierarchy & Resale Rule):
+      Did the user explicitly request a Chinese brand or Chinese origin in their prompt? (e.g. "Chinese SUV", "Haval", "MG HS", "Oshan X7")
+      - IF NO (Generic Query):
+          - HARD-EXCLUDE all Tier-2 brands (Haval, MG, Changan, Chery, DFSK, Proton, BAIC, Jetour, GWM, Seres) from initial recommendations, fallbacks, AND extended options.
+          - Recommend ONLY Tier-1 brands (Toyota, Honda, Kia, Hyundai, Suzuki, Nissan, Mitsubishi).
+          - Example: "best SUV under 1 crore" -> Recommend ONLY Toyota Fortuner, Kia Sportage, Hyundai Tucson, Kia Sorento, Toyota Vezel, Toyota Harrier. ZERO Haval, MG, or Changan.
+      - IF YES (User explicitly asked for Chinese/Specific Brand):
+          - Allow Tier-2 Chinese brands normally.
+
   Q-DOMINANCE (Pure Market Excellence Rule):
       Identify the absolute top 3 models in Pakistan that best satisfy the query.
       - If 1 brand dominates the top tier (e.g., Toyota for rugged 4x4s -> Land Cruiser, Prado, Fortuner/Hilux), output all 3 from that brand.
@@ -250,6 +259,7 @@ Q4. TRIM flag & Native Powertrain Rule:
       - When "hybrid" is requested, HARD-EXCLUDE all non-hybrid/petrol-only variants.
 
       Category Hierarchies (use as reference, not exhaustive):
+        SUVs under 1 Crore: Toyota Fortuner > Kia Sportage > Hyundai Tucson > Kia Sorento > Toyota Vezel/HR-V > Toyota Harrier/RAV4 > Honda CR-V (Never displace with Haval/MG/Oshan/Chery)
         Rugged 4x4 / Off-Road: Toyota Land Cruiser (70/100/200/300) > Toyota Prado > Toyota Fortuner / Toyota Hilux Revo
         Luxury: Toyota Land Cruiser > Toyota Prado > German Luxury (BMW 5/7, Mercedes E/S-Class)
         Entry Hatchback: Suzuki Alto > Suzuki Cultus > Suzuki WagonR
@@ -427,6 +437,7 @@ STRICT RULES:
 8. "max_budget": 0 means no ceiling. Never null.
 9. Pick models with GOOD inventory depth on PakWheels/OLX in Pakistan — avoid 
    ultra-rare imports that will also return 0 results.
+10. Q-TIER: If user did NOT explicitly request a Chinese brand, HARD-EXCLUDE all Tier-2 Chinese/secondary brands (Haval, MG, Changan, Chery, DFSK, Proton, BAIC, Jetour, GWM, Seres). Recommend ONLY Tier-1 brands (Toyota, Honda, Kia, Hyundai, Suzuki, Nissan, Mitsubishi).
 """
 
 
@@ -514,12 +525,12 @@ async def semantic_mapper(user_prompt: str) -> list[dict]:
         if not sanitized:
             raise ValueError("All recommendations were malformed after sanitization")
 
-        print(f"[SemanticMapper] → {len(sanitized)} targets:")
+        print(f"[SemanticMapper] -> {len(sanitized)} targets:")
         for r in sanitized:
             trim_label   = f" [{r['trim']}]" if r["trim"] else ""
             budget_label = f"PKR {r['max_budget']:,}" if r["max_budget"] else "no limit"
             year_label   = f" from {r['min_year']}" if r["min_year"] else ""
-            print(f"  → {r['make']} {r['model']}{trim_label}{year_label} | {budget_label} | city={r['city'] or 'any'}")
+            print(f"  -> {r['make']} {r['model']}{trim_label}{year_label} | {budget_label} | city={r['city'] or 'any'}")
 
         return sanitized
 
@@ -645,6 +656,7 @@ STRICT RULES:
    when the user's original intent explicitly required it.
 8. "min_year": 0 if budget given, current-gen first year if no budget.
 9. "max_budget": 0 means no ceiling. Never null.
+10. Q-TIER: If user did NOT explicitly request a Chinese brand, HARD-EXCLUDE all Tier-2 Chinese/secondary brands (Haval, MG, Changan, Chery, DFSK, Proton, BAIC, Jetour, GWM, Seres). Recommend ONLY Tier-1 brands (Toyota, Honda, Kia, Hyundai, Suzuki, Nissan, Mitsubishi).
 """
 
 
