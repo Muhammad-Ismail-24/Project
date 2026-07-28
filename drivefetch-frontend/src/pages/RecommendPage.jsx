@@ -2,11 +2,11 @@
  * src/pages/RecommendPage.jsx
  *
  * The AI Matchmaker page — feature-based car search.
- * Theme matched with GaariGuru studio design (#b0b0b0 metallic glassmorphism).
+ * Theme matched with DriveFetch studio design (#b0b0b0 metallic glassmorphism).
  */
 
 import React, { useState, useRef, useEffect } from "react";
-import { Sparkles, Search, X, ChevronRight, Car, Loader2, AlertCircle } from "lucide-react";
+import { Sparkles, Search, X, ChevronRight, Car, Loader2, AlertCircle, Plus, CheckCircle2 } from "lucide-react";
 import CarResultCard from "../components/CarResultCard";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
@@ -29,6 +29,10 @@ export default function RecommendPage() {
   const [listings, setListings]   = useState([]);
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState("");
+  const [extLoading, setExtLoading]     = useState(false);
+  const [extTargets, setExtTargets]     = useState([]);
+  const [extListings, setExtListings]   = useState([]);
+  const [extDone, setExtDone]           = useState(false);
   const eventSourceRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -46,6 +50,10 @@ export default function RecommendPage() {
     setError("");
     setStage("mapping");
     setLoading(true);
+    setExtTargets([]);
+    setExtListings([]);
+    setExtDone(false);
+    setExtLoading(false);
     setStatus("Connecting to AI Engine...");
 
     if (eventSourceRef.current) eventSourceRef.current.close();
@@ -144,7 +152,89 @@ export default function RecommendPage() {
     setError("");
     setStatus("");
     setStage("");
+    setExtTargets([]);
+    setExtListings([]);
+    setExtDone(false);
+    setExtLoading(false);
     inputRef.current?.focus();
+  };
+
+  // ── Show More Options handler ─────────────────────────────────────
+  const handleShowMore = async () => {
+    if (extLoading || extDone) return;
+    setExtLoading(true);
+
+    const excludeModels = targets.map(t =>
+      `${t.make || ""} ${t.model || ""}`.trim()
+    ).filter(Boolean);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/recommend/extend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          prompt: prompt.trim(),
+          exclude_models: excludeModels,
+          city: "",
+          max_budget: null,
+        }),
+      });
+
+      if (!response.ok) throw new Error(`Server error: ${response.status}`);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      const processChunk = (chunk) => {
+        buffer += chunk;
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop();
+
+        for (const part of parts) {
+          const lines = part.trim().split("\n");
+          let eventType = "message";
+          let dataStr = "";
+
+          for (const line of lines) {
+            if (line.startsWith("event:")) eventType = line.slice(6).trim();
+            if (line.startsWith("data:")) dataStr = line.slice(5).trim();
+          }
+
+          if (!dataStr) continue;
+
+          try {
+            const data = JSON.parse(dataStr);
+
+            if (eventType === "extension_results") {
+              setExtTargets(data.targets || []);
+              setExtListings(data.listings || []);
+            }
+
+            if (eventType === "status" && data.stage === "complete") {
+              setExtDone(true);
+              setExtLoading(false);
+            }
+          } catch {
+            // ignore malformed SSE chunks
+          }
+        }
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        processChunk(decoder.decode(value, { stream: true }));
+      }
+
+      setExtLoading(false);
+      setExtDone(true);
+    } catch (err) {
+      console.error("Extension error:", err);
+      setExtLoading(false);
+      setExtDone(true);
+    }
   };
 
   const stageLabel = {
@@ -182,7 +272,7 @@ export default function RecommendPage() {
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/80 text-white text-[10px] font-semibold tracking-[0.15em] uppercase mb-5">
             <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
-            GaariGuru AI Matchmaker
+            DriveFetch AI Matchmaker
           </div>
           <h1 className="text-4xl md:text-5xl font-black tracking-tight text-black mb-3">
             What kind of car do you need?
@@ -337,6 +427,71 @@ export default function RecommendPage() {
                     </div>
                   ))}
                 </div>
+
+                {/* ── Show More Options Button ─────────────────────── */}
+                {!extDone && (
+                  <div className="mt-5 pt-4 border-t border-black/10">
+                    <button
+                      onClick={handleShowMore}
+                      disabled={extLoading}
+                      className="w-full flex items-center justify-center gap-2.5 px-5 py-3
+                                 bg-gradient-to-r from-black/90 to-black/80 text-white
+                                 text-sm font-semibold rounded-xl
+                                 hover:from-black hover:to-neutral-800
+                                 active:scale-[0.98] transition-all shadow-lg
+                                 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {extLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Finding more options...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4" />
+                          <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+                          Show More Options
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* ── Extension Rationale Cards ────────────────────── */}
+                {extTargets.length > 0 && (
+                  <>
+                    <div className="mt-5 pt-4 border-t border-black/10">
+                      <p className="text-[10px] font-semibold text-black/45 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                        <Plus className="w-3 h-3" />
+                        Additional Recommendations
+                      </p>
+                    </div>
+                    {extTargets.map((t, i) => (
+                      <div key={`ext-${i}`} className="flex items-start gap-3 bg-white/40 p-3.5 rounded-xl border border-black/5">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-black/70 text-white
+                                         text-xs font-bold flex items-center justify-center mt-0.5">
+                          {targets.length + i + 1}
+                        </span>
+                        <div>
+                          <span className="text-sm font-bold text-black">
+                            {t.make} {t.model} {t.trim || ""}
+                          </span>
+                          {t.rationale && (
+                            <p className="text-xs font-medium text-black/60 mt-0.5 leading-relaxed">{t.rationale}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {/* ── Extension Complete Badge ─────────────────────── */}
+                {extDone && extTargets.length > 0 && (
+                  <div className="mt-3 flex items-center justify-center gap-2 text-xs font-medium text-black/40">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    All available options shown
+                  </div>
+                )}
               </div>
             )}
 
@@ -370,6 +525,34 @@ export default function RecommendPage() {
                 </div>
               ))}
             </div>
+
+            {/* ── Extension Listings ───────────────────────────────── */}
+            {extListings.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 pt-4">
+                  <div className="h-px flex-1 bg-black/10" />
+                  <span className="text-[10px] font-bold text-black/40 uppercase tracking-widest">
+                    More Options
+                  </span>
+                  <div className="h-px flex-1 bg-black/10" />
+                </div>
+                <div className="space-y-4">
+                  {extListings.map((listing, idx) => (
+                    <div key={`ext-listing-${listing.listing_url || idx}`} className="space-y-1.5">
+                      {listing.ai_rationale && (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/60 text-white text-[11px] font-medium backdrop-blur-sm">
+                          <Plus className="w-3 h-3 text-white/70" />
+                          <span>{listing.ai_rationale}</span>
+                        </div>
+                      )}
+                      <div className="rounded-2xl overflow-hidden border border-black/10 shadow-md bg-white/50 backdrop-blur-sm">
+                        <CarResultCard car={listing} listing={listing} userQuery={prompt} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
 

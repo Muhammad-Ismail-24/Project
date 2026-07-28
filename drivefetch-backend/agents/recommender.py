@@ -624,3 +624,104 @@ async def get_fallback_recommendations(
         print(f"[FallbackMapper] Failed: {e}")
         traceback.print_exc()
         return []
+
+# ---------------------------------------------------------------------------
+# EXTENDED MAPPER — "Show More Options" (Tier-2 alternatives)
+# ---------------------------------------------------------------------------
+_EXTENDED_MAPPER_PROMPT = """\
+You are GaariGuru, a Pakistani used-car expert. The user has already been \
+shown the Top 3 highest-confidence cars. Your task is to generate ONLY \
+2–3 SECONDARY (Tier-2) alternatives that the user might also consider.
+
+STRICT RULES:
+1. Output ONLY a raw JSON array — no preamble, no markdown.
+2. Return exactly 2 or 3 objects.
+3. HARD-EXCLUDE every model listed in the exclude list.
+4. Respect EVERY original constraint from the user's query:
+   - budget, city, body style, transmission, fuel type, brand origin, seating.
+5. Pick models with reasonable inventory depth on PakWheels/OLX in Pakistan.
+6. Use the same 8-key schema: make, model, trim, city, max_budget, min_year, required_features, rationale.
+7. "trim" rules: "" by default. Only use "AWD"/"Hybrid"/"EV"/"Diesel"/"Manual"
+   when the user's original intent explicitly required it.
+8. "min_year": 0 if budget given, current-gen first year if no budget.
+9. "max_budget": 0 means no ceiling. Never null.
+"""
+
+
+async def get_extended_recommendations(
+    user_prompt: str,
+    exclude_models: list[str],
+    city: str = "",
+    budget: int | None = None,
+) -> list[dict]:
+    """
+    Generates 2–3 Tier-2 alternative recommendations for the "Show More Options"
+    feature. Uses a dedicated prompt that knows these are secondary picks.
+
+    Args:
+        user_prompt:     The original user query.
+        exclude_models:  List of "Make Model" strings already shown (hard exclusion).
+        city:            User's city preference ("" for any).
+        budget:          Budget in PKR, or None for no ceiling.
+
+    Returns:
+        A sanitized list of 2–3 recommendation dicts. Returns [] on any error.
+    """
+    budget_str   = f"PKR {budget:,}" if budget else "no budget limit"
+    city_str     = city or "any city"
+    excluded_str = ", ".join(exclude_models) if exclude_models else "none"
+
+    extension_prompt = (
+        f'Original user request: "{user_prompt}"\n'
+        f'City: {city_str} | Budget: {budget_str}\n\n'
+        f'ALREADY SHOWN (hard-exclude these — do NOT repeat):\n'
+        f'  {excluded_str}\n\n'
+        f'Generate 2–3 Tier-2 alternative recommendations that still match '
+        f'all original constraints but offer different options from the Top 3.'
+    )
+
+    raw = ""
+    try:
+        response = await client.aio.models.generate_content(
+            model="gemini-3.5-flash-lite",
+            contents=extension_prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.25,
+                max_output_tokens=1200,
+                system_instruction=_EXTENDED_MAPPER_PROMPT,
+            ),
+        )
+
+        raw = response.text
+        results = _parse_llm_json(raw)
+
+        if not isinstance(results, list):
+            raise ValueError("Expected JSON array from extension mapper, got: " + type(results).__name__)
+
+        sanitized = _sanitize_recommendations(results, caller="ExtendedMapper")
+
+        # Hard-enforce exclusion list
+        excluded_lower = {m.lower().replace(" ", "") for m in exclude_models}
+        enforced = []
+        for r in sanitized:
+            key = f"{r['make']}{r['model']}".lower().replace(" ", "")
+            if key in excluded_lower:
+                print(f"[ExtendedMapper] LLM ignored exclusion for {r['make']} {r['model']} — dropping")
+                continue
+            enforced.append(r)
+
+        print(f"[ExtendedMapper] Generated {len(enforced)} extension(s)")
+        for r in enforced:
+            trim_label = f" [{r['trim']}]" if r['trim'] else ""
+            print(f"  -> {r['make']} {r['model']}{trim_label}")
+
+        return enforced
+
+    except json.JSONDecodeError as e:
+        print(f"[ExtendedMapper] JSON parse error: {e}")
+        print(f"[ExtendedMapper] Raw output was: {raw[:400]}")
+        return []
+    except Exception as e:
+        print(f"[ExtendedMapper] Failed: {e}")
+        traceback.print_exc()
+        return []

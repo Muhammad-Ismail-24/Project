@@ -52,7 +52,7 @@ from typing import AsyncGenerator
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
-from agents.recommender import semantic_mapper, get_fallback_recommendations
+from agents.recommender import semantic_mapper, get_fallback_recommendations, get_extended_recommendations
 from scrapers.runner import execute_search_pipeline
 from scrapers.recommend_normalizer import normalize_recommendation_target
 
@@ -471,21 +471,20 @@ async def recommend_cars(request: Request):
 # ---------------------------------------------------------------------------
 # ON-DEMAND EXTENSION: "Show More Options" (targets 4-6)
 # ---------------------------------------------------------------------------
-@router.post("/api/recommend/more")
-async def recommend_more_cars(request: Request):
+@router.post("/api/recommend/extend")
+async def recommend_extend(request: Request):
     """
-    Fetches additional recommendations (targets 4-6) for a query where the
-    initial 3 targets have already been displayed. The frontend sends the
-    original prompt plus the list of models already shown.
+    Generates 2–3 Tier-2 alternative recommendations for the "Show More Options"
+    button. Receives the original prompt plus models already shown.
     """
     try:
         body = await request.json()
     except Exception:
         body = {}
 
-    user_prompt  = (body.get("prompt") or "").strip()
-    tried_models = body.get("tried_models") or []
-    city         = (body.get("city") or "").strip() or None
+    user_prompt    = (body.get("prompt") or "").strip()
+    exclude_models = body.get("exclude_models") or []
+    city           = (body.get("city") or "").strip() or None
 
     raw_budget = body.get("max_budget")
     try:
@@ -501,48 +500,68 @@ async def recommend_more_cars(request: Request):
         return StreamingResponse(_err(), media_type="text/event-stream")
 
     async def _stream():
-        yield _sse("status", {"message": "Finding more options...", "stage": "extending"})
+        yield _sse("status", {
+            "message": "Finding more options...",
+            "stage": "extending",
+        })
 
-        tried_labels = [m if isinstance(m, str) else f"{m.get('make','')} {m.get('model','')}".strip() for m in tried_models]
-
-        extra_recs = await get_fallback_recommendations(
+        # ── Step 1: Get extended recommendations from Gemini ──────────
+        extended_targets = await get_extended_recommendations(
             user_prompt=user_prompt,
-            failed_targets=[],
-            tried_models=tried_labels,
+            exclude_models=exclude_models,
             city=city or "",
             budget=budget,
-            count=3,
         )
 
-        if not extra_recs:
-            yield _sse("status", {"message": "No additional options found.", "stage": "complete"})
+        if not extended_targets:
+            yield _sse("extension_results", {
+                "targets": [],
+                "listings": [],
+                "total": 0,
+            })
+            yield _sse("status", {
+                "message": "No additional options found.",
+                "stage": "complete",
+            })
             return
 
+        target_names = [_target_label(r) for r in extended_targets]
+        yield _sse("status", {
+            "message": f"Searching for: {', '.join(target_names)}",
+            "stage": "extending",
+            "targets": target_names,
+        })
+
+        # ── Step 2: Parallel scrape ───────────────────────────────────
         scrape_results = await asyncio.gather(
-            *[_scrape_one(rec, city, budget) for rec in extra_recs]
+            *[_scrape_one(rec, city, budget) for rec in extended_targets]
         )
 
+        # ── Step 3: Normalize ─────────────────────────────────────────
         output: list[dict] = []
         seen_urls: set[str] = set()
 
         for raw_listings, rec in scrape_results:
             _normalise_one(raw_listings, rec, city, budget, seen_urls, output)
 
-        if not output:
-            yield _sse("status", {"message": "No additional listings found.", "stage": "complete"})
-            return
-
-        yield _sse("results", {
-            "listings": output,
+        # ── Step 4: Stream extension results ──────────────────────────
+        yield _sse("extension_results", {
             "targets": [
-                {"make": r.get("make"), "model": r.get("model"),
-                 "trim": r.get("trim"), "rationale": r.get("rationale")}
-                for r in extra_recs
+                {
+                    "make":      r.get("make"),
+                    "model":     r.get("model"),
+                    "trim":      r.get("trim"),
+                    "rationale": r.get("rationale"),
+                }
+                for r in extended_targets
             ],
+            "listings": output,
             "total": len(output),
-            "is_extension": True,
         })
-        yield _sse("status", {"message": f"Found {len(output)} more listing(s)", "stage": "complete"})
+        yield _sse("status", {
+            "message": f"Found {len(output)} more listing(s)",
+            "stage": "complete",
+        })
 
     return StreamingResponse(
         _stream(),
