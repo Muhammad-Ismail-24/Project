@@ -162,24 +162,14 @@ automotive knowledge of the Pakistani market. Do not print your answers.
             acceptable for sports queries because they are genuinely sporty.
             Honda City, Corolla GLi, Toyota Aqua → REJECT. Not sports cars.
 
-  Q2. TRANSMISSION: Does the user want automatic/AGS/CVT?
-      If yes: for EVERY model you consider (not just Suzukis), ask yourself:
-        "What year range does this budget actually buy for this model in Pakistan?"
-        Then ask: "Were the units in that exact year range available with automatic
-        transmission in Pakistan?"
-
-      You know from your training which year ranges were manual-only for each model:
-        - Suzuki Cultus pre-2018, Alto pre-2019, WagonR pre-2020 → manual-only.
-        - Suzuki Mehran (all years, entire production run) → manual-only. EXCLUDE.
-        - Toyota Corolla XLI (pre-2014) and GLI entry-level → predominantly manual.
-          Only Grande and Altis had automatic as standard in older units.
-        - Honda City (2009–2014 gen) → available in both; confirm auto was offered.
-        - Any model whose budget-appropriate year range is predominantly manual
-          must be EXCLUDED and replaced with a genuinely automatic alternative.
-
-      Do NOT assume automatic just because a newer model has it. The budget tells
-      you WHICH year of that model the user will actually buy. If that year is
-      manual-only → EXCLUDE the model entirely.
+  Q-TRANSMISSION-STRICT: Did user specify transmission (e.g., "automatic", "manual")?
+      If "automatic" or "auto" or "cvt" or "ags": HARD-EXCLUDE any candidate with manual transmission or "Manual" in the title.
+      - NEVER output strings like "Cultus Manual" under an automatic query.
+      - You know from your training which year ranges were manual-only for each model (e.g. Mehran is manual only).
+      
+  Q-PUSH-START-TRIMS: Did user request "push start" or "factory push start" on a budget under 25–30 Lacs?
+      - Prioritize models that natively feature factory push start in Pakistan's used market: Nissan Dayz, Daihatsu Move, Suzuki WagonR Stingray.
+      - Avoid base local cars (Alto VXL, Cultus) or base Japanese cars (Vitz F, Mira L) that use traditional key ignition.
 
   Q3. BUDGET vs. GENERATION — THREE CASES:
 
@@ -664,18 +654,18 @@ shown the Top 3 highest-confidence cars. Your task is to generate ONLY \
 2–3 SECONDARY (Tier-2) alternatives that the user might also consider.
 
 STRICT RULES:
-1. Output ONLY a raw JSON array — no preamble, no markdown.
-2. Return exactly 2 or 3 objects.
-3. HARD-EXCLUDE every model listed in the exclude list.
-4. Respect EVERY original constraint from the user's query:
-   - budget, city, body style, transmission, fuel type, brand origin, seating.
-5. Pick models with reasonable inventory depth on PakWheels/OLX in Pakistan.
-6. Use the same 8-key schema: make, model, trim, city, max_budget, min_year, required_features, rationale.
-7. "trim" rules: "" by default. Only use "AWD"/"Hybrid"/"EV"/"Diesel"/"Manual"
-   when the user's original intent explicitly required it.
-8. "min_year": 0 if budget given, current-gen first year if no budget.
-9. "max_budget": 0 means no ceiling. Never null.
-10. Q-TIER: If user did NOT explicitly request a Chinese brand, HARD-EXCLUDE all Tier-2 Chinese/secondary brands (Haval, MG, Changan, Chery, DFSK, Proton, BAIC, Jetour, GWM, Seres). Recommend ONLY Tier-1 brands (Toyota, Honda, Kia, Hyundai, Suzuki, Nissan, Mitsubishi).
+1. TRANSMISSION LOCK: If user requested Automatic/CVT/AGS, output ONLY automatic vehicles. HARD-EXCLUDE all manual variants (e.g., NEVER output "Cultus Manual").
+2. FEATURE LOCK: Maintain required features (e.g., factory push start, sunroof).
+3. EXCLUSIONS: Hard-exclude all models listed in the exclude list.
+4. Output ONLY a raw JSON array — no preamble, no markdown.
+5. Return exactly 2 or 3 objects.
+6. Respect EVERY original constraint from the user's query: budget, city, body style, transmission, fuel type, brand origin, seating.
+7. Pick models with reasonable inventory depth on PakWheels/OLX in Pakistan.
+8. Use the same 8-key schema: make, model, trim, city, max_budget, min_year, required_features, rationale.
+9. "trim" rules: "" by default. Only use "AWD"/"Hybrid"/"EV"/"Diesel"/"Manual" when the user's original intent explicitly required it.
+10. "min_year": 0 if budget given, current-gen first year if no budget.
+11. "max_budget": 0 means no ceiling. Never null.
+12. Q-TIER: If user did NOT explicitly request a Chinese brand, HARD-EXCLUDE all Tier-2 Chinese/secondary brands (Haval, MG, Changan, Chery, DFSK, Proton, BAIC, Jetour, GWM, Seres). Recommend ONLY Tier-1 brands (Toyota, Honda, Kia, Hyundai, Suzuki, Nissan, Mitsubishi).
 """
 
 
