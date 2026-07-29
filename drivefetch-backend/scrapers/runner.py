@@ -35,7 +35,7 @@ from models.car_schema import CarListing
 # ------------------------------------------------------------------ #
 # OLX CITY SLUG MAP
 # Verified live against olx.com.pk July 2026.
-# ⚠️ SOURCE CONFLICT WARNING: ids.md and report.md disagree on 6 cities
+# ! SOURCE CONFLICT WARNING: ids.md and report.md disagree on 6 cities
 # (Peshawar, Multan, Faisalabad, Gujranwala, Sialkot, Quetta).
 # report.md values kept below — already deployed and tested.
 # New cities from ids.md are UNVERIFIED — spot-check before relying on them.
@@ -287,7 +287,7 @@ async def execute_search_pipeline(
             wisewheels_tasks.append((ww_url, search_filters))
 
     print(
-        f"[Pipeline] Search → Make={safe_make}, Model={safe_model}, "
+        f"[Pipeline] Search -> Make={safe_make}, Model={safe_model}, "
         f"Cities={cities_to_search}, Color={safe_color}, Trim={safe_trim}, "
         f"Year={min_year}-{max_year}, Budget={safe_budget}"
     )

@@ -138,6 +138,7 @@ async def _scrape_one(
     make         = rec.get("make") or ""
     model        = rec.get("model") or ""
     budget       = _resolve_budget(override_budget, rec.get("max_budget", 0))
+    min_budget   = rec.get("min_budget", 0)
     min_year     = _resolve_year(rec.get("min_year", 0))
     GENERIC_POWERTRAIN_TAGS = {
         "ev", "electric", "hev", "phev", "hybrid", 
@@ -154,6 +155,7 @@ async def _scrape_one(
             model=model,
             city="",                  # soft city — enforced by recommend_normalizer
             max_budget=scraper_budget,
+            min_budget=min_budget,
             color="",
             trim=trim_for_url,
             min_year=min_year,
@@ -187,6 +189,7 @@ def _normalise_one(
     rationale   = rec.get("rationale", "")
     label       = _target_label(rec)
     budget      = _resolve_budget(override_budget, rec.get("max_budget", 0))
+    min_budget  = rec.get("min_budget", 0)
     min_year    = _resolve_year(rec.get("min_year", 0))
     city        = override_city or rec.get("city") or ""
     year_suffix = f" (from {min_year})" if min_year else ""
@@ -205,6 +208,7 @@ def _normalise_one(
         requested_color="",
         requested_trim=rec.get("trim") or "",
         required_features=rec.get("required_features") or [],
+        min_budget=min_budget,
         min_year=min_year,
         max_year=0,
         top_k=5,
