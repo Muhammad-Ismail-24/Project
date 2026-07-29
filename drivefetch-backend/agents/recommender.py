@@ -37,7 +37,7 @@ client = genai.Client(api_key=GEMINI_API_KEY)
 #   - Fixed: model name gemini-2.0-flash-lite → gemini-2.0-flash-lite.
 #   - Fixed: syntax error (]]  double-bracket) at end of rugged 4x4 example.
 # ---------------------------------------------------------------------------
-SEMANTIC_MAPPER_PROMPT = """You are GaariGuru, an expert Pakistani used-car matchmaker. A user describes what they want in natural language, Roman Urdu, or Urdu script. Translate their intent into EXACTLY 3 tier-1 car search targets for the Pakistani used-car market.
+SEMANTIC_MAPPER_PROMPT = """You are GaariGuru, an expert Pakistani used-car matchmaker. A user describes what they want in natural language, Roman Urdu, or Urdu script. Translate their intent into 1 to 3 tier-1 car search targets for the Pakistani used-car market.
 
 ═══════════════════════════════════════════════════════
 STEP 1 — THINK BEFORE YOU OUTPUT (internal reasoning, never printed)
@@ -252,6 +252,16 @@ Q4. TRIM flag & Native Powertrain Rule:
       - IF YES (User explicitly asked for Chinese/Specific Brand):
           - Allow Tier-2 Chinese brands normally.
 
+  Q-COUNT (Dynamic 1-3 Quality Rule):
+      Return 1, 2, or 3 target objects based strictly on genuine market availability.
+      - If 2 models meet the exact criteria -> return EXACTLY 2 objects.
+      - NEVER force a non-matching car into the array just to hit a quota.
+
+  Q-SPEC-FLEX (Engine & Specs Flexibility):
+      Did the user specify an exact engine displacement? (e.g., "1.8 engine").
+      - First, identify all exact displacement matches with requested features (e.g. Corolla Altis Grande 1.8, Civic Oriel 1.8, Prius 1.8 Hybrid).
+      - If exact options are limited, you may include a near-equivalent engine option (e.g., 2.0L Elantra / 2.0L Sonata or 1.5T Turbo) ONLY if it fulfills the primary feature (sunroof) AND the rationale explicitly mentions the slight engine size variation.
+
   Q-DOMINANCE (Pure Market Excellence Rule):
       Identify the absolute top 3 models in Pakistan that best satisfy the query.
       - If 1 brand dominates the top tier (e.g., Toyota for rugged 4x4s -> Land Cruiser, Prado, Fortuner/Hilux), output all 3 from that brand.
@@ -268,8 +278,11 @@ Q4. TRIM flag & Native Powertrain Rule:
 ═══════════════════════════════════════════════════════
 STEP 2 — OUTPUT CONTRACT (non-negotiable)
 ═══════════════════════════════════════════════════════
+STRICT OUTPUT FORMAT:
+Your response MUST be valid raw JSON only. Do NOT include markdown meta-commentary, thought traces, or internal evaluation notes inside any JSON value. The `rationale` field must ONLY contain final, user-facing recommendation text.
+
 Output ONLY a raw JSON array. Zero preamble. Zero explanation. Zero markdown.
-The array must contain EXACTLY 3 objects, each with these EXACT 8 keys:
+The array must contain 1 to 3 objects, each with these EXACT 8 keys:
 
   "make"       → String. Brand name exactly as listed on PakWheels.
   "model"      → String. Model name exactly as listed on PakWheels.
@@ -479,6 +492,10 @@ def _sanitize_recommendations(raw_list: list, caller: str = "Recommender") -> li
             print(f"[{caller}] Skipping malformed entry (no make/model): {r}")
             continue
 
+        # Clean accidental CoT leak in rationale
+        if re.match(r'^(wait|let\'s|re-evaluating|no,|instead)', r.get("rationale", ""), re.IGNORECASE):
+            r["rationale"] = f"Proven {r.get('make')} {r.get('model')} variant matching your requested specifications."
+
         sanitized.append(r)
 
     return sanitized
@@ -488,11 +505,13 @@ def _sanitize_recommendations(raw_list: list, caller: str = "Recommender") -> li
 # SHARED RAW-RESPONSE PARSER
 # ---------------------------------------------------------------------------
 def _parse_llm_json(raw_text: str) -> list:
-    """Strips markdown fences and parses the LLM's JSON array response."""
+    """Strips meta-commentary and markdown fences to extract clean JSON array."""
     raw = raw_text.strip()
-    raw = re.sub(r'^```(?:json)?\s*', '', raw, flags=re.MULTILINE)
-    raw = re.sub(r'\s*```$', '', raw, flags=re.MULTILINE)
-    return json.loads(raw.strip())
+    # Extract only the content between the first '[' and last ']'
+    match = re.search(r'\[.*\]', raw, re.DOTALL)
+    if match:
+        raw = match.group(0)
+    return json.loads(raw)
 
 
 async def semantic_mapper(user_prompt: str) -> list[dict]:
