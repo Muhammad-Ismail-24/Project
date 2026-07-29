@@ -104,6 +104,7 @@ async def execute_search_pipeline(
     model: str,
     city: str,
     max_budget: int = None,
+    min_budget: int = 0,
     color: str = None,
     trim: str = None,
     min_year: int = 0,
@@ -125,6 +126,7 @@ async def execute_search_pipeline(
     }
     safe_trim = "" if (trim and trim.lower() in GENERIC_POWERTRAIN_TAGS) else (trim or "")
     safe_budget = int(max_budget) if max_budget else 0
+    safe_min_budget = int(min_budget) if min_budget else 0
 
     # --- Extract target cities (Multi-City Fan-Out) ---
     cities_to_search = [c.strip() for c in re.split(r',|\band\b', safe_city) if c.strip()]
@@ -195,7 +197,9 @@ async def execute_search_pipeline(
             if safe_model_lower:  pw_parts.append(f"md_{safe_model_lower}")
             if safe_trim_dash:    pw_parts.append(f"vg_{safe_trim_dash}")
             if c:                 pw_parts.append(f"ct_{c}")
-            if safe_budget > 0:   pw_parts.append(f"pr_0_{safe_budget}")
+            if safe_budget > 0 or safe_min_budget > 0:
+                mx_b = safe_budget if safe_budget > 0 else ""
+                pw_parts.append(f"pr_{safe_min_budget}_{mx_b}")
             if min_year > 0 or max_year > 0:
                                   pw_parts.append(f"yr_{my}_{mx}")
             if safe_color_lower:  pw_parts.append(f"cl_{safe_color_lower}")
@@ -228,8 +232,9 @@ async def execute_search_pipeline(
             olx_url = "/".join(olx_base_parts)
 
             olx_filters = []
-            if safe_budget > 0:
-                olx_filters.append(f"price_between_0_to_{safe_budget}")
+            if safe_budget > 0 or safe_min_budget > 0:
+                mx_b = safe_budget if safe_budget > 0 else ""
+                olx_filters.append(f"price_between_{safe_min_budget}_to_{mx_b}")
             if min_year > 0 or max_year > 0:
                 olx_filters.append(f"year_between_{my}_to_{mx}")
 
@@ -273,7 +278,7 @@ async def execute_search_pipeline(
             # ------------------------------------------------------------------ #
             # WISEWHEELS — query-parameter routing
             # ------------------------------------------------------------------ #
-            ww_url = f"https://wisewheels.com.pk/used-cars?price_from=0&page={page}"
+            ww_url = f"https://wisewheels.com.pk/used-cars?price_from={safe_min_budget}&page={page}"
             ww_city_id = WISEWHEELS_CITY_MAP.get(c, "")
             if ww_city_id:       ww_url += f"&city_id={ww_city_id}"
             if safe_make_lower:  ww_url += f"&make={safe_make_lower}"

@@ -171,6 +171,14 @@ automotive knowledge of the Pakistani market. Do not print your answers.
       - Prioritize models that natively feature factory push start in Pakistan's used market: Nissan Dayz, Daihatsu Move, Suzuki WagonR Stingray.
       - Avoid base local cars (Alto VXL, Cultus) or base Japanese cars (Vitz F, Mira L) that use traditional key ignition.
 
+  Q-BUDGET-WINDOW (30% Floor Calculation):
+      - Did the user specify a maximum budget limit (e.g., "under 50 lacs", "max 30 lacs")?
+      - If YES and no min_budget was provided:
+          - Calculate `min_budget = int(max_budget * 0.70)`.
+          - Output BOTH `max_budget` AND `min_budget` in the JSON payload.
+          - HARD-EXCLUDE candidate models whose market value falls below `min_budget`.
+          - Example: For "under 50 lacs", `max_budget=5000000` and `min_budget=3500000`. Recommend ONLY cars priced within 35–50 Lacs. Do NOT recommend 15 lac or 20 lac cars.
+
   Q3. BUDGET vs. GENERATION — THREE CASES:
 
       CASE A: Budget IS given AND budget ≥ PKR 5,000,000 (50 lacs / 0.5 crore):
@@ -272,16 +280,17 @@ STRICT OUTPUT FORMAT:
 Your response MUST be valid raw JSON only. Do NOT include markdown meta-commentary, thought traces, or internal evaluation notes inside any JSON value. The `rationale` field must ONLY contain final, user-facing recommendation text.
 
 Output ONLY a raw JSON array. Zero preamble. Zero explanation. Zero markdown.
-The array must contain 1 to 3 objects, each with these EXACT 8 keys:
+The array must contain 1 to 3 objects, each with these EXACT 9 keys:
 
-  "make"       → String. Brand name exactly as listed on PakWheels.
-  "model"      → String. Model name exactly as listed on PakWheels.
-  "trim"       → String. Set via Q4 reasoning above. Default is always "".
-  "city"       → String. User’s city if mentioned, else "" (never null).
-  "max_budget" → Integer. Budget in PKR. 0 if not mentioned (never null).
-  "min_year"   → Integer. Set via Q3 reasoning above. 0 means no floor.
-  "required_features" → Array of Strings. Standardized factory features requested (e.g. ["sunroof", "push_start"]). Empty array if none.
-  "rationale"  → String. 1–2 punchy sentences: why this specific car for this user.
+  "make"       -> String. Brand name exactly as listed on PakWheels.
+  "model"      -> String. Model name exactly as listed on PakWheels.
+  "trim"       -> String. Set via Q4 reasoning above. Default is always "".
+  "city"       -> String. User's city if mentioned, else "" (never null).
+  "min_budget" -> Integer. 30% floor limit if max_budget exists, else 0.
+  "max_budget" -> Integer. Budget in PKR. 0 if not mentioned (never null).
+  "min_year"   -> Integer. Set via Q3 reasoning above. 0 means no floor.
+  "required_features" -> Array of Strings. Standardized factory features requested (e.g. ["sunroof", "push_start"]). Empty array if none.
+  "rationale"  -> String. 1-2 punchy sentences: why this specific car for this user.
 
 ═══════════════════════════════════════════════════════
 FEW-SHOT EXAMPLES
@@ -433,7 +442,7 @@ STRICT RULES:
 2. Return UP TO the requested number of replacement objects (max 3).
 3. NEVER repeat any model in the excluded list.
 4. Apply the same logic as the original search (same drivetrain, budget, city, intent).
-5. Use the same 8-key schema: make, model, trim, city, max_budget, min_year, required_features, rationale.
+5. Use the same 9-key schema: make, model, trim, city, min_budget, max_budget, min_year, required_features, rationale.
 6. "trim" rules: "" by default. Only "AWD"/"Hybrid"/"EV"/"Diesel"/"Manual" when 
    the user's original intent explicitly required it.
 7. "min_year": 0 if budget given, current-gen first year if no budget.
@@ -464,6 +473,8 @@ def _sanitize_recommendations(raw_list: list, caller: str = "Recommender") -> li
     for r in raw_list:
         if r.get("trim") is None:
             r["trim"] = ""
+        if r.get("min_budget") is None:
+            r["min_budget"] = 0
         if r.get("max_budget") is None:
             r["max_budget"] = 0
         if r.get("city") is None:
@@ -661,7 +672,7 @@ STRICT RULES:
 5. Return exactly 2 or 3 objects.
 6. Respect EVERY original constraint from the user's query: budget, city, body style, transmission, fuel type, brand origin, seating.
 7. Pick models with reasonable inventory depth on PakWheels/OLX in Pakistan.
-8. Use the same 8-key schema: make, model, trim, city, max_budget, min_year, required_features, rationale.
+8. Use the same 9-key schema: make, model, trim, city, min_budget, max_budget, min_year, required_features, rationale.
 9. "trim" rules: "" by default. Only use "AWD"/"Hybrid"/"EV"/"Diesel"/"Manual" when the user's original intent explicitly required it.
 10. "min_year": 0 if budget given, current-gen first year if no budget.
 11. "max_budget": 0 means no ceiling. Never null.

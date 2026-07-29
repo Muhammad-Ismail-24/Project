@@ -561,6 +561,7 @@ def _calculate_relevance_score(
     clean_year: int,
     clean_mileage: int,
     requested_trim: str = None,
+    min_budget: int = 0,
     min_year: int = 0,
     max_year: int = 0,
     debug: bool = False,
@@ -587,9 +588,14 @@ def _calculate_relevance_score(
             return veto(f"Make '{requested_make}' not found in title")
 
     # 3: Budget
-    if requested_budget and clean_price > 0:
-        if clean_price > requested_budget:
-            return veto(f"Price {clean_price:,} exceeds budget {requested_budget:,}")
+    if clean_price > 0:
+        if min_budget > 0 and clean_price < min_budget:
+            return veto(f"Listing price ({clean_price:,} PKR) is below 30% budget floor ({min_budget:,} PKR)")
+
+        if requested_budget and requested_budget > 0:
+            hard_ceiling = int(requested_budget * 1.05)
+            if clean_price > hard_ceiling:
+                return veto(f"Listing price ({clean_price:,} PKR) exceeds max budget ({requested_budget:,} PKR)")
 
     # 4: Color Conflict
     if requested_color:
@@ -683,6 +689,7 @@ def normalize_listings(
     requested_budget: int = None,
     requested_color: str = None,
     requested_trim: str = None,
+    min_budget: int = 0,
     min_year: int = 0,
     max_year: int = 0,
     debug: bool = False,
@@ -710,6 +717,7 @@ def normalize_listings(
             clean_year=clean_year,
             clean_mileage=clean_mileage,
             requested_trim=requested_trim,
+            min_budget=min_budget,
             min_year=min_year,
             max_year=max_year,
             debug=debug,

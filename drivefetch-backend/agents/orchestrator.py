@@ -10,6 +10,7 @@ FALLBACK_QUERY_DATA = {
     "make": None,
     "model": None,
     "city": None,
+    "min_budget": 0,
     "max_budget": None,
     "color": None,
     "trim": None,
@@ -39,14 +40,15 @@ def clean_and_parse_json(response_text: str) -> dict:
             val = data.get(key)
             validated_data[key] = str(val).strip() if val else None
             
-        max_budget = data.get("max_budget")
-        if max_budget is not None:
-            try:
-                validated_data["max_budget"] = int(max_budget)
-            except (ValueError, TypeError):
-                validated_data["max_budget"] = None
-        else:
-            validated_data["max_budget"] = None
+        for b_key in ["min_budget", "max_budget"]:
+            b_val = data.get(b_key)
+            if b_val is not None:
+                try:
+                    validated_data[b_key] = int(b_val)
+                except (ValueError, TypeError):
+                    validated_data[b_key] = 0 if b_key == "min_budget" else None
+            else:
+                validated_data[b_key] = 0 if b_key == "min_budget" else None
 
         # Parse color
         color_val = data.get("color")
@@ -309,11 +311,16 @@ guj / gujranwala → Gujranwala
 Multiple cities: separate with " and " → "Islamabad and Rawalpindi"
 
 === BUDGET NORMALIZATION ===
-"X lakh / lac / lacs / lacs" → X * 100000
-"X crore / crores" → X * 10000000
-"X thousand" → X * 1000
-"under X" or "X se kam" → max_budget = X
-"X lakh se X lakh tak" → min and max budget (use max_budget = upper limit)
+"X lakh / lac / lacs / lacs" -> X * 100000
+"X crore / crores" -> X * 10000000
+"X thousand" -> X * 1000
+"under X" or "X se kam" -> max_budget = X
+
+Q-BUDGET-WINDOW (30% Floor Calculation):
+If the user specifies a maximum budget limit (max_budget) but does NOT provide a minimum budget:
+- Calculate `min_budget = int(max_budget * 0.70)`.
+- Output BOTH `max_budget` AND `min_budget` in the JSON payload.
+- "X lakh se X lakh tak" -> explicitly set min_budget and max_budget.
 
 === COLOR EXTRACTION ===
 "kali gari / kala / kaali" → Black
@@ -346,6 +353,7 @@ Return EXACTLY this JSON structure. No explanation. No markdown. No extra keys:
   "make": "BrandName or null",
   "model": "ModelName or null",
   "city": "NormalizedCityName or null",
+  "min_budget": integer_or_0,
   "max_budget": integer_or_null,
   "color": "ColorName or null",
   "trim": "TrimVariant or null",
@@ -357,7 +365,7 @@ Return EXACTLY this JSON structure. No explanation. No markdown. No extra keys:
 
 Example 1 — Roman Urdu + Urdu script, multiple constraints:
 Input: "mujhaye lahore mein honda civic oriel 2019 se 2022 ke darmiyan under 40 lakh chahye"
-Output: {"make": "Honda", "model": "Civic", "city": "Lahore", "max_budget": 4000000, "color": null, "trim": "Oriel", "min_year": 2019, "max_year": 2022}
+Output: {"make": "Honda", "model": "Civic", "city": "Lahore", "min_budget": 2800000, "max_budget": 4000000, "color": null, "trim": "Oriel", "min_year": 2019, "max_year": 2022}
 
 Example 2 — Model-only inference (T2 → Jetour):
 Input: "T2 islamabad mein"

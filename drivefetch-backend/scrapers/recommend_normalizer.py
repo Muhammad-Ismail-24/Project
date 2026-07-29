@@ -81,6 +81,7 @@ def _calculate_recommendation_score(
     clean_mileage: int,
     requested_trim: str = None,
     required_features: list[str] = None,
+    min_budget: int = 0,
     min_year: int = 0,
     max_year: int = 0,
     debug: bool = False,
@@ -113,13 +114,17 @@ def _calculate_recommendation_score(
     # ── 3. Budget — with +5% negotiation buffer ────────────────────────────
     # In the Pakistani used-car market buyers routinely negotiate 3–7% off
     # the listed price. A listing at 105% of budget is still reachable.
-    if requested_budget and requested_budget > 0 and clean_price > 0:
-        hard_ceiling = int(requested_budget * 1.05)
-        if clean_price > hard_ceiling:
-            return veto(
-                f"Price {clean_price:,} exceeds budget ceiling "
-                f"{requested_budget:,} + 5% buffer ({hard_ceiling:,})"
-            )
+    if clean_price > 0:
+        if min_budget > 0 and clean_price < min_budget:
+            return veto(f"Listing price ({clean_price:,} PKR) is below 30% budget floor ({min_budget:,} PKR)")
+
+        if requested_budget and requested_budget > 0:
+            hard_ceiling = int(requested_budget * 1.05)
+            if clean_price > hard_ceiling:
+                return veto(
+                    f"Listing price ({clean_price:,} PKR) exceeds max budget "
+                    f"({requested_budget:,} PKR) + 5% buffer ({hard_ceiling:,})"
+                )
 
     # ── 4. Color conflict ──────────────────────────────────────────────────
     if requested_color:
@@ -255,6 +260,7 @@ def normalize_recommendation_target(
     requested_color: str,
     requested_trim: str,
     required_features: list[str] = None,
+    min_budget: int = 0,
     min_year: int = 0,
     max_year: int = 0,
     top_k: int = 5,
@@ -299,6 +305,7 @@ def normalize_recommendation_target(
             clean_mileage=clean_mileage,
             requested_trim=requested_trim,
             required_features=required_features,
+            min_budget=min_budget,
             min_year=min_year,
             max_year=max_year,
             debug=debug,
@@ -344,7 +351,7 @@ def normalize_recommendation_target(
     label = f"{corrected_make} {corrected_model}".strip()
     print(
         f"[RecNorm] {label}: "
-        f"{len(raw_listings)} raw → {len(scored_map)} qualified, "
+        f"{len(raw_listings)} raw -> {len(scored_map)} qualified, "
         f"{veto_count} vetoed."
     )
 
