@@ -139,6 +139,11 @@ async def _scrape_one(
     model        = rec.get("model") or ""
     budget       = _resolve_budget(override_budget, rec.get("max_budget", 0))
     min_budget   = rec.get("min_budget", 0)
+    
+    # 🛡️ BULLETPROOF FALLBACK: If user gave a max_budget but min_budget got dropped
+    if budget and budget > 0 and (not min_budget or min_budget == 0):
+        min_budget = int(budget * 0.70)
+        rec["min_budget"] = min_budget # Update the dict so logs reflect it
     min_year     = _resolve_year(rec.get("min_year", 0))
     GENERIC_POWERTRAIN_TAGS = {
         "ev", "electric", "hev", "phev", "hybrid", 
@@ -190,6 +195,11 @@ def _normalise_one(
     label       = _target_label(rec)
     budget      = _resolve_budget(override_budget, rec.get("max_budget", 0))
     min_budget  = rec.get("min_budget", 0)
+    
+    # 🛡️ BULLETPROOF FALLBACK: If user gave a max_budget but min_budget got dropped
+    if budget and budget > 0 and (not min_budget or min_budget == 0):
+        min_budget = int(budget * 0.70)
+        rec["min_budget"] = min_budget
     min_year    = _resolve_year(rec.get("min_year", 0))
     city        = override_city or rec.get("city") or ""
     year_suffix = f" (from {min_year})" if min_year else ""

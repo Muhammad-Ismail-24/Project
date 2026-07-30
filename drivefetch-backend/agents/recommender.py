@@ -362,9 +362,9 @@ Q3: Case B (budget given, 18 lacs < 50 lacs) → min_year = 0.
 Q4: trim="" (auto is the reason we picked these). Q5/Q-DOMINANCE: top 3 selected ✓.
 ──────────────────────────────────────
 [
-  {"make":"Toyota","model":"Vitz","trim":"","city":"","max_budget":1800000,"min_year":0,"required_features":[],"rationale":"Japanese imported hatchback with a proven auto CVT — 2005–2010 units fit this budget and run indefinitely."},
-  {"make":"Daihatsu","model":"Mira","trim":"","city":"","max_budget":1800000,"min_year":0,"required_features":[],"rationale":"660cc Japanese automatic — ultra-light, excellent city fuel average, smooth CVT, easy to park."},
-  {"make":"Honda","model":"City","trim":"","city":"","max_budget":1800000,"min_year":0,"required_features":[],"rationale":"2004–2008 i-DSI Steermatic — spacious sedan with a genuine automatic, comfortable for daily commutes."}
+  {"make":"Toyota","model":"Vitz","trim":"","city":"","min_budget":1260000,"max_budget":1800000,"min_year":0,"required_features":[],"rationale":"Japanese imported hatchback with a proven auto CVT — 2005–2010 units fit this budget and run indefinitely."},
+  {"make":"Daihatsu","model":"Mira","trim":"","city":"","min_budget":1260000,"max_budget":1800000,"min_year":0,"required_features":[],"rationale":"660cc Japanese automatic — ultra-light, excellent city fuel average, smooth CVT, easy to park."},
+  {"make":"Honda","model":"City","trim":"","city":"","min_budget":1260000,"max_budget":1800000,"min_year":0,"required_features":[],"rationale":"2004–2008 i-DSI Steermatic — spacious sedan with a genuine automatic, comfortable for daily commutes."}
 ]
 
 ──────────────────────────────────────
@@ -379,9 +379,9 @@ Q3: Case B (budget given, 30 lacs < 50 lacs) → min_year = 0.
 Q4: trim="" (auto is standard on all picks). Q5/Q-DOMINANCE: top 3 selected ✓.
 ──────────────────────────────────────
 [
-  {"make":"Suzuki","model":"Alto","trim":"","city":"","max_budget":3000000,"min_year":2019,"required_features":[],"rationale":"New-shape 660cc Alto VXL AGS — cheapest locally-assembled automatic in Pakistan with low running cost."},
-  {"make":"Suzuki","model":"Cultus","trim":"","city":"","max_budget":3000000,"min_year":2018,"required_features":[],"rationale":"New Celerio-shape Cultus VXL AGS — slightly roomier than Alto with the same automatic gearbox."},
-  {"make":"Suzuki","model":"WagonR","trim":"","city":"","max_budget":3000000,"min_year":2020,"required_features":[],"rationale":"New-shape WagonR VXL AGS — tallboy body with the most interior space of the Suzuki AGS trio."}
+  {"make":"Suzuki","model":"Alto","trim":"","city":"","min_budget":2100000,"max_budget":3000000,"min_year":2019,"required_features":[],"rationale":"New-shape 660cc Alto VXL AGS — cheapest locally-assembled automatic in Pakistan with low running cost."},
+  {"make":"Suzuki","model":"Cultus","trim":"","city":"","min_budget":2100000,"max_budget":3000000,"min_year":2018,"required_features":[],"rationale":"New Celerio-shape Cultus VXL AGS — slightly roomier than Alto with the same automatic gearbox."},
+  {"make":"Suzuki","model":"WagonR","trim":"","city":"","min_budget":2100000,"max_budget":3000000,"min_year":2020,"required_features":[],"rationale":"New-shape WagonR VXL AGS — tallboy body with the most interior space of the Suzuki AGS trio."}
 ]
 
 ──────────────────────────────────────
@@ -397,9 +397,9 @@ Q4: trim="" for all (each model's top variant is implied by the budget and ratio
 Q-DOMINANCE: All have PakWheels listings at this price. Q-DOMINANCE: top 3 selected ✓.
 ──────────────────────────────────────
 [
-  {"make":"Toyota","model":"Land Cruiser","trim":"","city":"","max_budget":80000000,"min_year":2022,"required_features":[],"rationale":"300-series Land Cruiser is the pinnacle of Pakistani road presence — twin-turbo V6, locking diffs, unmatched reliability at any price."},
-  {"make":"Toyota","model":"Prado","trim":"","city":"","max_budget":80000000,"min_year":2023,"required_features":[],"rationale":"250-series Prado launched 2023 — freshest ladder-frame luxury SUV available in Pakistan with a premium cabin and proven 4x4."},
-  {"make":"Kia","model":"Carnival","trim":"","city":"","max_budget":80000000,"min_year":2021,"required_features":[],"rationale":"8-seat premium minivan — the most comfortable people-mover available in Pakistan with a flagship interior."}
+  {"make":"Toyota","model":"Land Cruiser","trim":"","city":"","min_budget":56000000,"max_budget":80000000,"min_year":2022,"required_features":[],"rationale":"300-series Land Cruiser is the pinnacle of Pakistani road presence — twin-turbo V6, locking diffs, unmatched reliability at any price."},
+  {"make":"Toyota","model":"Prado","trim":"","city":"","min_budget":56000000,"max_budget":80000000,"min_year":2023,"required_features":[],"rationale":"250-series Prado launched 2023 — freshest ladder-frame luxury SUV available in Pakistan with a premium cabin and proven 4x4."},
+  {"make":"Kia","model":"Carnival","trim":"","city":"","min_budget":56000000,"max_budget":80000000,"min_year":2021,"required_features":[],"rationale":"8-seat premium minivan — the most comfortable people-mover available in Pakistan with a flagship interior."}
 ]
 
 ──────────────────────────────────────
@@ -408,9 +408,9 @@ Q1: No AWD. Q2: No transmission constraint (hybrid implies auto). Q3: No budget 
 Q4: User said hybrid → trim="Hybrid". Q-DOMINANCE: top 3 by market hierarchy – add variety.
 ──────────────────────────────────────
 [
-  {"make":"Toyota","model":"Aqua","trim":"Hybrid","city":"Islamabad","max_budget":0,"min_year":2021,"required_features":[],"rationale":"Most common hybrid in Pakistan — 25–28 km/l city average, parts everywhere, proven 2nd gen reliability."},
-  {"make":"Toyota","model":"Prius","trim":"Hybrid","city":"Islamabad","max_budget":0,"min_year":2023,"required_features":[],"rationale":"Roomier than Aqua with a smoother system — 20–24 km/l; ideal for families wanting hybrid comfort."},
-  {"make":"Honda","model":"Vezel","trim":"Hybrid","city":"Islamabad","max_budget":0,"min_year":2022,"required_features":[],"rationale":"3rd gen crossover hybrid — more ground clearance and cargo room than Aqua; great for Islamabad’s roads."}
+  {"make":"Toyota","model":"Aqua","trim":"Hybrid","city":"Islamabad","min_budget":0,"max_budget":0,"min_year":2021,"required_features":[],"rationale":"Most common hybrid in Pakistan — 25–28 km/l city average, parts everywhere, proven 2nd gen reliability."},
+  {"make":"Toyota","model":"Prius","trim":"Hybrid","city":"Islamabad","min_budget":0,"max_budget":0,"min_year":2023,"required_features":[],"rationale":"Roomier than Aqua with a smoother system — 20–24 km/l; ideal for families wanting hybrid comfort."},
+  {"make":"Honda","model":"Vezel","trim":"Hybrid","city":"Islamabad","min_budget":0,"max_budget":0,"min_year":2022,"required_features":[],"rationale":"3rd gen crossover hybrid — more ground clearance and cargo room than Aqua; great for Islamabad’s roads."}
 ]
 
 ──────────────────────────────────────
@@ -419,9 +419,9 @@ Q1: No AWD. Q2: No transmission constraint. Q3: No budget → min_year=current g
 Q4: trim="" (sedans don’t need trim filtering). Q-DOMINANCE: top 3 selected ✓.
 ──────────────────────────────────────
 [
-  {"make":"Honda","model":"Civic","trim":"","city":"","max_budget":0,"min_year":2022,"required_features":[],"rationale":"11th gen FE Civic — 1.5T turbo, Honda Sensing ADAS, sharpest-looking sedan on Pakistan’s roads right now."},
-  {"make":"Toyota","model":"Corolla","trim":"","city":"","max_budget":0,"min_year":2022,"required_features":[],"rationale":"12th gen on TNGA platform — better handling, refined cabin, and unbeatable Corolla resale value nationwide."},
-  {"make":"Hyundai","model":"Elantra","trim":"","city":"","max_budget":0,"min_year":2021,"required_features":[],"rationale":"7th gen CN7 — most striking exterior in class, turbocharged options, and genuinely premium interior feel."}
+  {"make":"Honda","model":"Civic","trim":"","city":"","min_budget":0,"max_budget":0,"min_year":2022,"required_features":[],"rationale":"11th gen FE Civic — 1.5T turbo, Honda Sensing ADAS, sharpest-looking sedan on Pakistan’s roads right now."},
+  {"make":"Toyota","model":"Corolla","trim":"","city":"","min_budget":0,"max_budget":0,"min_year":2022,"required_features":[],"rationale":"12th gen on TNGA platform — better handling, refined cabin, and unbeatable Corolla resale value nationwide."},
+  {"make":"Hyundai","model":"Elantra","trim":"","city":"","min_budget":0,"max_budget":0,"min_year":2021,"required_features":[],"rationale":"7th gen CN7 — most striking exterior in class, turbocharged options, and genuinely premium interior feel."}
 ]
 """
 
