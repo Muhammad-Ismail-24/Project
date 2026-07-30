@@ -52,10 +52,15 @@ automotive knowledge of the Pakistani market. Do not print your answers.
       - If YES: HARD-EXCLUDE every brand outside that origin.
       - Example: "Chinese electric crossovers" → HARD-EXCLUDE Audi, BMW, Mercedes, Porsche, Hyundai, Kia, Toyota, Honda. Only allow Chinese brands (BYD, Changan, MG, Haval, Chery, GWM, Seres, etc.).
 
-    Q0-B. BODY-STYLE (Segment Check):
-      - Did the user specify body style? (e.g., "crossover", "SUV", "sedan", "hatchback", "van", "pickup").
-      - If YES: HARD-EXCLUDE mismatched body types.
-      - Example: If user asked for "crossover", HARD-EXCLUDE sedans (e.g., BYD Seal, Changan Deepal L07) even if they are electric and Chinese.
+    Q0-B. BODY-STYLE (Strict Segment Check):
+      - Did the user specify a body style? (e.g., "crossover", "SUV", "sedan", "hatchback", "van", "pickup").
+      - If YES: HARD-EXCLUDE all mismatched body types.
+      - CRITICAL: Do NOT offer "alternatives" from a different segment. If the user asks for a crossover, do not suggest a sedan (e.g., Elantra) even if it fits the brand and budget. It is better to return fewer results than to violate the requested body style.
+
+    Q0-C. PICKUP-CHECK:
+      - Did the user ask for a "pickup truck", "pickup", or "single/double cab"?
+      - IF YES: Target MUST have an open rear cargo bed (e.g., Hilux Revo/Vigo, D-Max, Triton). 
+      - HARD-EXCLUDE all closed-body SUVs and vans (e.g., Land Cruiser, Prado, Fortuner, Pajero, Hiace, Surf).
 
 
 
@@ -171,6 +176,18 @@ automotive knowledge of the Pakistani market. Do not print your answers.
       - Prioritize models that natively feature factory push start in Pakistan's used market: Nissan Dayz, Daihatsu Move, Suzuki WagonR Stingray.
       - Avoid base local cars (Alto VXL, Cultus) or base Japanese cars (Vitz F, Mira L) that use traditional key ignition.
 
+  Q-JDM-DISAMBIGUATION:
+      If the user specifically requests a "Japanese import" or "JDM" vehicle, and you recommend a model that is also assembled locally in Pakistan (e.g., Suzuki Alto), you MUST specify a JDM-exclusive trim (e.g., trim="G", trim="L", trim="X", trim="Turbo RS") to prevent scrapers from fetching local variants (like VXR, VXL, or AGS).
+  Q-ELITE-BUDGET-CHECK:
+      Is the user's max_budget >= 30,000,000 PKR (3 Crore)?
+      - IF YES: You MUST prioritize Apex Luxury vehicles.
+      - Prioritize: Toyota Land Cruiser (LC300/200 series), Range Rover, Porsche Cayenne, Audi Q7/Q8, Mercedes GLS/S-Class.
+      - HARD-DEMOTE mid-tier vehicles. Do NOT recommend a Toyota Fortuner, Kia Sorento, or Hilux Revo for budgets over 3 Crore unless explicitly requested by name. If they have 5 Crore, they want a Land Cruiser or Range Rover, not a Fortuner.
+
+  Q-AURA-STATUS-CHECK:
+      Does the prompt contain words implying elite status, prestige, or "Aura" (e.g., "aura", "boss", "status", "royal", "VIP")?
+      - IF YES: Exclude utility/commercial vehicles (like Hilux Revo or D-Max). Focus on commanding luxury vehicles (Land Cruiser, Range Rover, S-Class, E-Tron GT).
+
   Q-BUDGET-WINDOW (30% Floor Calculation):
       - Did the user specify a maximum budget limit (e.g., "under 50 lacs", "max 30 lacs")?
       - If YES and no min_budget was provided:
@@ -260,6 +277,10 @@ Q4. TRIM flag & Native Powertrain Rule:
       - First, identify all exact displacement matches with requested features (e.g. Corolla Altis Grande 1.8, Civic Oriel 1.8, Prius 1.8 Hybrid).
       - If exact options are limited, you may include a near-equivalent engine option (e.g., 2.0L Elantra / 2.0L Sonata or 1.5T Turbo) ONLY if it fulfills the primary feature (sunroof) AND the rationale explicitly mentions the slight engine size variation.
 
+  Q-SUV-HIERARCHY:
+      Did user request an "SUV" with budget >= 70 Lacs?
+      - Prioritize body-on-frame / 7-seater SUVs (Toyota Fortuner AWD, Kia Sorento AWD) above compact crossovers (Sportage, Tucson).
+
   Q-DOMINANCE (Pure Market Excellence Rule):
       Identify the absolute top 3 models in Pakistan that best satisfy the query.
       - If 1 brand dominates the top tier (e.g., Toyota for rugged 4x4s -> Land Cruiser, Prado, Fortuner/Hilux), output all 3 from that brand.
@@ -272,6 +293,7 @@ Q4. TRIM flag & Native Powertrain Rule:
         Luxury: Toyota Land Cruiser > Toyota Prado > German Luxury (BMW 5/7, Mercedes E/S-Class)
         Entry Hatchback: Suzuki Alto > Suzuki Cultus > Suzuki WagonR
         Sedan: Honda Civic > Toyota Corolla > Hyundai Elantra
+        Cargo Van / Microvan (7-Seater/Utility): For queries seeking budget cargo vans or multi-purpose utility vans in Pakistan, prioritize the Changan Karvaan, Suzuki Bolan, FAW X-PV, and Suzuki Every. Do NOT recommend the Toyota Hiace (which is a large commuter van) or the FAW Carrier (which is a pickup truck) when the user specifically asks for a 7-seater cargo van.
 
 ═══════════════════════════════════════════════════════
 STEP 2 — OUTPUT CONTRACT (non-negotiable)
@@ -667,16 +689,18 @@ shown the Top 3 highest-confidence cars. Your task is to generate ONLY \
 STRICT RULES:
 1. TRANSMISSION LOCK: If user requested Automatic/CVT/AGS, output ONLY automatic vehicles. HARD-EXCLUDE all manual variants (e.g., NEVER output "Cultus Manual").
 2. FEATURE LOCK: Maintain required features (e.g., factory push start, sunroof).
-3. EXCLUSIONS: Hard-exclude all models listed in the exclude list.
-4. Output ONLY a raw JSON array — no preamble, no markdown.
-5. Return exactly 2 or 3 objects.
-6. Respect EVERY original constraint from the user's query: budget, city, body style, transmission, fuel type, brand origin, seating.
-7. Pick models with reasonable inventory depth on PakWheels/OLX in Pakistan.
-8. Use the same 9-key schema: make, model, trim, city, min_budget, max_budget, min_year, required_features, rationale.
-9. "trim" rules: "" by default. Only use "AWD"/"Hybrid"/"EV"/"Diesel"/"Manual" when the user's original intent explicitly required it.
-10. "min_year": 0 if budget given, current-gen first year if no budget.
-11. "max_budget": 0 means no ceiling. Never null.
-12. Q-TIER: If user did NOT explicitly request a Chinese brand, HARD-EXCLUDE all Tier-2 Chinese/secondary brands (Haval, MG, Changan, Chery, DFSK, Proton, BAIC, Jetour, GWM, Seres). Recommend ONLY Tier-1 brands (Toyota, Honda, Kia, Hyundai, Suzuki, Nissan, Mitsubishi).
+3. BODY STYLE LOCK: Do NOT offer "alternatives" from a different segment. If the user asks for a crossover, do not suggest a sedan (e.g., Elantra). HARD-EXCLUDE all mismatched body types.
+4. EXCLUSIONS: Hard-exclude all models listed in the exclude list.
+5. Output ONLY a raw JSON array — no preamble, no markdown.
+6. Return 0 to 3 objects. (Return [] if no budget-compliant models exist).
+7. Respect EVERY original constraint from the user's query: budget, city, body style, transmission, fuel type, brand origin, seating.
+8. Pick models with reasonable inventory depth on PakWheels/OLX in Pakistan.
+9. Use the same 9-key schema: make, model, trim, city, min_budget, max_budget, min_year, required_features, rationale.
+10. "trim" rules: "" by default. Only use "AWD"/"Hybrid"/"EV"/"Diesel"/"Manual" when the user's original intent explicitly required it.
+11. "min_year": 0 if budget given, current-gen first year if no budget.
+12. "max_budget": 0 means no ceiling. Never null.
+13. Q-TIER: If user did NOT explicitly request a Chinese brand, HARD-EXCLUDE all Tier-2 Chinese/secondary brands (Haval, MG, Changan, Chery, DFSK, Proton, BAIC, Jetour, GWM, Seres). Recommend ONLY Tier-1 brands (Toyota, Honda, Kia, Hyundai, Suzuki, Nissan, Mitsubishi).
+14. Q-EXTENSION-BUDGET-VALIDATION: Check `max_budget` from original prompt. HARD-EXCLUDE any extended candidate whose typical used market price in Pakistan exceeds `max_budget`. Example: Under 7 Lacs, output ONLY Mehran, Cuore, Khyber, Charade, Santro. NEVER output Wagon R, Cultus (GD/BS), or Vitz. If no more valid budget-compliant models exist, return an EMPTY array [].
 """
 
 
