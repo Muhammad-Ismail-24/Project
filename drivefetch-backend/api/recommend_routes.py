@@ -2,45 +2,44 @@
 api/recommend_routes.py
 Route: POST /api/recommend
 
-Pipeline (v6.0):
-  Stage 1  → Semantic Mapping      (Gemini: 5 targets)
-  Stage 2  → Parallel Scrape       (asyncio.gather across all 5)
+Pipeline (v7.0):
+  Stage 1  → Semantic Mapping      (Gemini: up to 5 targets)
+  Stage 2  → Parallel Scrape       (asyncio.gather across all targets)
   Stage 3  → Per-Model Normalise   (recommend_normalizer per target)
   Stage 3.5→ Validation & Fallback (smart failure classification → retry)
   Stage 4  → Emit Results          (SSE stream to frontend)
 
-v6.0 changes over v5.0:
+v7.0 changes over v6.0:
   ─────────────────────────────────────────────────────────────────────────────
-  FIX 1 — Smart Fallback Triggering (the "EV zero result" bug):
-    Old logic: if failed_count > _MAX_FALLBACK_TARGETS (3) → assume network issue → skip fallback.
-    Problem: When all 5 targets are a niche category (EVs, rare imports, etc.),
-             ALL 5 can fail due to dry inventory, not a scraper outage.
-             WiseWheels returns 40 listings for any query (its API ignores unknown
-             models and returns popular cars) — so raw_count > 0 but normalizer
-             vetos everything. Old code saw 5 failures and assumed "network issue".
+  FIX — min_budget deduplication & Drive.pk / AutoDeals wiring:
+    Prior code had the 70% price-floor fallback duplicated in both _scrape_one
+    and _normalise_one, with each reading/writing rec["min_budget"] separately.
+    This was fragile and hard to audit.
 
-    New logic: classify each failure as one of two types:
-      - SCRAPER_ZERO:     platform returned 0 raw listings (possible infra issue)
-      - NORMALIZER_ZERO:  platform returned raw listings but normalizer vetoed all
+    New approach:
+      _resolve_min_budget(rec, max_budget) is a single shared helper.
+        Priority: LLM-supplied rec["min_budget"] > 70% of max_budget > 0.
+        Writes the resolved value back into rec so both _scrape_one (URL
+        builder) and _normalise_one (veto check) read the same number.
 
-    Fallback fires if:
-      a) Any NORMALIZER_ZERO failures exist (always inventory issue, not infra), OR
-      b) SCRAPER_ZERO count ≤ _MAX_SCRAPER_ZERO_THRESHOLD (3) (few pure zeros = probably ok)
+      _scrape_one calls _resolve_min_budget once and passes min_budget to
+        execute_search_pipeline → all platform URL builders.
 
-    This means niche EV searches now correctly trigger the fallback and get
-    reasonable alternatives (Prius, Vezel, etc.) instead of a dead-end error.
+      _normalise_one calls _resolve_min_budget as a safety net (idempotent
+        since rec already has the value from _scrape_one).
 
-  FIX 2 — Budget override parsing hardened (GAP-5 from test battery):
-    Old:  int(raw_budget) called twice — crashes on "80 lacs" string input.
-    New:  wrapped in try/except, called once, graceful fallback to None.
+    runner.py companion fixes (also in this release):
+      Drive.pk: added &minPrice={min_budget} when min_budget > 0
+                (was previously missing — only maxPrice was wired)
+      AutoDeals: replaced hardcoded minP_0 with minP_{min_budget}
+                (was always sending price_from=0 regardless of floor)
+      Pipeline log: now shows Budget={min_budget}-{max_budget} range
 
-  FIX 3 — Log clarity: _normalise_one now returns a FailureType enum-like string
-    so Render logs show exactly WHY each target failed.
-
-  Preserved from v5.0:
-    - city="" passed to runner (soft city signal, enforced by recommend_normalizer)
+  Preserved from v6.0:
+    - Smart failure classification (SCRAPER_ZERO vs NORMALIZER_ZERO)
+    - city="" passed to runner (soft city signal, recommend_normalizer enforces)
     - budget * 1.05 passed to runner (negotiate buffer pre-fetch)
-    - trim forwarded to URL builder only, never to normalizer
+    - trim stripped of generic powertrain tags before URL building
     - seen_urls dedup shared across initial + fallback pass
     - "targets" in results SSE includes fallback targets
 """
@@ -120,6 +119,33 @@ def _target_label(rec: dict) -> str:
     return f"{make} {model}".strip() + trim_suffix
 
 
+def _resolve_min_budget(rec: dict, resolved_max_budget: int | None) -> int:
+    """
+    Returns the effective price floor in PKR for a recommendation dict.
+
+    Priority:
+      1. LLM-supplied min_budget (if > 0)
+      2. 70% of max_budget as a hard Python fallback — prevents decade-old
+         budget units from flooding results when the user stated a high ceiling
+         (e.g. "under 50 lacs" should not surface a 2005 Corolla at 8 lacs).
+      3. 0 (no floor) when no max_budget exists either
+
+    The fallback is applied once here and written back into rec["min_budget"]
+    so that both _scrape_one (URL builder) and _normalise_one (veto check)
+    see the same value without repeating the calculation.
+    """
+    explicit = rec.get("min_budget", 0) or 0
+    if explicit > 0:
+        return explicit
+
+    if resolved_max_budget and resolved_max_budget > 0:
+        floor = int(resolved_max_budget * 0.70)
+        rec["min_budget"] = floor   # write-through so callers stay in sync
+        return floor
+
+    return 0
+
+
 async def _scrape_one(
     rec: dict,
     override_city: str | None,
@@ -134,22 +160,26 @@ async def _scrape_one(
 
     Budget is pre-expanded 5% so the runner's normalizer doesn't drop listings
     that the recommend_normalizer's +5% negotiation buffer would have kept.
+
+    min_budget is resolved once via _resolve_min_budget() and written back into
+    rec["min_budget"] so that _normalise_one reads the same value without a
+    second calculation.
     """
-    make         = rec.get("make") or ""
-    model        = rec.get("model") or ""
-    budget       = _resolve_budget(override_budget, rec.get("max_budget", 0))
-    min_budget   = rec.get("min_budget", 0)
-    
-    # 🛡️ BULLETPROOF FALLBACK: If user gave a max_budget but min_budget got dropped
-    if budget and budget > 0 and (not min_budget or min_budget == 0):
-        min_budget = int(budget * 0.70)
-        rec["min_budget"] = min_budget # Update the dict so logs reflect it
-    min_year     = _resolve_year(rec.get("min_year", 0))
+    make   = rec.get("make") or ""
+    model  = rec.get("model") or ""
+    budget = _resolve_budget(override_budget, rec.get("max_budget", 0))
+
+    # Resolve price floor — writes result back into rec for _normalise_one
+    min_budget = _resolve_min_budget(rec, budget)
+
+    min_year = _resolve_year(rec.get("min_year", 0))
+
+    # Strip generic powertrain tags from URL trim — platforms don't index these
     GENERIC_POWERTRAIN_TAGS = {
-        "ev", "electric", "hev", "phev", "hybrid", 
-        "petrol", "diesel", "cng", "awd", "fwd", "4x4", "4wd"
+        "ev", "electric", "hev", "phev", "hybrid",
+        "petrol", "diesel", "cng", "awd", "fwd", "4x4", "4wd",
     }
-    trim_raw = rec.get("trim") or ""
+    trim_raw     = rec.get("trim") or ""
     trim_for_url = trim_raw if trim_raw.lower() not in GENERIC_POWERTRAIN_TAGS else ""
 
     scraper_budget = int(budget * 1.05) if budget else None
@@ -194,12 +224,10 @@ def _normalise_one(
     rationale   = rec.get("rationale", "")
     label       = _target_label(rec)
     budget      = _resolve_budget(override_budget, rec.get("max_budget", 0))
-    min_budget  = rec.get("min_budget", 0)
-    
-    # 🛡️ BULLETPROOF FALLBACK: If user gave a max_budget but min_budget got dropped
-    if budget and budget > 0 and (not min_budget or min_budget == 0):
-        min_budget = int(budget * 0.70)
-        rec["min_budget"] = min_budget
+    # min_budget was already resolved and written into rec by _scrape_one.
+    # In the rare case _normalise_one is called without a prior _scrape_one
+    # (e.g. tests), _resolve_min_budget provides the same 70% fallback.
+    min_budget  = _resolve_min_budget(rec, budget)
     min_year    = _resolve_year(rec.get("min_year", 0))
     city        = override_city or rec.get("city") or ""
     year_suffix = f" (from {min_year})" if min_year else ""

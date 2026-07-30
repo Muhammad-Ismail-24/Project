@@ -251,23 +251,27 @@ async def execute_search_pipeline(
             # DRIVE.PK — flat query-parameter routing
             # ------------------------------------------------------------------ #
             drive_url = f"https://www.drivepk.com/cars/list?page={page}"
-            if safe_make_lower:    drive_url += f"&brands={safe_make_lower.capitalize()}"
-            if safe_budget > 0:    drive_url += f"&maxPrice={safe_budget}"
-            if min_year > 0:       drive_url += f"&minYear={min_year}"
-            if max_year > 0:       drive_url += f"&maxYear={max_year}"
-            if safe_color_lower:   drive_url += f"&colors={safe_color_lower.capitalize()}"
-            if target_city:        drive_url += f"&cities={target_city.capitalize()}"
+            if safe_make_lower:      drive_url += f"&brands={safe_make_lower.capitalize()}"
+            if safe_min_budget > 0:  drive_url += f"&minPrice={safe_min_budget}"
+            if safe_budget > 0:      drive_url += f"&maxPrice={safe_budget}"
+            if min_year > 0:         drive_url += f"&minYear={min_year}"
+            if max_year > 0:         drive_url += f"&maxYear={max_year}"
+            if safe_color_lower:     drive_url += f"&colors={safe_color_lower.capitalize()}"
+            if target_city:          drive_url += f"&cities={target_city.capitalize()}"
             drive_q_parts = list(filter(None, [safe_model, safe_trim]))
             drive_q_str   = " ".join(drive_q_parts).replace(" ", "%20")
-            if drive_q_str:        drive_url += f"&q={drive_q_str}"
+            if drive_q_str:          drive_url += f"&q={drive_q_str}"
             drive_tasks.append((drive_url, search_filters))
 
             # ------------------------------------------------------------------ #
             # AUTODEALS — mixed path/segment routing
+            # min_budget replaces the hardcoded minP_0 so old Corollas at
+            # PKR 200,000 are excluded when the user's floor is 35 lacs.
             # ------------------------------------------------------------------ #
             ad_parts = ["https://autodeals.pk/used-cars/search/-"]
             if c:               ad_parts.append(f"ct_{c}")
-            if safe_budget > 0: ad_parts.append(f"minP_0/maxP_{safe_budget}")
+            ad_min = safe_min_budget if safe_min_budget > 0 else 0
+            if safe_budget > 0: ad_parts.append(f"minP_{ad_min}/maxP_{safe_budget}")
             if min_year > 0:    ad_parts.append(f"minY_{min_year}")
             if max_year > 0:    ad_parts.append(f"maxY_{max_year}")
             ad_search = "-".join(filter(None, [safe_make_lower, safe_model_lower, safe_trim_dash]))
@@ -289,7 +293,7 @@ async def execute_search_pipeline(
     print(
         f"[Pipeline] Search -> Make={safe_make}, Model={safe_model}, "
         f"Cities={cities_to_search}, Color={safe_color}, Trim={safe_trim}, "
-        f"Year={min_year}-{max_year}, Budget={safe_budget}"
+        f"Year={min_year}-{max_year}, Budget={safe_min_budget}-{safe_budget}"
     )
 
     # --- Concurrency: run all scrapers using a shared curl_cffi session ---
