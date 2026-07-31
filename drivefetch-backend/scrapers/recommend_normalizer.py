@@ -108,7 +108,12 @@ def _calculate_recommendation_score(
     if requested_make:
         req_make_lower = requested_make.lower()
         acceptable_makes = MAKE_VETO_ALIASES.get(req_make_lower, [req_make_lower])
-        if not any(m in title_lower for m in acceptable_makes):
+        
+        # Robust hyphen handling: treat hyphens and spaces as equivalent
+        acceptable_makes = [m.replace("-", " ") for m in acceptable_makes] + acceptable_makes
+        title_make_check = title_lower.replace("-", " ")
+        
+        if not any(m in title_make_check for m in acceptable_makes):
             return veto(f"Make '{requested_make}' not found in title")
 
     # ── 3. Budget — with +5% negotiation buffer ────────────────────────────
@@ -218,12 +223,14 @@ def _calculate_recommendation_score(
         if max_year > 0 and clean_year > max_year:
             return veto(f"Too new. Car is {clean_year}, max requested {max_year}.")
 
-    # ── 8. Staleness veto (14-day rule) ────────────────────────────────────
-    # age_days == 999 = unknown → not vetoed (may be fresh, just no date found).
-    # age_days == 0   = posted today → never vetoed.
+    # ── 8. Staleness veto ──────────────────────────────────────────────────
+    # age_days == 999 = unknown → not vetoed.
+    # Elite luxury cars take longer to sell. If budget > 1.5 Crore, allow 90 days.
+    max_age_limit = 30 if (requested_budget and requested_budget >= 15_000_000) else 14
     age_score = max(0.0, 15.0 - (car.age_days * 0.5))
-    if 0 < car.age_days <= 998 and car.age_days > 14:
-        return veto(f"Stale listing. Posted {car.age_days} days ago (limit: 14).")
+    
+    if 0 < car.age_days <= 998 and car.age_days > max_age_limit:
+        return veto(f"Stale listing. Posted {car.age_days} days ago (limit: {max_age_limit}).")
 
     # ── 9. Data quality ────────────────────────────────────────────────────
     year_score    = 7.5 if clean_year    > 0 else 0.0
