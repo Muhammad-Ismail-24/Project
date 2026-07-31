@@ -1,6 +1,6 @@
 """
 scrapers/recommend_normalizer.py
-GaariGuru — AI Matchmaker Normalizer v1.0
+GaariGuru — AI Matchmaker Normalizer v1.1
 
 Purpose:
     A purpose-built scoring pipeline for the AI Recommendation feature.
@@ -10,19 +10,11 @@ Purpose:
 Key differences from the strict keyword-search normalizer:
     - +5% negotiation buffer on budget (buyers negotiate in Pakistan).
     - "Lazy Seller" trim handling: missing trim ≠ wrong trim.
-      Only an explicit conflicting trim (e.g. listing says FWD when user
-      wants AWD) triggers a veto. No trim in title → kept, 0 trim bonus.
     - Trim boost: +15.0 pts when the exact trim IS found in the title.
-    - 14-day staleness veto inherited from main normalizer.
-    - No city hard veto — city is a soft signal for AI recommendations
-      since the LLM already handles city filtering upstream.
-    - Per-model, not aggregate: one call = one model = top_k results.
-
-Architecture:
-    All knowledge maps (MAKE_INFERENCE_MAP, TRIM_ALIASES, etc.) and utility
-    functions (_clean_price, _clean_int, _calculate_identity_score, etc.)
-    are imported directly from scrapers.normalizer to stay DRY.
-    Only TRIM_CONFLICTS is defined here (it differs from the strict version).
+    - Elite Staleness Veto: Standard cars die at 14 days, but budgets 
+      over 1.5 Crore are allowed up to 90 days on market.
+    - No city hard veto — city is a soft signal for AI recommendations.
+    - Feature matcher (sunroof, push start boosts).
 """
 
 import re
@@ -39,7 +31,6 @@ from scrapers.normalizer import (
     _clean_int,
     _calculate_identity_score,
 )
-
 
 # ---------------------------------------------------------------------------
 # RECOMMEND-SPECIFIC CONFLICT MAP
@@ -104,11 +95,17 @@ def _calculate_recommendation_score(
     if identity_score < 0.75:
         return veto(f"Identity too low ({identity_score:.2f}) for model='{requested_model}'")
 
-    # ── 2. Make check ──────────────────────────────────────────────────────
+    # ── 2. Make check (With Elite Fallbacks) ───────────────────────────────
     if requested_make:
         req_make_lower = requested_make.lower()
         acceptable_makes = MAKE_VETO_ALIASES.get(req_make_lower, [req_make_lower])
         
+        # 🚨 FOOLPROOF MAKE ALIASES FOR ELITE CARS 🚨
+        if "mercedes" in req_make_lower:
+            acceptable_makes.extend(["mercedes", "benz", "mercedes-benz", "mercedes benz"])
+        if "land rover" in req_make_lower or "range rover" in requested_model.lower():
+            acceptable_makes.extend(["land rover", "range rover", "rangerover"])
+            
         # Robust hyphen handling: treat hyphens and spaces as equivalent
         acceptable_makes = [m.replace("-", " ") for m in acceptable_makes] + acceptable_makes
         title_make_check = title_lower.replace("-", " ")
@@ -117,8 +114,6 @@ def _calculate_recommendation_score(
             return veto(f"Make '{requested_make}' not found in title")
 
     # ── 3. Budget — with +5% negotiation buffer ────────────────────────────
-    # In the Pakistani used-car market buyers routinely negotiate 3–7% off
-    # the listed price. A listing at 105% of budget is still reachable.
     if clean_price > 0:
         if min_budget > 0 and clean_price < min_budget:
             return veto(f"Listing price ({clean_price:,} PKR) is below 30% budget floor ({min_budget:,} PKR)")
@@ -141,9 +136,6 @@ def _calculate_recommendation_score(
                 return veto(f"Title contains '{color}' but user wants '{req_color}'")
 
     # ── 5. City — soft signal only ─────────────────────────────────────────
-    # For AI recommendations the LLM already targeted the right city in its
-    # scraper URL. We score city presence but never hard-veto on it — the
-    # user's intent is the car model, not a specific city.
     car_city_lower = (car.city or "").lower().strip()
     req_city_str   = (requested_city or "").lower().strip()
     if req_city_str:
@@ -174,10 +166,10 @@ def _calculate_recommendation_score(
                 break
 
         if trim_explicitly_found:
-            # (a) exact match — reward it
+            # exact match — reward it
             trim_score = 15.0
         else:
-            # Check for (b) explicit conflicts before assuming (c) lazy seller
+            # Check for explicit conflicts before assuming lazy seller
             for keyword in trim_keywords:
                 if keyword in GENERIC_SKIP:
                     continue
@@ -188,11 +180,10 @@ def _calculate_recommendation_score(
                             f"Conflicting trim. Wanted '{requested_trim}', "
                             f"title contains '{conflict}'"
                         )
-            # (c) No trim, no conflict → lazy seller, keep the listing
+            # No trim, no conflict → lazy seller, keep the listing
             trim_score = 0.0
 
-
-    # ── 6.5. Feature Matcher (Hard Vetoes & Boosting) ────────────────────────────
+    # ── 6.5. Feature Matcher (Hard Vetoes & Boosting) ────────────────────────
     feature_score = 0.0
     if required_features:
         for feature in required_features:
@@ -226,7 +217,9 @@ def _calculate_recommendation_score(
     # ── 8. Staleness veto ──────────────────────────────────────────────────
     # age_days == 999 = unknown → not vetoed.
     # Elite luxury cars take longer to sell. If budget > 1.5 Crore, allow 90 days.
-    max_age_limit = 30 if (requested_budget and requested_budget >= 15_000_000) else 14
+    # Cast to int to guarantee the evaluation doesn't fail due to type coercion.
+    eff_budget = int(requested_budget) if requested_budget else 0
+    max_age_limit = 90 if eff_budget >= 15_000_000 else 14
     age_score = max(0.0, 15.0 - (car.age_days * 0.5))
     
     if 0 < car.age_days <= 998 and car.age_days > max_age_limit:
@@ -278,12 +271,6 @@ def normalize_recommendation_target(
 
     Returns a list of up to `top_k` CarListing objects, cross-platform mixed
     where possible. Never raises — returns [] on failure.
-
-    Platform allocation for top_k=5 (default):
-        PakWheels  : 2 slots
-        OLX        : 2 slots
-        Gari.pk    : 1 slot
-        Backfill   : any platform fills remaining gaps in score order
     """
     corrected_make,  corrected_model = normalize_make_model(
         requested_make or "", requested_model or ""
@@ -386,17 +373,14 @@ def normalize_recommendation_target(
             buckets["Other"].append(item)
 
     # ── Step 3: Cross-platform allocation for top_k slots ─────────────────
-    # Default for top_k=5: PakWheels→2, OLX→2, Gari→1
-    # Scales gracefully if top_k is changed.
     half      = max(1, top_k // 2)
     quarter   = max(1, top_k // 4)
     remainder = max(0, top_k - half - quarter)
 
     pw_quota   = half        # 2 of 5
-    olx_quota  = quarter     # 1 of 5  (gets bumped by backfill if OLX is rich)
-    gari_quota = remainder   # 2 of 5  (same)
+    olx_quota  = quarter     # 1 of 5 
+    gari_quota = remainder   # 2 of 5 
 
-    # Special-case top_k=5 to give the intuitive 2-2-1 split
     if top_k == 5:
         pw_quota, olx_quota, gari_quota = 2, 2, 1
 
@@ -414,7 +398,6 @@ def normalize_recommendation_target(
         already_selected_keys = {
             id(item) for item in selection
         }
-        # Pull from everything not yet selected, highest score first
         backup_pool = [
             item for item in all_scored
             if id(item) not in already_selected_keys
@@ -426,7 +409,6 @@ def normalize_recommendation_target(
                 f"{len(backup_pool[:shortfall])} slot(s) from overflow pool."
             )
 
-    # Final sort so the returned list is score-descending
     selection.sort(key=lambda x: x["score"], reverse=True)
     top_data = selection[:top_k]
 
