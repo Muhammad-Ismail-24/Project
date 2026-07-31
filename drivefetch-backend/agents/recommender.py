@@ -58,7 +58,7 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 client = genai.Client(api_key=GEMINI_API_KEY)
 
-_GEMINI_MODEL = "gemini-2.0-flash-lite"   # single constant — change once, applies everywhere
+_GEMINI_MODEL = "gemini-3.5-flash-lite"   # single constant — change once, applies everywhere
 
 
 # ---------------------------------------------------------------------------
