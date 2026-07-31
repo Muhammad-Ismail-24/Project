@@ -264,6 +264,13 @@ MODEL_ALIAS_MAP: dict[str, list[str]] = {
     "sealion":   ["sealion", "seelion", "sealyn", "sea lion"],
     "xtrail":    ["x trail", "xtrail", "x-trail"],
     "crz":       ["cr z", "crz", "cr-z"],
+    # European / Luxury aliases
+    "s-class":   ["s-class", "s class", "s400", "s500", "s600", "s350", "s 400", "s 500"],
+    "c-class":   ["c-class", "c class", "c180", "c200", "c250", "c300", "c 180", "c 200"],
+    "e-class":   ["e-class", "e class", "e200", "e250", "e300", "e 200", "e 250"],
+    "g-class":   ["g-class", "g class", "g63", "g500", "g 63"],
+    "range rover": ["range rover", "rangerover", "vogue", "autobiography"],
+    "range rover sport": ["range rover sport", "rangerover sport", "sport"],
 }
 
 MAKE_ALIAS_MAP: dict[str, str] = {
@@ -279,6 +286,15 @@ MAKE_VETO_ALIASES: dict[str, list[str]] = {
     "subaru":    ["subaru", "daihatsu", "toyota"],      # Sambar/Justy ↔ Hijet/Thor
     "nissan":    ["nissan", "suzuki", "mitsubishi"],   # Clipper ↔ Every/Minicab
     "mitsubishi":["mitsubishi", "nissan", "suzuki"],
+    
+    # European / Luxury makes
+    "mercedes-benz": ["mercedes-benz", "mercedes", "benz"],
+    "mercedes":      ["mercedes-benz", "mercedes", "benz"],
+    "bmw":           ["bmw"],
+    "audi":          ["audi"],
+    "porsche":       ["porsche"],
+    "land rover":    ["land rover", "range rover", "rover"],
+    "lexus":         ["lexus", "toyota"],
 }
 
 TYPO_CORRECTIONS: dict[str, str] = {
