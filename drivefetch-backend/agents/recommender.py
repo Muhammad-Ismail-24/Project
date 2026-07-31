@@ -621,7 +621,8 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         "7. Quality > Quantity: Output 1 target if only 1 fits well. Never pad to reach 3.\n"
         "8. Trim: Leave trim empty if no specific trim is needed — do not invent trims.\n"
         "9. Rationale: 1 sentence, buyer-friendly, explain WHY this car fits their need.\n"
-        "10. Single-brand dominance is fine — if Toyota has 3 perfect options, return all 3 Toyota."
+        "10. Single-brand dominance is fine — if Toyota has 3 perfect options, return all 3 Toyota.\n"
+        "11. ELITE MARKET OVERRIDES: If max_budget >= 40,000,000 (4 Crore), prioritize the Porsche Taycan over the Cayenne, and prioritize the full-size 'Range Rover' over the 'Range Rover Sport', as these match the purchasing power of this bracket far better in Pakistan."
     )
 
     response = await client.aio.models.generate_content(
