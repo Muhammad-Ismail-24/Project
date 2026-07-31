@@ -2,46 +2,30 @@
 api/recommend_routes.py
 Route: POST /api/recommend
 
-Pipeline (v7.0):
-  Stage 1  → Semantic Mapping      (Gemini: up to 5 targets)
-  Stage 2  → Parallel Scrape       (asyncio.gather across all targets)
-  Stage 3  → Per-Model Normalise   (recommend_normalizer per target)
-  Stage 3.5→ Validation & Fallback (smart failure classification → retry)
-  Stage 4  → Emit Results          (SSE stream to frontend)
+Pipeline (v9.0):
+  Stage 1   → Intent Extraction     (extract_intent → UserIntent)
+  Stage 1   → Constraint Resolution (resolve_constraints → dict, pure Python)
+  Stage 2   → Car Selection         (select_car_targets → CarTargetRaw list)
+  Stage 2   → Validation + Format   (_deduplicate_and_format_targets → 9-key dicts)
+  Stage 3   → Parallel Scrape       (asyncio.gather across all targets)
+  Stage 4   → Per-Model Normalise   (recommend_normalizer per target)
+  Stage 4.5 → Validation & Fallback (smart failure classification → retry)
+  Stage 5   → Emit Results          (SSE stream to frontend)
 
-v7.0 changes over v6.0:
-  ─────────────────────────────────────────────────────────────────────────────
-  FIX — min_budget deduplication & Drive.pk / AutoDeals wiring:
-    Prior code had the 70% price-floor fallback duplicated in both _scrape_one
-    and _normalise_one, with each reading/writing rec["min_budget"] separately.
-    This was fragile and hard to audit.
+v9.0 changes:
+  - Import _deduplicate_and_format_targets removed (now called inside recommender.py
+    by select_car_targets callers; routes only call the high-level functions)
+  - Pipeline comment updated to reflect new 3-phase recommender architecture
+  - No functional changes to route logic — all fixes are in recommender.py
 
-    New approach:
-      _resolve_min_budget(rec, max_budget) is a single shared helper.
-        Priority: LLM-supplied rec["min_budget"] > 70% of max_budget > 0.
-        Writes the resolved value back into rec so both _scrape_one (URL
-        builder) and _normalise_one (veto check) read the same number.
-
-      _scrape_one calls _resolve_min_budget once and passes min_budget to
-        execute_search_pipeline → all platform URL builders.
-
-      _normalise_one calls _resolve_min_budget as a safety net (idempotent
-        since rec already has the value from _scrape_one).
-
-    runner.py companion fixes (also in this release):
-      Drive.pk: added &minPrice={min_budget} when min_budget > 0
-                (was previously missing — only maxPrice was wired)
-      AutoDeals: replaced hardcoded minP_0 with minP_{min_budget}
-                (was always sending price_from=0 regardless of floor)
-      Pipeline log: now shows Budget={min_budget}-{max_budget} range
-
-  Preserved from v6.0:
-    - Smart failure classification (SCRAPER_ZERO vs NORMALIZER_ZERO)
-    - city="" passed to runner (soft city signal, recommend_normalizer enforces)
-    - budget * 1.05 passed to runner (negotiate buffer pre-fetch)
-    - trim stripped of generic powertrain tags before URL building
-    - seen_urls dedup shared across initial + fallback pass
-    - "targets" in results SSE includes fallback targets
+Preserved from v7.0:
+  - Smart failure classification (SCRAPER_ZERO vs NORMALIZER_ZERO)
+  - city="" passed to runner (soft city signal, recommend_normalizer enforces)
+  - budget * 1.05 passed to runner (negotiate buffer pre-fetch)
+  - trim stripped of generic powertrain tags before URL building
+  - seen_urls dedup shared across initial + fallback pass
+  - "targets" in results SSE includes fallback targets
+  - _resolve_min_budget single write-through helper
 """
 
 import asyncio
@@ -57,7 +41,7 @@ from agents.recommender import (
     select_car_targets,
     _deduplicate_and_format_targets,
     get_fallback_recommendations,
-    get_extended_recommendations
+    get_extended_recommendations,
 )
 from scrapers.runner import execute_search_pipeline
 from scrapers.recommend_normalizer import normalize_recommendation_target
@@ -67,15 +51,11 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 # Failure classification constants
 # ---------------------------------------------------------------------------
-# SCRAPER_ZERO     = platform returned no raw listings at all (possible outage)
-# NORMALIZER_ZERO  = platform returned listings but normalizer vetoed everything
-#                    (inventory dry for this exact model, or model unrecognised)
 _FAIL_SCRAPER_ZERO    = "scraper_zero"
 _FAIL_NORMALIZER_ZERO = "normalizer_zero"
 
-# How many pure scraper-zero failures before we assume it's an infra issue.
-# If ALL failures are scraper_zero AND count > this → skip fallback.
-# Normalizer-zero failures ALWAYS trigger fallback regardless of count.
+# If ALL failures are SCRAPER_ZERO and count exceeds this → assume infra issue,
+# skip fallback. NORMALIZER_ZERO always triggers fallback regardless.
 _MAX_SCRAPER_ZERO_THRESHOLD = 3
 
 
@@ -113,16 +93,16 @@ def _resolve_year(rec_min_year: int) -> int:
 
 def _target_label(rec: dict) -> str:
     """Human-readable label, e.g. 'Kia Sportage [AWD]'."""
-    make = (rec.get("make") or "").strip()
+    make  = (rec.get("make")  or "").strip()
     model = (rec.get("model") or "").strip()
-    trim = (rec.get("trim") or "").strip()
-    
-    # Prevent duplicate labels like "MG ZS EV [EV]" or "ZS EV EV"
+    trim  = (rec.get("trim")  or "").strip()
+
+    # Prevent duplicate labels like "MG ZS EV [EV]"
     if trim and trim.lower() not in model.lower():
         trim_suffix = f" [{trim}]"
     else:
         trim_suffix = ""
-        
+
     return f"{make} {model}".strip() + trim_suffix
 
 
@@ -131,15 +111,12 @@ def _resolve_min_budget(rec: dict, resolved_max_budget: int | None) -> int:
     Returns the effective price floor in PKR for a recommendation dict.
 
     Priority:
-      1. LLM-supplied min_budget (if > 0)
-      2. 70% of max_budget as a hard Python fallback — prevents decade-old
-         budget units from flooding results when the user stated a high ceiling
-         (e.g. "under 50 lacs" should not surface a 2005 Corolla at 8 lacs).
-      3. 0 (no floor) when no max_budget exists either
+      1. LLM-supplied min_budget (if > 0) — already set by resolve_constraints()
+      2. 70% of max_budget as Python fallback
+      3. 0 (no floor) when no max_budget exists
 
-    The fallback is applied once here and written back into rec["min_budget"]
-    so that both _scrape_one (URL builder) and _normalise_one (veto check)
-    see the same value without repeating the calculation.
+    Writes result back into rec["min_budget"] so _scrape_one and _normalise_one
+    both see the same value without repeating the calculation.
     """
     explicit = rec.get("min_budget", 0) or 0
     if explicit > 0:
@@ -147,7 +124,7 @@ def _resolve_min_budget(rec: dict, resolved_max_budget: int | None) -> int:
 
     if resolved_max_budget and resolved_max_budget > 0:
         floor = int(resolved_max_budget * 0.70)
-        rec["min_budget"] = floor   # write-through so callers stay in sync
+        rec["min_budget"] = floor
         return floor
 
     return 0
@@ -160,28 +137,25 @@ async def _scrape_one(
 ) -> tuple[list, dict]:
     """
     Fires the scraper pipeline for one recommendation dict.
-    Used by both the initial pass (Stage 2) and the fallback pass (Stage 3.5).
+    Used by both the initial pass (Stage 3) and fallback pass (Stage 4.5).
 
-    City passes as "" — the runner's strict normalizer would hard-veto
-    nearby-city listings. The recommend_normalizer handles city as a soft signal.
+    City passes as "" — runner's strict normalizer would hard-veto nearby-city
+    listings. recommend_normalizer handles city as a soft signal.
 
-    Budget is pre-expanded 5% so the runner's normalizer doesn't drop listings
-    that the recommend_normalizer's +5% negotiation buffer would have kept.
+    Budget is pre-expanded 5% so the runner doesn't drop listings that the
+    recommend_normalizer's +5% negotiation buffer would have kept.
 
-    min_budget is resolved once via _resolve_min_budget() and written back into
-    rec["min_budget"] so that _normalise_one reads the same value without a
-    second calculation.
+    min_budget is resolved once and written back into rec so _normalise_one
+    reads the same value without recalculating.
     """
-    make   = rec.get("make") or ""
+    make   = rec.get("make")  or ""
     model  = rec.get("model") or ""
     budget = _resolve_budget(override_budget, rec.get("max_budget", 0))
 
-    # Resolve price floor — writes result back into rec for _normalise_one
     min_budget = _resolve_min_budget(rec, budget)
+    min_year   = _resolve_year(rec.get("min_year", 0))
 
-    min_year = _resolve_year(rec.get("min_year", 0))
-
-    # Strip generic powertrain tags from URL trim — platforms don't index these
+    # Strip generic powertrain tags from trim — platforms don't index these
     GENERIC_POWERTRAIN_TAGS = {
         "ev", "electric", "hev", "phev", "hybrid",
         "petrol", "diesel", "cng", "awd", "fwd", "4x4", "4wd",
@@ -195,7 +169,7 @@ async def _scrape_one(
         listings, _ = await execute_search_pipeline(
             make=make,
             model=model,
-            city="",                  # soft city — enforced by recommend_normalizer
+            city="",                   # soft city — enforced by recommend_normalizer
             max_budget=scraper_budget,
             min_budget=min_budget,
             color="",
@@ -226,20 +200,16 @@ def _normalise_one(
       _FAIL_SCRAPER_ZERO    — scraper returned 0 raw listings
       _FAIL_NORMALIZER_ZERO — scraper returned listings but all were vetoed
     """
-    make        = rec.get("make", "")
-    model       = rec.get("model", "")
-    rationale   = rec.get("rationale", "")
-    label       = _target_label(rec)
-    budget      = _resolve_budget(override_budget, rec.get("max_budget", 0))
-    # min_budget was already resolved and written into rec by _scrape_one.
-    # In the rare case _normalise_one is called without a prior _scrape_one
-    # (e.g. tests), _resolve_min_budget provides the same 70% fallback.
-    min_budget  = _resolve_min_budget(rec, budget)
-    min_year    = _resolve_year(rec.get("min_year", 0))
-    city        = override_city or rec.get("city") or ""
+    make      = rec.get("make", "")
+    model     = rec.get("model", "")
+    rationale = rec.get("rationale", "")
+    label     = _target_label(rec)
+    budget    = _resolve_budget(override_budget, rec.get("max_budget", 0))
+    min_budget = _resolve_min_budget(rec, budget)
+    min_year   = _resolve_year(rec.get("min_year", 0))
+    city       = override_city or rec.get("city") or ""
     year_suffix = f" (from {min_year})" if min_year else ""
 
-    # ── Classify scraper-zero immediately ────────────────────────────────────
     if not raw_listings:
         print(f"[Recommend] {label}: SCRAPER_ZERO — 0 raw listings from any platform")
         return _FAIL_SCRAPER_ZERO
@@ -261,14 +231,17 @@ def _normalise_one(
     )
 
     if not clean_listings:
-        # Scraper found something but normalizer vetoed it all → inventory issue
         print(
             f"[Recommend] {label}{year_suffix}: NORMALIZER_ZERO — "
-            f"{len(raw_listings)} raw listings all vetoed (dry inventory or model mismatch)"
+            f"{len(raw_listings)} raw listings all vetoed "
+            f"(dry inventory or model mismatch)"
         )
         return _FAIL_NORMALIZER_ZERO
 
-    print(f"[Recommend] {label}{year_suffix}: {len(raw_listings)} raw → {len(clean_listings)} clean")
+    print(
+        f"[Recommend] {label}{year_suffix}: "
+        f"{len(raw_listings)} raw → {len(clean_listings)} clean"
+    )
 
     for listing in clean_listings[:5]:
         url = listing.listing_url
@@ -291,23 +264,15 @@ def _should_trigger_fallback(
     total_targets: int,
 ) -> tuple[bool, str]:
     """
-    Determines whether Stage 3.5 fallback should fire and why.
-
-    Args:
-        failed_recs:    list of rec dicts that produced 0 clean listings
-        failure_types:  {target_label: failure_type} for all failed recs
-        total_targets:  total number of initial recommendations
-
-    Returns:
-        (should_fire: bool, reason: str)
+    Determines whether Stage 4.5 fallback should fire.
 
     Decision logic:
-      - If no failures → don't fire (happy path)
-      - If any failure is NORMALIZER_ZERO → always fire
-        (WiseWheels/OLX returned unrelated cars for niche query → inventory issue)
-      - If all failures are SCRAPER_ZERO:
-          ≤ threshold → probably dry inventory, fire fallback
-          > threshold → probably infra outage, skip fallback
+      - No failures → don't fire (happy path)
+      - Any NORMALIZER_ZERO → always fire
+        (platform returned unrelated cars → dry inventory)
+      - All SCRAPER_ZERO:
+          ≤ threshold → treat as dry inventory, fire fallback
+          > threshold → likely infra outage, skip fallback
     """
     if not failed_recs:
         return False, "no failures"
@@ -322,14 +287,11 @@ def _should_trigger_fallback(
     ]
 
     if normalizer_zeros:
-        # Listings were fetched but vetoed → definitely inventory/category issue
         return True, (
-            f"{len(normalizer_zeros)} normalizer-zero failure(s) "
-            f"(scrapers returned data but normalizer vetoed all listings — "
-            f"dry inventory or model not indexed on platforms)"
+            f"{len(normalizer_zeros)} normalizer-zero failure(s) — "
+            f"scrapers returned data but normalizer vetoed all listings"
         )
 
-    # All failures are scraper-zero (no raw listings at all)
     if len(scraper_zeros) <= _MAX_SCRAPER_ZERO_THRESHOLD:
         return True, (
             f"{len(scraper_zeros)} scraper-zero failure(s) "
@@ -352,7 +314,7 @@ async def run_recommend_pipeline(
     override_budget: int | None = None,
 ) -> AsyncGenerator[str, None]:
 
-    # ── Stage 1: Intent Extraction & Constraints ───────────────────────────
+    # ── Stage 1: Intent Extraction & Constraint Resolution ─────────────────
     yield _sse("status", {"message": "🧠 Analysing your requirements...", "stage": "mapping"})
 
     intent = await extract_intent(user_prompt)
@@ -361,8 +323,9 @@ async def run_recommend_pipeline(
     constraints = resolve_constraints(intent)
     if override_city:
         constraints["city"] = override_city
-        
-    raw_targets = await select_car_targets(constraints)
+
+    # ── Stage 2: Car Selection & Validation ───────────────────────────────
+    raw_targets     = await select_car_targets(constraints)
     recommendations = _deduplicate_and_format_targets(raw_targets, constraints)
 
     if not recommendations:
@@ -378,18 +341,21 @@ async def run_recommend_pipeline(
         "targets": target_names,
     })
 
-    # ── Stage 2: Parallel Scrape ───────────────────────────────────────────
+    # ── Stage 3: Parallel Scrape ──────────────────────────────────────────
     scrape_results = await asyncio.gather(
         *[_scrape_one(rec, override_city, override_budget) for rec in recommendations]
     )
 
-    # ── Stage 3: Per-Model Normalisation ──────────────────────────────────
-    yield _sse("status", {"message": "⚡ Ranking and deduplicating results...", "stage": "aggregating"})
+    # ── Stage 4: Per-Model Normalisation ─────────────────────────────────
+    yield _sse("status", {
+        "message": "⚡ Ranking and deduplicating results...",
+        "stage":   "aggregating",
+    })
 
-    output: list[dict]         = []
-    seen_urls: set[str]        = set()
-    failed_recs: list[dict]    = []
-    failure_types: dict[str, str] = {}   # label → failure type
+    output: list[dict]            = []
+    seen_urls: set[str]           = set()
+    failed_recs: list[dict]       = []
+    failure_types: dict[str, str] = {}
 
     for raw_listings, rec in scrape_results:
         failure = _normalise_one(
@@ -399,7 +365,7 @@ async def run_recommend_pipeline(
             failed_recs.append(rec)
             failure_types[_target_label(rec)] = failure
 
-    # ── Stage 3.5: Smart Validation & Self-Healing Fallback ───────────────
+    # ── Stage 4.5: Smart Validation & Self-Healing Fallback ───────────────
     all_recommendations = list(recommendations)
 
     should_fire, fire_reason = _should_trigger_fallback(
@@ -412,13 +378,8 @@ async def run_recommend_pipeline(
             f"{r.get('make', '')} {r.get('model', '')}".strip()
             for r in recommendations
         ]
-        eff_city   = override_city or (recommendations[0].get("city") or "") if recommendations else ""
-        eff_budget = _resolve_budget(
-            override_budget,
-            recommendations[0].get("max_budget", 0) if recommendations else 0
-        )
 
-        print(f"[Recommend] Stage 3.5 FIRING: {fire_reason}")
+        print(f"[Recommend] Stage 4.5 FIRING: {fire_reason}")
 
         yield _sse("status", {
             "message": f"🔄 Finding alternatives for {len(failed_recs)} dry search(es)...",
@@ -444,21 +405,22 @@ async def run_recommend_pipeline(
             )
 
             for raw_listings, rec in fb_scrape_results:
-                _normalise_one(raw_listings, rec, override_city, override_budget, seen_urls, output)
+                _normalise_one(
+                    raw_listings, rec, override_city, override_budget, seen_urls, output
+                )
 
             all_recommendations.extend(fallback_recs)
 
         else:
-            print("[Recommend] Stage 3.5: fallback returned no replacements")
+            print("[Recommend] Stage 4.5: fallback returned no replacements")
 
     elif failed_recs:
-        # Not firing — log the reason clearly
         _, skip_reason = _should_trigger_fallback(
             failed_recs, failure_types, len(recommendations)
         )
-        print(f"[Recommend] Stage 3.5 SKIPPED: {skip_reason}")
+        print(f"[Recommend] Stage 4.5 SKIPPED: {skip_reason}")
 
-    # ── Stage 4: Emit Results ─────────────────────────────────────────────
+    # ── Stage 5: Emit Results ─────────────────────────────────────────────
     if not output:
         yield _sse("error", {
             "message": (
@@ -490,6 +452,10 @@ async def run_recommend_pipeline(
     })
 
 
+# ---------------------------------------------------------------------------
+# ROUTE: POST /api/recommend
+# ---------------------------------------------------------------------------
+
 @router.post("/api/recommend")
 async def recommend_cars(request: Request):
     try:
@@ -498,10 +464,8 @@ async def recommend_cars(request: Request):
         body = {}
 
     user_prompt   = (body.get("prompt") or "").strip()
-    city_override = (body.get("city") or "").strip() or None
+    city_override = (body.get("city")   or "").strip() or None
 
-    # FIX 2: Hardened budget parsing — wraps int() in try/except so strings
-    # like "80 lacs" don't crash the route before SSE starts (GAP-5).
     raw_budget = body.get("max_budget")
     try:
         budget_override = int(raw_budget) if raw_budget is not None else None
@@ -512,7 +476,9 @@ async def recommend_cars(request: Request):
 
     if not user_prompt:
         async def _err():
-            yield _sse("error", {"message": "Please describe what kind of car you are looking for."})
+            yield _sse("error", {
+                "message": "Please describe what kind of car you are looking for."
+            })
         return StreamingResponse(_err(), media_type="text/event-stream")
 
     return StreamingResponse(
@@ -521,13 +487,15 @@ async def recommend_cars(request: Request):
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
+
 # ---------------------------------------------------------------------------
-# ON-DEMAND EXTENSION: "Show More Options" (targets 4-6)
+# ROUTE: POST /api/recommend/extend  ("Show More Options")
 # ---------------------------------------------------------------------------
+
 @router.post("/api/recommend/extend")
 async def recommend_extend(request: Request):
     """
-    Generates 2–3 Tier-2 alternative recommendations for the "Show More Options"
+    Generates 1–3 Tier-2 alternative recommendations for the 'Show More Options'
     button. Receives the original prompt plus models already shown.
     """
     try:
@@ -535,9 +503,9 @@ async def recommend_extend(request: Request):
     except Exception:
         body = {}
 
-    user_prompt    = (body.get("prompt") or "").strip()
-    exclude_models = body.get("exclude_models") or []
-    city           = (body.get("city") or "").strip() or None
+    user_prompt    = (body.get("prompt")         or "").strip()
+    exclude_models = body.get("exclude_models")  or []
+    city           = (body.get("city")           or "").strip() or None
 
     raw_budget = body.get("max_budget")
     try:
@@ -555,17 +523,17 @@ async def recommend_extend(request: Request):
     async def _stream():
         yield _sse("status", {
             "message": "Finding more options...",
-            "stage": "extending",
+            "stage":   "extending",
         })
 
-        # ── Step 1: Extract constraints & Get extended recommendations ──────────
+        # Re-extract intent + constraints (same as main pipeline)
         intent = await extract_intent(user_prompt)
         if budget is not None and budget > 0:
             intent.max_budget = budget
         constraints = resolve_constraints(intent)
         if city:
             constraints["city"] = city
-            
+
         extended_targets = await get_extended_recommendations(
             original_constraints=constraints,
             excluded_models=exclude_models,
@@ -573,36 +541,36 @@ async def recommend_extend(request: Request):
 
         if not extended_targets:
             yield _sse("extension_results", {
-                "targets": [],
+                "targets":  [],
                 "listings": [],
-                "total": 0,
+                "total":    0,
             })
             yield _sse("status", {
                 "message": "No additional options found.",
-                "stage": "complete",
+                "stage":   "complete",
             })
             return
 
         target_names = [_target_label(r) for r in extended_targets]
         yield _sse("status", {
             "message": f"Searching for: {', '.join(target_names)}",
-            "stage": "extending",
+            "stage":   "extending",
             "targets": target_names,
         })
 
-        # ── Step 2: Parallel scrape ───────────────────────────────────
+        # Parallel scrape
         scrape_results = await asyncio.gather(
             *[_scrape_one(rec, city, budget) for rec in extended_targets]
         )
 
-        # ── Step 3: Normalize ─────────────────────────────────────────
-        output: list[dict] = []
-        seen_urls: set[str] = set()
+        # Normalize
+        output:    list[dict] = []
+        seen_urls: set[str]   = set()
 
         for raw_listings, rec in scrape_results:
             _normalise_one(raw_listings, rec, city, budget, seen_urls, output)
 
-        # ── Step 4: Stream extension results ──────────────────────────
+        # Stream extension results
         yield _sse("extension_results", {
             "targets": [
                 {
@@ -614,11 +582,11 @@ async def recommend_extend(request: Request):
                 for r in extended_targets
             ],
             "listings": output,
-            "total": len(output),
+            "total":    len(output),
         })
         yield _sse("status", {
             "message": f"Found {len(output)} more listing(s)",
-            "stage": "complete",
+            "stage":   "complete",
         })
 
     return StreamingResponse(
