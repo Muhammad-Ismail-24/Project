@@ -477,7 +477,7 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "- If a field is not mentioned, leave it null/empty — do not guess."
     )
     response = await client.aio.models.generate_content(
-        model="gemini-2.0-flash-lite",
+        model="gemini-3.5-flash-lite",
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -633,7 +633,7 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
     )
 
     response = await client.aio.models.generate_content(
-        model="gemini-2.0-flash-lite",
+        model="gemini-3.5-flash-lite",
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -748,7 +748,7 @@ async def get_fallback_recommendations(
 
     try:
         response = await client.aio.models.generate_content(
-            model="gemini-2.0-flash-lite",
+            model="gemini-3.5-flash-lite",
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -822,7 +822,7 @@ async def get_extended_recommendations(
 
     try:
         response = await client.aio.models.generate_content(
-            model="gemini-2.0-flash-lite",
+            model="gemini-3.5-flash-lite",
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
