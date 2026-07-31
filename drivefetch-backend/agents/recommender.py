@@ -507,23 +507,10 @@ def resolve_constraints(intent: UserIntent) -> dict:
     if max_budget > 0:
         min_budget = int(max_budget * 0.70)
 
-    # ── 2. Graduated min_year (budget-tier aware) ───────────────────────────
-    # Fixed: original 3-case logic had a gap where 45 lac budget → min_year=2005.
-    # Now graduated so year floors scale smoothly with budget.
-    if max_budget >= 15_000_000:       # 1.5 crore+  → recent gen only
-        min_year = 2020
-    elif max_budget >= 8_000_000:      # 80 lacs+    → post-2018
-        min_year = 2018
-    elif max_budget >= 5_000_000:      # 50 lacs+    → post-2015
-        min_year = 2015
-    elif max_budget >= 3_000_000:      # 30 lacs+    → post-2012
-        min_year = 2012
-    elif max_budget >= 1_500_000:      # 15 lacs+    → post-2008
-        min_year = 2008
-    elif max_budget > 0:               # any stated budget → post-2003
-        min_year = 2003
-    else:                              # no budget stated → current gen default
-        min_year = 2019
+    # ── 2. Year Floor ────────────────────────────────────────────────────────
+    # Year constraints have been removed. The 30% budget floor handles all 
+    # quality/tier filtering. 0 means the normalizer will accept any year.
+    min_year = 0
 
     # ── 3. Tier classification ──────────────────────────────────────────────
     # Passed to the LLM as a clear signal — replaces the old allowed_tiers list
