@@ -51,7 +51,14 @@ from typing import AsyncGenerator
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
-from agents.recommender import semantic_mapper, get_fallback_recommendations, get_extended_recommendations
+from agents.recommender import (
+    extract_intent,
+    resolve_constraints,
+    select_car_targets,
+    _deduplicate_and_format_targets,
+    get_fallback_recommendations,
+    get_extended_recommendations
+)
 from scrapers.runner import execute_search_pipeline
 from scrapers.recommend_normalizer import normalize_recommendation_target
 
@@ -345,10 +352,18 @@ async def run_recommend_pipeline(
     override_budget: int | None = None,
 ) -> AsyncGenerator[str, None]:
 
-    # ── Stage 1: Semantic Mapping ──────────────────────────────────────────
+    # ── Stage 1: Intent Extraction & Constraints ───────────────────────────
     yield _sse("status", {"message": "🧠 Analysing your requirements...", "stage": "mapping"})
 
-    recommendations = await semantic_mapper(user_prompt)
+    intent = await extract_intent(user_prompt)
+    if override_budget is not None and override_budget > 0:
+        intent.max_budget = override_budget
+    constraints = resolve_constraints(intent)
+    if override_city:
+        constraints["city"] = override_city
+        
+    raw_targets = await select_car_targets(constraints)
+    recommendations = _deduplicate_and_format_targets(raw_targets, constraints)
 
     if not recommendations:
         yield _sse("error", {
@@ -412,12 +427,8 @@ async def run_recommend_pipeline(
         })
 
         fallback_recs = await get_fallback_recommendations(
-            user_prompt=user_prompt,
-            failed_targets=failed_labels,
-            tried_models=tried_models,
-            city=eff_city,
-            budget=eff_budget,
-            count=len(failed_recs),
+            constraints=constraints,
+            excluded_models=tried_models,
         )
 
         if fallback_recs:
@@ -547,12 +558,17 @@ async def recommend_extend(request: Request):
             "stage": "extending",
         })
 
-        # ── Step 1: Get extended recommendations from Gemini ──────────
+        # ── Step 1: Extract constraints & Get extended recommendations ──────────
+        intent = await extract_intent(user_prompt)
+        if budget is not None and budget > 0:
+            intent.max_budget = budget
+        constraints = resolve_constraints(intent)
+        if city:
+            constraints["city"] = city
+            
         extended_targets = await get_extended_recommendations(
-            user_prompt=user_prompt,
-            exclude_models=exclude_models,
-            city=city or "",
-            budget=budget,
+            original_constraints=constraints,
+            excluded_models=exclude_models,
         )
 
         if not extended_targets:

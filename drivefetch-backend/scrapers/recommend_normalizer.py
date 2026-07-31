@@ -153,7 +153,6 @@ def _calculate_recommendation_score(
     # ── 6. Smart trim — lazy seller fix ───────────────────────────────────
     trim_score = 0.0
     title_clean = title_lower.replace("-", "")
-    title_clean = title_lower.replace("-", "")
 
     if requested_trim:
         req_trim_clean = requested_trim.lower().replace("-", "")
