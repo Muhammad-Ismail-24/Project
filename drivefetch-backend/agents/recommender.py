@@ -503,9 +503,14 @@ def resolve_constraints(intent: UserIntent) -> dict:
     max_budget = intent.max_budget or 0
     min_budget = 0
 
-    # ── 1. Budget floor ──────────────────────────────────────────────────────
+    # ── 1. Dynamic Budget Floor ──────────────────────────────────────────────
     if max_budget > 0:
-        min_budget = int(max_budget * 0.70)
+        # Relax the floor to 50% for high-end luxury to account for extreme depreciation
+        if max_budget >= 30_000_000:
+            min_budget = int(max_budget * 0.50)
+        else:
+            # Strict 70% floor for standard economy/mid-tier vehicles
+            min_budget = int(max_budget * 0.70)
 
     # ── 2. Year Floor ────────────────────────────────────────────────────────
     # Year constraints have been removed. The 30% budget floor handles all 
