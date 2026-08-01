@@ -239,7 +239,7 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "FWD", "transmission": "auto",   "tags": {"city","jdm"},              "chinese": False},
     "honda:vezel":             {"lo": 4_000_000,  "hi": 11_000_000, "styles": {"Crossover"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"city","hybrid","jdm"},     "chinese": False},
-    "honda:cr-v":              {"lo": 6_000_000,  "hi": 14_000_000, "styles": {"SUV"},
+    "honda:cr-v":              {"lo": 6_000_000,  "hi": 14_000_000, "styles": {"Crossover"},
                                 "drive": "AWD", "transmission": "auto",   "tags": {"family","awd","jdm"},      "chinese": False},
     "honda:accord":            {"lo": 4_500_000,  "hi": 12_000_000, "styles": {"Sedan"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"luxury","family","jdm"},   "chinese": False},
