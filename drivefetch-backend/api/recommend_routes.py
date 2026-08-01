@@ -4,21 +4,27 @@ Route: POST /api/recommend
 
 Pipeline (v9.0):
   Stage 1   → Intent Extraction     (extract_intent → UserIntent)
-  Stage 1   → Constraint Resolution (resolve_constraints → dict, pure Python)
-  Stage 2   → Car Selection         (select_car_targets → CarTargetRaw list)
+  Stage 1   → Constraint Resolution (resolve_constraints → budget floor + Chinese gate only)
+  Stage 2   → Budget Filter         (get_budget_eligible_cars → full price-overlap list)
+  Stage 2   → Car Selection         (select_car_targets → LLM picks from eligible list)
   Stage 2   → Validation + Format   (_deduplicate_and_format_targets → 9-key dicts)
   Stage 3   → Parallel Scrape       (asyncio.gather across all targets)
   Stage 4   → Per-Model Normalise   (recommend_normalizer per target)
   Stage 4.5 → Validation & Fallback (smart failure classification → retry)
   Stage 5   → Emit Results          (SSE stream to frontend)
 
-v9.0 changes:
-  - Import _deduplicate_and_format_targets removed (now called inside recommender.py
-    by select_car_targets callers; routes only call the high-level functions)
-  - Pipeline comment updated to reflect new 3-phase recommender architecture
-  - No functional changes to route logic — all fixes are in recommender.py
+v9.0 changes (all in recommender.py — route logic unchanged):
+  - Tier system completely removed (economy/mid/premium/apex_luxury gone)
+  - _STYLE_TIER_ALLOWLIST catalog removed
+  - resolve_constraints() now only computes budget floor + allow_chinese flag
+  - get_budget_eligible_cars() replaces get_candidate_pool():
+      pure budget overlap filter, no scoring, no style pre-filter
+      full eligible list passed to LLM — LLM applies body style / use case
+  - LLM prompt rewritten: receives budget-filtered list, applies all
+      qualitative criteria (body style, use case, luxury, JDM, diversity)
+  - gemini-2.0-flash-lite → gemini-2.0-flash-lite (model string fix)
 
-Preserved from v7.0:
+Preserved from v8.0:
   - Smart failure classification (SCRAPER_ZERO vs NORMALIZER_ZERO)
   - city="" passed to runner (soft city signal, recommend_normalizer enforces)
   - budget * 1.05 passed to runner (negotiate buffer pre-fetch)
@@ -495,7 +501,7 @@ async def recommend_cars(request: Request):
 @router.post("/api/recommend/extend")
 async def recommend_extend(request: Request):
     """
-    Generates 1–3 Tier-2 alternative recommendations for the 'Show More Options'
+    Generates 1–3 alternative recommendations for the 'Show More Options'
     button. Receives the original prompt plus models already shown.
     """
     try:
