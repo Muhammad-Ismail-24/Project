@@ -60,7 +60,7 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 client = genai.Client(api_key=GEMINI_API_KEY)
 
-_GEMINI_MODEL = "gemini-3.5-flash-lite"   # DO NOT CHANGE — gemini-2.0-flash-lite is dead
+_GEMINI_MODEL = "gemini-3.5-flash-lite"
 
 
 # ---------------------------------------------------------------------------
@@ -144,6 +144,18 @@ CAR_REGISTRY: dict[str, dict] = {
     "suzuki:apv":              {"lo": 1_500_000,  "hi": 3_500_000,  "styles": {"Van"},
                                 "transmission": "auto",   "tags": {"family","7seat"},          "chinese": False},
 
+    # ── Legacy / Retro ──────────────────────────────────────────────────────────
+    "suzuki:fx":               {"lo": 150_000,   "hi": 600_000,   "styles": {"Hatchback"},
+                                "transmission": "manual", "tags": {"economy","city"},          "chinese": False, "priority": 3},
+    "suzuki:khyber":           {"lo": 300_000,   "hi": 1_200_000, "styles": {"Hatchback"},
+                                "transmission": "manual", "tags": {"economy","city"},          "chinese": False, "priority": 3},
+    "suzuki:margalla":         {"lo": 400_000,   "hi": 1_500_000, "styles": {"Sedan"},
+                                "transmission": "manual", "tags": {"economy","family"},        "chinese": False, "priority": 3},
+    "daihatsu:charade":        {"lo": 250_000,   "hi": 1_000_000, "styles": {"Hatchback"},
+                                "transmission": "both",   "tags": {"economy","city"},          "chinese": False, "priority": 3},
+    "nissan:sunny":            {"lo": 500_000,   "hi": 1_800_000, "styles": {"Sedan"},
+                                "transmission": "both",   "tags": {"economy","family"},        "chinese": False, "priority": 3},
+
     # ── Toyota ───────────────────────────────────────────────────────────────
     "toyota:vitz":             {"lo": 1_500_000,  "hi": 4_500_000,  "styles": {"Hatchback"},
                                 "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
@@ -158,9 +170,9 @@ CAR_REGISTRY: dict[str, dict] = {
     "toyota:probox":           {"lo": 2_000_000,  "hi": 4_500_000,  "styles": {"Van"},
                                 "transmission": "both",   "tags": {"cargo","economy","jdm"},   "chinese": False},
     "toyota:corolla":          {"lo": 2_000_000,  "hi": 8_500_000,  "styles": {"Sedan"},
-                                "transmission": "both",   "tags": {"family","city","economy"}, "chinese": False, "priority": 1},
+                                "transmission": "both",   "tags": {"family","city","economy","reliability","resale"}, "chinese": False, "priority": 1},
     "toyota:yaris":            {"lo": 3_500_000,  "hi": 6_000_000,  "styles": {"Sedan"},
-                                "transmission": "auto",   "tags": {"family","city"},           "chinese": False, "priority": 1},
+                                "transmission": "auto",   "tags": {"family","city","reliability","resale"}, "chinese": False, "priority": 1},
     "toyota:allion":           {"lo": 3_000_000,  "hi": 8_000_000,  "styles": {"Sedan"},
                                 "transmission": "auto",   "tags": {"family","jdm","city"},     "chinese": False, "priority": 2},
     "toyota:premio":           {"lo": 3_500_000,  "hi": 9_000_000,  "styles": {"Sedan"},
@@ -186,7 +198,7 @@ CAR_REGISTRY: dict[str, dict] = {
     "toyota:rush":             {"lo": 5_500_000,  "hi": 9_000_000,  "styles": {"SUV"},
                                 "transmission": "auto",   "tags": {"family","7seat"},          "chinese": False},
     "toyota:fortuner":         {"lo": 9_000_000,  "hi": 21_000_000, "styles": {"SUV"},
-                                "transmission": "auto",   "tags": {"family","offroad","status","7seat"}, "chinese": False, "priority": 1},
+                                "transmission": "auto",   "tags": {"family","offroad","status","7seat","reliability","resale"}, "chinese": False, "priority": 1},
     "toyota:hilux":            {"lo": 8_000_000,  "hi": 16_000_000, "styles": {"Pickup"},
                                 "transmission": "both",   "tags": {"offroad","cargo","awd"},   "chinese": False, "priority": 1},
     "toyota:alphard":          {"lo": 6_000_000,  "hi": 35_000_000, "styles": {"Van"},
@@ -196,9 +208,9 @@ CAR_REGISTRY: dict[str, dict] = {
     "toyota:hiace":            {"lo": 3_500_000,  "hi": 12_000_000, "styles": {"Van"},
                                 "transmission": "both",   "tags": {"cargo","7seat","family"},  "chinese": False},
     "toyota:prado":            {"lo": 18_000_000, "hi": 48_000_000, "styles": {"SUV"},
-                                "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": False, "priority": 1},
+                                "transmission": "auto",   "tags": {"luxury","status","offroad","awd","reliability","resale"}, "chinese": False, "priority": 1},
     "toyota:land cruiser":     {"lo": 35_000_000, "hi": 90_000_000, "styles": {"SUV"},
-                                "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": False, "priority": 1},
+                                "transmission": "auto",   "tags": {"luxury","status","offroad","awd","reliability","resale"}, "chinese": False, "priority": 1},
 
     # ── Honda ────────────────────────────────────────────────────────────────
     "honda:n-box":             {"lo": 1_800_000,  "hi": 4_200_000,  "styles": {"Hatchback"},
@@ -208,9 +220,9 @@ CAR_REGISTRY: dict[str, dict] = {
     "honda:fit":               {"lo": 2_000_000,  "hi": 5_500_000,  "styles": {"Hatchback"},
                                 "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
     "honda:city":              {"lo": 1_500_000,  "hi": 6_000_000,  "styles": {"Sedan"},
-                                "transmission": "both",   "tags": {"economy","family","city"}, "chinese": False, "priority": 1},
+                                "transmission": "both",   "tags": {"economy","family","city","reliability","resale"}, "chinese": False, "priority": 1},
     "honda:civic":             {"lo": 2_000_000,  "hi": 9_500_000,  "styles": {"Sedan"},
-                                "transmission": "both",   "tags": {"family","city","sports"},  "chinese": False, "priority": 1},
+                                "transmission": "both",   "tags": {"family","city","sports","reliability","resale"},  "chinese": False, "priority": 1},
     "honda:grace":             {"lo": 3_500_000,  "hi": 6_500_000,  "styles": {"Sedan"},
                                 "transmission": "auto",   "tags": {"family","hybrid","jdm"},   "chinese": False},
     "honda:insight":           {"lo": 2_500_000,  "hi": 6_500_000,  "styles": {"Sedan"},
@@ -234,8 +246,6 @@ CAR_REGISTRY: dict[str, dict] = {
 
     # ── Hyundai ──────────────────────────────────────────────────────────────
     "hyundai:santro":          {"lo": 700_000,    "hi": 1_800_000,  "styles": {"Hatchback"},
-                                "transmission": "both",   "tags": {"economy","city"},          "chinese": False},
-    "hyundai:i10":             {"lo": 1_200_000,  "hi": 3_000_000,  "styles": {"Hatchback"},
                                 "transmission": "both",   "tags": {"economy","city"},          "chinese": False},
     "hyundai:elantra":         {"lo": 5_000_000,  "hi": 7_500_000,  "styles": {"Sedan"},
                                 "transmission": "auto",   "tags": {"family","city"},           "chinese": False},
@@ -570,13 +580,15 @@ _USE_CASE_PRINCIPLES: dict[str, str] = {
 
     "family": """
 USE-CASE PRINCIPLES — Family / Daily:
-  - Prioritise: boot space, rear legroom, reliability, service network availability
-  - Rank higher: cars with 5+ years of parts availability in Pakistan
-  - Rank higher: cars known for resale value retention (Toyota > Honda > others generally)
-  - For budgets under PKR 50 lacs: Corolla, Civic, City are the benchmark — pick alternatives only if they offer clear advantage (more space, lower maintenance)
-  - For 7-seat needs: prefer dedicated 7-seat (BR-V, Rush, Sorento) over squeezing 3 adults into a rear bench
-  - Avoid: sports-tuned cars (RX-8, BRZ) — stiff ride and limited boot space for families
-  - Avoid: kei cars (N-Box, Mira) for families with children over 8 — too small
+  - PAKISTANI MARKET REALITY: "Family car" means Sedan with a trunk ("diggi"). Pakistani families strongly prefer Sedans (Corolla, City, Civic) over hatchbacks for boot space and social status.
+  - Rank 1st: Sedans with reliable service networks — Corolla, City, Civic, Yaris, Allion, Premio.
+  - Rank 2nd: Crossovers that double as family haulers — BR-V, Vezel, Sportage.
+  - Rank 3rd: 7-seat dedicated options IF buyer mentions "7 seater" or "multiple passengers" — Rush, Sorento, Carnival.
+  - HARD RULE: DO NOT recommend Vans (APV, Bolan, Every, Hiace, Sienta) for a "family car" query UNLESS the user EXPLICITLY asks for "7 seater", "van", or "multiple passengers". A van is not a family sedan.
+  - HARD RULE: DO NOT recommend hatchbacks (Wagon R, Cultus, N-Box) when budget allows a sedan. Budget >= PKR 15 lacs always has sedan options.
+  - Rank higher: Toyota and Honda over other brands — best reliability track record, widest service network, highest resale in Pakistan.
+  - Rank higher: cars with known sunroof trims if user mentions sunroof (Corolla Grande, Civic RS, Mark X).
+  - Avoid: sports-tuned cars (RX-8, BRZ) — stiff ride and no boot space.
 """,
 
     "city": """
@@ -635,9 +647,11 @@ USE-CASE PRINCIPLES — Ride Sharing / Commercial:
     "general": """
 USE-CASE PRINCIPLES — General (no specific use case stated):
   - Default to reliability and resale value as primary ranking factors
-  - Toyota > Honda for reliability track record in Pakistan market
-  - Prefer models with established parts supply chains in major cities
-  - If budget is wide, pick 1 reliable mainstream + 1 alternative make to show diversity
+  - RELIABILITY HIERARCHY in Pakistan: Toyota > Honda > Suzuki > Kia/Hyundai > Chinese brands
+  - RESALE VALUE HIERARCHY: Toyota Corolla/Civic/City hold the best resale in their respective segments
+  - Toyota and Honda get a reliability/resale bonus — prefer them over equally-priced alternatives
+  - Prefer models with established parts supply chains in major Pakistani cities (Lahore, Karachi, Islamabad)
+  - If budget is wide, pick 1 reliable mainstream (Toyota/Honda) + 1 alternative make to show diversity
   - Never recommend niche sports or offroad cars for unspecified use cases
 """,
 }
@@ -896,8 +910,12 @@ def get_eligible_cars(
             fit_score = 0.5
 
         # Priority boost — prevents Liana/Baleno ranking above Corolla/Civic
-        priority      = info.get("priority", 2)
+        # Reliability/resale bonus — Toyota/Honda with "reliability" tag get +0.10 extra
+        priority       = info.get("priority", 2)
         priority_boost = (3 - priority) * 0.15   # priority 1 → +0.30, 2 → +0.15, 3 → 0
+        tags = info.get("tags", set())
+        reliability_bonus = 0.10 if ("reliability" in tags and "resale" in tags) else 0.0
+        priority_boost += reliability_bonus
 
         # Youth penalty — kei box vans deprioritised for young buyer queries
         youth_penalty = -0.20 if (is_youth_query and key in _KEI_BOX_VANS) else 0.0
@@ -1200,7 +1218,8 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         "trim='660cc' — this prevents flooding with local Suzuki Alto listings.\n"
         "6. DIVERSITY: Pick from 2–3 different makes when the list allows. "
         "Avoid all-Toyota or all-Honda picks unless the list genuinely forces it.\n"
-        "7. QUANTITY: Return 1 if only 1 car truly fits well. Never pad to 3.\n"
+        "7. QUANTITY: Return EXACTLY 3 targets if 3 or more eligible cars exist in the list. "
+        "Only return fewer than 3 if the eligible list physically has fewer than 3 cars.\n"
         "8. TRIM: For sunroof-required queries, use the trim specified in the list. "
         "Otherwise leave empty unless a trim meaningfully changes the car.\n"
         "9. RATIONALE: 1 buyer-friendly sentence — explain WHY this specific car "

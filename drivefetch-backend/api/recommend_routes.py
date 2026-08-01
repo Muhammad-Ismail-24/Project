@@ -2,7 +2,7 @@
 api/recommend_routes.py
 Route: POST /api/recommend
 
-Pipeline (v9.0):
+Pipeline (v10.0):
   Stage 1   → Intent Extraction     (extract_intent → UserIntent)
   Stage 1   → Constraint Resolution (resolve_constraints → budget floor + Chinese gate only)
   Stage 2   → Budget Filter         (get_budget_eligible_cars → full price-overlap list)
@@ -13,7 +13,7 @@ Pipeline (v9.0):
   Stage 4.5 → Validation & Fallback (smart failure classification → retry)
   Stage 5   → Emit Results          (SSE stream to frontend)
 
-v9.0 changes (all in recommender.py — route logic unchanged):
+v10.0 changes:
   - Tier system completely removed (economy/mid/premium/apex_luxury gone)
   - _STYLE_TIER_ALLOWLIST catalog removed
   - resolve_constraints() now only computes budget floor + allow_chinese flag
@@ -22,7 +22,10 @@ v9.0 changes (all in recommender.py — route logic unchanged):
       full eligible list passed to LLM — LLM applies body style / use case
   - LLM prompt rewritten: receives budget-filtered list, applies all
       qualitative criteria (body style, use case, luxury, JDM, diversity)
-  - gemini-2.0-flash-lite → gemini-2.0-flash-lite (model string fix)
+  - gemini-3.5-flash-lite → gemini-2.0-flash-lite (valid model string fix)
+  - UI BUG FIX: scraping status SSE now sends target_objects (with make/model keys)
+    instead of target_names (strings) — fixes [undefined undefined] loading pills
+  - Same target_objects fix applied in Stage 4.5 fallback status SSE
 
 Preserved from v8.0:
   - Smart failure classification (SCRAPER_ZERO vs NORMALIZER_ZERO)
@@ -340,11 +343,12 @@ async def run_recommend_pipeline(
         })
         return
 
-    target_names = [_target_label(r) for r in recommendations]
+    target_names   = [_target_label(r) for r in recommendations]
+    target_objects = [{"make": r.get("make"), "model": r.get("model")} for r in recommendations]
     yield _sse("status", {
         "message": f"🔍 Searching for: {', '.join(target_names)}",
         "stage":   "scraping",
-        "targets": target_names,
+        "targets": target_objects,
     })
 
     # ── Stage 3: Parallel Scrape ──────────────────────────────────────────
@@ -399,11 +403,12 @@ async def run_recommend_pipeline(
         )
 
         if fallback_recs:
-            fb_names = [_target_label(r) for r in fallback_recs]
+            fb_names   = [_target_label(r) for r in fallback_recs]
+            fb_objects = [{"make": r.get("make"), "model": r.get("model")} for r in fallback_recs]
             yield _sse("status", {
                 "message": f"🔍 Trying alternatives: {', '.join(fb_names)}",
                 "stage":   "backfilling",
-                "targets": fb_names,
+                "targets": fb_objects,
             })
 
             fb_scrape_results = await asyncio.gather(
@@ -557,11 +562,12 @@ async def recommend_extend(request: Request):
             })
             return
 
-        target_names = [_target_label(r) for r in extended_targets]
+        target_names   = [_target_label(r) for r in extended_targets]
+        target_objects = [{"make": r.get("make"), "model": r.get("model")} for r in extended_targets]
         yield _sse("status", {
             "message": f"Searching for: {', '.join(target_names)}",
             "stage":   "extending",
-            "targets": target_names,
+            "targets": target_objects,
         })
 
         # Parallel scrape

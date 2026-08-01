@@ -1,17 +1,19 @@
 """
 scrapers/recommend_normalizer.py
-GaariGuru — AI Matchmaker Normalizer v2.1
+GaariGuru — AI Matchmaker Normalizer v2.2
 
 Purpose:
     Scoring and selection pipeline for AI Recommendation results.
     Operates on one recommended model at a time, returns exactly
     `top_k` (default: 5) listings with a cross-platform mix.
 
-v2.1 changes over v2.0:
-  FIX-11 Local Identity Scorer implemented. The identity scoring 
-         function no longer imports the global version from 
-         normalizer.py, ensuring it actually reads the private 
-         _MODEL_ALIAS_MAP for luxury compound titles (S-Class, Range Rover).
+v2.2 updates:
+  - PERFECT MERGE: Combines the advanced v2.0 Feature Keyword Engine 
+    (with _MODEL_TRIM_GATES) with the v2.1 Local Identity Scorer.
+  - Ensures luxury aliases (S-Class, Range Rover) are correctly parsed 
+    using the private _MODEL_ALIAS_MAP.
+  - Retains 60/120-day staleness, graduated budget scoring, and 
+    platform-aware deduplication.
 """
 
 import re
@@ -47,7 +49,7 @@ _MAKE_VETO_ALIASES: dict[str, list[str]] = {
     "hyundai":     ["hyundai"],
     "kia":         ["kia"],
     "lexus":       ["lexus", "toyota"],
-    # European / Luxury — extended for PakWheels title variations
+    # European / Luxury
     "mercedes-benz": ["mercedes-benz", "mercedes", "benz", "mercedesbenz"],
     "mercedes":      ["mercedes-benz", "mercedes", "benz"],
     "bmw":           ["bmw", "bimmer"],
@@ -72,7 +74,7 @@ _MAKE_VETO_ALIASES: dict[str, list[str]] = {
 # ---------------------------------------------------------------------------
 
 _MODEL_ALIAS_MAP: dict[str, list[str]] = {
-    # Mercedes-Benz variants (most common in PakWheels titles)
+    # Mercedes-Benz
     "s-class":           ["s class", "s-class", "sclass", "s300", "s350", "s400",
                           "s450", "s500", "s550", "s560", "s580", "s600", "s63", "s65"],
     "e-class":           ["e class", "e-class", "eclass", "e200", "e220", "e250",
@@ -187,44 +189,89 @@ _TRIM_CONFLICTS: dict[str, list[str]] = {
 }
 
 # ---------------------------------------------------------------------------
-# FEATURE KEYWORDS MAP
+# FEATURE KEYWORDS MAP & GATES (From v2.0)
 # ---------------------------------------------------------------------------
 
-_FEATURE_KEYWORDS: dict[str, list[str]] = {
-    "sunroof":          ["sunroof", "sun roof", "moonroof", "panoramic"],
-    "panoramic sunroof":["panoramic", "pano roof", "panoramic sunroof"],
-    "push start":       ["push start", "pushstart", "keyless", "smart key",
-                         "button start", "start stop"],
-    "back camera":      ["back camera", "rear camera", "reverse camera",
-                         "parking camera", "rearview camera"],
-    "navigation":       ["navigation", "navi", "gps", "infotainment"],
-    "leather seats":    ["leather", "leather seats", "nappa", "alcantara"],
-    "android auto":     ["android auto", "android", "carplay", "apple carplay"],
-    "heated seats":     ["heated seats", "seat warmer", "heated"],
-    "cruise control":   ["cruise control", "cruise", "adaptive cruise"],
-    "blind spot":       ["blind spot", "bsm", "lane assist", "lane departure"],
-    "alloy wheels":     ["alloy", "alloy wheels", "rims", "mags"],
-    "power seats":      ["power seat", "electric seat", "memory seat"],
-    "dvd":              ["dvd", "dvd player", "multimedia", "screen"],
-    "original":         ["original", "un-modified", "unmodified", "factory"],
-    "4wd":              ["4wd", "4x4", "awd", "four wheel drive", "xdrive",
-                         "quattro", "4motion"],
-    "hybrid":           ["hybrid", "hev", "phev", "e-hybrid"],
-    "electric":         ["electric", "ev", "battery", "bev"],
-    "turbo":            ["turbo", "turbocharged", "t gdi", "tsi", "tfsi", "tdi"],
-    "diesel":           ["diesel", "tdi", "crdi", "cdti"],
-    "low mileage":      [],   # handled by mileage score, not title keyword
-    "single owner":     ["single owner", "1st owner", "first owner", "1 owner"],
-    "accident free":    ["accident free", "no accident", "never bumped", "unaccident"],
-    "gcc spec":         ["gcc", "gcc spec", "middle east spec", "me spec"],
+_FEATURE_KEYWORDS: dict[str, dict] = {
+    "sunroof": {
+        "positive": ["sunroof", "moonroof", "panoramic", "sunrooof", "sun roof"],
+        "negative": [],
+    },
+    "panoramic sunroof": {
+        "positive": ["panoramic", "pano roof", "panoroof"],
+        "negative": [],
+    },
+    "push start": {
+        "positive": ["push start", "push-start", "keyless", "smart key"],
+        "negative": [],
+    },
+    "back camera": {
+        "positive": ["back camera", "reverse camera", "rear camera", "parking camera", "backup camera"],
+        "negative": [],
+    },
+    "leather seats": {
+        "positive": ["leather", "leather seats", "nappa", "leatherette"],
+        "negative": [],
+    },
+    "alloy wheels": {
+        "positive": ["alloy", "alloy wheels", "mags"],
+        "negative": ["steel rim", "steel wheel"],
+    },
+    "cruise control": {
+        "positive": ["cruise control", "adaptive cruise"],
+        "negative": [],
+    },
 }
 
-_MODEL_FEATURE_VETOS: list[tuple[str, str, list[str], str]] = [
-    ("corolla", "sunroof",  ["gli", "xli"],     "Corolla GLi/XLi do not have factory sunroofs"),
-    ("corolla", "sunroof",  ["standard"],        "Corolla Standard does not have sunroof"),
-    ("city",    "sunroof",  ["vario", "aspire"], "Honda City Aspire/Vario does not have sunroof"),
-    ("civic",   "sunroof",  ["vti oriel"],       "Civic VTi Oriel does not have sunroof"),
-]
+_MODEL_TRIM_GATES: dict[str, dict[str, dict]] = {
+    "toyota:corolla": {
+        "sunroof": {
+            "require_trims": ["grande", "altis grande", "altis", "x corolla"],
+            "min_year": 0,
+            "veto_trims": ["gli", "xli"],
+        },
+    },
+    "toyota:yaris":   {"sunroof": {"require_trims": [], "min_year": 0, "veto_trims": ["any"]}},
+    "toyota:rush":    {"sunroof": {"require_trims": [], "min_year": 0, "veto_trims": ["any"]}},
+    "toyota:aqua":    {"sunroof": {"require_trims": [], "min_year": 0, "veto_trims": ["any"]}},
+    "toyota:fortuner": {
+        "sunroof": {
+            "require_trims": ["vrz", "sigma3", "sigma 3", "legender"],
+            "min_year": 0,
+            "veto_trims": [],
+        },
+    },
+    "honda:city": {
+        "sunroof": {
+            "require_trims": ["aspire", "rs", "1.5 aspire"],
+            "min_year": 0,
+            "veto_trims": ["prosmatec", "vti", "manual"],
+        },
+    },
+    "honda:civic": {
+        "sunroof": {
+            "require_trims": ["rs", "oriel 1.5", "oriel turbo", "oriel prosmatec 1.8"],
+            "min_year": 0,
+            "veto_trims": ["reborn", "exi"],
+        },
+    },
+    "honda:br-v":     {"sunroof": {"require_trims": [], "min_year": 0, "veto_trims": ["any"]}},
+    "honda:fit":      {"sunroof": {"require_trims": [], "min_year": 0, "veto_trims": ["any"]}},
+    "honda:vezel": {
+        "sunroof": {
+            "require_trims": ["rs", "z", "ehev", "e:hev"],
+            "min_year": 2021,
+            "veto_trims": [],
+        },
+    },
+    "kia:stonic":     {"sunroof": {"require_trims": [], "min_year": 0, "veto_trims": ["any"]}},
+    "suzuki:cultus":  {"sunroof": {"require_trims": [], "min_year": 0, "veto_trims": ["any"]}},
+    "suzuki:wagon r": {"sunroof": {"require_trims": [], "min_year": 0, "veto_trims": ["any"]}},
+    "suzuki:swift":   {"sunroof": {"require_trims": [], "min_year": 0, "veto_trims": ["any"]}},
+    "suzuki:alto":    {"sunroof": {"require_trims": [], "min_year": 0, "veto_trims": ["any"]}},
+    "suzuki:liana":   {"sunroof": {"require_trims": [], "min_year": 0, "veto_trims": ["any"]}},
+    "suzuki:baleno":  {"sunroof": {"require_trims": [], "min_year": 0, "veto_trims": ["any"]}},
+}
 
 _CITY_COLOR_EXCEPTIONS: set[str] = {
     "blue area", "blue world", "maroon town", "gold town", "golden town",
@@ -233,8 +280,86 @@ _CITY_COLOR_EXCEPTIONS: set[str] = {
 }
 
 # ---------------------------------------------------------------------------
+# HELPER: FEATURE GATES
+# ---------------------------------------------------------------------------
+
+def _check_feature_gates(
+    car,
+    requested_make: str,
+    requested_model: str,
+    required_features: list[str],
+    title_lower: str,
+    clean_year: int,
+    debug: bool,
+) -> tuple[float, str | None]:
+    """
+    Returns (feature_score, veto_reason).
+    veto_reason is None when the listing passes all feature gates.
+    feature_score is a bonus (+15 per confirmed feature, -5 if likely absent).
+    """
+    feature_score = 0.0
+    make_lower    = (requested_make or "").lower().strip()
+    model_lower   = (requested_model or "").lower().strip()
+    gate_key      = f"{make_lower}:{model_lower}"
+
+    for feat in required_features:
+        feat_lower = feat.lower().strip()
+
+        # Find keyword config (try exact, then first word)
+        feat_info = _FEATURE_KEYWORDS.get(feat_lower) or _FEATURE_KEYWORDS.get(feat_lower.split()[0], {})
+        positive_kws = feat_info.get("positive", [feat_lower])
+        found_positive = any(kw in title_lower for kw in positive_kws)
+
+        if found_positive:
+            feature_score += 15.0
+            if debug:
+                print(f"  [FEATURE +15] '{feat}' confirmed in title")
+
+        # Find model gate (try exact feature name, then first word)
+        model_gates = _MODEL_TRIM_GATES.get(gate_key, {})
+        feat_gate   = model_gates.get(feat_lower) or model_gates.get(feat_lower.split()[0])
+
+        if feat_gate:
+            veto_trims    = feat_gate.get("veto_trims", [])
+            require_trims = feat_gate.get("require_trims", [])
+            min_year      = feat_gate.get("min_year", 0)
+
+            # veto_trims=["any"] → model never has this feature
+            if veto_trims == ["any"]:
+                reason = f"{requested_make} {requested_model} has no factory {feat} in any trim"
+                if debug:
+                    print(f"  [FEAT-VETO] {reason}")
+                return 0.0, reason
+
+            # Specific trim vetoes
+            for vt in veto_trims:
+                if vt in title_lower:
+                    reason = f"Trim '{vt}' confirmed to NOT have {feat}"
+                    if debug:
+                        print(f"  [FEAT-VETO] {reason}")
+                    return 0.0, reason
+
+            # Year gate
+            if min_year > 0 and clean_year > 0 and clean_year < min_year:
+                reason = f"{feat} only available from {min_year} (listing is {clean_year})"
+                if debug:
+                    print(f"  [FEAT-VETO] {reason}")
+                return 0.0, reason
+
+            # require_trims soft check — penalty if feature not confirmed and trim not shown
+            if require_trims and not found_positive:
+                has_required = any(rt in title_lower for rt in require_trims)
+                if not has_required:
+                    feature_score -= 5.0
+                    if debug:
+                        print(f"  [FEATURE -5] '{feat}' required trim not found in title")
+
+    return feature_score, None
+
+# ---------------------------------------------------------------------------
 # LOCAL IDENTITY SCORER (Uses private _MODEL_ALIAS_MAP)
 # ---------------------------------------------------------------------------
+
 def _normalize_str(s: str) -> str:
     return s.lower().replace(" ", "").replace("-", "").replace(".", "").replace("_", "")
 
@@ -314,7 +439,6 @@ def _score_listing(
     """
     clean_title = re.sub(r'\b\d{7,}\b', '', car.title).strip()
     title_lower = clean_title.lower()
-    title_nohyphen = title_lower.replace("-", "").replace(" ", "")
 
     eff_budget = int(requested_budget) if requested_budget else 0
     is_luxury  = eff_budget >= 15_000_000    # 1.5 crore+ → luxury thresholds
@@ -450,23 +574,17 @@ def _score_listing(
     # ── 9. Feature matching ────────────────────────────────────────────────
     feature_score = 0.0
     if required_features:
-        model_lower_frag = requested_model.lower()
-
-        for feature in required_features:
-            feat_lower = feature.lower().replace("_", " ").strip()
-
-            for (model_frag, feat_key, veto_signals, reason) in _MODEL_FEATURE_VETOS:
-                if model_frag in model_lower_frag and feat_key in feat_lower:
-                    if any(sig in title_lower for sig in veto_signals):
-                        return veto(reason)
-
-            synonyms = _FEATURE_KEYWORDS.get(feat_lower, [feat_lower])
-            if not synonyms:
-                continue
-
-            feat_found = any(syn in title_lower for syn in synonyms)
-            if feat_found:
-                feature_score += 5.0
+        feature_score, feat_veto_reason = _check_feature_gates(
+            car=car,
+            requested_make=requested_make,
+            requested_model=requested_model,
+            required_features=required_features,
+            title_lower=title_lower,
+            clean_year=clean_year,
+            debug=debug,
+        )
+        if feat_veto_reason:
+            return veto(feat_veto_reason)
 
     # ── 10. Data quality ───────────────────────────────────────────────────
     quality_score = (7.5 if clean_year > 0 else 0.0) + (7.5 if clean_mileage > 0 else 0.0)
