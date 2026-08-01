@@ -1,28 +1,27 @@
 """
 scrapers/recommend_normalizer.py
-GaariGuru — AI Matchmaker Normalizer v1.1
+GaariGuru — AI Matchmaker Normalizer v1.4
 
 Purpose:
     A purpose-built scoring pipeline for the AI Recommendation feature.
     Operates on a single recommended model at a time and returns exactly
     `top_k` (default: 5) listings with a cross-platform mix.
 
-Key differences from the strict keyword-search normalizer:
-    - +5% negotiation buffer on budget (buyers negotiate in Pakistan).
-    - "Lazy Seller" trim handling: missing trim ≠ wrong trim.
-    - Trim boost: +15.0 pts when the exact trim IS found in the title.
-    - Elite Staleness Veto: Standard cars die at 14 days, but budgets 
-      over 1.5 Crore are allowed up to 90 days on market.
-    - No city hard veto — city is a soft signal for AI recommendations.
-    - Feature matcher (sunroof, push start boosts).
+Key Features:
+    - +5% negotiation buffer on budget.
+    - Robust luxury make/model alias bypass (Mercedes, Range Rover, S-Class, Vogue).
+    - Dynamic identity threshold (0.60 for luxury compound titles, 0.75 for standard).
+    - 90-day staleness allowance for vehicles > 1.5 Crore PKR.
+    - Soft city scoring & lazy seller trim handling.
 """
 
 import re
 from models.car_schema import CarListing
 
-# ── Import all shared knowledge maps and utilities from main normalizer ─────
+# ── Import shared knowledge maps and utilities from main normalizer ──────────
 from scrapers.normalizer import (
     MAKE_VETO_ALIASES,
+    MODEL_ALIAS_MAP,
     TRIM_ALIASES,
     COMMON_COLORS,
     normalize_make_model,
@@ -32,12 +31,33 @@ from scrapers.normalizer import (
     _calculate_identity_score,
 )
 
+# ── 🚨 INJECT LUXURY ALIASES DIRECTLY 🚨 ─────────────────────────────────
+# This guarantees the AI Matchmaker never vetoes European luxury cars
+# even if they are missing from the main normalizer.py knowledge map.
+MAKE_VETO_ALIASES.update({
+    "mercedes-benz": ["mercedes-benz", "mercedes", "benz"],
+    "mercedes":      ["mercedes-benz", "mercedes", "benz"],
+    "land rover":    ["land rover", "range rover", "rangerover", "landrover"],
+    "bmw":           ["bmw", "bimmer"],
+    "porsche":       ["porsche"],
+})
+
+MODEL_ALIAS_MAP.update({
+    "sclass":          ["s class", "s-class", "sclass", "s300", "s350", "s400", "s450", "s500", "s550", "s560", "s580", "s600", "s63", "s65"],
+    "eclass":          ["e class", "e-class", "eclass", "e200", "e220", "e250", "e300", "e350", "e400", "e450", "e53", "e63"],
+    "cclass":          ["c class", "c-class", "cclass", "c180", "c200", "c220", "c250", "c300", "c350", "c43", "c63"],
+    "rangerover":      ["range rover", "rangerover", "vogue", "autobiography", "evoque", "velar"],
+    "rangeroversport": ["range rover sport", "rangerover sport", "range rover sports", "sport"],
+    "3series":         ["3 series", "3series", "318i", "320i", "328i", "330i", "335i"],
+    "5series":         ["5 series", "5series", "520i", "525i", "528i", "530i", "535i", "540i"],
+    "7series":         ["7 series", "7series", "730li", "740li", "750li", "760li"],
+    "taycan":          ["taycan", "taycan 4s", "taycan turbo", "cross turismo"],
+    "cayenne":         ["cayenne", "cayenne s", "cayenne gts", "cayenne turbo", "e-hybrid"],
+})
+
 # ---------------------------------------------------------------------------
 # RECOMMEND-SPECIFIC CONFLICT MAP
 # ---------------------------------------------------------------------------
-# Maps a requested trim keyword to trims that explicitly contradict it.
-# Only used when the title CONTAINS one of the listed conflict strings.
-# Absence of a trim in the title is NOT a conflict — it's a lazy seller.
 
 TRIM_CONFLICTS: dict[str, list[str]] = {
     "awd":       ["fwd", "alpha", "alpha fwd"],
@@ -81,7 +101,6 @@ def _calculate_recommendation_score(
     Scores a single listing for AI recommendation relevance.
     Returns 0.0 for any hard veto, otherwise a positive float.
     """
-    # Strip phone numbers / long digit sequences from title before any matching
     clean_title = re.sub(r'\b\d{7,}\b', '', car.title).strip()
     title_lower = clean_title.lower()
 
@@ -90,33 +109,41 @@ def _calculate_recommendation_score(
             print(f"  [REC-VETO] '{clean_title[:50]}' — {reason}")
         return 0.0
 
+    eff_budget = int(requested_budget) if requested_budget else 0
+
     # ── 1. Identity check ──────────────────────────────────────────────────
     identity_score = _calculate_identity_score(requested_make, requested_model, clean_title)
-    if identity_score < 0.75:
+    
+    # Soften identity requirement slightly for luxury vehicles with long/variant titles
+    min_identity = 0.60 if eff_budget >= 15_000_000 else 0.75
+    if identity_score < min_identity:
         return veto(f"Identity too low ({identity_score:.2f}) for model='{requested_model}'")
 
-    # ── 2. Make check (With Elite Fallbacks) ───────────────────────────────
+    # ── 2. Make check (With Luxury Brand Bypass) ───────────────────────────
     if requested_make:
         req_make_lower = requested_make.lower()
-        acceptable_makes = MAKE_VETO_ALIASES.get(req_make_lower, [req_make_lower])
-        
-        # 🚨 FOOLPROOF MAKE ALIASES FOR ELITE CARS 🚨
-        if "mercedes" in req_make_lower:
-            acceptable_makes.extend(["mercedes", "benz", "mercedes-benz", "mercedes benz"])
-        if "land rover" in req_make_lower or "range rover" in requested_model.lower():
-            acceptable_makes.extend(["land rover", "range rover", "rangerover"])
-            
-        # Robust hyphen handling: treat hyphens and spaces as equivalent
-        acceptable_makes = [m.replace("-", " ") for m in acceptable_makes] + acceptable_makes
         title_make_check = title_lower.replace("-", " ")
-        
-        if not any(m in title_make_check for m in acceptable_makes):
-            return veto(f"Make '{requested_make}' not found in title")
+
+        # Direct bypass for brands frequently omitted or abbreviated in titles
+        is_luxury_bypass = False
+        if "mercedes" in req_make_lower and ("mercedes" in title_make_check or "benz" in title_make_check):
+            is_luxury_bypass = True
+        elif ("land rover" in req_make_lower or "range rover" in requested_model.lower()) and (
+            "land rover" in title_make_check or "range rover" in title_make_check or "rangerover" in title_make_check or "vogue" in title_make_check
+        ):
+            is_luxury_bypass = True
+
+        if not is_luxury_bypass:
+            acceptable_makes = MAKE_VETO_ALIASES.get(req_make_lower, [req_make_lower])
+            acceptable_makes = [m.replace("-", " ") for m in acceptable_makes] + acceptable_makes
+
+            if not any(m in title_make_check for m in acceptable_makes):
+                return veto(f"Make '{requested_make}' not found in title")
 
     # ── 3. Budget — with +5% negotiation buffer ────────────────────────────
     if clean_price > 0:
         if min_budget > 0 and clean_price < min_budget:
-            return veto(f"Listing price ({clean_price:,} PKR) is below 30% budget floor ({min_budget:,} PKR)")
+            return veto(f"Listing price ({clean_price:,} PKR) is below price floor ({min_budget:,} PKR)")
 
         if requested_budget and requested_budget > 0:
             hard_ceiling = int(requested_budget * 1.05)
@@ -141,7 +168,7 @@ def _calculate_recommendation_score(
     if req_city_str:
         req_cities = [c.strip() for c in re.split(r',|\band\b', req_city_str) if c.strip()]
         city_matched = any(rc in car_city_lower or rc in title_lower for rc in req_cities)
-        city_score = 30.0 if city_matched else 10.0   # penalty, not veto
+        city_score = 30.0 if city_matched else 10.0
     else:
         city_score = 30.0 if car_city_lower else 15.0
 
@@ -166,10 +193,8 @@ def _calculate_recommendation_score(
                 break
 
         if trim_explicitly_found:
-            # exact match — reward it
             trim_score = 15.0
         else:
-            # Check for explicit conflicts before assuming lazy seller
             for keyword in trim_keywords:
                 if keyword in GENERIC_SKIP:
                     continue
@@ -180,28 +205,24 @@ def _calculate_recommendation_score(
                             f"Conflicting trim. Wanted '{requested_trim}', "
                             f"title contains '{conflict}'"
                         )
-            # No trim, no conflict → lazy seller, keep the listing
             trim_score = 0.0
 
-    # ── 6.5. Feature Matcher (Hard Vetoes & Boosting) ────────────────────────
+    # ── 6.5. Feature Matcher ───────────────────────────────────────────────
     feature_score = 0.0
     if required_features:
         for feature in required_features:
             feat_lower = feature.lower().replace("_", " ")
-            
-            # 1. Trim-to-Feature Hardcoding
+
             if "sunroof" in feat_lower and requested_model.lower() == "corolla":
                 if "gli" in title_lower or "xli" in title_lower:
                     return veto("Corolla GLi/XLi do not have factory sunroofs")
                 if "grande" in title_lower or "altis" in title_lower:
                     feature_score += 20.0
-            
-            # 2. Year-to-Feature Hardcoding
+
             if "panoramic" in feat_lower and requested_model.lower() == "vezel":
                 if clean_year > 0 and clean_year < 2021:
                     return veto("Vezel panoramic sunroof only available 2021+")
-                    
-            # 3. Keyword Scanning
+
             if feat_lower in title_lower or feat_lower.replace(" ", "") in title_clean:
                 feature_score += 15.0
             elif "push start" in feat_lower and ("push" in title_lower or "start" in title_lower):
@@ -215,13 +236,10 @@ def _calculate_recommendation_score(
             return veto(f"Too new. Car is {clean_year}, max requested {max_year}.")
 
     # ── 8. Staleness veto ──────────────────────────────────────────────────
-    # age_days == 999 = unknown → not vetoed.
-    # Elite luxury cars take longer to sell. If budget > 1.5 Crore, allow 90 days.
-    # Cast to int to guarantee the evaluation doesn't fail due to type coercion.
-    eff_budget = int(requested_budget) if requested_budget else 0
+    # Allow 90 days on market for budgets >= 1.5 Crore PKR
     max_age_limit = 90 if eff_budget >= 15_000_000 else 14
     age_score = max(0.0, 15.0 - (car.age_days * 0.5))
-    
+
     if 0 < car.age_days <= 998 and car.age_days > max_age_limit:
         return veto(f"Stale listing. Posted {car.age_days} days ago (limit: {max_age_limit}).")
 
@@ -268,11 +286,8 @@ def normalize_recommendation_target(
     """
     Scores, deduplicates, and selects the best `top_k` listings for a single
     AI-recommended car model.
-
-    Returns a list of up to `top_k` CarListing objects, cross-platform mixed
-    where possible. Never raises — returns [] on failure.
     """
-    corrected_make,  corrected_model = normalize_make_model(
+    corrected_make, corrected_model = normalize_make_model(
         requested_make or "", requested_model or ""
     )
     corrected_city = normalize_city(requested_city or "")
@@ -308,9 +323,8 @@ def normalize_recommendation_target(
             veto_count += 1
             continue
 
-        # Garbage city rescue — overwrite transmission/fuel strings with real city
-        display_city  = (car.city or "").strip()
-        GARBAGE_VALS  = {
+        display_city = (car.city or "").strip()
+        GARBAGE_VALS = {
             "automatic", "manual", "unregistered", "petrol",
             "hybrid", "cng", "diesel", "electric",
         }
@@ -325,7 +339,6 @@ def normalize_recommendation_target(
                     display_city = rc.title()
                     break
 
-        # Keep highest-scored version when duplicate
         dedup_key = (car.title.lower().strip(), clean_year, clean_mileage)
         if dedup_key in scored_map:
             if score > scored_map[dedup_key]["score"]:
@@ -358,7 +371,7 @@ def normalize_recommendation_target(
         "PakWheels": [],
         "OLX":       [],
         "Gari.pk":   [],
-        "Other":     [],   # Drive.pk, AutoDeals, FameWheels, etc.
+        "Other":     [],
     }
 
     for item in all_scored:
@@ -377,12 +390,7 @@ def normalize_recommendation_target(
     quarter   = max(1, top_k // 4)
     remainder = max(0, top_k - half - quarter)
 
-    pw_quota   = half        # 2 of 5
-    olx_quota  = quarter     # 1 of 5 
-    gari_quota = remainder   # 2 of 5 
-
-    if top_k == 5:
-        pw_quota, olx_quota, gari_quota = 2, 2, 1
+    pw_quota, olx_quota, gari_quota = (2, 2, 1) if top_k == 5 else (half, quarter, remainder)
 
     pw_selected   = buckets["PakWheels"][:pw_quota]
     olx_selected  = buckets["OLX"][:olx_quota]
@@ -395,9 +403,7 @@ def normalize_recommendation_target(
     # ── Step 4: Backfill to guarantee exactly top_k results ───────────────
     shortfall = top_k - len(selection)
     if shortfall > 0:
-        already_selected_keys = {
-            id(item) for item in selection
-        }
+        already_selected_keys = {id(item) for item in selection}
         backup_pool = [
             item for item in all_scored
             if id(item) not in already_selected_keys
