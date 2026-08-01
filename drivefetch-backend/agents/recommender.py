@@ -84,6 +84,20 @@ _GEMINI_MODEL = "gemini-3.5-flash-lite"   # DO NOT CHANGE — gemini-2.0-flash-l
 #                                     #       "jdm","luxury","status","hybrid","ev",
 #                                     #       "7seat","cargo","performance","awd"
 #       "chinese":      bool,         # True = Chinese brand, gated by allow_chinese
+#       "priority":     int,          # 1 = best-in-class (Corolla, Civic, Fortuner)
+#                                     # 2 = solid alternative (Liana, Baleno, Rush)
+#                                     # 3 = niche/JDM/last-resort pick
+#                                     # Higher priority wins tie-breakers at same budget fit.
+#                                     # Prevents Liana ranking above Corolla at 22 lacs.
+#       "sunroof_trims":list[str]|None, # Which trims of this model have factory sunroof.
+#                                     # None = no factory sunroof in any trim.
+#                                     # []   = unknown / seller-dependent.
+#                                     # ["VRZ","Sigma3"] = only these trims.
+#                                     # Used by get_eligible_cars() to hard-exclude
+#                                     # models that can never have a requested feature.
+#       "jdm_force_trim":str|None,    # When not None, always force this trim in the
+#                                     # scraper URL to avoid local variant flooding.
+#                                     # e.g. "660cc" for Alto to avoid local Alto flood.
 #   }
 #
 # MAINTENANCE RULES:
@@ -99,206 +113,366 @@ _GEMINI_MODEL = "gemini-3.5-flash-lite"   # DO NOT CHANGE — gemini-2.0-flash-l
 CAR_REGISTRY: dict[str, dict] = {
 
     # ── Suzuki ───────────────────────────────────────────────────────────────
-    "suzuki:fx":               {"lo": 150_000,    "hi": 600_000,    "styles": {"Hatchback"}, "drive": "FWD", "transmission": "manual", "tags": {"economy","city"}, "chinese": False},
-    "suzuki:khyber":           {"lo": 300_000,    "hi": 1_200_000,  "styles": {"Hatchback"}, "drive": "FWD", "transmission": "manual", "tags": {"economy","city"}, "chinese": False},
-    "suzuki:margalla":         {"lo": 400_000,    "hi": 1_500_000,  "styles": {"Sedan"},     "drive": "FWD", "transmission": "manual", "tags": {"economy","family"}, "chinese": False},
-    "daihatsu:charade":        {"lo": 250_000,    "hi": 1_000_000,  "styles": {"Hatchback"}, "drive": "FWD", "transmission": "both",   "tags": {"economy","city"}, "chinese": False},
-    "nissan:sunny":            {"lo": 500_000,    "hi": 1_800_000,  "styles": {"Sedan"},     "drive": "FWD", "transmission": "both",   "tags": {"economy","family"}, "chinese": False},
-    "suzuki:mehran":           {"lo": 300_000, "hi": 1_500_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "both",   "tags": {"economy","city"},          "chinese": False},
-    "suzuki:alto":             {"lo": 700_000, "hi": 3_600_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "both",   "tags": {"economy","city"},          "chinese": False},
-    "suzuki:alto 660cc":       {"lo": 1_500_000, "hi": 3_800_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "both",   "tags": {"economy","city","jdm"},    "chinese": False},
-    "suzuki:cultus":           {"lo": 1_000_000, "hi": 4_500_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "both",   "tags": {"economy","city","family"}, "chinese": False},
-    "suzuki:wagon r":          {"lo": 1_500_000, "hi": 3_500_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "both",   "tags": {"economy","city","family"}, "chinese": False},
-    "suzuki:swift":            {"lo": 1_200_000, "hi": 5_200_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "both",   "tags": {"economy","city","sports"}, "chinese": False},
-    "suzuki:baleno":           {"lo": 1_000_000, "hi": 2_500_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "both",   "tags": {"economy","city","family"}, "chinese": False},
-    "suzuki:liana":            {"lo": 1_200_000, "hi": 2_800_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "both",   "tags": {"economy","family"},        "chinese": False},
-    "suzuki:hustler":          {"lo": 1_800_000, "hi": 4_000_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
-    "suzuki:spacia":           {"lo": 1_800_000, "hi": 4_000_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm","family"}, "chinese": False},
-    "suzuki:solio":            {"lo": 2_000_000, "hi": 4_500_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm","family"}, "chinese": False},
-    "suzuki:jimny":            {"lo": 2_500_000, "hi": 8_500_000, "styles": {"Crossover", "Mini SUV"}, "drive": "4x4", "transmission": "both",   "tags": {"offroad","awd","jdm"},     "chinese": False},
-    "suzuki:every":            {"lo": 1_000_000, "hi": 3_000_000, "styles": {"Van"}, "drive": "FWD", "transmission": "both",   "tags": {"cargo","economy","jdm"},   "chinese": False},
-    "suzuki:bolan":            {"lo": 500_000, "hi": 2_000_000, "styles": {"Van"}, "drive": "RWD", "transmission": "manual", "tags": {"cargo","economy"},         "chinese": False},
-    "suzuki:apv":              {"lo": 1_500_000, "hi": 3_500_000, "styles": {"Van"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","7seat"},          "chinese": False},
+    "suzuki:mehran":           {"lo": 300_000,    "hi": 1_500_000,  "styles": {"Hatchback"},
+                                "transmission": "both",   "tags": {"economy","city"},          "chinese": False, "priority": 2},
+    "suzuki:alto":             {"lo": 700_000,    "hi": 3_600_000,  "styles": {"Hatchback"},
+                                "transmission": "both",   "tags": {"economy","city"},          "chinese": False, "priority": 2},
+    "suzuki:alto 660cc":       {"lo": 1_500_000,  "hi": 3_800_000,  "styles": {"Hatchback"},
+                                "transmission": "both",   "tags": {"economy","city","jdm"},    "chinese": False, "priority": 2},
+    "suzuki:cultus":           {"lo": 1_000_000,  "hi": 4_500_000,  "styles": {"Hatchback"},
+                                "transmission": "both",   "tags": {"economy","city","family"}, "chinese": False, "priority": 2},
+    "suzuki:wagon r":          {"lo": 1_500_000,  "hi": 3_500_000,  "styles": {"Hatchback"},
+                                "transmission": "both",   "tags": {"economy","city","family"}, "chinese": False, "priority": 2},
+    "suzuki:swift":            {"lo": 1_200_000,  "hi": 5_200_000,  "styles": {"Hatchback"},
+                                "transmission": "both",   "tags": {"economy","city","sports"}, "chinese": False, "priority": 2},
+    "suzuki:baleno":           {"lo": 1_000_000,  "hi": 2_500_000,  "styles": {"Sedan"},
+                                "transmission": "both",   "tags": {"economy","city","family"}, "chinese": False, "priority": 3},
+    "suzuki:liana":            {"lo": 1_200_000,  "hi": 2_800_000,  "styles": {"Sedan"},
+                                "transmission": "both",   "tags": {"economy","family"},        "chinese": False, "priority": 3},
+    "suzuki:hustler":          {"lo": 1_800_000,  "hi": 4_000_000,  "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
+    "suzuki:spacia":           {"lo": 1_800_000,  "hi": 4_000_000,  "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"economy","city","jdm","family"}, "chinese": False},
+    "suzuki:solio":            {"lo": 2_000_000,  "hi": 4_500_000,  "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"economy","city","jdm","family"}, "chinese": False},
+    "suzuki:jimny":            {"lo": 2_500_000,  "hi": 8_500_000,  "styles": {"Crossover"},
+                                "transmission": "both",   "tags": {"offroad","awd","jdm"},     "chinese": False},
+    "suzuki:every":            {"lo": 1_000_000,  "hi": 3_000_000,  "styles": {"Van"},
+                                "transmission": "both",   "tags": {"cargo","economy","jdm"},   "chinese": False},
+    "suzuki:bolan":            {"lo": 500_000,    "hi": 2_000_000,  "styles": {"Van"},
+                                "transmission": "manual", "tags": {"cargo","economy"},         "chinese": False},
+    "suzuki:apv":              {"lo": 1_500_000,  "hi": 3_500_000,  "styles": {"Van"},
+                                "transmission": "auto",   "tags": {"family","7seat"},          "chinese": False},
 
     # ── Toyota ───────────────────────────────────────────────────────────────
-    "toyota:vitz":             {"lo": 1_500_000, "hi": 4_500_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
-    "toyota:passo":            {"lo": 1_500_000, "hi": 4_000_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
-    "toyota:aqua":             {"lo": 2_500_000, "hi": 6_500_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"hybrid","economy","city","jdm"}, "chinese": False},
-    "toyota:tank":             {"lo": 3_000_000, "hi": 4_500_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm","family"}, "chinese": False},
-    "toyota:roomy":            {"lo": 3_000_000, "hi": 5_000_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm","family"}, "chinese": False},
-    "toyota:probox":           {"lo": 2_000_000, "hi": 4_500_000, "styles": {"Van"}, "drive": "FWD", "transmission": "both",   "tags": {"cargo","economy","jdm"},   "chinese": False},
-    "toyota:corolla":          {"lo": 2_000_000, "hi": 8_500_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "both",   "tags": {"family","city","economy"}, "chinese": False},
-    "toyota:yaris":            {"lo": 3_500_000, "hi": 6_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","city"},           "chinese": False},
-    "toyota:allion":           {"lo": 3_000_000, "hi": 8_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","jdm","city"},     "chinese": False},
-    "toyota:premio":           {"lo": 3_500_000, "hi": 9_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","jdm","city"},     "chinese": False},
-    "toyota:mark x":           {"lo": 3_000_000, "hi": 7_000_000, "styles": {"Sedan"}, "drive": "RWD", "transmission": "auto",   "tags": {"sports","jdm","performance"}, "chinese": False},
-    "toyota:fielder":          {"lo": 2_500_000, "hi": 6_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","jdm","cargo"},    "chinese": False},
-    "toyota:prius":            {"lo": 2_500_000, "hi": 12_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"hybrid","economy","jdm"},  "chinese": False},
-    "toyota:crown":            {"lo": 4_000_000, "hi": 25_000_000, "styles": {"Sedan"}, "drive": "RWD", "transmission": "auto",   "tags": {"sports","jdm","luxury","status","performance"}, "chinese": False},
-    "toyota:camry":            {"lo": 7_000_000, "hi": 18_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status","family"}, "chinese": False},
-    "toyota:sienta":           {"lo": 3_000_000, "hi": 6_500_000, "styles": {"Van"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","7seat","jdm"},    "chinese": False},
-    "toyota:c-hr":             {"lo": 4_500_000, "hi": 10_000_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"city","jdm","sports"},     "chinese": False},
-    "toyota:raize":            {"lo": 5_000_000, "hi": 7_500_000, "styles": {"Crossover", "Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"city","family","jdm"},     "chinese": False},
-    "toyota:yaris cross":      {"lo": 6_000_000, "hi": 9_500_000, "styles": {"Crossover", "Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"city","hybrid","jdm"},     "chinese": False},
-    "toyota:rush":             {"lo": 5_500_000, "hi": 9_000_000, "styles": {"SUV", "Hatchback", "MPV"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","7seat"},          "chinese": False},
-    "toyota:fortuner":         {"lo": 9_000_000, "hi": 21_000_000, "styles": {"SUV"}, "drive": "4x4", "transmission": "auto",   "tags": {"family","offroad","status","7seat"}, "chinese": False},
-    "toyota:hilux":            {"lo": 8_000_000, "hi": 16_000_000, "styles": {"Pickup"}, "drive": "4x4", "transmission": "both",   "tags": {"offroad","cargo","awd"},   "chinese": False},
-    "toyota:alphard":          {"lo": 6_000_000, "hi": 35_000_000, "styles": {"Van"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status","family","7seat","jdm"}, "chinese": False},
-    "toyota:vellfire":         {"lo": 6_000_000, "hi": 35_000_000, "styles": {"Van"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status","family","7seat","jdm"}, "chinese": False},
-    "toyota:hiace":            {"lo": 3_500_000, "hi": 12_000_000, "styles": {"Van"}, "drive": "RWD", "transmission": "both",   "tags": {"cargo","7seat","family"},  "chinese": False},
-    "toyota:prado":            {"lo": 2_500_000, "hi": 48_000_000, "styles": {"SUV"}, "drive": "4x4", "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": False},
-    "toyota:land cruiser":     {"lo": 2_500_000, "hi": 90_000_000, "styles": {"SUV"}, "drive": "4x4", "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": False},
+    "toyota:vitz":             {"lo": 1_500_000,  "hi": 4_500_000,  "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
+    "toyota:passo":            {"lo": 1_500_000,  "hi": 4_000_000,  "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
+    "toyota:aqua":             {"lo": 2_500_000,  "hi": 6_500_000,  "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"hybrid","economy","city","jdm"}, "chinese": False},
+    "toyota:tank":             {"lo": 3_000_000,  "hi": 4_500_000,  "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"economy","city","jdm","family"}, "chinese": False},
+    "toyota:roomy":            {"lo": 3_000_000,  "hi": 5_000_000,  "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"economy","city","jdm","family"}, "chinese": False},
+    "toyota:probox":           {"lo": 2_000_000,  "hi": 4_500_000,  "styles": {"Van"},
+                                "transmission": "both",   "tags": {"cargo","economy","jdm"},   "chinese": False},
+    "toyota:corolla":          {"lo": 2_000_000,  "hi": 8_500_000,  "styles": {"Sedan"},
+                                "transmission": "both",   "tags": {"family","city","economy"}, "chinese": False, "priority": 1},
+    "toyota:yaris":            {"lo": 3_500_000,  "hi": 6_000_000,  "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"family","city"},           "chinese": False, "priority": 1},
+    "toyota:allion":           {"lo": 3_000_000,  "hi": 8_000_000,  "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"family","jdm","city"},     "chinese": False, "priority": 2},
+    "toyota:premio":           {"lo": 3_500_000,  "hi": 9_000_000,  "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"family","jdm","city"},     "chinese": False, "priority": 2},
+    "toyota:mark x":           {"lo": 3_000_000,  "hi": 7_000_000,  "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"sports","jdm","performance"}, "chinese": False, "priority": 2},
+    "toyota:fielder":          {"lo": 2_500_000,  "hi": 6_000_000,  "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"family","jdm","cargo"},    "chinese": False, "priority": 3},
+    "toyota:prius":            {"lo": 2_500_000,  "hi": 12_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"hybrid","economy","jdm"},  "chinese": False, "priority": 2},
+    "toyota:crown":            {"lo": 4_000_000,  "hi": 25_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"sports","jdm","luxury","status","performance"}, "chinese": False, "priority": 2},
+    "toyota:camry":            {"lo": 7_000_000,  "hi": 18_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"luxury","status","family"}, "chinese": False, "priority": 1},
+    "toyota:sienta":           {"lo": 3_000_000,  "hi": 6_500_000,  "styles": {"Van"},
+                                "transmission": "auto",   "tags": {"family","7seat","jdm"},    "chinese": False},
+    "toyota:c-hr":             {"lo": 4_500_000,  "hi": 10_000_000, "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"city","jdm","sports"},     "chinese": False},
+    "toyota:raize":            {"lo": 5_000_000,  "hi": 7_500_000,  "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"city","family","jdm"},     "chinese": False},
+    "toyota:yaris cross":      {"lo": 6_000_000,  "hi": 9_500_000,  "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"city","hybrid","jdm"},     "chinese": False},
+    "toyota:rush":             {"lo": 5_500_000,  "hi": 9_000_000,  "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"family","7seat"},          "chinese": False},
+    "toyota:fortuner":         {"lo": 9_000_000,  "hi": 21_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"family","offroad","status","7seat"}, "chinese": False, "priority": 1},
+    "toyota:hilux":            {"lo": 8_000_000,  "hi": 16_000_000, "styles": {"Pickup"},
+                                "transmission": "both",   "tags": {"offroad","cargo","awd"},   "chinese": False, "priority": 1},
+    "toyota:alphard":          {"lo": 6_000_000,  "hi": 35_000_000, "styles": {"Van"},
+                                "transmission": "auto",   "tags": {"luxury","status","family","7seat","jdm"}, "chinese": False},
+    "toyota:vellfire":         {"lo": 6_000_000,  "hi": 35_000_000, "styles": {"Van"},
+                                "transmission": "auto",   "tags": {"luxury","status","family","7seat","jdm"}, "chinese": False},
+    "toyota:hiace":            {"lo": 3_500_000,  "hi": 12_000_000, "styles": {"Van"},
+                                "transmission": "both",   "tags": {"cargo","7seat","family"},  "chinese": False},
+    "toyota:prado":            {"lo": 18_000_000, "hi": 48_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": False, "priority": 1},
+    "toyota:land cruiser":     {"lo": 35_000_000, "hi": 90_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": False, "priority": 1},
 
     # ── Honda ────────────────────────────────────────────────────────────────
-    "honda:n-box":             {"lo": 1_800_000, "hi": 4_200_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
-    "honda:n-wgn":             {"lo": 1_500_000, "hi": 3_800_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
-    "honda:fit":               {"lo": 2_000_000, "hi": 5_500_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
-    "honda:city":              {"lo": 1_500_000, "hi": 6_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "both",   "tags": {"economy","family","city"}, "chinese": False},
-    "honda:civic":             {"lo": 2_000_000, "hi": 9_500_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "both",   "tags": {"family","city","sports"},  "chinese": False},
-    "honda:grace":             {"lo": 3_500_000, "hi": 6_500_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","hybrid","jdm"},   "chinese": False},
-    "honda:insight":           {"lo": 2_500_000, "hi": 6_500_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"hybrid","economy","jdm"},  "chinese": False},
-    "honda:freed":             {"lo": 2_500_000, "hi": 6_000_000, "styles": {"Van"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","7seat","jdm"},    "chinese": False},
-    "honda:shuttle":           {"lo": 3_500_000, "hi": 7_000_000, "styles": {"Van"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","hybrid","jdm"},   "chinese": False},
-    "honda:stepwgn":           {"lo": 3_000_000, "hi": 8_000_000, "styles": {"Van"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","7seat","jdm"},    "chinese": False},
-    "honda:br-v":              {"lo": 3_500_000, "hi": 6_500_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "both",   "tags": {"family","7seat","city"},   "chinese": False},
-    "honda:hr-v":              {"lo": 6_000_000, "hi": 8_500_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"city","jdm"},              "chinese": False},
-    "honda:vezel":             {"lo": 4_000_000, "hi": 11_000_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"city","hybrid","jdm"},     "chinese": False},
-    "honda:cr-v":              {"lo": 6_000_000, "hi": 14_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"family","awd","jdm"},      "chinese": False},
-    "honda:accord":            {"lo": 4_500_000, "hi": 12_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","family","jdm"},   "chinese": False},
+    "honda:n-box":             {"lo": 1_800_000,  "hi": 4_200_000,  "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
+    "honda:n-wgn":             {"lo": 1_500_000,  "hi": 3_800_000,  "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
+    "honda:fit":               {"lo": 2_000_000,  "hi": 5_500_000,  "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
+    "honda:city":              {"lo": 1_500_000,  "hi": 6_000_000,  "styles": {"Sedan"},
+                                "transmission": "both",   "tags": {"economy","family","city"}, "chinese": False, "priority": 1},
+    "honda:civic":             {"lo": 2_000_000,  "hi": 9_500_000,  "styles": {"Sedan"},
+                                "transmission": "both",   "tags": {"family","city","sports"},  "chinese": False, "priority": 1},
+    "honda:grace":             {"lo": 3_500_000,  "hi": 6_500_000,  "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"family","hybrid","jdm"},   "chinese": False},
+    "honda:insight":           {"lo": 2_500_000,  "hi": 6_500_000,  "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"hybrid","economy","jdm"},  "chinese": False},
+    "honda:freed":             {"lo": 2_500_000,  "hi": 6_000_000,  "styles": {"Van"},
+                                "transmission": "auto",   "tags": {"family","7seat","jdm"},    "chinese": False},
+    "honda:shuttle":           {"lo": 3_500_000,  "hi": 7_000_000,  "styles": {"Van"},
+                                "transmission": "auto",   "tags": {"family","hybrid","jdm"},   "chinese": False},
+    "honda:stepwgn":           {"lo": 3_000_000,  "hi": 8_000_000,  "styles": {"Van"},
+                                "transmission": "auto",   "tags": {"family","7seat","jdm"},    "chinese": False},
+    "honda:br-v":              {"lo": 3_500_000,  "hi": 6_500_000,  "styles": {"Crossover"},
+                                "transmission": "both",   "tags": {"family","7seat","city"},   "chinese": False},
+    "honda:hr-v":              {"lo": 6_000_000,  "hi": 8_500_000,  "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"city","jdm"},              "chinese": False},
+    "honda:vezel":             {"lo": 4_000_000,  "hi": 11_000_000, "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"city","hybrid","jdm"},     "chinese": False},
+    "honda:cr-v":              {"lo": 6_000_000,  "hi": 14_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"family","awd","jdm"},      "chinese": False},
+    "honda:accord":            {"lo": 4_500_000,  "hi": 12_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"luxury","family","jdm"},   "chinese": False},
 
     # ── Hyundai ──────────────────────────────────────────────────────────────
-    "hyundai:santro":          {"lo": 700_000, "hi": 1_800_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "both",   "tags": {"economy","city"},          "chinese": False},
-    "hyundai:i10":             {"lo": 1_200_000, "hi": 3_000_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "both",   "tags": {"economy","city"},          "chinese": False},
-    "hyundai:elantra":         {"lo": 5_000_000, "hi": 7_500_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","city"},           "chinese": False},
-    "hyundai:sonata":          {"lo": 7_500_000, "hi": 11_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","family"},         "chinese": False},
-    "hyundai:tucson":          {"lo": 6_000_000, "hi": 9_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"family","city","awd"},     "chinese": False},
-    "hyundai:porter":          {"lo": 2_500_000, "hi": 4_000_000, "styles": {"Van"}, "drive": "FWD", "transmission": "both",   "tags": {"cargo"},                   "chinese": False},
-    "hyundai:palisade":        {"lo": 18_000_000, "hi": 35_000_000, "styles": {"SUV"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","family","7seat","awd"}, "chinese": False},
-
-    "hyundai:santa fe": {"lo": 12_000_000, "hi": 20_000_000, "styles": {"SUV", "Crossover"}, "drive": "AWD", "transmission": "auto", "tags": {"family", "luxury", "7seat"}, "chinese": False},
+    "hyundai:santro":          {"lo": 700_000,    "hi": 1_800_000,  "styles": {"Hatchback"},
+                                "transmission": "both",   "tags": {"economy","city"},          "chinese": False},
+    "hyundai:i10":             {"lo": 1_200_000,  "hi": 3_000_000,  "styles": {"Hatchback"},
+                                "transmission": "both",   "tags": {"economy","city"},          "chinese": False},
+    "hyundai:elantra":         {"lo": 5_000_000,  "hi": 7_500_000,  "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"family","city"},           "chinese": False},
+    "hyundai:sonata":          {"lo": 7_500_000,  "hi": 11_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"luxury","family"},         "chinese": False},
+    "hyundai:tucson":          {"lo": 6_000_000,  "hi": 9_000_000,  "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"family","city","awd"},     "chinese": False},
+    "hyundai:porter":          {"lo": 2_500_000,  "hi": 4_000_000,  "styles": {"Van"},
+                                "transmission": "both",   "tags": {"cargo"},                   "chinese": False},
+    "hyundai:palisade":        {"lo": 18_000_000, "hi": 35_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","family","7seat","awd"}, "chinese": False},
 
     # ── Kia ──────────────────────────────────────────────────────────────────
-    "kia:picanto":             {"lo": 2_500_000, "hi": 3_800_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city"},          "chinese": False},
-    "kia:stonic":              {"lo": 4_500_000, "hi": 6_000_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"city","family"},           "chinese": False},
-    "kia:sportage":            {"lo": 5_500_000, "hi": 10_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"family","city","awd"},     "chinese": False},
-    "kia:sorento":             {"lo": 7_500_000, "hi": 11_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"family","7seat","awd"},    "chinese": False},
-    "kia:carnival":            {"lo": 9_000_000, "hi": 18_000_000, "styles": {"Van", "MPV"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","family","7seat"}, "chinese": False},
+    "kia:picanto":             {"lo": 2_500_000,  "hi": 3_800_000,  "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"economy","city"},          "chinese": False},
+    "kia:stonic":              {"lo": 4_500_000,  "hi": 6_000_000,  "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"city","family"},           "chinese": False},
+    "kia:sportage":            {"lo": 5_500_000,  "hi": 10_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"family","city","awd"},     "chinese": False},
+    "kia:sorento":             {"lo": 7_500_000,  "hi": 11_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"family","7seat","awd"},    "chinese": False},
+    "kia:carnival":            {"lo": 9_000_000,  "hi": 18_000_000, "styles": {"Van"},
+                                "transmission": "auto",   "tags": {"luxury","family","7seat"}, "chinese": False},
 
     # ── Daihatsu ─────────────────────────────────────────────────────────────
-    "daihatsu:cuore":          {"lo": 600_000, "hi": 1_600_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "both",   "tags": {"economy","city"},          "chinese": False},
-    "daihatsu:mira":           {"lo": 1_200_000, "hi": 3_800_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
-    "daihatsu:move":           {"lo": 1_200_000, "hi": 3_500_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
-    "daihatsu:tanto":          {"lo": 1_500_000, "hi": 4_000_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm","family"}, "chinese": False},
-    "daihatsu:cast":           {"lo": 2_000_000, "hi": 3_500_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
-    "daihatsu:hijet":          {"lo": 1_000_000, "hi": 2_500_000, "styles": {"Van"}, "drive": "FWD", "transmission": "both",   "tags": {"cargo","economy"},         "chinese": False},
-    "daihatsu:rocky":          {"lo": 5_000_000, "hi": 7_500_000, "styles": {"Crossover", "Mini SUV", "Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"city","jdm"},              "chinese": False},
-    "daihatsu:terios":         {"lo": 2_500_000, "hi": 6_000_000, "styles": {"Crossover", "Mini SUV"}, "drive": "AWD", "transmission": "both",   "tags": {"offroad","family"},        "chinese": False},
+    "daihatsu:cuore":          {"lo": 600_000,    "hi": 1_600_000,  "styles": {"Hatchback"},
+                                "transmission": "both",   "tags": {"economy","city"},          "chinese": False},
+    "daihatsu:mira":           {"lo": 1_200_000,  "hi": 3_800_000,  "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
+    "daihatsu:move":           {"lo": 1_200_000,  "hi": 3_500_000,  "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
+    "daihatsu:tanto":          {"lo": 1_500_000,  "hi": 4_000_000,  "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"economy","city","jdm","family"}, "chinese": False},
+    "daihatsu:cast":           {"lo": 2_000_000,  "hi": 3_500_000,  "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
+    "daihatsu:hijet":          {"lo": 1_000_000,  "hi": 2_500_000,  "styles": {"Van"},
+                                "transmission": "both",   "tags": {"cargo","economy"},         "chinese": False},
+    "daihatsu:rocky":          {"lo": 5_000_000,  "hi": 7_500_000,  "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"city","jdm"},              "chinese": False},
+    "daihatsu:terios":         {"lo": 2_500_000,  "hi": 6_000_000,  "styles": {"Crossover"},
+                                "transmission": "both",   "tags": {"offroad","family"},        "chinese": False},
 
     # ── Nissan ───────────────────────────────────────────────────────────────
-    "nissan:dayz":             {"lo": 1_500_000, "hi": 3_500_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
-    "nissan:roox":             {"lo": 1_500_000, "hi": 3_800_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
-    "nissan:note":             {"lo": 3_500_000, "hi": 6_500_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"hybrid","economy","jdm"},  "chinese": False},
-    "nissan:juke":             {"lo": 3_500_000, "hi": 8_000_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"city","sports","jdm"},     "chinese": False},
-    "nissan:x-trail":          {"lo": 5_000_000, "hi": 14_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"family","awd"},            "chinese": False},
-    "nissan:patrol":           {"lo": 20_000_000, "hi": 55_000_000, "styles": {"SUV"}, "drive": "4x4", "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": False},
+    "nissan:dayz":             {"lo": 1_500_000,  "hi": 3_500_000,  "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
+    "nissan:roox":             {"lo": 1_500_000,  "hi": 3_800_000,  "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
+    "nissan:note":             {"lo": 3_500_000,  "hi": 6_500_000,  "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"hybrid","economy","jdm"},  "chinese": False},
+    "nissan:juke":             {"lo": 3_500_000,  "hi": 8_000_000,  "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"city","sports","jdm"},     "chinese": False},
+    "nissan:x-trail":          {"lo": 5_000_000,  "hi": 14_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"family","awd"},            "chinese": False},
+    "nissan:patrol":           {"lo": 20_000_000, "hi": 55_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": False},
 
     # ── Mitsubishi ───────────────────────────────────────────────────────────
-    "mitsubishi:mirage":       {"lo": 2_000_000, "hi": 4_500_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
-    "mitsubishi:asx":          {"lo": 3_500_000, "hi": 8_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"city","awd","jdm"},        "chinese": False},
-    "mitsubishi:outlander":    {"lo": 5_000_000, "hi": 14_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"family","awd"},            "chinese": False},
-    "mitsubishi:pajero":       {"lo": 1_800_000, "hi": 16_000_000, "styles": {"SUV"}, "drive": "4x4", "transmission": "auto",   "tags": {"offroad","awd","status"},  "chinese": False},
-
-    "mitsubishi:mini pajero": {"lo": 800_000, "hi": 2_500_000, "styles": {"Mini SUV", "SUV"}, "drive": "4x4", "transmission": "both", "tags": {"offroad", "city", "economy"}, "chinese": False},
-    "mitsubishi:pajero sport": {"lo": 8_000_000, "hi": 18_000_000, "styles": {"SUV"}, "drive": "4x4", "transmission": "auto",   "tags": {"offroad","awd","status"},  "chinese": False},
+    "mitsubishi:mirage":       {"lo": 2_000_000,  "hi": 4_500_000,  "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
+    "mitsubishi:asx":          {"lo": 3_500_000,  "hi": 8_000_000,  "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"city","awd","jdm"},        "chinese": False},
+    "mitsubishi:outlander":    {"lo": 5_000_000,  "hi": 14_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"family","awd"},            "chinese": False},
+    "mitsubishi:pajero":       {"lo": 5_000_000,  "hi": 16_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"offroad","awd","status"},  "chinese": False},
+    "mitsubishi:pajero sport": {"lo": 8_000_000,  "hi": 18_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"offroad","awd","status"},  "chinese": False},
 
     # ── Subaru ───────────────────────────────────────────────────────────────
-    "subaru:impreza":          {"lo": 2_500_000, "hi": 6_000_000, "styles": {"Sedan"}, "drive": "AWD", "transmission": "both",   "tags": {"sports","awd","jdm","performance"}, "chinese": False},
-    "subaru:xv":               {"lo": 4_000_000, "hi": 7_500_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"awd","city","jdm"},        "chinese": False},
-    "subaru:forester":         {"lo": 4_500_000, "hi": 9_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"awd","family","offroad"},  "chinese": False},
-    "subaru:brz":              {"lo": 4_500_000, "hi": 10_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "both",   "tags": {"sports","performance","jdm"}, "chinese": False},
+    "subaru:impreza":          {"lo": 2_500_000,  "hi": 6_000_000,  "styles": {"Sedan"},
+                                "transmission": "both",   "tags": {"sports","awd","jdm","performance"}, "chinese": False},
+    "subaru:xv":               {"lo": 4_000_000,  "hi": 7_500_000,  "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"awd","city","jdm"},        "chinese": False},
+    "subaru:forester":         {"lo": 4_500_000,  "hi": 9_000_000,  "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"awd","family","offroad"},  "chinese": False},
+    "subaru:brz":              {"lo": 4_500_000,  "hi": 10_000_000, "styles": {"Sedan"},
+                                "transmission": "both",   "tags": {"sports","performance","jdm"}, "chinese": False},
 
     # ── Mazda ────────────────────────────────────────────────────────────────
-    "mazda:demio":             {"lo": 2_500_000, "hi": 4_500_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
-    "mazda:mazda3":            {"lo": 3_000_000, "hi": 7_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"sports","city","jdm"},     "chinese": False},
-    "mazda:rx-8":              {"lo": 1_500_000, "hi": 4_000_000, "styles": {"Sedan"}, "drive": "RWD", "transmission": "both",   "tags": {"sports","performance","jdm"}, "chinese": False},
-    "mazda:cx-3":              {"lo": 4_000_000, "hi": 7_000_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"city","jdm"},              "chinese": False},
-    "mazda:cx-5":              {"lo": 5_500_000, "hi": 9_500_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"family","awd","jdm"},      "chinese": False},
+    "mazda:demio":             {"lo": 2_500_000,  "hi": 4_500_000,  "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
+    "mazda:mazda3":            {"lo": 3_000_000,  "hi": 7_000_000,  "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"sports","city","jdm"},     "chinese": False},
+    "mazda:rx-8":              {"lo": 1_500_000,  "hi": 4_000_000,  "styles": {"Sedan"},
+                                "transmission": "both",   "tags": {"sports","performance","jdm"}, "chinese": False},
+    "mazda:cx-3":              {"lo": 4_000_000,  "hi": 7_000_000,  "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"city","jdm"},              "chinese": False},
+    "mazda:cx-5":              {"lo": 5_500_000,  "hi": 9_500_000,  "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"family","awd","jdm"},      "chinese": False},
 
     # ── Chinese & New Entrants ────────────────────────────────────────────────
-    "mg:zs":                   {"lo": 4_500_000, "hi": 6_500_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"city","economy"},          "chinese": True},
-    "mg:zs ev":                {"lo": 7_000_000, "hi": 11_000_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"ev","city"},               "chinese": True},
-    "mg:hs":                   {"lo": 6_000_000, "hi": 8_500_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","city"},           "chinese": True},
-    "mg:rx5":                  {"lo": 4_500_000, "hi": 9_000_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","city"},           "chinese": True},
-    "mg:cyberster":            {"lo": 15_000_000, "hi": 25_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"ev","sports","luxury"},    "chinese": True},
-    "changan:alsvin":          {"lo": 3_200_000, "hi": 4_800_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","family"}, "chinese": True},
-    "changan:karvaan":         {"lo": 1_500_000, "hi": 3_000_000, "styles": {"Van"}, "drive": "FWD", "transmission": "both",   "tags": {"cargo","family","economy"},"chinese": True},
-    "changan:oshan x7":        {"lo": 7_000_000, "hi": 9_500_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","7seat"},          "chinese": True},
-    "changan:uni-t":           {"lo": 8_000_000, "hi": 11_000_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","city"},           "chinese": True},
-    "changan:deepal s07":      {"lo": 13_000_000, "hi": 18_000_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"ev","luxury","family"},    "chinese": True},
-    "changan:deepal l07":      {"lo": 13_000_000, "hi": 18_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"ev","luxury"},             "chinese": True},
-    "haval:jolion":            {"lo": 7_000_000, "hi": 9_000_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","city"},           "chinese": True},
-    "haval:h6":                {"lo": 8_900_000, "hi": 10_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"family","awd"},            "chinese": True},
-    "haval:h6 hev":            {"lo": 11_400_000, "hi": 14_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"hybrid","family","awd"},   "chinese": True},
-    "chery:tiggo 4 pro":       {"lo": 5_500_000, "hi": 7_500_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"city","family"},           "chinese": True},
-    "chery:tiggo 8 pro":       {"lo": 8_000_000, "hi": 10_500_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","7seat"},          "chinese": True},
-    "proton:saga":             {"lo": 2_500_000, "hi": 3_800_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","family"}, "chinese": True},
-    "proton:x70":              {"lo": 6_000_000, "hi": 8_000_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","city"},           "chinese": True},
-    "byd:dolphin":             {"lo": 9_000_000, "hi": 12_000_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"ev","city","economy"},     "chinese": True},
-    "byd:atto 3":              {"lo": 11_000_000, "hi": 15_000_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"ev","family"},             "chinese": True},
-    "byd:seal":                {"lo": 16_000_000, "hi": 22_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"ev","sports","luxury"},    "chinese": True},
-    "gwm:ora 03":              {"lo": 8_000_000, "hi": 11_000_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"ev","city"},               "chinese": True},
-    "gwm:tank 500":            {"lo": 35_000_000, "hi": 45_000_000, "styles": {"SUV"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": True},
+    "mg:zs":                   {"lo": 4_500_000,  "hi": 6_500_000,  "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"city","economy"},          "chinese": True},
+    "mg:zs ev":                {"lo": 7_000_000,  "hi": 11_000_000, "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"ev","city"},               "chinese": True},
+    "mg:hs":                   {"lo": 6_000_000,  "hi": 8_500_000,  "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"family","city"},           "chinese": True},
+    "mg:rx5":                  {"lo": 4_500_000,  "hi": 9_000_000,  "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"family","city"},           "chinese": True},
+    "mg:cyberster":            {"lo": 15_000_000, "hi": 25_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"ev","sports","luxury"},    "chinese": True},
+    "changan:alsvin":          {"lo": 3_200_000,  "hi": 4_800_000,  "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"economy","city","family"}, "chinese": True},
+    "changan:karvaan":         {"lo": 1_500_000,  "hi": 3_000_000,  "styles": {"Van"},
+                                "transmission": "both",   "tags": {"cargo","family","economy"},"chinese": True},
+    "changan:oshan x7":        {"lo": 7_000_000,  "hi": 9_500_000,  "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"family","7seat"},          "chinese": True},
+    "changan:uni-t":           {"lo": 8_000_000,  "hi": 11_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"family","city"},           "chinese": True},
+    "changan:deepal s07":      {"lo": 13_000_000, "hi": 18_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"ev","luxury","family"},    "chinese": True},
+    "changan:deepal l07":      {"lo": 13_000_000, "hi": 18_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"ev","luxury"},             "chinese": True},
+    "haval:jolion":            {"lo": 7_000_000,  "hi": 9_000_000,  "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"family","city"},           "chinese": True},
+    "haval:h6":                {"lo": 8_900_000,  "hi": 10_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"family","awd"},            "chinese": True},
+    "haval:h6 hev":            {"lo": 11_400_000, "hi": 14_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"hybrid","family","awd"},   "chinese": True},
+    "chery:tiggo 4 pro":       {"lo": 5_500_000,  "hi": 7_500_000,  "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"city","family"},           "chinese": True},
+    "chery:tiggo 8 pro":       {"lo": 8_000_000,  "hi": 10_500_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"family","7seat"},          "chinese": True},
+    "proton:saga":             {"lo": 2_500_000,  "hi": 3_800_000,  "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"economy","city","family"}, "chinese": True},
+    "proton:x70":              {"lo": 6_000_000,  "hi": 8_000_000,  "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"family","city"},           "chinese": True},
+    "byd:dolphin":             {"lo": 9_000_000,  "hi": 12_000_000, "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"ev","city","economy"},     "chinese": True},
+    "byd:atto 3":              {"lo": 11_000_000, "hi": 15_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"ev","family"},             "chinese": True},
+    "byd:seal":                {"lo": 16_000_000, "hi": 22_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"ev","sports","luxury"},    "chinese": True},
+    "gwm:ora 03":              {"lo": 8_000_000,  "hi": 11_000_000, "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"ev","city"},               "chinese": True},
+    "gwm:tank 500":            {"lo": 35_000_000, "hi": 45_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": True},
 
     # ── European & Luxury ────────────────────────────────────────────────────
-    "bmw:3 series":            {"lo": 6_000_000, "hi": 25_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"sports","luxury","status","performance"}, "chinese": False},
-    "bmw:5 series":            {"lo": 8_000_000, "hi": 35_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status","family"}, "chinese": False},
-    "bmw:7 series":            {"lo": 15_000_000, "hi": 60_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status"},         "chinese": False},
-    "bmw:x1":                  {"lo": 7_000_000, "hi": 20_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"city","luxury","awd"},     "chinese": False},
-    "bmw:x3":                  {"lo": 9_000_000, "hi": 30_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","awd","status"},   "chinese": False},
-    "bmw:x5":                  {"lo": 12_000_000, "hi": 50_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","status","awd"},   "chinese": False},
-    "bmw:x7":                  {"lo": 40_000_000, "hi": 80_000_000, "styles": {"SUV"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status","7seat"}, "chinese": False},
-    "bmw:i4":                  {"lo": 25_000_000, "hi": 35_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"ev","luxury","performance"}, "chinese": False},
-    "bmw:i7":                  {"lo": 60_000_000, "hi": 90_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"ev","luxury","status"},    "chinese": False},
-    "bmw:ix":                  {"lo": 35_000_000, "hi": 55_000_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"ev","luxury"},             "chinese": False},
-    "mercedes-benz:cla":       {"lo": 7_000_000, "hi": 18_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","sports","status"}, "chinese": False},
-    "mercedes-benz:c-class":   {"lo": 6_000_000, "hi": 30_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status","family"}, "chinese": False},
-    "mercedes-benz:e-class":   {"lo": 8_000_000, "hi": 45_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status","family"}, "chinese": False},
-    "mercedes-benz:s-class":   {"lo": 15_000_000, "hi": 80_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status"},         "chinese": False},
-    "mercedes-benz:gla":       {"lo": 7_500_000, "hi": 20_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","city","awd"},     "chinese": False},
-    "mercedes-benz:glc":       {"lo": 12_000_000, "hi": 35_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","status","awd"},   "chinese": False},
-    "mercedes-benz:gle":       {"lo": 15_000_000, "hi": 50_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","status","awd"},   "chinese": False},
-    "mercedes-benz:gls":       {"lo": 30_000_000, "hi": 75_000_000, "styles": {"SUV"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status","7seat"}, "chinese": False},
-    "audi:a3":                 {"lo": 5_000_000, "hi": 12_000_000, "styles": {"Sedan","Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","sports","city"},  "chinese": False},
-    "audi:a4":                 {"lo": 6_500_000, "hi": 20_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","sports","status"}, "chinese": False},
-    "audi:a5":                 {"lo": 8_000_000, "hi": 25_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","sports"},         "chinese": False},
-    "audi:a6":                 {"lo": 9_000_000, "hi": 35_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status","family"}, "chinese": False},
-    "audi:a7":                 {"lo": 15_000_000, "hi": 45_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status"},         "chinese": False},
-    "audi:q2":                 {"lo": 6_500_000, "hi": 11_000_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","city"},           "chinese": False},
-    "audi:q3":                 {"lo": 7_500_000, "hi": 15_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","city","awd"},     "chinese": False},
-    "audi:q5":                 {"lo": 10_000_000, "hi": 25_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","awd","status"},   "chinese": False},
-    "audi:q7":                 {"lo": 15_000_000, "hi": 45_000_000, "styles": {"SUV"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status","7seat"}, "chinese": False},
-    "audi:q8":                 {"lo": 30_000_000, "hi": 60_000_000, "styles": {"SUV"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status"},         "chinese": False},
-    "audi:e-tron":             {"lo": 18_000_000, "hi": 35_000_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"ev","luxury"},             "chinese": False},
-    "audi:e-tron gt":          {"lo": 35_000_000, "hi": 60_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"ev","luxury","performance"}, "chinese": False},
-    "porsche:macan":           {"lo": 20_000_000, "hi": 45_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","sports","awd"},   "chinese": False},
-    "porsche:cayenne":         {"lo": 25_000_000, "hi": 70_000_000, "styles": {"SUV"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","status","awd"},   "chinese": False},
-    "porsche:panamera":        {"lo": 25_000_000, "hi": 60_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status","performance"}, "chinese": False},
-    "porsche:taycan":          {"lo": 40_000_000, "hi": 85_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"ev","luxury","performance"}, "chinese": False},
-    "land rover:evoque":       {"lo": 9_000_000, "hi": 25_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","awd","status"},   "chinese": False},
-    "land rover:velar":        {"lo": 20_000_000, "hi": 45_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","status","awd"},   "chinese": False},
-    "land rover:discovery":    {"lo": 15_000_000, "hi": 50_000_000, "styles": {"SUV"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","offroad","awd","7seat"}, "chinese": False},
-    "land rover:range rover sport": {"lo": 20_000_000, "hi": 75_000_000, "styles": {"SUV"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","status","awd"},   "chinese": False},
-    "land rover:defender":     {"lo": 35_000_000, "hi": 85_000_000, "styles": {"SUV"}, "drive": "4x4", "transmission": "auto",   "tags": {"luxury","offroad","awd","status"}, "chinese": False},
-    "land rover:range rover":  {"lo": 25_000_000, "hi": 95_000_000, "styles": {"SUV"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","status","awd"},   "chinese": False},
-    "land rover:vogue":        {"lo": 25_000_000, "hi": 95_000_000, "styles": {"SUV"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","status","awd"},   "chinese": False},
-    "lexus:ct200h":            {"lo": 4_000_000, "hi": 7_500_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"hybrid","luxury","city"},  "chinese": False},
-    "lexus:is":                {"lo": 5_000_000, "hi": 15_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","sports","status"}, "chinese": False},
-    "lexus:es":                {"lo": 8_000_000, "hi": 25_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status","family"}, "chinese": False},
-    "lexus:rx":                {"lo": 10_000_000, "hi": 35_000_000, "styles": {"SUV"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","status","awd"},   "chinese": False},
-    "lexus:nx":                {"lo": 12_000_000, "hi": 28_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","city","awd"},     "chinese": False},
-    "lexus:lx570":             {"lo": 30_000_000, "hi": 75_000_000, "styles": {"SUV"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": False},
-    "lexus:lx":                {"lo": 30_000_000, "hi": 75_000_000, "styles": {"SUV"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": False},
-    "lexus:lx600":             {"lo": 90_000_000, "hi": 140_000_000, "styles": {"SUV"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": False},
+    "bmw:3 series":            {"lo": 6_000_000,  "hi": 25_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"sports","luxury","status","performance"}, "chinese": False},
+    "bmw:5 series":            {"lo": 8_000_000,  "hi": 35_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"luxury","status","family"}, "chinese": False},
+    "bmw:7 series":            {"lo": 15_000_000, "hi": 60_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"luxury","status"},         "chinese": False},
+    "bmw:x1":                  {"lo": 7_000_000,  "hi": 20_000_000, "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"city","luxury","awd"},     "chinese": False},
+    "bmw:x3":                  {"lo": 9_000_000,  "hi": 30_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","awd","status"},   "chinese": False},
+    "bmw:x5":                  {"lo": 12_000_000, "hi": 50_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","status","awd"},   "chinese": False},
+    "bmw:x7":                  {"lo": 40_000_000, "hi": 80_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","status","7seat"}, "chinese": False},
+    "bmw:i4":                  {"lo": 25_000_000, "hi": 35_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"ev","luxury","performance"}, "chinese": False},
+    "bmw:i7":                  {"lo": 60_000_000, "hi": 90_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"ev","luxury","status"},    "chinese": False},
+    "bmw:ix":                  {"lo": 35_000_000, "hi": 55_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"ev","luxury"},             "chinese": False},
+    "mercedes-benz:cla":       {"lo": 7_000_000,  "hi": 18_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"luxury","sports","status"}, "chinese": False},
+    "mercedes-benz:c-class":   {"lo": 6_000_000,  "hi": 30_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"luxury","status","family"}, "chinese": False},
+    "mercedes-benz:e-class":   {"lo": 8_000_000,  "hi": 45_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"luxury","status","family"}, "chinese": False},
+    "mercedes-benz:s-class":   {"lo": 15_000_000, "hi": 80_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"luxury","status"},         "chinese": False},
+    "mercedes-benz:gla":       {"lo": 7_500_000,  "hi": 20_000_000, "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"luxury","city","awd"},     "chinese": False},
+    "mercedes-benz:glc":       {"lo": 12_000_000, "hi": 35_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","status","awd"},   "chinese": False},
+    "mercedes-benz:gle":       {"lo": 15_000_000, "hi": 50_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","status","awd"},   "chinese": False},
+    "mercedes-benz:gls":       {"lo": 30_000_000, "hi": 75_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","status","7seat"}, "chinese": False},
+    "audi:a3":                 {"lo": 5_000_000,  "hi": 12_000_000, "styles": {"Sedan","Hatchback"},
+                                "transmission": "auto",   "tags": {"luxury","sports","city"},  "chinese": False},
+    "audi:a4":                 {"lo": 6_500_000,  "hi": 20_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"luxury","sports","status"}, "chinese": False},
+    "audi:a5":                 {"lo": 8_000_000,  "hi": 25_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"luxury","sports"},         "chinese": False},
+    "audi:a6":                 {"lo": 9_000_000,  "hi": 35_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"luxury","status","family"}, "chinese": False},
+    "audi:a7":                 {"lo": 15_000_000, "hi": 45_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"luxury","status"},         "chinese": False},
+    "audi:q2":                 {"lo": 6_500_000,  "hi": 11_000_000, "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"luxury","city"},           "chinese": False},
+    "audi:q3":                 {"lo": 7_500_000,  "hi": 15_000_000, "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"luxury","city","awd"},     "chinese": False},
+    "audi:q5":                 {"lo": 10_000_000, "hi": 25_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","awd","status"},   "chinese": False},
+    "audi:q7":                 {"lo": 15_000_000, "hi": 45_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","status","7seat"}, "chinese": False},
+    "audi:q8":                 {"lo": 30_000_000, "hi": 60_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","status"},         "chinese": False},
+    "audi:e-tron":             {"lo": 18_000_000, "hi": 35_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"ev","luxury"},             "chinese": False},
+    "audi:e-tron gt":          {"lo": 35_000_000, "hi": 60_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"ev","luxury","performance"}, "chinese": False},
+    "porsche:macan":           {"lo": 20_000_000, "hi": 45_000_000, "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"luxury","sports","awd"},   "chinese": False},
+    "porsche:cayenne":         {"lo": 25_000_000, "hi": 70_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","status","awd"},   "chinese": False},
+    "porsche:panamera":        {"lo": 25_000_000, "hi": 60_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"luxury","status","performance"}, "chinese": False},
+    "porsche:taycan":          {"lo": 40_000_000, "hi": 85_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"ev","luxury","performance"}, "chinese": False},
+    "land rover:evoque":       {"lo": 9_000_000,  "hi": 25_000_000, "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"luxury","awd","status"},   "chinese": False},
+    "land rover:velar":        {"lo": 20_000_000, "hi": 45_000_000, "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"luxury","status","awd"},   "chinese": False},
+    "land rover:discovery":    {"lo": 15_000_000, "hi": 50_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","offroad","awd","7seat"}, "chinese": False},
+    "land rover:range rover sport": {"lo": 20_000_000, "hi": 75_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","status","awd"},   "chinese": False},
+    "land rover:defender":     {"lo": 35_000_000, "hi": 85_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","offroad","awd","status"}, "chinese": False},
+    "land rover:range rover":  {"lo": 25_000_000, "hi": 95_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","status","awd"},   "chinese": False},
+    "land rover:vogue":        {"lo": 25_000_000, "hi": 95_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","status","awd"},   "chinese": False},
+    "lexus:ct200h":            {"lo": 4_000_000,  "hi": 7_500_000,  "styles": {"Hatchback"},
+                                "transmission": "auto",   "tags": {"hybrid","luxury","city"},  "chinese": False},
+    "lexus:is":                {"lo": 5_000_000,  "hi": 15_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"luxury","sports","status"}, "chinese": False},
+    "lexus:es":                {"lo": 8_000_000,  "hi": 25_000_000, "styles": {"Sedan"},
+                                "transmission": "auto",   "tags": {"luxury","status","family"}, "chinese": False},
+    "lexus:rx":                {"lo": 10_000_000, "hi": 35_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","status","awd"},   "chinese": False},
+    "lexus:nx":                {"lo": 12_000_000, "hi": 28_000_000, "styles": {"Crossover"},
+                                "transmission": "auto",   "tags": {"luxury","city","awd"},     "chinese": False},
+    "lexus:lx570":             {"lo": 30_000_000, "hi": 75_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": False},
+    "lexus:lx":                {"lo": 30_000_000, "hi": 75_000_000, "styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": False},
+    "lexus:lx600":             {"lo": 90_000_000, "hi": 140_000_000,"styles": {"SUV"},
+                                "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": False},
 }
 
 
@@ -396,9 +570,13 @@ _USE_CASE_PRINCIPLES: dict[str, str] = {
 
     "family": """
 USE-CASE PRINCIPLES — Family / Daily:
-  - PAKISTANI MARKET REALITY: Families heavily prefer SEDANS over hatchbacks due to boot space ("diggi") and status.
-  - If budget >= PKR 1,500_000 (15 Lacs), ALWAYS prioritize Sedans (Corolla, City, Civic, Liana, Baleno) over small hatchbacks (Passo, Wagon R, Vitz) unless the user explicitly requested a hatchback.
-  - Prioritise: boot space, rear legroom, air conditioning effectiveness, reliability.
+  - Prioritise: boot space, rear legroom, reliability, service network availability
+  - Rank higher: cars with 5+ years of parts availability in Pakistan
+  - Rank higher: cars known for resale value retention (Toyota > Honda > others generally)
+  - For budgets under PKR 50 lacs: Corolla, Civic, City are the benchmark — pick alternatives only if they offer clear advantage (more space, lower maintenance)
+  - For 7-seat needs: prefer dedicated 7-seat (BR-V, Rush, Sorento) over squeezing 3 adults into a rear bench
+  - Avoid: sports-tuned cars (RX-8, BRZ) — stiff ride and limited boot space for families
+  - Avoid: kei cars (N-Box, Mira) for families with children over 8 — too small
 """,
 
     "city": """
@@ -413,10 +591,13 @@ USE-CASE PRINCIPLES — City Commute:
 """,
 
     "offroad": """
-USE-CASE PRINCIPLES — SUV / Off-road / Northern Areas:
-  - HARD SEPARATION: True SUVs (Land Cruiser, Prado, Pajero, Patrol, Fortuner) have ladder-frame chassis or true 4x4 systems.
-  - Crossovers (Sportage, Tucson, Vezel, Rush) are unibody city cars — NEVER recommend crossovers when the user asks for a true SUV or rugged 4x4.
-  - Old Land Cruisers (LC80/LC100), Prados, and Pajeros from 1990-2005 are extremely popular in Pakistan for rough terrain and Northern trips. Recommend them if budget allows!
+USE-CASE PRINCIPLES — Off-road / Rugged:
+  - HARD RULE: body-on-frame or proven AWD/4WD ONLY — Fortuner, Prado, Land Cruiser, Patrol, Hilux, Pajero
+  - Unibody crossovers (Vezel, Stonic, C-HR) are NOT suitable — do not recommend them for offroad use
+  - Rank higher: cars with locking differentials and proper 4L mode
+  - Ground clearance matters: minimum 200mm for serious offroad
+  - Budget reality: capable 4x4s start at PKR 80 lacs — if budget is under 60 lacs, be honest that options are limited and suggest Pajero or Jimny as entry-level capable options
+  - Avoid: road-tuned AWD (Subaru XV, Tucson) for genuine offroad — they are road-biased
 """,
 
     "sports": """
@@ -496,9 +677,119 @@ def _get_relevant_principles(use_case: str | None, is_luxury: bool) -> str:
 
 
 # ---------------------------------------------------------------------------
+# MODEL-FEATURE KNOWLEDGE MAP
+#
+# Answers: "Does this model have feature X in any trim?"
+# Used by get_eligible_cars() to HARD-EXCLUDE models that can NEVER satisfy
+# a required feature — before the LLM ever sees them.
+#
+# Format: "make:model" → { "feature_key": trim_list_or_None }
+#   trim_list = list of trims that have the feature (can be ["any"] if all do)
+#   None      = this model NEVER has this feature in any trim
+#
+# Feature keys should match _FEATURE_KEYWORDS keys in recommend_normalizer.py.
+# ---------------------------------------------------------------------------
+
+MODEL_FEATURE_KNOWLEDGE: dict[str, dict[str, list[str] | None]] = {
+    # ── Sunroof availability by model ────────────────────────────────────────
+    # None = no trim of this model has factory sunroof
+    # ["any"] = all/most trims have it
+    # ["Trim1","Trim2"] = only these trims have it
+    "toyota:corolla":          {"sunroof": ["Grande", "Altis Grande", "X Corolla"]},
+    "toyota:yaris":            {"sunroof": None},        # Yaris has no sunroof in any trim
+    "toyota:aqua":             {"sunroof": None},
+    "toyota:vitz":             {"sunroof": None},
+    "toyota:passo":            {"sunroof": None},
+    "toyota:probox":           {"sunroof": None},        # cargo van — never
+    "toyota:rush":             {"sunroof": None},        # Rush has no factory sunroof
+    "toyota:fortuner":         {"sunroof": ["VRZ", "Sigma3", "Legender"]},
+    "toyota:hilux":            {"sunroof": None},
+    "toyota:prado":            {"sunroof": ["any"]},
+    "toyota:land cruiser":     {"sunroof": ["any"]},
+    "toyota:camry":            {"sunroof": ["any"]},
+    "toyota:crown":            {"sunroof": ["any"]},
+    "toyota:mark x":           {"sunroof": ["250G", "300G", "350G", "any"]},
+    "toyota:allion":           {"sunroof": ["A20", "A25", "250G"]},
+    "toyota:premio":           {"sunroof": ["F L Package", "G L Package", "250G"]},
+    "toyota:c-hr":             {"sunroof": ["any"]},
+    "toyota:raize":            {"sunroof": ["Z", "G"]},
+    "toyota:yaris cross":      {"sunroof": ["any"]},
+    "toyota:alphard":          {"sunroof": ["any"]},
+    "toyota:vellfire":         {"sunroof": ["any"]},
+    "honda:city":              {"sunroof": ["Aspire", "1.5 Aspire", "RS"]},
+    "honda:civic":             {"sunroof": ["RS", "Oriel 1.5T", "VTi Oriel Prosmatec 1.8"]},
+    "honda:br-v":              {"sunroof": None},
+    "honda:hr-v":              {"sunroof": ["any"]},
+    "honda:vezel":             {"sunroof": ["RS", "Z", "e:HEV Z"]},
+    "honda:accord":            {"sunroof": ["any"]},
+    "honda:cr-v":              {"sunroof": ["any"]},
+    "honda:fit":               {"sunroof": None},
+    "honda:freed":             {"sunroof": None},
+    "honda:grace":             {"sunroof": ["Hybrid EX"]},
+    "honda:n-box":             {"sunroof": None},        # kei car — no sunroof
+    "honda:n-wgn":             {"sunroof": None},
+    "suzuki:baleno":           {"sunroof": None},        # local Baleno never had sunroof
+    "suzuki:liana":            {"sunroof": None},
+    "suzuki:swift":            {"sunroof": None},        # local swift no sunroof
+    "suzuki:cultus":           {"sunroof": None},
+    "suzuki:wagon r":          {"sunroof": None},
+    "suzuki:alto":             {"sunroof": None},
+    "suzuki:alto 660cc":       {"sunroof": None},        # JDM kei — no sunroof
+    "suzuki:jimny":            {"sunroof": None},
+    "kia:sportage":            {"sunroof": ["Alpha AWD", "FWD Alpha", "FWD"]},
+    "kia:stonic":              {"sunroof": None},
+    "kia:sorento":             {"sunroof": ["any"]},
+    "hyundai:tucson":          {"sunroof": ["any"]},
+    "hyundai:elantra":         {"sunroof": ["GLS", "GL"]},
+    "mitsubishi:pajero sport": {"sunroof": ["GLS", "Exceed"]},
+    "mitsubishi:pajero":       {"sunroof": ["GLS", "3.5 V6"]},
+    "nissan:patrol":           {"sunroof": ["any"]},
+    "nissan:x-trail":          {"sunroof": ["any"]},
+    "subaru:forester":         {"sunroof": ["any"]},
+    "subaru:xv":               {"sunroof": ["any"]},
+    "mazda:cx-5":              {"sunroof": ["any"]},
+    "bmw:3 series":            {"sunroof": ["any"]},
+    "bmw:5 series":            {"sunroof": ["any"]},
+    "bmw:x3":                  {"sunroof": ["any"]},
+    "bmw:x5":                  {"sunroof": ["any"]},
+    "mercedes-benz:c-class":   {"sunroof": ["any"]},
+    "mercedes-benz:e-class":   {"sunroof": ["any"]},
+    "mercedes-benz:glc":       {"sunroof": ["any"]},
+    "mercedes-benz:gle":       {"sunroof": ["any"]},
+    "audi:a4":                 {"sunroof": ["any"]},
+    "audi:q5":                 {"sunroof": ["any"]},
+    "lexus:rx":                {"sunroof": ["any"]},
+    "lexus:es":                {"sunroof": ["any"]},
+    "land rover:range rover":  {"sunroof": ["any"]},
+    "land rover:defender":     {"sunroof": ["any"]},
+    "porsche:cayenne":         {"sunroof": ["any"]},
+    "daihatsu:mira":           {"sunroof": None},
+    "daihatsu:move":           {"sunroof": None},
+    "daihatsu:tanto":          {"sunroof": None},
+    "daihatsu:rocky":          {"sunroof": ["G", "Premium"]},
+    "nissan:dayz":             {"sunroof": None},
+    "nissan:roox":             {"sunroof": None},
+    "mg:hs":                   {"sunroof": ["any"]},
+    "mg:zs":                   {"sunroof": None},
+    "haval:jolion":            {"sunroof": ["any"]},
+    "haval:h6":                {"sunroof": ["any"]},
+    "changan:alsvin":          {"sunroof": None},
+}
+
+# ---------------------------------------------------------------------------
 # ELIGIBLE CAR LIST BUILDER
-# Single function — replaces the old get_budget_eligible_cars() + separate maps.
-# Derives everything from CAR_REGISTRY.
+# Single function — derives everything from CAR_REGISTRY.
+#
+# v2.0 additions:
+#   - priority field: breaks fit-score ties. Priority 1 beats priority 2
+#     at the same budget fit. Prevents Liana ranking above Corolla at 22 lacs.
+#   - feature_filter: when required_features contains a feature that requires
+#     sunroof/specific trim, hard-excludes models that can NEVER have it.
+#     Models not in MODEL_FEATURE_KNOWLEDGE pass through (unknown = allow).
+#   - JDM Alto protection: when "suzuki:alto 660cc" is selected, sets
+#     jdm_force_trim flag in the display so LLM knows to use trim="660cc".
+#   - is_youth_query: when use_case implies young buyer, deprioritises
+#     kei box vans (Wagon R, Bolan, Every) even if budget-eligible.
 # ---------------------------------------------------------------------------
 
 def get_eligible_cars(
@@ -509,27 +800,50 @@ def get_eligible_cars(
     is_apex_luxury: bool = False,
     transmission_req: str | None = None,
     excluded_models: list[str] | None = None,
-    drive_req: str | None = None,
+    required_features: list[str] | None = None,
+    is_youth_query: bool = False,
 ) -> str:
     """
-    Returns a fit-score-sorted eligible car list as a prompt string.
+    Returns a priority-weighted, fit-score-sorted eligible car list as a prompt string.
 
     Filters applied (in order, all deterministic Python):
-      1. Body style  — hard match against CAR_REGISTRY styles set
-      2. Chinese gate — drop chinese=True unless allow_chinese=True
-      3. Transmission — drop manual-only when user wants Automatic
-      4. Budget overlap — [min_budget,max_budget] must intersect [lo,hi]
-      5. Apex luxury gate — if is_apex_luxury, drop cars whose price
-         ceiling is below max_budget * 0.55 (too cheap for the budget)
-      6. Exclusion gate — drop already-tried/shown models
-      7. Fit score — sort by budget-centrality so best-fitting cars appear
-         first in the list the LLM reads
+      1. Body style       — hard match against CAR_REGISTRY styles set
+      2. Chinese gate     — drop chinese=True unless allow_chinese=True
+      3. Transmission     — drop manual-only when user requests Automatic
+      4. Budget overlap   — [min_budget,max_budget] must intersect [lo,hi]
+      5. Apex luxury gate — drop cars too cheap for a luxury budget
+      6. Feature gate     — drop models that CAN NEVER have a required feature
+                            (e.g. Rush has no factory sunroof → excluded for sunroof query)
+      7. Exclusion gate   — drop already-tried/shown models
 
-    The LLM then picks 1–3 from this pre-approved, pre-sorted list.
+    Scoring (composite — higher = shown first to LLM):
+      fit_score    = 0.6 × budget_coverage + 0.4 × budget_centrality
+      priority_boost = (3 - priority) × 0.15  → priority 1 gets +0.30, priority 2 gets +0.15
+      youth_penalty  = -0.20 for kei box vans when is_youth_query=True
+      final_score    = fit_score + priority_boost + youth_penalty
+
+    JDM Alto protection:
+      When "suzuki:alto 660cc" appears in the list, it is annotated with
+      "(JDM 660cc — use trim='660cc' in scraper)" to prevent the LLM from
+      picking it as plain "Alto" which would flood local Alto listings.
     """
     excluded_lower = {m.lower() for m in (excluded_models or [])}
 
-    scored: list[tuple[float, str, int, int]] = []   # (fit_score, display, lo, hi)
+    # Build set of features that require sunroof capability
+    needs_sunroof = False
+    if required_features:
+        sunroof_keywords = {"sunroof", "panoramic sunroof", "moonroof", "panoramic"}
+        needs_sunroof = any(
+            any(kw in feat.lower() for kw in sunroof_keywords)
+            for feat in required_features
+        )
+
+    # Kei box vans that look awkward for young buyers
+    _KEI_BOX_VANS = {"suzuki:wagon r", "suzuki:every", "suzuki:bolan",
+                     "honda:n-wgn", "honda:n-box", "daihatsu:move",
+                     "daihatsu:tanto", "nissan:roox", "nissan:dayz"}
+
+    scored: list[tuple[float, str, int, int, str]] = []  # (score, display, lo, hi, note)
 
     for key, info in CAR_REGISTRY.items():
         lo    = info["lo"]
@@ -544,36 +858,34 @@ def get_eligible_cars(
         if info["chinese"] and not allow_chinese:
             continue
 
-        # 3. Transmission gate — only filter if user explicitly wants Automatic
+        # 3. Transmission gate
         if transmission_req == "Automatic" and info["transmission"] == "manual":
             continue
 
-        # Drive type filtering
-        if drive_req and info.get("drive") != drive_req:
-            # Allow 4x4 when AWD is requested, but do NOT allow FWD for 4x4 queries
-            if drive_req == "4x4" and info.get("drive") != "4x4":
-                continue
-            elif drive_req == "AWD" and info.get("drive") not in {"AWD", "4x4"}:
-                continue
-            elif drive_req == "FWD" and info.get("drive") != "FWD":
-                continue
-
         # 4. Budget overlap
         if max_budget > 0 and max_budget < lo * 0.80:
-            continue   # budget can't reach floor
+            continue
         if min_budget > 0 and hi < min_budget * 0.80:
-            continue   # model ceiling below budget floor
+            continue
 
-        # 5. Apex luxury gate — prevents Fortuner appearing in 5-crore queries
+        # 5. Apex luxury gate
         if is_apex_luxury and max_budget > 0 and hi < max_budget * 0.55:
             continue
 
-        # 6. Exclusion gate
+        # 6. Feature gate — hard exclude models that CAN NEVER have sunroof
+        if needs_sunroof:
+            feature_info = MODEL_FEATURE_KNOWLEDGE.get(key, {})
+            sunroof_trims = feature_info.get("sunroof", [])  # default [] = unknown = pass
+            if sunroof_trims is None:
+                # None explicitly means this model has no factory sunroof in any trim
+                continue
+
+        # 7. Exclusion gate
         display_lower = f"{make} {model}".lower()
         if any(ex in display_lower for ex in excluded_lower):
             continue
 
-        # 7. Fit score — higher = budget more centered in this car's range
+        # Fit score
         if max_budget > 0:
             midpoint  = (lo + hi) / 2
             centered  = 1.0 - abs(max_budget - midpoint) / max(midpoint, 1)
@@ -581,38 +893,68 @@ def get_eligible_cars(
             coverage  = overlap / max(hi - lo, 1)
             fit_score = 0.6 * coverage + 0.4 * max(0.0, min(1.0, centered))
         else:
-            fit_score = 0.5   # no budget — neutral score
+            fit_score = 0.5
 
+        # Priority boost — prevents Liana/Baleno ranking above Corolla/Civic
+        priority      = info.get("priority", 2)
+        priority_boost = (3 - priority) * 0.15   # priority 1 → +0.30, 2 → +0.15, 3 → 0
+
+        # Youth penalty — kei box vans deprioritised for young buyer queries
+        youth_penalty = -0.20 if (is_youth_query and key in _KEI_BOX_VANS) else 0.0
+
+        final_score = fit_score + priority_boost + youth_penalty
+
+        # Display string with JDM annotation
         display = f"{make.title()} {model.title()}"
-        scored.append((fit_score, display, lo, hi))
+        note    = ""
+        if key == "suzuki:alto 660cc":
+            note = " [JDM — always use trim='660cc' to avoid local Alto flood]"
+        elif needs_sunroof:
+            feature_info  = MODEL_FEATURE_KNOWLEDGE.get(key, {})
+            sunroof_trims = feature_info.get("sunroof", [])
+            if sunroof_trims and sunroof_trims != ["any"]:
+                note = f" [sunroof only in: {', '.join(sunroof_trims)}]"
+            elif sunroof_trims == ["any"]:
+                note = " [sunroof: all trims]"
+
+        scored.append((final_score, display, lo, hi, note))
 
     if not scored:
         style_note = f" matching body style '{body_style}'" if body_style else ""
+        feat_note  = " with sunroof" if needs_sunroof else ""
         return (
-            f"No eligible cars found{style_note} for this budget. "
+            f"No eligible cars found{style_note}{feat_note} for this budget. "
             "Return an empty array []."
         )
 
-    # Sort by fit score descending — best fit appears first
+    # Sort by final_score descending — best fit + highest priority appears first
     scored.sort(key=lambda x: x[0], reverse=True)
-    top = scored[:15]   # cap at 15 to keep prompt lean
+    top = scored[:15]
 
     lines = [
-        f"  {display}: PKR {lo:,} – {hi:,}"
-        for _, display, lo, hi in top
+        f"  {display}: PKR {lo:,} – {hi:,}{note}"
+        for _, display, lo, hi, note in top
     ]
 
-    budget_note = (
-        f"PKR {min_budget:,} – {max_budget:,}" if max_budget > 0 else "no budget limit"
-    )
-    style_note  = f", body style: {body_style}" if body_style else ""
-    total_note  = f"{len(scored)} eligible" + (f" (showing top {len(top)})" if len(scored) > 15 else "")
+    budget_note  = f"PKR {min_budget:,} – {max_budget:,}" if max_budget > 0 else "no budget limit"
+    style_note   = f", body style: {body_style}" if body_style else ""
+    feat_note    = ", requires sunroof" if needs_sunroof else ""
+    total_note   = f"{len(scored)} eligible" + (f" (showing top {len(top)})" if len(scored) > 15 else "")
+
+    suffix = ""
+    if needs_sunroof:
+        suffix = (
+            "\nSUNROOF NOTE: Cars marked '[sunroof only in: X]' must be "
+            "recommended with that specific trim. Cars marked '[sunroof: all trims]' "
+            "are safe to recommend without specifying trim.\n"
+        )
 
     return (
-        f"ELIGIBLE CARS ({total_note}, budget {budget_note}{style_note}):\n"
+        f"ELIGIBLE CARS ({total_note}, budget {budget_note}{style_note}{feat_note}):\n"
         + "\n".join(lines)
         + "\n\nPick ONLY from this list. "
-        "These are pre-verified against budget, body style, and transmission.\n"
+        "These are pre-verified against budget, body style, transmission, and feature availability.\n"
+        + suffix
     )
 
 
@@ -677,9 +1019,8 @@ def _validate_targets(targets: list, constraints: dict) -> list:
 
 class UserIntent(BaseModel):
     max_budget:        Optional[int]                                                                 = None
-    body_style:        Optional[Literal["SUV", "Mini SUV", "Sedan", "Hatchback", "Pickup", "Crossover", "Van", "MPV"]] = None
+    body_style:        Optional[Literal["SUV", "Sedan", "Hatchback", "Pickup", "Crossover", "Van"]] = None
     transmission:      Optional[Literal["Automatic", "Manual"]]                                     = None
-    drive:             Optional[Literal["4x4", "AWD", "FWD", "RWD"]]                                = None
     use_case:          Optional[str]                                                                 = None
     origin_pref:       Optional[Literal["JDM", "Local", "European", "Chinese"]]                     = None
     is_luxury_request: bool                                                                          = False
@@ -700,9 +1041,9 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "- is_luxury_request: true ONLY for explicit words: 'luxury', 'premium', 'aura',\n"
         "  'VIP', 'boss car', 'status symbol', 'high-end', 'shaan'.\n"
         "- required_features: only features EXPLICITLY mentioned. Never infer.\n"
-        "- body_style: 'car' or 'sedan' -> Sedan. 'SUV' or '4x4' -> SUV. 'mini suv' or 'compact 4x4' -> Mini SUV.\n"
+        "- body_style: 'car' or 'sedan' -> Sedan. 'SUV' or '4x4' -> SUV.\n"
         "  'small car' or 'hatchback' -> Hatchback. 'pickup' or 'truck' -> Pickup.\n"
-        "  'crossover' -> Crossover. 'van' -> Van. 'mpv' or '11 seater' -> MPV.\n"
+        "  'crossover' or 'compact SUV' -> Crossover.\n"
         "- origin_pref: 'Japanese' or 'JDM' -> JDM. 'European' -> European. "
         "'Chinese' -> Chinese. 'local' -> Local.\n"
         "- Leave null if not clearly stated — do not guess."
@@ -747,7 +1088,6 @@ def resolve_constraints(intent: UserIntent) -> dict:
         "allow_chinese":     intent.origin_pref == "Chinese",
         "body_style":        intent.body_style,
         "transmission":      intent.transmission,
-        "drive":             intent.drive,
         "use_case":          intent.use_case,
         "origin_pref":       intent.origin_pref,
         "is_luxury_request": intent.is_luxury_request,
@@ -777,16 +1117,22 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
       3. Buyer profile       — this specific buyer's constraints
       4. Ranking rules       — concise instructions for what to do
     """
-    max_budget      = constraints.get("max_budget", 0)
-    min_budget      = constraints.get("min_budget", 0)
-    allow_chinese   = constraints.get("allow_chinese", False)
-    body_style      = constraints.get("body_style")
-    transmission    = constraints.get("transmission")
-    drive           = constraints.get("drive")
-    use_case        = constraints.get("use_case")
-    is_apex_luxury  = constraints.get("is_apex_luxury", False)
-    is_luxury       = constraints.get("is_luxury_request", False)
-    origin_pref     = constraints.get("origin_pref")
+    max_budget        = constraints.get("max_budget", 0)
+    min_budget        = constraints.get("min_budget", 0)
+    allow_chinese     = constraints.get("allow_chinese", False)
+    body_style        = constraints.get("body_style")
+    transmission      = constraints.get("transmission")
+    use_case          = constraints.get("use_case")
+    is_apex_luxury    = constraints.get("is_apex_luxury", False)
+    is_luxury         = constraints.get("is_luxury_request", False)
+    origin_pref       = constraints.get("origin_pref")
+    required_features = constraints.get("required_features", [])
+
+    # Detect youth/university buyer from use_case for kei box van deprioritisation
+    is_youth_query = bool(use_case and any(
+        w in use_case.lower()
+        for w in ["university", "student", "young", "youth", "college", "boy", "boys", "youngster"]
+    ))
 
     eligible_list = get_eligible_cars(
         max_budget=max_budget,
@@ -796,7 +1142,8 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         is_apex_luxury=is_apex_luxury,
         transmission_req=transmission,
         excluded_models=None,
-        drive_req=drive,
+        required_features=required_features,
+        is_youth_query=is_youth_query,
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
@@ -807,20 +1154,34 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
     )
 
     buyer_profile = {
-        "budget":            budget_str,
-        "body_style":        body_style        or "No preference",
-        "transmission":      transmission      or "No preference",
-        "use_case":          use_case          or "General",
-        "origin_pref":       origin_pref       or "No preference (default: Japanese/Korean)",
-        "is_luxury_request": is_luxury,
-        "is_apex_luxury":    is_apex_luxury,
-        "required_features": constraints.get("required_features", []),
+        "budget":             budget_str,
+        "body_style":         body_style         or "No preference",
+        "transmission":       transmission       or "No preference",
+        "use_case":           use_case           or "General",
+        "origin_pref":        origin_pref        or "No preference (default: Japanese/Korean)",
+        "is_luxury_request":  is_luxury,
+        "is_apex_luxury":     is_apex_luxury,
+        "required_features":  required_features,
     }
+
+    # Build sunroof trim instruction if needed
+    sunroof_rule = ""
+    if required_features and any(
+        "sunroof" in f.lower() or "panoramic" in f.lower()
+        for f in required_features
+    ):
+        sunroof_rule = (
+            "\nSUNROOF RULE: The buyer requires a sunroof. "
+            "Cars marked '[sunroof only in: X]' MUST be recommended with that specific trim. "
+            "Do NOT recommend a car marked '[sunroof only in: X]' without setting trim to one of those values. "
+            "Cars marked '[sunroof: all trims]' are safe without trim specification.\n"
+        )
 
     prompt = (
         f"{principles}\n\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         f"{eligible_list}\n"
+        f"{sunroof_rule}"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         "TASK: You are a Pakistani used car expert. "
         "From the eligible list above, pick the best 1–3 cars for this buyer.\n\n"
@@ -830,14 +1191,19 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         "The list is pre-verified by Python — trust it completely.\n"
         "2. PRINCIPLES FIRST: Apply the use-case principles above when ranking. "
         "They encode real Pakistani market knowledge — follow them.\n"
-        "3. ORIGIN: If origin_pref is JDM, prefer JDM cars and specify exact trim "
-        "(e.g. trim='G Grade', trim='RS Advance'). If European, prefer BMW/Audi/Mercedes/Porsche.\n"
-        "4. DIVERSITY: Pick from 2–3 different makes when the list allows. "
+        "3. PRIORITY ORDER: Cars listed higher in the eligible list are ranked higher "
+        "by budget fit AND market standing. Prefer them unless the buyer's use-case "
+        "clearly makes a lower-ranked car more suitable.\n"
+        "4. ORIGIN: If origin_pref is JDM, prefer JDM cars and specify exact trim "
+        "(e.g. trim='G Grade', trim='RS Advance'). If European, prefer BMW/Audi/Mercedes.\n"
+        "5. JDM ALTO PROTECTION: If recommending 'Suzuki Alto 660cc', ALWAYS set "
+        "trim='660cc' — this prevents flooding with local Suzuki Alto listings.\n"
+        "6. DIVERSITY: Pick from 2–3 different makes when the list allows. "
         "Avoid all-Toyota or all-Honda picks unless the list genuinely forces it.\n"
-        "8. QUANTITY: Always return 3 distinct targets if 3 or more eligible options exist in the list. Only return fewer than 3 if the eligible candidate list physically contains fewer than 3 cars.\n"
-        "6. TRIM: Leave empty unless a specific trim meaningfully changes the car "
-        "(e.g. WRX vs base Impreza). Do not invent trim names.\n"
-        "7. RATIONALE: 1 buyer-friendly sentence — explain WHY this specific car "
+        "7. QUANTITY: Return 1 if only 1 car truly fits well. Never pad to 3.\n"
+        "8. TRIM: For sunroof-required queries, use the trim specified in the list. "
+        "Otherwise leave empty unless a trim meaningfully changes the car.\n"
+        "9. RATIONALE: 1 buyer-friendly sentence — explain WHY this specific car "
         "fits this specific buyer. No generic descriptions."
     )
 
@@ -919,10 +1285,10 @@ async def get_fallback_recommendations(
     body_style      = constraints.get("body_style")
     is_apex_luxury  = constraints.get("is_apex_luxury", False)
     transmission    = constraints.get("transmission")
-    drive           = constraints.get("drive")
     use_case        = constraints.get("use_case")
     is_luxury       = constraints.get("is_luxury_request", False)
 
+    required_features = constraints.get("required_features", [])
     eligible_list = get_eligible_cars(
         max_budget=max_budget,
         min_budget=min_budget,
@@ -931,6 +1297,7 @@ async def get_fallback_recommendations(
         is_apex_luxury=is_apex_luxury,
         transmission_req=transmission,
         excluded_models=excluded_models,
+        required_features=required_features,
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
@@ -949,7 +1316,8 @@ async def get_fallback_recommendations(
         f"  Budget: {budget_str}\n"
         f"  Body style: {body_style or 'No preference'}\n"
         f"  Transmission: {transmission or 'No preference'}\n"
-        f"  Use case: {use_case or 'General'}\n\n"
+        f"  Use case: {use_case or 'General'}\n"
+        f"  Required features: {json.dumps(required_features)}\n\n"
         f"Already tried (excluded from list above): {json.dumps(excluded_models)}\n\n"
         "Return exactly 1 target. Pick only from the eligible list. "
         "Apply the principles above. "
@@ -992,6 +1360,7 @@ async def get_extended_recommendations(
     use_case        = original_constraints.get("use_case")
     is_luxury       = original_constraints.get("is_luxury_request", False)
 
+    required_features = original_constraints.get("required_features", [])
     eligible_list = get_eligible_cars(
         max_budget=max_budget,
         min_budget=min_budget,
@@ -1000,6 +1369,7 @@ async def get_extended_recommendations(
         is_apex_luxury=is_apex_luxury,
         transmission_req=transmission,
         excluded_models=excluded_models,
+        required_features=required_features,
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
@@ -1018,7 +1388,8 @@ async def get_extended_recommendations(
         f"  Budget: {budget_str}\n"
         f"  Body style: {body_style or 'No preference'}\n"
         f"  Transmission: {transmission or 'No preference'}\n"
-        f"  Use case: {use_case or 'General'}\n\n"
+        f"  Use case: {use_case or 'General'}\n"
+        f"  Required features: {json.dumps(required_features)}\n\n"
         f"Already shown (excluded from list above): {json.dumps(excluded_models)}\n\n"
         "Pick from different makes than already shown. "
         "Apply the principles above for ranking. "
