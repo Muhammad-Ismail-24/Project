@@ -115,7 +115,7 @@ CAR_REGISTRY: dict[str, dict] = {
     "suzuki:hustler":          {"lo": 1_800_000, "hi": 4_000_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
     "suzuki:spacia":           {"lo": 1_800_000, "hi": 4_000_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm","family"}, "chinese": False},
     "suzuki:solio":            {"lo": 2_000_000, "hi": 4_500_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm","family"}, "chinese": False},
-    "suzuki:jimny":            {"lo": 2_500_000, "hi": 8_500_000, "styles": {"Crossover"}, "drive": "4x4", "transmission": "both",   "tags": {"offroad","awd","jdm"},     "chinese": False},
+    "suzuki:jimny":            {"lo": 2_500_000, "hi": 8_500_000, "styles": {"Crossover", "Mini SUV"}, "drive": "4x4", "transmission": "both",   "tags": {"offroad","awd","jdm"},     "chinese": False},
     "suzuki:every":            {"lo": 1_000_000, "hi": 3_000_000, "styles": {"Van"}, "drive": "FWD", "transmission": "both",   "tags": {"cargo","economy","jdm"},   "chinese": False},
     "suzuki:bolan":            {"lo": 500_000, "hi": 2_000_000, "styles": {"Van"}, "drive": "RWD", "transmission": "manual", "tags": {"cargo","economy"},         "chinese": False},
     "suzuki:apv":              {"lo": 1_500_000, "hi": 3_500_000, "styles": {"Van"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","7seat"},          "chinese": False},
@@ -138,9 +138,9 @@ CAR_REGISTRY: dict[str, dict] = {
     "toyota:camry":            {"lo": 7_000_000, "hi": 18_000_000, "styles": {"Sedan"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status","family"}, "chinese": False},
     "toyota:sienta":           {"lo": 3_000_000, "hi": 6_500_000, "styles": {"Van"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","7seat","jdm"},    "chinese": False},
     "toyota:c-hr":             {"lo": 4_500_000, "hi": 10_000_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"city","jdm","sports"},     "chinese": False},
-    "toyota:raize":            {"lo": 5_000_000, "hi": 7_500_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"city","family","jdm"},     "chinese": False},
-    "toyota:yaris cross":      {"lo": 6_000_000, "hi": 9_500_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"city","hybrid","jdm"},     "chinese": False},
-    "toyota:rush":             {"lo": 5_500_000, "hi": 9_000_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","7seat"},          "chinese": False},
+    "toyota:raize":            {"lo": 5_000_000, "hi": 7_500_000, "styles": {"Crossover", "Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"city","family","jdm"},     "chinese": False},
+    "toyota:yaris cross":      {"lo": 6_000_000, "hi": 9_500_000, "styles": {"Crossover", "Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"city","hybrid","jdm"},     "chinese": False},
+    "toyota:rush":             {"lo": 5_500_000, "hi": 9_000_000, "styles": {"SUV", "Hatchback", "MPV"}, "drive": "FWD", "transmission": "auto",   "tags": {"family","7seat"},          "chinese": False},
     "toyota:fortuner":         {"lo": 9_000_000, "hi": 21_000_000, "styles": {"SUV"}, "drive": "4x4", "transmission": "auto",   "tags": {"family","offroad","status","7seat"}, "chinese": False},
     "toyota:hilux":            {"lo": 8_000_000, "hi": 16_000_000, "styles": {"Pickup"}, "drive": "4x4", "transmission": "both",   "tags": {"offroad","cargo","awd"},   "chinese": False},
     "toyota:alphard":          {"lo": 6_000_000, "hi": 35_000_000, "styles": {"Van"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status","family","7seat","jdm"}, "chinese": False},
@@ -175,12 +175,14 @@ CAR_REGISTRY: dict[str, dict] = {
     "hyundai:porter":          {"lo": 2_500_000, "hi": 4_000_000, "styles": {"Van"}, "drive": "FWD", "transmission": "both",   "tags": {"cargo"},                   "chinese": False},
     "hyundai:palisade":        {"lo": 18_000_000, "hi": 35_000_000, "styles": {"SUV"}, "drive": "AWD", "transmission": "auto",   "tags": {"luxury","family","7seat","awd"}, "chinese": False},
 
+    "hyundai:santa fe": {"lo": 12_000_000, "hi": 20_000_000, "styles": {"SUV", "Crossover"}, "drive": "AWD", "transmission": "auto", "tags": {"family", "luxury", "7seat"}, "chinese": False},
+
     # ── Kia ──────────────────────────────────────────────────────────────────
     "kia:picanto":             {"lo": 2_500_000, "hi": 3_800_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city"},          "chinese": False},
     "kia:stonic":              {"lo": 4_500_000, "hi": 6_000_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"city","family"},           "chinese": False},
     "kia:sportage":            {"lo": 5_500_000, "hi": 10_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"family","city","awd"},     "chinese": False},
     "kia:sorento":             {"lo": 7_500_000, "hi": 11_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"family","7seat","awd"},    "chinese": False},
-    "kia:carnival":            {"lo": 9_000_000, "hi": 18_000_000, "styles": {"Van"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","family","7seat"}, "chinese": False},
+    "kia:carnival":            {"lo": 9_000_000, "hi": 18_000_000, "styles": {"Van", "MPV"}, "drive": "FWD", "transmission": "auto",   "tags": {"luxury","family","7seat"}, "chinese": False},
 
     # ── Daihatsu ─────────────────────────────────────────────────────────────
     "daihatsu:cuore":          {"lo": 600_000, "hi": 1_600_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "both",   "tags": {"economy","city"},          "chinese": False},
@@ -189,8 +191,8 @@ CAR_REGISTRY: dict[str, dict] = {
     "daihatsu:tanto":          {"lo": 1_500_000, "hi": 4_000_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm","family"}, "chinese": False},
     "daihatsu:cast":           {"lo": 2_000_000, "hi": 3_500_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
     "daihatsu:hijet":          {"lo": 1_000_000, "hi": 2_500_000, "styles": {"Van"}, "drive": "FWD", "transmission": "both",   "tags": {"cargo","economy"},         "chinese": False},
-    "daihatsu:rocky":          {"lo": 5_000_000, "hi": 7_500_000, "styles": {"Crossover"}, "drive": "FWD", "transmission": "auto",   "tags": {"city","jdm"},              "chinese": False},
-    "daihatsu:terios":         {"lo": 2_500_000, "hi": 6_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "both",   "tags": {"offroad","family"},        "chinese": False},
+    "daihatsu:rocky":          {"lo": 5_000_000, "hi": 7_500_000, "styles": {"Crossover", "Mini SUV", "Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"city","jdm"},              "chinese": False},
+    "daihatsu:terios":         {"lo": 2_500_000, "hi": 6_000_000, "styles": {"Crossover", "Mini SUV"}, "drive": "AWD", "transmission": "both",   "tags": {"offroad","family"},        "chinese": False},
 
     # ── Nissan ───────────────────────────────────────────────────────────────
     "nissan:dayz":             {"lo": 1_500_000, "hi": 3_500_000, "styles": {"Hatchback"}, "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
@@ -205,6 +207,8 @@ CAR_REGISTRY: dict[str, dict] = {
     "mitsubishi:asx":          {"lo": 3_500_000, "hi": 8_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"city","awd","jdm"},        "chinese": False},
     "mitsubishi:outlander":    {"lo": 5_000_000, "hi": 14_000_000, "styles": {"Crossover"}, "drive": "AWD", "transmission": "auto",   "tags": {"family","awd"},            "chinese": False},
     "mitsubishi:pajero":       {"lo": 1_800_000, "hi": 16_000_000, "styles": {"SUV"}, "drive": "4x4", "transmission": "auto",   "tags": {"offroad","awd","status"},  "chinese": False},
+
+    "mitsubishi:mini pajero": {"lo": 800_000, "hi": 2_500_000, "styles": {"Mini SUV", "SUV"}, "drive": "4x4", "transmission": "both", "tags": {"offroad", "city", "economy"}, "chinese": False},
     "mitsubishi:pajero sport": {"lo": 8_000_000, "hi": 18_000_000, "styles": {"SUV"}, "drive": "4x4", "transmission": "auto",   "tags": {"offroad","awd","status"},  "chinese": False},
 
     # ── Subaru ───────────────────────────────────────────────────────────────
@@ -673,7 +677,7 @@ def _validate_targets(targets: list, constraints: dict) -> list:
 
 class UserIntent(BaseModel):
     max_budget:        Optional[int]                                                                 = None
-    body_style:        Optional[Literal["SUV", "Sedan", "Hatchback", "Pickup", "Crossover", "Van"]] = None
+    body_style:        Optional[Literal["SUV", "Mini SUV", "Sedan", "Hatchback", "Pickup", "Crossover", "Van", "MPV"]] = None
     transmission:      Optional[Literal["Automatic", "Manual"]]                                     = None
     drive:             Optional[Literal["4x4", "AWD", "FWD", "RWD"]]                                = None
     use_case:          Optional[str]                                                                 = None
@@ -696,9 +700,9 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "- is_luxury_request: true ONLY for explicit words: 'luxury', 'premium', 'aura',\n"
         "  'VIP', 'boss car', 'status symbol', 'high-end', 'shaan'.\n"
         "- required_features: only features EXPLICITLY mentioned. Never infer.\n"
-        "- body_style: 'car' or 'sedan' -> Sedan. 'SUV' or '4x4' -> SUV.\n"
+        "- body_style: 'car' or 'sedan' -> Sedan. 'SUV' or '4x4' -> SUV. 'mini suv' or 'compact 4x4' -> Mini SUV.\n"
         "  'small car' or 'hatchback' -> Hatchback. 'pickup' or 'truck' -> Pickup.\n"
-        "  'crossover' or 'compact SUV' -> Crossover.\n"
+        "  'crossover' -> Crossover. 'van' -> Van. 'mpv' or '11 seater' -> MPV.\n"
         "- origin_pref: 'Japanese' or 'JDM' -> JDM. 'European' -> European. "
         "'Chinese' -> Chinese. 'local' -> Local.\n"
         "- Leave null if not clearly stated — do not guess."
