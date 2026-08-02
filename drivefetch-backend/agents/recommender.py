@@ -690,101 +690,308 @@ def _get_relevant_principles(use_case: str | None, is_luxury: bool) -> str:
 # ---------------------------------------------------------------------------
 # MODEL-FEATURE KNOWLEDGE MAP
 #
-# Answers: "Does this model have feature X in any trim?"
-# Used by get_eligible_cars() to HARD-EXCLUDE models that can NEVER satisfy
-# a required feature — before the LLM ever sees them.
+# Answers: "Which models CAN NEVER have feature X in ANY trim?"
+# Used by get_eligible_cars() to hard-exclude impossible cars before the LLM sees the list.
 #
-# Format: "make:model" → { "feature_key": trim_list_or_None }
-#   trim_list = list of trims that have the feature (can be ["any"] if all do)
-#   None      = this model NEVER has this feature in any trim
+# Philosophy: only put a car here if you are 100% certain it NEVER has the feature.
+# Unknown = pass through (LLM decides). Wrong exclusions hurt results more than
+# missing inclusions.
 #
-# Feature keys should match _FEATURE_KEYWORDS keys in recommend_normalizer.py.
+# Feature keys must match keys in _FEATURE_KEYWORDS in recommend_normalizer.py.
 # ---------------------------------------------------------------------------
 
-MODEL_FEATURE_KNOWLEDGE: dict[str, dict[str, list[str] | None]] = {
-    # ── Sunroof availability by model ────────────────────────────────────────
-    # None = no trim of this model has factory sunroof
-    # ["any"] = all/most trims have it
-    # ["Trim1","Trim2"] = only these trims have it
-    "toyota:corolla":          {"sunroof": ["Grande", "Altis Grande", "X Corolla"]},
-    "toyota:yaris":            {"sunroof": None},        # Yaris has no sunroof in any trim
-    "toyota:aqua":             {"sunroof": None},
-    "toyota:vitz":             {"sunroof": None},
-    "toyota:passo":            {"sunroof": None},
-    "toyota:probox":           {"sunroof": None},        # cargo van — never
-    "toyota:rush":             {"sunroof": None},        # Rush has no factory sunroof
-    "toyota:fortuner":         {"sunroof": ["VRZ", "Sigma3", "Legender"]},
-    "toyota:hilux":            {"sunroof": None},
-    "toyota:prado":            {"sunroof": ["any"]},
-    "toyota:land cruiser":     {"sunroof": ["any"]},
-    "toyota:camry":            {"sunroof": ["any"]},
-    "toyota:crown":            {"sunroof": ["any"]},
-    "toyota:mark x":           {"sunroof": ["250G", "300G", "350G", "any"]},
-    "toyota:allion":           {"sunroof": ["A20", "A25", "250G"]},
-    "toyota:premio":           {"sunroof": ["F L Package", "G L Package", "250G"]},
-    "toyota:c-hr":             {"sunroof": ["any"]},
-    "toyota:raize":            {"sunroof": ["Z", "G"]},
-    "toyota:yaris cross":      {"sunroof": ["any"]},
-    "toyota:alphard":          {"sunroof": ["any"]},
-    "toyota:vellfire":         {"sunroof": ["any"]},
-    "honda:city":              {"sunroof": ["Aspire", "1.5 Aspire", "RS"]},
-    "honda:civic":             {"sunroof": ["RS", "Oriel 1.5T", "VTi Oriel Prosmatec 1.8"]},
-    "honda:br-v":              {"sunroof": None},
-    "honda:hr-v":              {"sunroof": ["any"]},
-    "honda:vezel":             {"sunroof": ["RS", "Z", "e:HEV Z"]},
-    "honda:accord":            {"sunroof": ["any"]},
-    "honda:cr-v":              {"sunroof": ["any"]},
-    "honda:fit":               {"sunroof": None},
-    "honda:freed":             {"sunroof": None},
-    "honda:grace":             {"sunroof": ["Hybrid EX"]},
-    "honda:n-box":             {"sunroof": None},        # kei car — no sunroof
-    "honda:n-wgn":             {"sunroof": None},
-    "suzuki:baleno":           {"sunroof": None},        # local Baleno never had sunroof
-    "suzuki:liana":            {"sunroof": None},
-    "suzuki:swift":            {"sunroof": None},        # local swift no sunroof
-    "suzuki:cultus":           {"sunroof": None},
-    "suzuki:wagon r":          {"sunroof": None},
-    "suzuki:alto":             {"sunroof": None},
-    "suzuki:alto 660cc":       {"sunroof": None},        # JDM kei — no sunroof
-    "suzuki:jimny":            {"sunroof": None},
-    "kia:sportage":            {"sunroof": ["Alpha AWD", "FWD Alpha", "FWD"]},
-    "kia:stonic":              {"sunroof": None},
-    "kia:sorento":             {"sunroof": ["any"]},
-    "hyundai:tucson":          {"sunroof": ["any"]},
-    "hyundai:elantra":         {"sunroof": ["GLS", "GL"]},
-    "mitsubishi:pajero sport": {"sunroof": ["GLS", "Exceed"]},
-    "mitsubishi:pajero":       {"sunroof": ["GLS", "3.5 V6"]},
-    "nissan:patrol":           {"sunroof": ["any"]},
-    "nissan:x-trail":          {"sunroof": ["any"]},
-    "subaru:forester":         {"sunroof": ["any"]},
-    "subaru:xv":               {"sunroof": ["any"]},
-    "mazda:cx-5":              {"sunroof": ["any"]},
-    "bmw:3 series":            {"sunroof": ["any"]},
-    "bmw:5 series":            {"sunroof": ["any"]},
-    "bmw:x3":                  {"sunroof": ["any"]},
-    "bmw:x5":                  {"sunroof": ["any"]},
-    "mercedes-benz:c-class":   {"sunroof": ["any"]},
-    "mercedes-benz:e-class":   {"sunroof": ["any"]},
-    "mercedes-benz:glc":       {"sunroof": ["any"]},
-    "mercedes-benz:gle":       {"sunroof": ["any"]},
-    "audi:a4":                 {"sunroof": ["any"]},
-    "audi:q5":                 {"sunroof": ["any"]},
-    "lexus:rx":                {"sunroof": ["any"]},
-    "lexus:es":                {"sunroof": ["any"]},
-    "land rover:range rover":  {"sunroof": ["any"]},
-    "land rover:defender":     {"sunroof": ["any"]},
-    "porsche:cayenne":         {"sunroof": ["any"]},
-    "daihatsu:mira":           {"sunroof": None},
-    "daihatsu:move":           {"sunroof": None},
-    "daihatsu:tanto":          {"sunroof": None},
-    "daihatsu:rocky":          {"sunroof": ["G", "Premium"]},
-    "nissan:dayz":             {"sunroof": None},
-    "nissan:roox":             {"sunroof": None},
-    "mg:hs":                   {"sunroof": ["any"]},
-    "mg:zs":                   {"sunroof": None},
-    "haval:jolion":            {"sunroof": ["any"]},
-    "haval:h6":                {"sunroof": ["any"]},
-    "changan:alsvin":          {"sunroof": None},
+_FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
+
+    # ── Sunroof / Panoramic ──────────────────────────────────────────────────
+    "sunroof": {
+        "suzuki:mehran", "suzuki:alto", "suzuki:alto 660cc", "suzuki:cultus",
+        "suzuki:wagon r", "suzuki:swift", "suzuki:liana", "suzuki:baleno",
+        "suzuki:every", "suzuki:bolan", "suzuki:apv", "suzuki:hustler", "suzuki:spacia",
+        "toyota:vitz", "toyota:passo", "toyota:probox", "toyota:hiace",
+        "toyota:yaris", "toyota:aqua", "toyota:rush", "toyota:hilux",
+        "honda:n-box", "honda:n-wgn", "honda:fit", "honda:freed", "honda:br-v",
+        "hyundai:santro",
+        "daihatsu:cuore", "daihatsu:mira", "daihatsu:move", "daihatsu:tanto",
+        "daihatsu:cast", "daihatsu:hijet",
+        "nissan:dayz", "nissan:roox",
+        "kia:picanto", "kia:stonic",
+        "mitsubishi:mirage",
+        "changan:alsvin", "changan:karvaan",
+        "proton:saga",
+        "mazda:demio",
+    },
+    "panoramic sunroof": {
+        "suzuki:mehran", "suzuki:alto", "suzuki:alto 660cc", "suzuki:cultus",
+        "suzuki:wagon r", "suzuki:swift", "suzuki:liana", "suzuki:baleno",
+        "suzuki:every", "suzuki:bolan", "suzuki:apv", "suzuki:hustler", "suzuki:spacia",
+        "toyota:vitz", "toyota:passo", "toyota:probox", "toyota:hiace",
+        "toyota:yaris", "toyota:aqua", "toyota:rush", "toyota:hilux",
+        "toyota:corolla",   # Grande has regular sunroof, NOT panoramic
+        "toyota:allion", "toyota:premio", "toyota:mark x",
+        "honda:n-box", "honda:n-wgn", "honda:fit", "honda:freed", "honda:br-v",
+        "honda:city", "honda:civic",    # regular sunroof only in PK spec
+        "hyundai:santro", "hyundai:elantra",
+        "kia:sportage",                 # regular sunroof only in PK spec
+        "kia:picanto", "kia:stonic",
+        "daihatsu:cuore", "daihatsu:mira", "daihatsu:move", "daihatsu:tanto",
+        "daihatsu:cast", "daihatsu:hijet",
+        "nissan:dayz", "nissan:roox",
+        "changan:alsvin", "changan:karvaan",
+        "proton:saga", "mazda:demio", "mitsubishi:mirage", "suzuki:jimny",
+    },
+
+    # ── Push Start / Keyless Entry ───────────────────────────────────────────
+    "push start": {
+        "suzuki:mehran", "suzuki:bolan",
+        "daihatsu:cuore", "daihatsu:hijet",
+        "hyundai:santro", "toyota:probox", "changan:karvaan",
+    },
+    "keyless entry": {
+        "suzuki:mehran", "suzuki:bolan",
+        "daihatsu:cuore", "daihatsu:hijet",
+        "hyundai:santro", "toyota:probox", "changan:karvaan",
+    },
+
+    # ── ADAS Features ────────────────────────────────────────────────────────
+    "lane assist": {
+        "suzuki:mehran", "suzuki:alto", "suzuki:alto 660cc", "suzuki:cultus",
+        "suzuki:liana", "suzuki:baleno", "suzuki:swift", "suzuki:wagon r",
+        "suzuki:every", "suzuki:bolan", "suzuki:apv", "suzuki:hustler", "suzuki:spacia",
+        "toyota:vitz", "toyota:passo", "toyota:probox", "toyota:hiace",
+        "toyota:corolla", "toyota:yaris", "toyota:hilux",
+        "honda:n-box", "honda:n-wgn", "honda:fit", "honda:freed",
+        "honda:city", "honda:civic", "honda:br-v",
+        "hyundai:santro", "hyundai:i10",
+        "kia:picanto",
+        "daihatsu:cuore", "daihatsu:mira", "daihatsu:move", "daihatsu:tanto",
+        "daihatsu:cast", "daihatsu:hijet",
+        "nissan:dayz", "nissan:roox",
+        "mitsubishi:mirage",
+        "changan:alsvin", "changan:karvaan",
+        "proton:saga", "mazda:demio", "subaru:impreza",
+    },
+    "adaptive cruise control": {
+        "suzuki:mehran", "suzuki:alto", "suzuki:alto 660cc", "suzuki:cultus",
+        "suzuki:liana", "suzuki:baleno", "suzuki:swift", "suzuki:wagon r",
+        "suzuki:every", "suzuki:bolan", "suzuki:apv", "suzuki:hustler", "suzuki:spacia",
+        "toyota:vitz", "toyota:passo", "toyota:probox", "toyota:hiace",
+        "toyota:corolla", "toyota:yaris", "toyota:hilux",
+        "toyota:allion", "toyota:premio", "toyota:mark x",
+        "honda:n-box", "honda:n-wgn", "honda:fit", "honda:freed",
+        "honda:city", "honda:civic", "honda:br-v", "honda:grace",
+        "hyundai:santro", "hyundai:elantra",
+        "kia:picanto", "kia:stonic",
+        "daihatsu:cuore", "daihatsu:mira", "daihatsu:move", "daihatsu:tanto",
+        "daihatsu:cast", "daihatsu:hijet",
+        "nissan:dayz", "nissan:roox",
+        "mitsubishi:mirage", "mitsubishi:asx",
+        "changan:alsvin", "changan:karvaan",
+        "proton:saga", "mazda:demio", "mazda:mazda3", "subaru:impreza", "mg:zs",
+    },
+    "auto parking": {
+        # Only very recent luxury imports — BMW 5/7 series 2019+,
+        # Mercedes E/S class 2019+, Audi A6/A8, Porsche Cayenne 2020+
+        "suzuki:mehran", "suzuki:alto", "suzuki:alto 660cc", "suzuki:cultus",
+        "suzuki:liana", "suzuki:baleno", "suzuki:swift", "suzuki:wagon r",
+        "suzuki:every", "suzuki:bolan", "suzuki:apv", "suzuki:hustler", "suzuki:spacia",
+        "suzuki:jimny",
+        "toyota:vitz", "toyota:passo", "toyota:probox", "toyota:hiace",
+        "toyota:corolla", "toyota:yaris", "toyota:hilux", "toyota:allion",
+        "toyota:premio", "toyota:mark x", "toyota:aqua", "toyota:rush",
+        "toyota:fortuner", "toyota:c-hr", "toyota:raize", "toyota:camry",
+        "toyota:prado",
+        "honda:n-box", "honda:n-wgn", "honda:fit", "honda:freed",
+        "honda:city", "honda:civic", "honda:br-v", "honda:grace",
+        "honda:vezel", "honda:hr-v", "honda:accord", "honda:cr-v",
+        "hyundai:santro", "hyundai:elantra", "hyundai:sonata", "hyundai:tucson",
+        "kia:picanto", "kia:stonic", "kia:sportage", "kia:sorento",
+        "daihatsu:cuore", "daihatsu:mira", "daihatsu:move", "daihatsu:tanto",
+        "daihatsu:cast", "daihatsu:hijet", "daihatsu:rocky", "daihatsu:terios",
+        "nissan:dayz", "nissan:roox", "nissan:juke", "nissan:x-trail", "nissan:patrol",
+        "mitsubishi:mirage", "mitsubishi:asx", "mitsubishi:outlander",
+        "mitsubishi:pajero", "mitsubishi:pajero sport",
+        "changan:alsvin", "changan:karvaan", "changan:uni-t", "changan:oshan x7",
+        "proton:saga", "proton:x70",
+        "mazda:demio", "mazda:mazda3", "mazda:rx-8", "mazda:cx-3", "mazda:cx-5",
+        "subaru:impreza", "subaru:xv", "subaru:forester", "subaru:brz",
+        "mg:zs", "mg:zs ev", "mg:hs", "mg:rx5",
+        "haval:jolion", "haval:h6", "chery:tiggo 4 pro", "chery:tiggo 8 pro",
+        "land rover:evoque",
+        "bmw:3 series", "bmw:x1", "bmw:x3",
+        "mercedes-benz:cla", "mercedes-benz:c-class", "mercedes-benz:glc",
+        "audi:a3", "audi:a4", "audi:q3", "audi:q5",
+        "lexus:is", "lexus:nx", "lexus:rx",
+    },
+
+    # ── Parking Sensors ──────────────────────────────────────────────────────
+    "parking sensors": {
+        "suzuki:mehran", "suzuki:bolan",
+        "daihatsu:cuore", "daihatsu:hijet",
+        "hyundai:santro", "toyota:probox", "changan:karvaan",
+    },
+
+    # ── Back Camera ─────────────────────────────────────────────────────────
+    "back camera": {
+        "suzuki:mehran", "suzuki:bolan",
+        "daihatsu:cuore", "daihatsu:hijet",
+        "hyundai:santro", "toyota:probox", "changan:karvaan",
+    },
+
+    # ── Heated Seats ────────────────────────────────────────────────────────
+    "heated seats": {
+        "suzuki:mehran", "suzuki:alto", "suzuki:alto 660cc", "suzuki:cultus",
+        "suzuki:liana", "suzuki:baleno", "suzuki:swift", "suzuki:wagon r",
+        "suzuki:every", "suzuki:bolan", "suzuki:apv", "suzuki:jimny",
+        "toyota:vitz", "toyota:passo", "toyota:probox", "toyota:hiace",
+        "toyota:corolla", "toyota:yaris", "toyota:allion", "toyota:premio",
+        "toyota:mark x", "toyota:aqua", "toyota:rush", "toyota:hilux",
+        "toyota:c-hr", "toyota:raize",
+        "honda:n-box", "honda:n-wgn", "honda:fit", "honda:freed",
+        "honda:city", "honda:civic", "honda:br-v", "honda:grace",
+        "honda:vezel", "honda:hr-v",
+        "hyundai:santro", "hyundai:elantra",
+        "kia:picanto", "kia:stonic", "kia:sportage",
+        "daihatsu:cuore", "daihatsu:mira", "daihatsu:move", "daihatsu:tanto",
+        "daihatsu:cast", "daihatsu:hijet", "daihatsu:rocky",
+        "nissan:dayz", "nissan:roox", "nissan:juke",
+        "mitsubishi:mirage", "mitsubishi:asx",
+        "changan:alsvin", "changan:karvaan",
+        "proton:saga", "mazda:demio", "mazda:cx-3",
+        "subaru:impreza", "subaru:xv",
+        "mg:zs", "mg:hs", "haval:jolion", "chery:tiggo 4 pro",
+    },
+
+    # ── Leather Seats ───────────────────────────────────────────────────────
+    "leather seats": {
+        "suzuki:mehran", "suzuki:bolan",
+        "daihatsu:cuore", "daihatsu:hijet",
+        "hyundai:santro", "toyota:probox", "changan:karvaan",
+        "suzuki:alto", "suzuki:wagon r",
+    },
+
+    # ── 4WD / AWD ───────────────────────────────────────────────────────────
+    "4wd": {
+        "suzuki:mehran", "suzuki:alto", "suzuki:alto 660cc", "suzuki:cultus",
+        "suzuki:liana", "suzuki:baleno", "suzuki:swift", "suzuki:wagon r",
+        "suzuki:every", "suzuki:bolan", "suzuki:apv",
+        "toyota:vitz", "toyota:passo", "toyota:probox", "toyota:hiace",
+        "toyota:corolla", "toyota:yaris", "toyota:allion", "toyota:premio",
+        "toyota:mark x", "toyota:aqua", "toyota:camry",
+        "honda:n-box", "honda:n-wgn", "honda:fit", "honda:freed",
+        "honda:city", "honda:civic", "honda:br-v", "honda:grace", "honda:accord",
+        "hyundai:santro", "hyundai:elantra", "hyundai:sonata",
+        "kia:picanto",
+        "daihatsu:cuore", "daihatsu:mira", "daihatsu:move", "daihatsu:tanto",
+        "daihatsu:cast", "daihatsu:hijet",
+        "nissan:dayz", "nissan:roox",
+        "mitsubishi:mirage",
+        "changan:alsvin", "changan:karvaan",
+        "proton:saga", "mazda:demio", "mazda:mazda3", "mazda:rx-8",
+        "subaru:brz",   # BRZ is RWD
+        "mg:zs",        # FWD only in PK
+        "mercedes-benz:cla", "audi:a3",
+    },
+
+    # ── Hybrid ───────────────────────────────────────────────────────────────
+    "hybrid": {
+        "suzuki:mehran", "suzuki:cultus", "suzuki:liana", "suzuki:baleno",
+        "suzuki:swift", "suzuki:wagon r", "suzuki:every", "suzuki:bolan",
+        "suzuki:apv", "suzuki:jimny",
+        "toyota:probox", "toyota:hiace", "toyota:hilux",
+        "toyota:corolla", "toyota:yaris", "toyota:allion", "toyota:premio",
+        "toyota:mark x", "toyota:rush", "toyota:fortuner",
+        "honda:n-box", "honda:n-wgn", "honda:br-v",
+        "honda:city", "honda:civic",
+        "hyundai:santro", "kia:picanto",
+        "daihatsu:cuore", "daihatsu:hijet",
+        "mitsubishi:mirage", "mitsubishi:pajero",
+        "changan:alsvin", "changan:karvaan",
+        "proton:saga", "mazda:rx-8", "subaru:brz",
+        "mg:zs",    # mg:zs is petrol; mg:zs ev is separate
+    },
+
+    # ── Blind Spot Monitor ──────────────────────────────────────────────────
+    "blind spot monitor": {
+        "suzuki:mehran", "suzuki:alto", "suzuki:alto 660cc", "suzuki:cultus",
+        "suzuki:liana", "suzuki:baleno", "suzuki:swift", "suzuki:wagon r",
+        "suzuki:every", "suzuki:bolan", "suzuki:apv",
+        "toyota:vitz", "toyota:passo", "toyota:probox", "toyota:hiace",
+        "toyota:corolla", "toyota:yaris", "toyota:hilux", "toyota:allion",
+        "toyota:premio", "toyota:mark x", "toyota:aqua", "toyota:rush",
+        "honda:n-box", "honda:n-wgn", "honda:fit", "honda:freed",
+        "honda:city", "honda:civic", "honda:br-v", "honda:grace",
+        "hyundai:santro", "hyundai:elantra",
+        "kia:picanto", "kia:stonic",
+        "daihatsu:cuore", "daihatsu:mira", "daihatsu:move", "daihatsu:tanto",
+        "daihatsu:cast", "daihatsu:hijet",
+        "nissan:dayz", "nissan:roox",
+        "mitsubishi:mirage",
+        "changan:alsvin", "changan:karvaan",
+        "proton:saga", "mazda:demio", "subaru:impreza",
+    },
+}
+
+# ---------------------------------------------------------------------------
+# SUNROOF TRIM KNOWLEDGE
+# Retained from MODEL_FEATURE_KNOWLEDGE — trim-level hint for sunroof queries.
+# Injected as inline notes in the eligible list so the LLM knows which trim
+# to specify. Only sunroof has trim-level data; all other features use the
+# impossible-gate approach above which is sufficient.
+# ---------------------------------------------------------------------------
+
+_SUNROOF_TRIM_KNOWLEDGE: dict[str, list[str]] = {
+    # ["any"] = all trims, [] / missing = unknown
+    "toyota:corolla":          ["Grande", "Altis Grande", "X Corolla"],
+    "toyota:fortuner":         ["VRZ", "Sigma3", "Legender"],
+    "toyota:prado":            ["any"],
+    "toyota:land cruiser":     ["any"],
+    "toyota:camry":            ["any"],
+    "toyota:crown":            ["any"],
+    "toyota:mark x":           ["250G", "300G", "350G"],
+    "toyota:allion":           ["A20", "A25", "250G"],
+    "toyota:premio":           ["F L Package", "G L Package", "250G"],
+    "toyota:c-hr":             ["any"],
+    "toyota:raize":            ["Z", "G"],
+    "toyota:yaris cross":      ["any"],
+    "toyota:alphard":          ["any"],
+    "toyota:vellfire":         ["any"],
+    "honda:city":              ["Aspire", "1.5 Aspire", "RS"],
+    "honda:civic":             ["RS", "Oriel 1.5T"],
+    "honda:hr-v":              ["any"],
+    "honda:vezel":             ["RS", "Z", "e:HEV Z"],
+    "honda:accord":            ["any"],
+    "honda:cr-v":              ["any"],
+    "honda:grace":             ["Hybrid EX"],
+    "kia:sportage":            ["Alpha AWD", "FWD Alpha"],
+    "kia:sorento":             ["any"],
+    "hyundai:tucson":          ["any"],
+    "hyundai:elantra":         ["GLS", "GL"],
+    "mitsubishi:pajero sport": ["GLS", "Exceed"],
+    "mitsubishi:pajero":       ["GLS", "3.5 V6"],
+    "nissan:patrol":           ["any"],
+    "nissan:x-trail":          ["any"],
+    "subaru:forester":         ["any"],
+    "subaru:xv":               ["any"],
+    "mazda:cx-5":              ["any"],
+    "bmw:3 series":            ["any"],
+    "bmw:5 series":            ["any"],
+    "bmw:x3":                  ["any"],
+    "bmw:x5":                  ["any"],
+    "mercedes-benz:c-class":   ["any"],
+    "mercedes-benz:e-class":   ["any"],
+    "mercedes-benz:glc":       ["any"],
+    "mercedes-benz:gle":       ["any"],
+    "audi:a4":                 ["any"],
+    "audi:q5":                 ["any"],
+    "lexus:rx":                ["any"],
+    "lexus:es":                ["any"],
+    "land rover:range rover":  ["any"],
+    "land rover:defender":     ["any"],
+    "porsche:cayenne":         ["any"],
+    "daihatsu:rocky":          ["G", "Premium"],
+    "mg:hs":                   ["any"],
+    "haval:jolion":            ["any"],
+    "haval:h6":                ["any"],
 }
 
 # ---------------------------------------------------------------------------
@@ -842,14 +1049,73 @@ def get_eligible_cars(
     """
     excluded_lower = {m.lower() for m in (excluded_models or [])}
 
-    # Build set of features that require sunroof capability
-    needs_sunroof = False
+    # Normalise required_features strings → canonical _FEATURE_IMPOSSIBLE keys
+    _FEAT_NORMALISE: dict[str, str] = {
+        "sunroof":                 "sunroof",
+        "moonroof":                "sunroof",
+        "panoramic":               "panoramic sunroof",
+        "panoramic sunroof":       "panoramic sunroof",
+        "push start":              "push start",
+        "push-start":              "push start",
+        "button start":            "push start",
+        "keyless":                 "keyless entry",
+        "keyless entry":           "keyless entry",
+        "keyless start":           "push start",
+        "smart key":               "push start",
+        "lane assist":             "lane assist",
+        "lane departure":          "lane assist",
+        "lane keep":               "lane assist",
+        "lkas":                    "lane assist",
+        "adaptive cruise":         "adaptive cruise control",
+        "adaptive cruise control": "adaptive cruise control",
+        "acc":                     "adaptive cruise control",
+        "auto parking":            "auto parking",
+        "self parking":            "auto parking",
+        "automatic parking":       "auto parking",
+        "parking sensors":         "parking sensors",
+        "parking sensor":          "parking sensors",
+        "pdc":                     "parking sensors",
+        "back camera":             "back camera",
+        "rear camera":             "back camera",
+        "reverse camera":          "back camera",
+        "parking camera":          "back camera",
+        "backup camera":           "back camera",
+        "heated seats":            "heated seats",
+        "seat warmer":             "heated seats",
+        "ventilated seats":        "heated seats",
+        "leather seats":           "leather seats",
+        "leather":                 "leather seats",
+        "4wd":                     "4wd",
+        "4x4":                     "4wd",
+        "awd":                     "4wd",
+        "four wheel drive":        "4wd",
+        "all wheel drive":         "4wd",
+        "hybrid":                  "hybrid",
+        "hev":                     "hybrid",
+        "phev":                    "hybrid",
+        "blind spot":              "blind spot monitor",
+        "bsm":                     "blind spot monitor",
+        "blind spot monitor":      "blind spot monitor",
+    }
+
+    active_feature_gates: set[str] = set()
     if required_features:
-        sunroof_keywords = {"sunroof", "panoramic sunroof", "moonroof", "panoramic"}
-        needs_sunroof = any(
-            any(kw in feat.lower() for kw in sunroof_keywords)
-            for feat in required_features
-        )
+        for feat in required_features:
+            feat_lower = feat.lower().strip()
+            normalised = _FEAT_NORMALISE.get(feat_lower)
+            if normalised:
+                active_feature_gates.add(normalised)
+            else:
+                # Substring scan for partial matches (e.g. "adaptive cruise control")
+                for raw, norm in _FEAT_NORMALISE.items():
+                    if raw in feat_lower:
+                        active_feature_gates.add(norm)
+                        break
+
+    # Convenience flag for sunroof-specific trim hint logic
+    needs_sunroof = bool(
+        active_feature_gates & {"sunroof", "panoramic sunroof"}
+    )
 
     # Kei box vans that look awkward for young buyers
     _KEI_BOX_VANS = {"suzuki:wagon r", "suzuki:every", "suzuki:bolan",
@@ -895,12 +1161,17 @@ def get_eligible_cars(
         if is_apex_luxury and max_budget > 0 and hi < max_budget * 0.55:
             continue
 
-        # 7. Feature gate — hard exclude models that CAN NEVER have sunroof
-        if needs_sunroof:
-            feature_info = MODEL_FEATURE_KNOWLEDGE.get(key, {})
-            sunroof_trims = feature_info.get("sunroof", [])  # default [] = unknown = pass
-            if sunroof_trims is None:
-                # None explicitly means this model has no factory sunroof in any trim
+        # 7. Feature impossible gate — hard exclude models that can NEVER have
+        #    any of the requested features. Uses _FEATURE_IMPOSSIBLE dict.
+        #    Models not in the dict for a given feature pass through (unknown = allow).
+        if active_feature_gates:
+            skip = False
+            for feat_key in active_feature_gates:
+                impossible_set = _FEATURE_IMPOSSIBLE.get(feat_key, set())
+                if key in impossible_set:
+                    skip = True
+                    break
+            if skip:
                 continue
 
         # 8. Exclusion gate
@@ -931,18 +1202,18 @@ def get_eligible_cars(
 
         final_score = fit_score + priority_boost + youth_penalty
 
-        # Display string with JDM annotation
+        # Display string with JDM / feature trim annotations
         display = f"{make.title()} {model.title()}"
         note    = ""
         if key == "suzuki:alto 660cc":
             note = " [JDM — always use trim='660cc' to avoid local Alto flood]"
         elif needs_sunroof:
-            feature_info  = MODEL_FEATURE_KNOWLEDGE.get(key, {})
-            sunroof_trims = feature_info.get("sunroof", [])
+            sunroof_trims = _SUNROOF_TRIM_KNOWLEDGE.get(key, [])
             if sunroof_trims and sunroof_trims != ["any"]:
                 note = f" [sunroof only in: {', '.join(sunroof_trims)}]"
             elif sunroof_trims == ["any"]:
                 note = " [sunroof: all trims]"
+            # No note if not in _SUNROOF_TRIM_KNOWLEDGE — LLM uses its own knowledge
 
         scored.append((final_score, display, lo, hi, note))
 
@@ -963,18 +1234,38 @@ def get_eligible_cars(
         for _, display, lo, hi, note in top
     ]
 
+    feat_labels  = sorted(active_feature_gates) if active_feature_gates else []
     budget_note  = f"PKR {min_budget:,} – {max_budget:,}" if max_budget > 0 else "no budget limit"
     style_note   = f", body style: {body_style}" if body_style else ""
-    feat_note    = ", requires sunroof" if needs_sunroof else ""
+    feat_note    = f", requires: {', '.join(feat_labels)}" if feat_labels else ""
     total_note   = f"{len(scored)} eligible" + (f" (showing top {len(top)})" if len(scored) > 15 else "")
 
     suffix = ""
-    if needs_sunroof:
+    if active_feature_gates:
+        feat_str = ", ".join(feat_labels)
         suffix = (
-            "\nSUNROOF NOTE: Cars marked '[sunroof only in: X]' must be "
-            "recommended with that specific trim. Cars marked '[sunroof: all trims]' "
-            "are safe to recommend without specifying trim.\n"
+            f"\nFEATURE NOTE: This query requires [{feat_str}]. "
+            "Cars in this list have passed the impossible-feature gate — "
+            "they are physically capable of having these features in some trim. "
         )
+        if needs_sunroof:
+            suffix += (
+                "For sunroof: use the trim hint shown next to each car. "
+                "Cars marked '[sunroof only in: X]' MUST be recommended with that trim. "
+                "Cars marked '[sunroof: all trims]' are safe without trim specification. "
+            )
+        if active_feature_gates & {"lane assist", "adaptive cruise control", "blind spot monitor"}:
+            suffix += (
+                "For ADAS features (lane assist, adaptive cruise, blind spot): "
+                "prefer 2019+ models and specify higher trims "
+                "(e.g. Sigma3, VRZ, Alpha AWD, RS, Z grade). "
+            )
+        if "heated seats" in active_feature_gates:
+            suffix += (
+                "For heated seats: only luxury/premium trims have this — "
+                "specify top trim variant. "
+            )
+        suffix += "The normalizer will verify feature presence in actual listing titles.\n"
 
     return (
         f"ELIGIBLE CARS ({total_note}, budget {budget_note}{style_note}{feat_note}):\n"
