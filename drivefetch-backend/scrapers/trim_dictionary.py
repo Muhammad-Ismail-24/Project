@@ -665,9 +665,9 @@ def resolve_canonical_trim(
     is_budget_search: bool = False
 ) -> str:
     """
-    Sanitizes raw trim, checks against CANONICAL_TRIM_MAP via model,
-    and returns exact platform slug. Falls back to naive hyphenation for unverified cars.
-    Bypasses strict vr_ slugs on PakWheels for multi-gen trims if is_budget_search is True.
+    Resolves canonical trim slug for platforms.
+    ALWAYS bypasses strict vr_ slugs on PakWheels for known multi-generation trims
+    (e.g., Oriel, Aspire, GLi) so normalizer.py can filter them reliably across all years.
     """
     if not raw_trim or not model:
         return ""
@@ -678,11 +678,10 @@ def resolve_canonical_trim(
     if raw_trim_clean in GENERIC_TRIM_TAGS:
         return ""
 
-    # Smart hybrid check for PakWheels budget searches
-    if platform == "pakwheels" and is_budget_search:
-        if raw_trim_clean in MULTI_GEN_TRIMS:
-            return ""
-        
+    # THE FIX: ALWAYS bypass PakWheels URL injection for Multi-Gen Trims
+    if platform == "pakwheels" and raw_trim_clean in MULTI_GEN_TRIMS:
+        return ""
+
     key = f"{model_clean}:{raw_trim_clean}"
     if key in CANONICAL_TRIM_MAP:
         return CANONICAL_TRIM_MAP[key].get(platform, "")
