@@ -164,10 +164,11 @@ async def _scrape_one(
     min_budget = _resolve_min_budget(rec, budget)
     min_year   = _resolve_year(rec.get("min_year", 0))
 
-    # Strip generic powertrain tags from trim — platforms don't index these
+   # Strip generic powertrain and instructional tags from trim
     GENERIC_POWERTRAIN_TAGS = {
         "ev", "electric", "hev", "phev", "hybrid",
         "petrol", "diesel", "cng", "awd", "fwd", "4x4", "4wd",
+        "all trims", "any", "none" # <-- Add these to intercept LLM hallucinated instructions
     }
     trim_raw     = rec.get("trim") or ""
     trim_for_url = trim_raw if trim_raw.lower() not in GENERIC_POWERTRAIN_TAGS else ""
