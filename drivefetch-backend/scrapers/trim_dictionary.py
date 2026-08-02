@@ -14,7 +14,7 @@ GENERIC_TRIM_TAGS: set[str] = {
 # For broad/budget searches on PakWheels, these bypass vr_ slugs
 # so normalizer.py can catch older generations under the budget floor.
 MULTI_GEN_TRIMS: set[str] = {
-    "oriel", "aspire", "gli", "xli", "vti", "exi", "i-dsi", "idsi"
+    "oriel", "aspire", "gli", "xli", "vti", "exi", "i-dsi", "idsi", "altis", "grande"
 }
 
 CANONICAL_TRIM_MAP = {
