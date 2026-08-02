@@ -10,6 +10,13 @@ GENERIC_TRIM_TAGS: set[str] = {
     "sedan", "hatchback", "crossover", "suv", "van", "mpv", "car",
 }
 
+# Multi-generation trims that span 15+ years and multiple price tiers.
+# For broad/budget searches on PakWheels, these bypass vr_ slugs
+# so normalizer.py can catch older generations under the budget floor.
+MULTI_GEN_TRIMS: set[str] = {
+    "oriel", "aspire", "gli", "xli", "vti", "exi", "i-dsi", "idsi"
+}
+
 CANONICAL_TRIM_MAP = {
     # ── Toyota Corolla ──────────────────────────────────────────
     "corolla:grande": {
@@ -651,10 +658,16 @@ CANONICAL_TRIM_MAP = {
     },
 }
 
-def resolve_canonical_trim(model: str, raw_trim: str, platform: str) -> str:
+def resolve_canonical_trim(
+    model: str, 
+    raw_trim: str, 
+    platform: str, 
+    is_budget_search: bool = False
+) -> str:
     """
     Sanitizes raw trim, checks against CANONICAL_TRIM_MAP via model,
     and returns exact platform slug. Falls back to naive hyphenation for unverified cars.
+    Bypasses strict vr_ slugs on PakWheels for multi-gen trims if is_budget_search is True.
     """
     if not raw_trim or not model:
         return ""
@@ -664,6 +677,11 @@ def resolve_canonical_trim(model: str, raw_trim: str, platform: str) -> str:
     
     if raw_trim_clean in GENERIC_TRIM_TAGS:
         return ""
+
+    # Smart hybrid check for PakWheels budget searches
+    if platform == "pakwheels" and is_budget_search:
+        if raw_trim_clean in MULTI_GEN_TRIMS:
+            return ""
         
     key = f"{model_clean}:{raw_trim_clean}"
     if key in CANONICAL_TRIM_MAP:
