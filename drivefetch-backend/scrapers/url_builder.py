@@ -21,8 +21,7 @@ def build_platform_search_url(
 ) -> str:
     """
     Resolves canonical trim slug and cleanly appends or merges it into base_url.
-    Prevents model name duplication (e.g. q-corolla + corolla-altis-grande -> q-corolla-altis-grande).
-    Passes is_budget_search to bypass strict vr_ slugs on PakWheels for multi-gen trims.
+    Surgically injects PakWheels segments to preserve city and budget filters.
     """
     slug = resolve_canonical_trim(model, raw_trim, platform, is_budget_search=is_budget_search)
     if not slug:
@@ -32,10 +31,22 @@ def build_platform_search_url(
     model_clean = (model or "").lower().strip().replace(" ", "-")
     
     if platform == "pakwheels":
-        if slug.startswith("vg_") or slug.startswith("vr_"):
-            return f"{clean_base}/{slug}"
-        else:
-            return f"{clean_base}/vr_{slug}"
+        # Ensure correct prefix if missing
+        if not (slug.startswith("vg_") or slug.startswith("vr_")):
+            slug = f"vr_{slug}"
+        
+        # PakWheels requires trim slug to be injected immediately after md_ (model)
+        parts = clean_base.split('/')
+        insert_idx = len(parts)
+        for i, part in enumerate(parts):
+            if part.startswith("md_"):
+                insert_idx = i + 1
+                break
+            elif part.startswith("mk_") and insert_idx == len(parts):
+                insert_idx = i + 1
+        
+        parts.insert(insert_idx, slug)
+        return "/".join(parts)
         
     elif platform == "olx":
         clean_slug = slug
@@ -54,19 +65,16 @@ def build_platform_search_url(
             return f"{clean_base}/searchStr_{slug}"
             
     elif platform == "wisewheels":
-        separator = "&" if "?" in base_url else "?"
+        separator = "&" if "?" in clean_base else "?"
         encoded_slug = urllib.parse.quote_plus(slug)
-        return f"{base_url}{separator}keyword={encoded_slug}"
+        return f"{clean_base}{separator}keyword={encoded_slug}"
         
     elif platform == "drivepk":
-        return base_url
+        # Merge safely if a query parameter already exists
+        if "&q=" in clean_base:
+            return f"{clean_base}%20{urllib.parse.quote_plus(slug)}"
+        else:
+            separator = "&" if "?" in clean_base else "?"
+            return f"{clean_base}{separator}q={urllib.parse.quote_plus(slug)}"
         
     return base_url
-
-if __name__ == "__main__":
-    print("\n--- Hybrid Test Suite ---")
-    base_pw = "https://www.pakwheels.com/used-cars/search/-/mk_honda/md_civic"
-
-    print("1. Matchmaker Specific (RS Turbo): ", build_platform_search_url(base_pw, "pakwheels", "civic", "RS Turbo"))
-    print("2. Direct Budget Search (Oriel):    ", build_platform_search_url(base_pw, "pakwheels", "civic", "Oriel", is_budget_search=True))
-    print("3. Matchmaker Specific (Oriel):     ", build_platform_search_url(base_pw, "pakwheels", "civic", "Oriel", is_budget_search=False))
