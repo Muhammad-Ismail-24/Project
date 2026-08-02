@@ -395,6 +395,46 @@ CITY_ALIAS_MAP: dict[str, str] = {
     "hyderabad":    "Hyderabad",
 }
 
+# ---------------------------------------------------------------------------
+# TWIN CITY PAIRS & NEARBY CITY MAP
+#
+# Pakistani cities that are functionally equivalent for used car buying.
+# Buyers in city A regularly buy from city B — hard-vetoing these kills
+# legitimate inventory. Instead, listings from a twin city get a reduced
+# city score (20 pts) vs full match (30 pts), rather than a veto (0 pts).
+#
+# TWIN_CITY_PAIRS: frozenset pairs — bidirectional, order doesn't matter.
+# NEARBY_CITY_MAP: maps each city to its accepted nearby cities.
+# ---------------------------------------------------------------------------
+
+TWIN_CITY_PAIRS: set[frozenset] = {
+    frozenset({"islamabad", "rawalpindi"}),      # Capital twin cities — 15 min apart
+    frozenset({"lahore", "sheikhupura"}),         # Lahore suburb — buyers overlap
+    frozenset({"lahore", "kasur"}),
+    frozenset({"karachi", "hyderabad"}),          # Sindh corridor
+    frozenset({"peshawar", "nowshera"}),          # KPK corridor
+    frozenset({"peshawar", "mardan"}),
+    frozenset({"rawalpindi", "attock"}),          # Punjab/Rawalpindi zone
+    frozenset({"rawalpindi", "chakwal"}),
+    frozenset({"islamabad", "attock"}),
+    frozenset({"islamabad", "haripur"}),          # Hazara buyers come to ISB
+    frozenset({"lahore", "gujranwala"}),          # North Punjab corridor
+    frozenset({"faisalabad", "sargodha"}),
+    frozenset({"multan", "khanewal"}),
+    frozenset({"multan", "lodhran"}),
+    frozenset({"gujranwala", "sialkot"}),
+    frozenset({"gujranwala", "gujrat"}),
+}
+
+# Build a fast lookup: city → set of accepted nearby cities
+NEARBY_CITY_MAP: dict[str, set[str]] = {}
+for _pair in TWIN_CITY_PAIRS:
+    _cities = list(_pair)
+    if len(_cities) == 2:
+        NEARBY_CITY_MAP.setdefault(_cities[0], set()).add(_cities[1])
+        NEARBY_CITY_MAP.setdefault(_cities[1], set()).add(_cities[0])
+
+
 TRIM_ALIASES: dict[str, list[str]] = {
     "2d":       ["2d", "2.0d", "20d", "diesel"],
     "2.0d":     ["2d", "2.0d", "20d", "diesel"],
@@ -639,19 +679,54 @@ def _calculate_relevance_score(
 
     budget_score = 10.0 if clean_price == 0 else 40.0
 
-    # 5: City
+    # 5: City — SOFT scoring with twin-city awareness (NOT a hard veto)
+    #
+    # Score breakdown:
+    #   30.0 pts — exact city match in car.city or listing title
+    #   20.0 pts — twin/nearby city match (Islamabad ↔ Rawalpindi, etc.)
+    #    0.0 pts — no city match at all (listing kept, just ranked lower)
+    #
+    # Rationale: Pakistani used car market regularly crosses city boundaries.
+    # Islamabad buyers buy from Rawalpindi sellers constantly. Hard-vetoing
+    # by city on a niche query (e.g. Corolla Grande Islamabad) kills most
+    # inventory — only 1-3 exact-city listings may exist at any time.
+    # Soft scoring lets the normalizer surface nearby listings while still
+    # ranking exact-city matches above them.
     car_city_lower = (car.city or "").lower().strip()
-    req_city_str = (requested_city or "").lower().strip()
+    req_city_str   = (requested_city or "").lower().strip()
+
     if req_city_str:
         req_cities = [c.strip() for c in re.split(r',|\band\b', req_city_str) if c.strip()]
-        city_matched = False
+
+        exact_match = False
+        twin_match  = False
+
         for rc in req_cities:
+            # Exact match: city field or title contains the requested city
             if rc in car_city_lower or rc in title_lower:
-                city_matched = True
+                exact_match = True
                 break
-        if not city_matched:
-            return veto(f"Wrong city. User requested '{req_city_str}', found '{car.city}'")
-        city_score = 30.0
+
+            # Twin-city match: car's city is a known neighbour of requested city
+            nearby_cities = NEARBY_CITY_MAP.get(rc, set())
+            if any(nb in car_city_lower for nb in nearby_cities):
+                twin_match = True
+                break
+            # Also check if any nearby city appears in the title
+            if any(nb in title_lower for nb in nearby_cities):
+                twin_match = True
+                break
+
+        if exact_match:
+            city_score = 30.0
+        elif twin_match:
+            city_score = 20.0   # Nearby city — kept but ranked below exact matches
+            if debug:
+                print(f"  [TWIN-CITY] '{clean_title[:45]}' — nearby city accepted for '{req_city_str}', found '{car.city}'")
+        else:
+            city_score = 0.0    # No match — listing kept but deprioritised
+            if debug:
+                print(f"  [CITY-MISS] '{clean_title[:45]}' — no city match for '{req_city_str}', found '{car.city}'")
     else:
         city_score = 30.0 if car_city_lower else 15.0
 
@@ -710,10 +785,34 @@ def _calculate_relevance_score(
         if max_year > 0 and clean_year > max_year:
             return veto(f"Too new. Car is {clean_year}, user requested max {max_year}.")
 
-    # 8: Freshness 
-    age_score = max(0.0, 15.0 - (car.age_days * 0.5))
-    if 0 < car.age_days <= 998 and car.age_days > 14:
-        return veto(f"Stale listing. Posted {car.age_days} days ago (limit: 14).")
+    # 8: Freshness — graduated decay, NOT a hard cliff at 14 days
+    #
+    # Old behaviour: hard veto at 14 days → killed 15+ Corolla Grande listings
+    # in a single Islamabad query (59, 68, 72, 76, 79, 89, 92, 97, 104, 130 days).
+    # For niche queries (specific trim + city), inventory is thin — a 60-day-old
+    # listing is far better than returning 0 results.
+    #
+    # New behaviour:
+    #   0–14 days:  15.0 pts (fresh — full score)
+    #   15–45 days: linear decay 15.0 → 5.0 pts (moderately fresh)
+    #   46–90 days:  5.0 → 0.0 pts (stale, but kept — ranked below fresh listings)
+    #   90+ days:   hard veto — listing is too old to be credible
+    #
+    # This means a 45-day-old listing scores 5 pts less than a 14-day-old one,
+    # so fresh listings always rank above stale ones when both exist.
+    if car.age_days > 998 or car.age_days == 0:
+        age_score = 10.0   # age unknown — neutral
+    elif car.age_days > 90:
+        return veto(f"Stale listing. Posted {car.age_days} days ago (limit: 90).")
+    elif car.age_days <= 14:
+        age_score = 15.0                                    # fresh — full score
+    elif car.age_days <= 45:
+        # Linear decay: 15.0 at day 14 → 5.0 at day 45
+        age_score = 15.0 - ((car.age_days - 14) / 31) * 10.0
+    else:
+        # Linear decay: 5.0 at day 45 → 0.0 at day 90
+        age_score = 5.0 - ((car.age_days - 45) / 45) * 5.0
+        age_score = max(0.0, age_score)
 
     # 9: Quality
     year_score = 7.5 if clean_year > 0 else 0.0
