@@ -1,11 +1,18 @@
 """
 scrapers/normalizer.py
-Drive Fetch — API-Free Heuristic Scoring Normalizer v3.4
+Drive Fetch — API-Free Heuristic Scoring Normalizer v3.5
 
 Upgrade log over v3.3:
   - ADDED (v3.3): Smart Trim Normalization. Trims now use negative matching 
     (conflict veto) instead of strict positive vetoing to account for lazy titles.
   - ADDED (v3.4): Extended taxonomy for JDM Kei cars, Chinese entrants, and premium SUVs. Fixed identity scoring for compound titles.
+  - ADDED (v3.5): Auto-calculated 70% budget floor when min_budget == 0.
+    Vetos listings below 70% of requested_budget (e.g. PKR 2M car against PKR 5M budget).
+  - ADDED (v3.5): Description/metadata secondary scan for lazy seller trim protection.
+    If requested_trim not found in title, scan car.description and car.about for trim or
+    TRIM_ALIASES matches. Counts as a match so sellers who omit trim from title are included.
+  - ADDED (v3.5): Trim priority ranking. Title trim match = +25.0 pts, description trim match = +15.0 pts.
+    Listings with explicit trim declarations rank above generic model listings.
 """
 
 import re
@@ -604,9 +611,18 @@ def _calculate_relevance_score(
             return veto(f"Make '{requested_make}' not found in title")
 
     # 3: Budget
+    # Auto-calculate 70% floor when caller passes min_budget=0 but budget is known.
+    # Prevents e.g. a PKR 2M Alto surfacing for a PKR 5M Corolla search.
+    eff_min_budget = min_budget
+    if eff_min_budget == 0 and requested_budget and requested_budget > 0:
+        eff_min_budget = int(requested_budget * 0.70)
+
     if clean_price > 0:
-        if min_budget > 0 and clean_price < min_budget:
-            return veto(f"Listing price ({clean_price:,} PKR) is below 30% budget floor ({min_budget:,} PKR)")
+        if eff_min_budget > 0 and clean_price < eff_min_budget:
+            return veto(
+                f"Listing price ({clean_price:,} PKR) is below 70% budget floor "
+                f"({eff_min_budget:,} PKR = 70% of {requested_budget:,} PKR)"
+            )
 
         if requested_budget and requested_budget > 0:
             hard_ceiling = int(requested_budget * 1.05)
@@ -639,32 +655,53 @@ def _calculate_relevance_score(
     else:
         city_score = 30.0 if car_city_lower else 15.0
 
-    # --- 6: SMART TRIM ENFORCEMENT ---
+    # --- 6: SMART TRIM ENFORCEMENT (with description scan + priority ranking) ---
     trim_score = 0.0
     if requested_trim:
         req_trim_clean = requested_trim.lower().replace("-", "")
-        title_clean = title_lower.replace("-", "")
+        title_clean    = title_lower.replace("-", "")
         GENERIC_SKIP_WORDS = {"automatic", "manual", "car", "sedan", "petrol", "hybrid"}
-        trim_keywords = req_trim_clean.split()
+        trim_keywords  = [kw for kw in req_trim_clean.split() if kw not in GENERIC_SKIP_WORDS]
 
-        trim_matched = False
+        # Build secondary scan text from description/about fields (lazy seller protection)
+        raw_desc   = getattr(car, "description", None) or getattr(car, "about", None) or ""
+        desc_lower = raw_desc.lower().replace("-", "")
+
+        # Pass 1: Scan TITLE for trim match
+        trim_in_title = False
         for keyword in trim_keywords:
-            if keyword in GENERIC_SKIP_WORDS: continue
             valid_forms = TRIM_ALIASES.get(keyword, [keyword])
-            if any(form in title_clean for form in valid_forms):
-                trim_matched = True
+            valid_nohyph = [f.replace("-", "") for f in valid_forms]
+            if any(form in title_clean for form in valid_nohyph):
+                trim_in_title = True
                 break
 
-        if trim_matched:
-            trim_score = 15.0  # Reward exact trim matches!
+        # Pass 2: Scan DESCRIPTION for trim match (only if not found in title)
+        trim_in_desc = False
+        if not trim_in_title and desc_lower:
+            for keyword in trim_keywords:
+                valid_forms = TRIM_ALIASES.get(keyword, [keyword])
+                valid_nohyph = [f.replace("-", "") for f in valid_forms]
+                if any(form in desc_lower for form in valid_nohyph):
+                    trim_in_desc = True
+                    break
+
+        if trim_in_title:
+            trim_score = 25.0   # Title match: highest confidence
+        elif trim_in_desc:
+            trim_score = 15.0   # Description match: lazy seller, still valid
         else:
-            # Check for explicit negative conflicts
+            # Neither title nor description — check for hard conflicts before keeping
             for keyword in trim_keywords:
                 conflicts = TRIM_CONFLICTS.get(keyword, [])
                 for conflict in conflicts:
-                    if conflict in title_clean:
-                        return veto(f"Conflicting trim. User wanted '{requested_trim}', found '{conflict}'")
-            # If no conflict found, we assume a lazy seller. Car is kept but gets 0 trim_score.
+                    conflict_nohyph = conflict.replace("-", "")
+                    if conflict_nohyph in title_clean or conflict_nohyph in desc_lower:
+                        return veto(
+                            f"Conflicting trim. User wanted '{requested_trim}', "
+                            f"found '{conflict}'"
+                        )
+            # No conflict found → assume lazy seller. Car kept, trim_score = 0.
 
     # 7: Year Bounds
     if clean_year > 0:

@@ -1,6 +1,6 @@
 """
 scrapers/recommend_normalizer.py
-Drive Fetch — AI Matchmaker Normalizer v2.2
+Drive Fetch — AI Matchmaker Normalizer v2.3
 
 Purpose:
     Scoring and selection pipeline for AI Recommendation results.
@@ -8,12 +8,27 @@ Purpose:
     `top_k` (default: 5) listings with a cross-platform mix.
 
 v2.2 updates:
-  - PERFECT MERGE: Combines the advanced v2.0 Feature Keyword Engine 
+  - PERFECT MERGE: Combines the advanced v2.0 Feature Keyword Engine
     (with _MODEL_TRIM_GATES) with the v2.1 Local Identity Scorer.
-  - Ensures luxury aliases (S-Class, Range Rover) are correctly parsed 
+  - Ensures luxury aliases (S-Class, Range Rover) are correctly parsed
     using the private _MODEL_ALIAS_MAP.
-  - Retains 60/120-day staleness, graduated budget scoring, and 
+  - Retains 60/120-day staleness, graduated budget scoring, and
     platform-aware deduplication.
+
+v2.3 updates:
+  - AUTO BUDGET FLOOR: If min_budget == 0 and requested_budget > 0,
+    auto-calculates effective_min_budget = int(requested_budget * 0.70).
+    Hard-vetos listings below this floor to filter out cheap/old cars
+    that don't match the buyer's intended price band.
+  - DESCRIPTION DEEP SCAN: Trim and feature matching now scans both
+    car.title and car.description (or car.about) via a combined
+    search_text buffer. Lazy sellers who omit trim from the title but
+    mention it in the description are no longer filtered out.
+  - TRIM PRIORITY WEIGHTING: Title trim match = +25.0 pts (was +15.0),
+    description-only trim match = +12.0 pts. Listings that declare the
+    trim in the headline rank above those that only mention it in the body.
+  - Feature gates also scan search_text (title + description) so features
+    confirmed only in the description count toward scoring.
 """
 
 import re
@@ -468,12 +483,19 @@ def _score_listing(
         if not any(m in title_normalized for m in acceptable_norm):
             return veto(f"Make '{requested_make}' not found in title")
 
-    # ── 3. Budget check (graduated score) ─────────────────────────────────
+    # ── 3. Budget check (graduated score + auto 70% floor) ───────────────
+    # Auto-calculate 70% floor when caller passes min_budget=0 but budget is
+    # known. Prevents e.g. a PKR 2M Alto surfacing for a PKR 5M Corolla search.
+    eff_min_budget = min_budget
+    if eff_min_budget == 0 and eff_budget > 0:
+        eff_min_budget = int(eff_budget * 0.70)
+
     budget_score = 0.0
     if clean_price > 0 and eff_budget > 0:
-        if min_budget > 0 and clean_price < min_budget:
+        if eff_min_budget > 0 and clean_price < eff_min_budget:
             return veto(
-                f"Price PKR {clean_price:,} below floor PKR {min_budget:,}"
+                f"Price PKR {clean_price:,} below 70% floor "
+                f"PKR {eff_min_budget:,} (budget PKR {eff_budget:,})"
             )
 
         hard_ceiling = int(eff_budget * 1.05)
@@ -540,9 +562,16 @@ def _score_listing(
         if max_year > 0 and clean_year > max_year:
             return veto(f"Year {clean_year} > max_year {max_year}")
 
-    # ── 8. Trim score ──────────────────────────────────────────────────────
+    # ── 8. Trim score (title + description scan, priority weighting) ──────
+    # Build a combined search buffer from title + description/about.
+    # This catches lazy sellers who omit the trim from the headline but
+    # mention it in the listing body.
+    raw_desc    = getattr(car, "description", None) or getattr(car, "about", None) or ""
+    search_text = (title_lower + " " + raw_desc.lower()).strip()
+
     trim_score  = 0.0
     title_clean = title_lower.replace("-", "")
+    desc_clean  = raw_desc.lower().replace("-", "")
 
     if requested_trim:
         req_trim_clean = requested_trim.lower().replace("-", "")
@@ -552,26 +581,44 @@ def _score_listing(
         }
         trim_keywords = [kw for kw in req_trim_clean.split() if kw not in GENERIC_SKIP]
 
-        trim_found = False
+        # Pass 1 — scan TITLE (highest confidence, +25 pts)
+        trim_in_title = False
         for keyword in trim_keywords:
-            valid_forms = TRIM_ALIASES.get(keyword, [keyword])
+            valid_forms  = TRIM_ALIASES.get(keyword, [keyword])
             valid_nohyph = [f.replace("-", "") for f in valid_forms]
             if any(f in title_clean for f in valid_nohyph):
-                trim_found = True
+                trim_in_title = True
                 break
 
-        if trim_found:
-            trim_score = 15.0
+        # Pass 2 — scan DESCRIPTION only if not found in title (+12 pts)
+        trim_in_desc = False
+        if not trim_in_title and desc_clean:
+            for keyword in trim_keywords:
+                valid_forms  = TRIM_ALIASES.get(keyword, [keyword])
+                valid_nohyph = [f.replace("-", "") for f in valid_forms]
+                if any(f in desc_clean for f in valid_nohyph):
+                    trim_in_desc = True
+                    break
+
+        if trim_in_title:
+            trim_score = 25.0   # Title match: seller declared trim in headline
+        elif trim_in_desc:
+            trim_score = 12.0   # Description match: lazy seller, still valid
         else:
+            # Neither found — check for hard conflicts before passing listing through
+            search_clean = search_text.replace("-", "")
             for keyword in trim_keywords:
                 for conflict in _TRIM_CONFLICTS.get(keyword, []):
-                    if conflict.replace("-", "") in title_clean:
+                    if conflict.replace("-", "") in search_clean:
                         return veto(
                             f"Trim conflict: wanted '{requested_trim}', "
-                            f"title contains '{conflict}'"
+                            f"found '{conflict}' in listing"
                         )
+            # No conflict → lazy seller, passes with trim_score = 0
 
     # ── 9. Feature matching ────────────────────────────────────────────────
+    # Passes search_text (title + description) so features confirmed in the
+    # listing body (not just headline) count as a positive match.
     feature_score = 0.0
     if required_features:
         feature_score, feat_veto_reason = _check_feature_gates(
@@ -579,7 +626,7 @@ def _score_listing(
             requested_make=requested_make,
             requested_model=requested_model,
             required_features=required_features,
-            title_lower=title_lower,
+            title_lower=search_text,   # scans title + description combined
             clean_year=clean_year,
             debug=debug,
         )
