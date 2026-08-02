@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import Background3DShell from '../components/Background3DShell';
 import SearchBar from '../components/SearchBar';
 import CarResultCard from '../components/CarResultCard';
-import { ShieldCheck, Database, Sparkles, AlertCircle, Loader2 } from 'lucide-react';
+import { ShieldCheck, Database, Sparkles, AlertCircle, Loader2, Car } from 'lucide-react';
 
 const heroContainerVariants = {
   hidden: {},
@@ -127,7 +127,7 @@ export default function Home() {
             <motion.div variants={heroItemVariants}>
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/80 text-white text-[10px] font-semibold tracking-[0.15em] uppercase mb-8">
                 <span className="w-1.5 h-1.5 rounded-full bg-white/70 inline-block" />
-                GaariGuru AI Engine
+                Drive Fetch AI Engine
               </div>
             </motion.div>
 
@@ -203,13 +203,33 @@ export default function Home() {
 
             <SearchBar onSearch={handleSearch} isLoading={isLoading} />
 
+            {/* ── Category Badges ── */}
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <button 
+                onClick={() => handleSearch("7 Seater MPV under 60 lacs")} 
+                disabled={isLoading}
+                className="flex items-center gap-2 px-4 py-2 bg-white/40 hover:bg-white/70 backdrop-blur-md border border-black/10 rounded-full text-sm font-semibold text-black/80 transition-all shadow-sm hover:shadow-md disabled:opacity-50"
+              >
+                <Car className="w-4 h-4 text-black/60" />
+                MPVs (7-Seater)
+              </button>
+              <button 
+                onClick={() => handleSearch("Mini SUV Crossover under 70 lacs")} 
+                disabled={isLoading}
+                className="flex items-center gap-2 px-4 py-2 bg-white/40 hover:bg-white/70 backdrop-blur-md border border-black/10 rounded-full text-sm font-semibold text-black/80 transition-all shadow-sm hover:shadow-md disabled:opacity-50"
+              >
+                <Car className="w-4 h-4 text-black/60" />
+                Mini SUVs
+              </button>
+            </div>
+
             <div className="mt-16 md:mt-24 space-y-8 md:space-y-12">
 
               {isLoading && (
                 <div className="flex flex-col items-center justify-center py-16 space-y-3">
                   <Loader2 className="w-8 h-8 text-black/50 animate-spin" />
                   <p className="text-sm font-medium text-black/50 animate-pulse">
-                    GaariGuru is fetching &amp; appraising listings…
+                    Drive Fetch is fetching &amp; appraising listings…
                   </p>
                 </div>
               )}

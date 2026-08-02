@@ -1,0 +1,425 @@
+# table.txt
+# GaariGuru — Verified Trim Routing Table for Pakistani Marketplaces
+
+CANONICAL_TRIM_MAP = {
+    "corolla:xli": {
+        "pakwheels": "lx-limited",
+        "olx":       "xli",
+        "autodeals": "XLi"
+    },
+    "corolla:gli": {
+        "pakwheels": "gli--2",
+        "olx":       "gli",
+        "autodeals": "GLi"
+    },
+    "corolla:altis": {
+        "pakwheels": "1-6",
+        "olx":       "altis",
+        "autodeals": "Altis"
+    },
+    "corolla:grande": {
+        "pakwheels": "altis-1-8-grande",
+        "olx":       "grande",
+        "autodeals": "Grande"
+    },
+    "corolla:2.0d": {
+        "pakwheels": "2-0d",
+        "olx":       "2.0d",
+        "autodeals": "2.0D"
+    },
+    "yaris:ativ": {
+        "pakwheels": "ativ-cvt-1-3",
+        "olx":       "ativ",
+        "autodeals": "ATIV"
+    },
+    "yaris:gli": {
+        "pakwheels": "gli-cvt-1-3",
+        "olx":       "gli",
+        "autodeals": "GLi"
+    },
+    "fortuner:2.7 vvti": {
+        "pakwheels": "2-7-automatic",
+        "olx":       "2.7-vvti",
+        "autodeals": "2.7-VVTi"
+    },
+    "fortuner:vrz": {
+        "pakwheels": "vrz",
+        "olx":       "vrz",
+        "autodeals": "VRZ"
+    },
+    "fortuner:sigma 3": {
+        "pakwheels": "sigma-3",
+        "olx":       "sigma-3",
+        "autodeals": "Sigma-3"
+    },
+    "fortuner:legender": {
+        "pakwheels": "legender",
+        "olx":       "legender",
+        "autodeals": "Legender"
+    },
+    "fortuner:g": {
+        "pakwheels": "2-7-g",
+        "olx":       "g",
+        "autodeals": "G"
+    },
+    "prado:tx": {
+        "pakwheels": "tx--4",
+        "olx":       "tx",
+        "autodeals": "TX"
+    },
+    "prado:tz": {
+        "pakwheels": "tz-3-0d",
+        "olx":       "tz",
+        "autodeals": "TZ"
+    },
+    "prado:vx": {
+        "pakwheels": "vx-2-8l-diesel",
+        "olx":       "vx",
+        "autodeals": "VX"
+    },
+    "vitz:f": {
+        "pakwheels": "1-0f-safety-edition-iii",
+        "olx":       "f",
+        "autodeals": "F"
+    },
+    "vitz:jewela": {
+        "pakwheels": "1-0-jewela",
+        "olx":       "jewela",
+        "autodeals": "Jewela"
+    },
+    "vitz:u": {
+        "pakwheels": "hybrid-u-1-5",
+        "olx":       "u",
+        "autodeals": "U"
+    },
+    "aqua:s": {
+        "pakwheels": "crossover",
+        "olx":       "s",
+        "autodeals": "S"
+    },
+    "aqua:g": {
+        "pakwheels": "g--37",
+        "olx":       "g",
+        "autodeals": "G"
+    },
+    "aqua:l": {
+        "pakwheels": "on",
+        "olx":       "l",
+        "autodeals": "L"
+    },
+    "hilux:revo g": {
+        "pakwheels": "revo-g-2-4",
+        "olx":       "revo-g",
+        "autodeals": "Revo-G"
+    },
+    "hilux:revo v": {
+        "pakwheels": "revo-v",
+        "olx":       "revo-v",
+        "autodeals": "Revo-V"
+    },
+    "hilux:revo rocco": {
+        "pakwheels": "revo-rocco",
+        "olx":       "revo-rocco",
+        "autodeals": "Revo-Rocco"
+    },
+    "hilux:vigo": {
+        "pakwheels": "vigo-champ-automatic",
+        "olx":       "vigo",
+        "autodeals": "Vigo"
+    },
+    "hilux:e": {
+        "pakwheels": "3-0d-raider",
+        "olx":       "e",
+        "autodeals": "E"
+    },
+    "civic:oriel": {
+        "pakwheels": "1-5-vtec-turbo-oriel",
+        "olx":       "oriel",
+        "autodeals": "Oriel"
+    },
+    "civic:rs": {
+        "pakwheels": "1-5-rs-turbo",
+        "olx":       "rs",
+        "autodeals": "RS"
+    },
+    "civic:turbo": {
+        "pakwheels": "1-5-rs-turbo",
+        "olx":       "turbo",
+        "autodeals": "Turbo"
+    },
+    "civic:vti": {
+        "pakwheels": "vti-1-6",
+        "olx":       "vti",
+        "autodeals": "VTi"
+    },
+    "civic:exi": {
+        "pakwheels": "exi-3",
+        "olx":       "exi",
+        "autodeals": "EXi"
+    },
+    "city:i-vtec": {
+        "pakwheels": "i-vtec--2",
+        "olx":       "i-vtec",
+        "autodeals": "i-VTEC"
+    },
+    "city:aspire": {
+        "pakwheels": "1-5l-aspire-cvt",
+        "olx":       "aspire",
+        "autodeals": "Aspire"
+    },
+    "city:1.2l": {
+        "pakwheels": "1-2l-cvt",
+        "olx":       "1.2l",
+        "autodeals": "1.2L"
+    },
+    "city:1.5l": {
+        "pakwheels": "1-5l-aspire-cvt",
+        "olx":       "1.5l",
+        "autodeals": "1.5L"
+    },
+    "br-v:i-vtec s": {
+        "pakwheels": "i-vtec-s",
+        "olx":       "i-vtec-s",
+        "autodeals": "i-VTEC-S"
+    },
+    "br-v:i-vtec mt": {
+        "pakwheels": "i-vtec-mt",
+        "olx":       "i-vtec-mt",
+        "autodeals": "i-VTEC-MT"
+    },
+    "vezel:z": {
+        "pakwheels": "e-hev-z",
+        "olx":       "z",
+        "autodeals": "Z"
+    },
+    "vezel:x": {
+        "pakwheels": "e-hev-x",
+        "olx":       "x",
+        "autodeals": "X"
+    },
+    "vezel:rs": {
+        "pakwheels": "hybrid-rs-honda-sensing",
+        "olx":       "rs",
+        "autodeals": "RS"
+    },
+    "hr-v:vti": {
+        "pakwheels": "vti",
+        "olx":       "vti",
+        "autodeals": "VTi"
+    },
+    "hr-v:vti-s": {
+        "pakwheels": "vti-s",
+        "olx":       "vti-s",
+        "autodeals": "VTi-S"
+    },
+    "cultus:vxr": {
+        "pakwheels": "vxr",
+        "olx":       "vxr",
+        "autodeals": "VXR"
+    },
+    "cultus:vxl": {
+        "pakwheels": "vxl-2",
+        "olx":       "vxl",
+        "autodeals": "VXL"
+    },
+    "cultus:auto gear shift": {
+        "pakwheels": "auto-gear-shift-vxl",
+        "olx":       "auto-gear-shift",
+        "autodeals": "Auto-Gear-Shift"
+    },
+    "cultus:euro ii": {
+        "pakwheels": "vxri-euro-ii",
+        "olx":       "euro-ii",
+        "autodeals": "Euro-II"
+    },
+    "cultus:ags": {
+        "pakwheels": "ags",
+        "olx":       "ags",
+        "autodeals": "AGS"
+    },
+    "alto:vx": {
+        "pakwheels": "vx-14",
+        "olx":       "vx",
+        "autodeals": "VX"
+    },
+    "alto:vxr": {
+        "pakwheels": "vxr-2",
+        "olx":       "vxr",
+        "autodeals": "VXR"
+    },
+    "alto:vxl": {
+        "pakwheels": "vxl--2",
+        "olx":       "vxl",
+        "autodeals": "VXL"
+    },
+    "alto:ags": {
+        "pakwheels": "vxl--2",
+        "olx":       "ags",
+        "autodeals": "AGS"
+    },
+    "alto:vxr ags": {
+        "pakwheels": "vxr-ags",
+        "olx":       "vxr-ags",
+        "autodeals": "VXR-AGS"
+    },
+    "wagon-r:vxr": {
+        "pakwheels": "vxr",
+        "olx":       "vxr",
+        "autodeals": "VXR"
+    },
+    "wagon-r:vxl": {
+        "pakwheels": "vxl",
+        "olx":       "vxl",
+        "autodeals": "VXL"
+    },
+    "wagon-r:ags": {
+        "pakwheels": "ags",
+        "olx":       "ags",
+        "autodeals": "AGS"
+    },
+    "swift:dlx": {
+        "pakwheels": "1-3l-dlx",
+        "olx":       "dlx",
+        "autodeals": "DLX"
+    },
+    "swift:glx cvt": {
+        "pakwheels": "glx-cvt",
+        "olx":       "glx-cvt",
+        "autodeals": "GLX-CVT"
+    },
+    "swift:gl cvt": {
+        "pakwheels": "gl-cvt",
+        "olx":       "gl-cvt",
+        "autodeals": "GL-CVT"
+    },
+    "mehran:vx": {
+        "pakwheels": "vx-2",
+        "olx":       "vx",
+        "autodeals": "VX"
+    },
+    "mehran:vxr": {
+        "pakwheels": "vxr-2",
+        "olx":       "vxr",
+        "autodeals": "VXR"
+    },
+    "mehran:euro ii": {
+        "pakwheels": "vx-euro-ii",
+        "olx":       "euro-ii",
+        "autodeals": "Euro-II"
+    },
+    "sportage:alpha": {
+        "pakwheels": "alpha--2",
+        "olx":       "alpha",
+        "autodeals": "Alpha"
+    },
+    "sportage:fwd": {
+        "pakwheels": "fwd",
+        "olx":       "fwd",
+        "autodeals": "FWD"
+    },
+    "sportage:awd": {
+        "pakwheels": "awd",
+        "olx":       "awd",
+        "autodeals": "AWD"
+    },
+    "sportage:black limited edition": {
+        "pakwheels": "black-limited-edition",
+        "olx":       "black-limited-edition",
+        "autodeals": "Black-Limited-Edition"
+    },
+    "stonic:ex": {
+        "pakwheels": "ex--3",
+        "olx":       "ex",
+        "autodeals": "EX"
+    },
+    "stonic:ex+": {
+        "pakwheels": "ex--4",
+        "olx":       "ex+",
+        "autodeals": "EX+"
+    },
+    "tucson:gls sport": {
+        "pakwheels": "fwd-a-t-gls-sport",
+        "olx":       "gls-sport",
+        "autodeals": "GLS-Sport"
+    },
+    "tucson:ultimate": {
+        "pakwheels": "awd-a-t-ultimate",
+        "olx":       "ultimate",
+        "autodeals": "Ultimate"
+    },
+    "tucson:awd": {
+        "pakwheels": "awd-a-t-ultimate",
+        "olx":       "awd",
+        "autodeals": "AWD"
+    },
+    "elantra:gl": {
+        "pakwheels": "gl--9",
+        "olx":       "gl",
+        "autodeals": "GL"
+    },
+    "elantra:gls": {
+        "pakwheels": "gls--9",
+        "olx":       "gls",
+        "autodeals": "GLS"
+    },
+    "sonata:2.0": {
+        "pakwheels": "2-0--3",
+        "olx":       "2.0",
+        "autodeals": "2.0"
+    },
+    "sonata:2.5": {
+        "pakwheels": "2-5--2",
+        "olx":       "2.5",
+        "autodeals": "2.5"
+    },
+    "h6:1.5t": {
+        "pakwheels": "1-5t",
+        "olx":       "1.5t",
+        "autodeals": "1.5T"
+    },
+    "h6:2.0t": {
+        "pakwheels": "2-0t--2",
+        "olx":       "2.0t",
+        "autodeals": "2.0T"
+    },
+    "h6:hev": {
+        "pakwheels": "hev",
+        "olx":       "hev",
+        "autodeals": "HEV"
+    },
+    "alsvin:comfort": {
+        "pakwheels": "1-3l-mt-comfort",
+        "olx":       "comfort",
+        "autodeals": "Comfort"
+    },
+    "alsvin:lumiere": {
+        "pakwheels": "1-5l-dct-lumiere",
+        "olx":       "lumiere",
+        "autodeals": "Lumiere"
+    },
+    "oshan-x7:comfort": {
+        "pakwheels": "comfort--2",
+        "olx":       "comfort",
+        "autodeals": "Comfort"
+    },
+    "oshan-x7:futuresense": {
+        "pakwheels": "futuresense",
+        "olx":       "futuresense",
+        "autodeals": "FutureSense"
+    },
+    "hs:1.5 turbo": {
+        "pakwheels": "1.5-turbo",
+        "olx":       "1.5-turbo",
+        "autodeals": "1.5-Turbo"
+    },
+    "hs:phev": {
+        "pakwheels": "phev",
+        "olx":       "phev",
+        "autodeals": "PHEV"
+    },
+    "hs:essence": {
+        "pakwheels": "essence",
+        "olx":       "essence",
+        "autodeals": "Essence"
+    },
+}

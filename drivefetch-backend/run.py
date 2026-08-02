@@ -9,7 +9,7 @@ if sys.platform == "win32":
 
 # 2. Start the Uvicorn server manually, after the policy is already set
 if __name__ == "__main__":
-    print("🚀 [Startup] Starting GaariGuru with Windows Subprocess Support...")
+    print("🚀 [Startup] Starting Drive Fetch with Windows Subprocess Support...")
     port = int(os.getenv("PORT", 8000))
     host = os.getenv("HOST", "0.0.0.0")
     

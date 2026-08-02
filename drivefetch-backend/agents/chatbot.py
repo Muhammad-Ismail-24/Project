@@ -1,10 +1,10 @@
 """
 agents/chatbot.py
 
-Conversational automotive assistant for GaariGuru.
+Conversational automotive assistant for Drive Fetch.
 
 The AI persona is configurable per user via their `agent_name` setting
-(stored in the User table, default "GaariGuru Expert"). The caller passes
+(stored in the User table, default "Drive Fetch Expert"). The caller passes
 `agent_name` into `get_chatbot_response()` — the system prompt injects it
 so the AI introduces itself by that name and signs its answers with it.
 """
@@ -21,7 +21,7 @@ CHATBOT_FALLBACK_RESPONSE = (
 )
 
 # Default persona name used for guests and as the pre-settings default for new users.
-DEFAULT_AGENT_NAME = "GaariGuru Expert"
+DEFAULT_AGENT_NAME = "Drive Fetch Expert"
 
 
 async def _execute_llama_call(formatted_messages: list) -> str:
@@ -88,7 +88,7 @@ async def _execute_gemini_fallback_chat(formatted_messages: list) -> str:
 
 def _build_system_prompt(agent_name: str) -> str:
     """
-    Builds the system prompt for the GaariGuru automotive chatbot.
+    Builds the system prompt for the Drive Fetch automotive chatbot.
 
     Design goals:
     - Single, consistent identity (no contradictory persona statements)
@@ -98,7 +98,7 @@ def _build_system_prompt(agent_name: str) -> str:
       not a customer service bot or a textbook
     - Hard constraints on scope, length, and honesty about uncertainty
     """
-    return f"""You are {agent_name}, GaariGuru's automotive expert for the Pakistani car market.
+    return f"""You are {agent_name}, Drive Fetch's automotive expert for the Pakistani car market.
 
 You have 20 years of hands-on experience buying, selling, inspecting, and advising on cars across Islamabad, Lahore, and Karachi. You know every ustaad mechanic worth trusting, every model year to avoid, and exactly which used car listings are overpriced. You speak like a confident, knowledgeable friend — direct, specific, and practical. You never sound like a customer service rep or a textbook.
 
@@ -266,7 +266,7 @@ if __name__ == "__main__":
         test_history = [
             {"role": "user", "content": "What is the ground clearance of civic 2022 in pakistan?"}
         ]
-        response = await get_chatbot_response(test_history, agent_name="GaariGuru Expert")
+        response = await get_chatbot_response(test_history, agent_name="Drive Fetch Expert")
         print("Test Query: What is the ground clearance of civic 2022 in pakistan?")
         print("Response:", response)
 

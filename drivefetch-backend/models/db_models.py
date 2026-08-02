@@ -46,7 +46,7 @@ class User(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Configurable AI assistant name — user sets this in Settings.
-    agent_name: str = Field(default="GaariGuru Expert")
+    agent_name: str = Field(default="Drive Fetch Expert")
 
     saved_listings: List["SavedListing"] = Relationship(
         back_populates="user",

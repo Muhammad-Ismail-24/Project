@@ -201,7 +201,9 @@ async def execute_search_pipeline(
             if min_year > 0 or max_year > 0:
                                   pw_parts.append(f"yr_{my}_{mx}")
             if safe_color_lower:  pw_parts.append(f"cl_{safe_color_lower}")
-            pw_urls.append("/".join(pw_parts) + f"/?page={page}")
+            pw_base = "/".join(pw_parts)
+            pw_base = build_platform_search_url(pw_base, "pakwheels", safe_model, safe_trim)
+            pw_urls.append(pw_base + f"/?page={page}")
 
             # ------------------------------------------------------------------ #
             # OLX — make-prefixed category + filter= + sorting=desc-creation
@@ -227,7 +229,8 @@ async def execute_search_pipeline(
             if olx_q_parts:
                 olx_base_parts.append("q-" + "-".join(olx_q_parts))
 
-            olx_url = "/".join(olx_base_parts)
+            olx_base = "/".join(olx_base_parts)
+            olx_url = build_platform_search_url(olx_base, "olx", safe_model, safe_trim)
 
             olx_filters = []
             if safe_budget > 0 or safe_min_budget > 0:
@@ -259,6 +262,7 @@ async def execute_search_pipeline(
             drive_q_parts = list(filter(None, [safe_model]))
             drive_q_str   = " ".join(drive_q_parts).replace(" ", "%20")
             if drive_q_str:          drive_url += f"&q={drive_q_str}"
+            drive_url = build_platform_search_url(drive_url, "drivepk", safe_model, safe_trim)
             drive_tasks.append((drive_url, search_filters))
 
             # ------------------------------------------------------------------ #
@@ -274,7 +278,9 @@ async def execute_search_pipeline(
             if max_year > 0:    ad_parts.append(f"maxY_{max_year}")
             ad_search = "-".join(filter(None, [safe_make_lower, safe_model_lower]))
             if ad_search:       ad_parts.append(f"searchStr_{ad_search}")
-            ad_url = "/".join(ad_parts) + f"?page={page}"
+            ad_base = "/".join(ad_parts)
+            ad_base = build_platform_search_url(ad_base, "autodeals", safe_model, safe_trim)
+            ad_url = ad_base + f"?page={page}"
             auto_deals_tasks.append((ad_url, search_filters))
 
             # ------------------------------------------------------------------ #
@@ -286,6 +292,7 @@ async def execute_search_pipeline(
             if safe_make_lower:  ww_url += f"&make={safe_make_lower}"
             if safe_model_lower: ww_url += f"&model={safe_model_lower}"
             if safe_budget > 0:  ww_url += f"&price_to={safe_budget}"
+            ww_url = build_platform_search_url(ww_url, "wisewheels", safe_model, safe_trim)
             wisewheels_tasks.append((ww_url, search_filters))
 
     print(

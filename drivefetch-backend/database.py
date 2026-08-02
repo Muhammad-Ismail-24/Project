@@ -6,7 +6,7 @@ from agents.config import settings
 raw_url = getattr(
     settings, 
     "database_url", 
-    getattr(settings, "DATABASE_URL", os.getenv("DATABASE_URL", "sqlite:///./gaariguru.db"))
+    getattr(settings, "DATABASE_URL", os.getenv("DATABASE_URL", "sqlite:///./drivefetch.db"))
 )
 
 # 2. Crucial fix for SQLAlchemy: enforce 'postgresql://' over legacy 'postgres://'

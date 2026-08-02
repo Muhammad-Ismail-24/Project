@@ -1,6 +1,6 @@
-# GaariGuru Backend - Project Context & Rules
+# Drive Fetch Backend - Project Context & Rules
 
-This document serves as the master context for the GaariGuru AI Matchmaker backend. When starting a new chat, refer to this file to understand the current architecture, established business rules, and recent fixes.
+This document serves as the master context for the Drive Fetch AI Matchmaker backend. When starting a new chat, refer to this file to understand the current architecture, established business rules, and recent fixes.
 
 ## 🏛️ System Architecture
 - **Agents (`agents/recommender.py`):** Uses Gemini 3.5 Flash Lite to process user natural language queries and map them to strict JSON recommendation targets.

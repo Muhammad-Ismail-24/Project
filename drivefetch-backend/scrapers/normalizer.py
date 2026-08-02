@@ -1,6 +1,6 @@
 """
 scrapers/normalizer.py
-GaariGuru — API-Free Heuristic Scoring Normalizer v3.4
+Drive Fetch — API-Free Heuristic Scoring Normalizer v3.4
 
 Upgrade log over v3.3:
   - ADDED (v3.3): Smart Trim Normalization. Trims now use negative matching 

@@ -1,6 +1,6 @@
 """
 scrapers/recommend_normalizer.py
-GaariGuru — AI Matchmaker Normalizer v2.2
+Drive Fetch — AI Matchmaker Normalizer v2.2
 
 Purpose:
     Scoring and selection pipeline for AI Recommendation results.

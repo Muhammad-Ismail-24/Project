@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     """
     openrouter_api_key: str = ""
     gemini_api_key: str = ""
-    database_url: str = "sqlite:///./gaariguru.db"
+    database_url: str = "sqlite:///./drivefetch.db"
     
     model_config = SettingsConfigDict(
         env_file=".env",

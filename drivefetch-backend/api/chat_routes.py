@@ -52,7 +52,7 @@ def _get_user_or_none(request: Request, session: Session) -> Optional[User]:
                 email=email,
                 name=name,
                 picture=picture,
-                agent_name="GaariGuru Expert"
+                agent_name="Drive Fetch Expert"
             )
             session.add(new_user)
             session.commit()
