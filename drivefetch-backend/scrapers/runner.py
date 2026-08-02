@@ -30,6 +30,7 @@ from scrapers.famewheels import scrape_famewheels
 from scrapers.gari_pk import scrape_gari_pk
 from scrapers.wise_wheels import scrape_wise_wheels
 from scrapers.normalizer import normalize_listings, MAKE_ALIAS_MAP
+from scrapers.url_builder import build_platform_search_url # <-- IMPORT ADDED HERE
 from models.car_schema import CarListing
 
 # ------------------------------------------------------------------ #

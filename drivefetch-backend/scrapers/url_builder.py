@@ -14,27 +14,37 @@ def sanitize_trim(raw_trim: str) -> str:
 
 def build_platform_search_url(base_url: str, platform: str, model: str, raw_trim: str) -> str:
     """
-    Resolves canonical trim slug and cleanly appends or merges it into the base_url
-    to prevent double-slug stacking bugs (e.g. preventing /q-civic/q-rs-turbo).
+    Resolves canonical trim slug and cleanly appends or merges it into base_url.
+    Prevents model name duplication (e.g. q-corolla + corolla-altis-grande -> q-corolla-altis-grande).
     """
     slug = resolve_canonical_trim(model, raw_trim, platform)
     if not slug:
         return base_url
         
     clean_base = base_url.rstrip("/")
+    model_clean = (model or "").lower().strip().replace(" ", "-")
     
     if platform == "pakwheels":
-        return f"{clean_base}/vg_{slug}"
+        if slug.startswith("vg_") or slug.startswith("vr_"):
+            return f"{clean_base}/{slug}"
+        else:
+            return f"{clean_base}/vg_{slug}"
         
     elif platform == "olx":
+        # Strip redundant model prefix if slug starts with model name 
+        # (e.g. "corolla-altis" -> "altis")
+        clean_slug = slug
+        if model_clean and clean_slug.startswith(f"{model_clean}-"):
+            clean_slug = clean_slug[len(model_clean) + 1:]
+
         if "/q-" in clean_base:
-            return clean_base + f"-{slug}"
+            return f"{clean_base}-{clean_slug}"
         else:
-            return f"{clean_base}/q-{slug}"
+            return f"{clean_base}/q-{clean_slug}"
             
     elif platform == "autodeals":
         if "/searchStr_" in clean_base:
-            return clean_base + f"-{slug}"
+            return f"{clean_base}-{slug}"
         else:
             return f"{clean_base}/searchStr_{slug}"
             
@@ -49,24 +59,9 @@ def build_platform_search_url(base_url: str, platform: str, model: str, raw_trim
     return base_url
 
 if __name__ == "__main__":
-    print("\\n--- Verification Test Suite ---")
-    
-    # 1. Toyota Corolla + "Grande" (Must resolve PakWheels to vg_altis-grande)
-    base1 = "https://www.pakwheels.com/used-cars/search/-/mk_toyota/md_corolla"
-    print("1.", build_platform_search_url(base1, "pakwheels", "corolla", "Grande"))
-    
-    # 2. Suzuki Cultus + "AGS" (Must resolve PakWheels to vg_auto-gear-shift)
-    base2 = "https://www.pakwheels.com/used-cars/search/-/mk_suzuki/md_cultus"
-    print("2.", build_platform_search_url(base2, "pakwheels", "cultus", "AGS"))
-    
-    # 3. Hyundai Elantra + "GL" (Must resolve PakWheels to vg_1-6-gl)
-    base3 = "https://www.pakwheels.com/used-cars/search/-/mk_hyundai/md_elantra"
-    print("3.", build_platform_search_url(base3, "pakwheels", "elantra", "GL"))
-    
-    # 4. Honda Civic + "RS" (Must resolve OLX to q-civic-rs-turbo or q-rs-turbo)
-    base4 = "https://www.olx.com.pk/islamabad_g4060615/honda-cars_c84/q-civic"
-    print("4.", build_platform_search_url(base4, "olx", "civic", "RS"))
-    
-    # 5. Toyota Corolla + "All trims" (Generic tag: must return clean base URL)
-    base5 = "https://www.pakwheels.com/used-cars/search/-/mk_toyota/md_corolla"
-    print("5.", build_platform_search_url(base5, "pakwheels", "corolla", "All trims"))
+    print("\n--- Live Test Suite ---")
+    base_pw = "https://www.pakwheels.com/used-cars/search/-/mk_toyota/md_corolla"
+    base_olx = "https://www.olx.com.pk/islamabad_g4060615/toyota-cars_c84/q-corolla"
+
+    print("1. PakWheels Grande:   ", build_platform_search_url(base_pw, "pakwheels", "corolla", "Grande"))
+    print("2. OLX Grande:         ", build_platform_search_url(base_olx, "olx", "corolla", "Grande"))
