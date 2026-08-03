@@ -182,46 +182,25 @@ _MODEL_ALIAS_MAP: dict[str, list[str]] = {
 # ---------------------------------------------------------------------------
 
 _TRIM_CONFLICTS: dict[str, list[str]] = {
-
-    # ── Drivetrain / Transmission ──────────────────────────────────────────
-    "awd":          ["fwd", "alpha", "alpha fwd", "2wd"],
-    "4x4":          ["fwd", "2wd", "alpha fwd"],
-    "fwd":          ["awd", "4x4", "4wd", "xdrive", "quattro"],
-    "alpha":        ["awd", "fwd", "4x4"],
-    "manual":       ["auto", "automatic", "cvt", "ags", "prosmatec", "easytronic",
-                     "tiptronic", "dct", "pdk"],
-    "automatic":    ["manual", "mt"],
-    "auto":         ["manual", "mt"],
-    "cvt":          ["manual", "mt"],
-    "pdk":          ["manual", "mt"],
-    "dct":          ["manual", "mt"],
-    "hybrid":       ["non-hybrid", "non hybrid", "petrol only"],
-    "petrol":       ["diesel", "ev", "electric", "hybrid", "plug-in"],
-    "diesel":       ["petrol", "ev", "electric", "hybrid"],
-    "turbo":        ["naturally aspirated", "na engine"],
-    "essence":      ["trophy"],
-    "trophy":       ["essence"],
-    "v6":           ["v8", "v12"],
-    "v8":           ["v6", "v12"],
-
-    # ── Corolla trim-tier conflicts ────────────────────────────────────────
-    "grande":       ["gli", "xli", "dx", "se saloon", "2d", "2.0d"],
-    "altis":        ["gli", "xli", "dx", "se saloon"],
-    "altis grande": ["gli", "xli", "dx", "se saloon"],
-
-    # ── Civic trim-tier conflicts ──────────────────────────────────────────
-    "oriel":        ["exi", "vti prosmatec", "standard"],
-    "rs":           ["exi", "vti", "oriel", "standard"],
-
-    # ── City trim-tier conflicts ───────────────────────────────────────────
-    "aspire":       ["vario", "steermatic"],
-    "rs city":      ["aspire", "vario"],
-
-    # ── Sportage / Sorento ────────────────────────────────────────────────
-    "alpha awd":    ["fwd", "alpha fwd"],
-    "alpha fwd":    ["awd", "alpha awd"],
-    "fwd sorento":  ["awd", "4x4"],
-    "awd sorento":  ["fwd"],
+    "awd":       ["fwd", "alpha", "alpha fwd", "2wd"],
+    "4x4":       ["fwd", "2wd", "alpha fwd"],
+    "fwd":       ["awd", "4x4", "4wd", "xdrive", "quattro"],
+    "alpha":     ["awd", "fwd", "4x4"],
+    "manual":    ["auto", "automatic", "cvt", "ags", "prosmatec", "easytronic",
+                  "tiptronic", "dct", "pdk"],
+    "automatic": ["manual", "mt"],
+    "auto":      ["manual", "mt"],
+    "cvt":       ["manual", "mt"],
+    "pdk":       ["manual", "mt"],
+    "dct":       ["manual", "mt"],
+    "hybrid":    ["non-hybrid", "non hybrid", "petrol only"],
+    "petrol":    ["diesel", "ev", "electric", "hybrid", "plug-in"],
+    "diesel":    ["petrol", "ev", "electric", "hybrid"],
+    "turbo":     ["naturally aspirated", "na engine"],
+    "essence":   ["trophy"],
+    "trophy":    ["essence"],
+    "v6":        ["v8", "v12"],
+    "v8":        ["v6", "v12"],
 }
 
 # ---------------------------------------------------------------------------
@@ -539,9 +518,41 @@ def _score_listing(
     else:
         budget_score = 30.0
 
-    # ── 4. Color conflict check ────────────────────────────────────────────
+    # ── 4. Color conflict check ───────────────────────────────────────────
+    # Three-tier check (in priority order):
+    #
+    #   Tier 1 — car.color field (structured scraper attribute, highest confidence)
+    #     PakWheels and OLX expose a dedicated color field. If populated and
+    #     mismatched, veto immediately without scanning any text.
+    #
+    #   Tier 2 — Title scan (unstructured)
+    #     Color word found in headline. Skips _CITY_COLOR_EXCEPTIONS so that
+    #     "Blue Area Islamabad" in the title doesn't trigger a blue conflict.
+    #
+    #   Tier 3 — Description / about scan (unstructured, word-boundary safe)
+    #     Sellers sometimes only mention color in the listing body. Scans
+    #     description/about for conflicting color words using word-boundary
+    #     regex to avoid false matches (e.g. "silver" inside "silverware").
+    #     Also applies _CITY_COLOR_EXCEPTIONS for safety.
     if requested_color:
         req_color = requested_color.lower().strip()
+
+        # ── Tier 1: structured car.color field ──────────────────────────────
+        car_color_field = (getattr(car, "color", None) or "").lower().strip()
+        if car_color_field:
+            # Normalise composite values: "pearl white" → "white", "metallic grey" → "grey"
+            normalised_car_color = car_color_field
+            for color in COMMON_COLORS:
+                if color in car_color_field:
+                    normalised_car_color = color
+                    break
+            if normalised_car_color and normalised_car_color != req_color:
+                return veto(
+                    f"Color field mismatch: car is '{normalised_car_color}', "
+                    f"user wants '{req_color}'"
+                )
+
+        # ── Tier 2: title scan (with city-color exception guard) ─────────────
         for color in COMMON_COLORS:
             if color == req_color:
                 continue
@@ -554,6 +565,24 @@ def _score_listing(
                     return veto(
                         f"Color conflict: title has '{color}', user wants '{req_color}'"
                     )
+
+        # ── Tier 3: description / about scan ────────────────────────────────
+        raw_desc   = (getattr(car, "description", None) or
+                      getattr(car, "about", None) or "")
+        desc_lower = raw_desc.lower()
+        if desc_lower:
+            for color in COMMON_COLORS:
+                if color == req_color:
+                    continue
+                if re.search(rf'\b{re.escape(color)}\b', desc_lower):
+                    is_location_color = any(
+                        exc in desc_lower for exc in _CITY_COLOR_EXCEPTIONS
+                        if exc.startswith(color)
+                    )
+                    if not is_location_color:
+                        return veto(
+                            f"Description contains '{color}', user wants '{req_color}'"
+                        )
 
     # ── 5. City (soft signal) ──────────────────────────────────────────────
     car_city_lower = (car.city or "").lower().strip()
@@ -624,7 +653,7 @@ def _score_listing(
         if trim_in_title:
             trim_score = 25.0   # Title match: seller declared trim in headline
         elif trim_in_desc:
-            trim_score = 15.0   # Description match: lazy seller, still valid
+            trim_score = 12.0   # Description match: lazy seller, still valid
         else:
             # Neither found — check for hard conflicts before passing listing through
             search_clean = search_text.replace("-", "")

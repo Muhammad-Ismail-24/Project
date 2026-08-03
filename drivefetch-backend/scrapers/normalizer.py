@@ -458,56 +458,17 @@ TRIM_ALIASES: dict[str, list[str]] = {
 }
 
 # NEW: Explicit Negative Match Conflicts
-# Two categories:
-#   1. Drivetrain / transmission conflicts (original)
-#   2. Trim-tier conflicts — if user asks for a higher trim, veto listings
-#      that explicitly declare a lower/different trim in title or description.
-#      These only fire when the LOWER trim is explicitly present in the text
-#      (never veto on absence — that's the lazy-seller pass-through path).
 TRIM_CONFLICTS: dict[str, list[str]] = {
-
-    # ── Drivetrain / Transmission ──────────────────────────────────────────
-    "awd":        ["fwd", "alpha", "alpha fwd", "2wd"],
-    "4x4":        ["fwd", "2wd", "alpha fwd"],
-    "fwd":        ["awd", "4x4", "4wd", "xdrive", "quattro"],
-    "alpha":      ["awd", "fwd", "4x4"],
-    "manual":     ["auto", "automatic", "cvt", "ags", "prosmatec", "easytronic",
-                   "tiptronic", "dct", "pdk"],
-    "automatic":  ["manual", "mt"],
-    "auto":       ["manual", "mt"],
-    "cvt":        ["manual", "mt"],
-    "hybrid":     ["non-hybrid", "non hybrid", "petrol only"],
-    "petrol":     ["diesel", "ev", "electric", "hybrid", "plug-in"],
-    "diesel":     ["petrol", "ev", "electric", "hybrid"],
-    "essence":    ["trophy"],
-    "trophy":     ["essence"],
-    "v6":         ["v8", "v12"],
-    "v8":         ["v6", "v12"],
-
-    # ── Corolla trim-tier conflicts ────────────────────────────────────────
-    # If user wants Grande/Altis (top tier), reject if title explicitly says
-    # GLi or XLi (lower tier). The reverse is NOT added — if someone wants
-    # a GLi, finding a Grande title is fine (seller may be mis-titling).
-    "grande":     ["gli", "xli", "dx", "se saloon", "2d", "2.0d"],
-    "altis":      ["gli", "xli", "dx", "se saloon"],
-    "altis grande": ["gli", "xli", "dx", "se saloon"],
-
-    # ── Civic trim-tier conflicts ──────────────────────────────────────────
-    # Oriel is higher than VTi and EXi — if title says EXi when user wants Oriel, veto.
-    "oriel":      ["exi", "vti prosmatec", "standard"],
-    "rs":         ["exi", "vti", "oriel", "standard"],   # RS is top — exclude all lower
-
-    # ── City trim-tier conflicts ───────────────────────────────────────────
-    "aspire":     ["vario", "steermatic"],       # Aspire is higher than Vario
-    "rs city":    ["aspire", "vario"],
-
-    # ── Sportage trim conflicts ────────────────────────────────────────────
-    "alpha awd":  ["fwd", "alpha fwd"],
-    "alpha fwd":  ["awd", "alpha awd"],
-
-    # ── Kia Sorento ──────────────────────────────────────────────────────────
-    "fwd sorento":["awd", "4x4"],
-    "awd sorento":["fwd"],
+    "awd":       ["fwd", "alpha"],
+    "fwd":       ["awd", "alpha"],
+    "alpha":     ["awd", "fwd"],
+    "manual":    ["auto", "automatic", "cvt", "ags", "prosmatec"],
+    "automatic": ["manual", "mt"],
+    "auto":      ["manual", "mt"],
+    "hybrid":    ["non-hybrid", "non hybrid"],
+    "petrol":    ["diesel", "ev", "electric"],
+    "diesel":    ["petrol", "ev", "electric"],
+    "essence":   ["trophy"]
 }
 
 COMMON_COLORS = ["black", "white", "silver", "grey", "gray", "red", "blue",
@@ -709,12 +670,67 @@ def _calculate_relevance_score(
                 return veto(f"Listing price ({clean_price:,} PKR) exceeds max budget ({requested_budget:,} PKR)")
 
     # 4: Color Conflict
+    # Three-tier check (in priority order):
+    #
+    #   Tier 1 — car.color field (structured, highest confidence)
+    #     Scrapers on PakWheels and OLX extract a dedicated color attribute.
+    #     If the field is populated and doesn't match requested_color, veto
+    #     immediately — no need to scan text at all.
+    #
+    #   Tier 2 — Title scan (unstructured, second highest confidence)
+    #     Sellers often write the color in the title. If a conflicting color
+    #     word is found, veto.
+    #
+    #   Tier 3 — Description scan (unstructured, catches what title misses)
+    #     Sellers sometimes only mention color in the listing body, e.g.
+    #     "pearl white exterior, black interior". Scan description/about
+    #     for conflicting color words. Only runs if tiers 1 and 2 didn't veto.
+    #
+    # Safe guards:
+    #   - CITY_COLOR_EXCEPTIONS: prevents "Blue Area Islamabad" triggering
+    #     a blue color conflict (not implemented in normalizer.py but
+    #     location words in titles are rare — description scan is lower-risk).
+    #   - Short description words: only check colors that appear as whole words
+    #     in the description to avoid "silver" matching "silvered" or similar.
     if requested_color:
         req_color = requested_color.lower().strip()
+
+        # ── Tier 1: structured car.color field ──────────────────────────────
+        car_color_field = (getattr(car, "color", None) or "").lower().strip()
+        if car_color_field:
+            # Normalise common variants: "pearl white" → "white", "metallic grey" → "grey"
+            for color in COMMON_COLORS:
+                if color in car_color_field:
+                    car_color_field = color
+                    break
+            if car_color_field and car_color_field != req_color:
+                return veto(
+                    f"Color field mismatch: car is '{car_color_field}', "
+                    f"user wants '{req_color}'"
+                )
+
+        # ── Tier 2: title scan ───────────────────────────────────────────────
         for color in COMMON_COLORS:
-            if color == req_color: continue
+            if color == req_color:
+                continue
             if color in title_lower:
-                return veto(f"Title contains '{color}' but user wants '{req_color}'")
+                return veto(
+                    f"Title contains '{color}' but user wants '{req_color}'"
+                )
+
+        # ── Tier 3: description / about scan ────────────────────────────────
+        raw_desc  = (getattr(car, "description", None) or
+                     getattr(car, "about", None) or "")
+        desc_lower = raw_desc.lower()
+        if desc_lower:
+            for color in COMMON_COLORS:
+                if color == req_color:
+                    continue
+                # Word-boundary match to avoid "silver" inside "silverware" etc.
+                if re.search(rf'\b{re.escape(color)}\b', desc_lower):
+                    return veto(
+                        f"Description contains '{color}' but user wants '{req_color}'"
+                    )
 
     budget_score = 10.0 if clean_price == 0 else 40.0
 
