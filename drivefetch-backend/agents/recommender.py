@@ -457,6 +457,18 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status","performance"}, "chinese": False},
     "porsche:taycan":          {"lo": 40_000_000, "hi": 85_000_000, "styles": {"Sedan"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"ev","luxury","performance"}, "chinese": False},
+    "porsche:cayman":          {"lo": 20_000_000, "hi": 40_000_000, "styles": {"Sedan"},
+                                "drive": "RWD", "transmission": "both",   "tags": {"sports","performance","luxury"}, "chinese": False, "priority": 2},
+    "toyota:supra":            {"lo": 15_000_000, "hi": 30_000_000, "styles": {"Sedan"},
+                                "drive": "RWD", "transmission": "both",   "tags": {"sports","performance","jdm"}, "chinese": False, "priority": 2},
+    "nissan:fairlady z":       {"lo": 8_000_000,  "hi": 20_000_000, "styles": {"Sedan"},
+                                "drive": "RWD", "transmission": "both",   "tags": {"sports","performance","jdm"}, "chinese": False, "priority": 2},
+    "nissan:350z":             {"lo": 5_000_000,  "hi": 12_000_000, "styles": {"Sedan"},
+                                "drive": "RWD", "transmission": "both",   "tags": {"sports","performance","jdm"}, "chinese": False, "priority": 2},
+    "nissan:370z":             {"lo": 8_000_000,  "hi": 18_000_000, "styles": {"Sedan"},
+                                "drive": "RWD", "transmission": "both",   "tags": {"sports","performance","jdm"}, "chinese": False, "priority": 2},
+    "bmw:m3":                  {"lo": 15_000_000, "hi": 40_000_000, "styles": {"Sedan"},
+                                "drive": "RWD", "transmission": "both",   "tags": {"sports","performance","luxury"}, "chinese": False, "priority": 1},
     "land rover:evoque":       {"lo": 9_000_000,  "hi": 25_000_000, "styles": {"Crossover"},
                                 "drive": "AWD", "transmission": "auto",   "tags": {"luxury","awd","status"},   "chinese": False},
     "land rover:velar":        {"lo": 20_000_000, "hi": 45_000_000, "styles": {"Crossover"},
@@ -565,6 +577,13 @@ _CANONICAL_MODEL_MAP: dict[str, str] = {
     "lx 570":                    "LX570",
     "lx 600":                    "LX600",
     "pajero sport":              "Pajero Sport",
+    "m3":                        "M3",
+    "bmw m3":                    "M3",
+    "supra":                     "Supra",
+    "fairlady z":                "Fairlady Z",
+    "350z":                      "350Z",
+    "370z":                      "370Z",
+    "cayman":                    "Cayman",
 }
 
 
@@ -978,6 +997,24 @@ def apply_keyword_intent(user_prompt: str, constraints: dict) -> dict:
     """
     prompt_lower = user_prompt.lower()
 
+    # ── Explicit Constraint Detection ──────────────────────────────────
+    # If the user EXPLICITLY typed a body style, transmission, or seating
+    # capacity, those override any implicit keyword heuristics.
+    # E.g. "student" + "sedan" → sedan wins over hatchback heuristic.
+    _EXPLICIT_SEDAN_KW = {"sedan", "diggi", "diggy", "trunk", "car with trunk", "big car"}
+    _EXPLICIT_HATCHBACK_KW = {"hatchback", "small car", "choti gaari"}
+    _EXPLICIT_SUV_KW = {"suv", "jeep", "4x4"}
+    _EXPLICIT_VAN_KW = {"van", "mpv", "hiace", "7 seater", "8 seater", "9 seater", "11 seater"}
+    _EXPLICIT_MANUAL_KW = {"manual", "stick shift", "gear wali"}
+    _EXPLICIT_SEATING_KW = {"9 people", "9 log", "10 people", "11 people", "9 seater", "10 seater", "11 seater"}
+    
+    has_explicit_sedan = any(kw in prompt_lower for kw in _EXPLICIT_SEDAN_KW)
+    has_explicit_hatch = any(kw in prompt_lower for kw in _EXPLICIT_HATCHBACK_KW)
+    has_explicit_suv   = any(kw in prompt_lower for kw in _EXPLICIT_SUV_KW)
+    has_explicit_van   = any(kw in prompt_lower for kw in _EXPLICIT_VAN_KW)
+    has_explicit_manual = any(kw in prompt_lower for kw in _EXPLICIT_MANUAL_KW)
+    has_explicit_body = has_explicit_sedan or has_explicit_hatch or has_explicit_suv or has_explicit_van
+
     for intent in KEYWORD_INTENT_MAP:
         keywords         = intent.get("keywords", [])
         exclude_keywords = intent.get("exclude_keywords", [])
@@ -995,13 +1032,21 @@ def apply_keyword_intent(user_prompt: str, constraints: dict) -> dict:
         print(f"[IntentMapper] Triggered intent: '{intent_id}' from prompt: '{user_prompt[:60]}'")
 
         if intent.get("force_body_style"):
-            constraints["body_style"] = intent["force_body_style"]
+            # NEVER override an explicit body style from the user
+            if not has_explicit_body:
+                constraints["body_style"] = intent["force_body_style"]
+            else:
+                print(f"[IntentMapper] Skipping body_style override '{intent['force_body_style']}' — user explicitly stated a body style")
 
         if intent.get("use_case_override"):
             constraints["use_case"] = intent["use_case_override"]
 
         if intent.get("force_transmission"):
-            constraints["transmission"] = intent["force_transmission"]
+            # NEVER override an explicit manual request
+            if not has_explicit_manual:
+                constraints["transmission"] = intent["force_transmission"]
+            else:
+                print(f"[IntentMapper] Skipping transmission override — user explicitly requested Manual")
 
         if intent.get("max_budget_cap") and constraints.get("max_budget", 0) > intent["max_budget_cap"]:
             constraints["max_budget"] = intent["max_budget_cap"]
@@ -1018,6 +1063,88 @@ def apply_keyword_intent(user_prompt: str, constraints: dict) -> dict:
         return constraints  # first match wins
 
     return constraints
+
+# ---------------------------------------------------------------------------
+# ADVISORY DISCLAIMER GENERATOR
+#
+# Scans user prompt + constraints for known conflict patterns and injects
+# human-readable safety/budget/feasibility warnings into the SSE payload.
+# Called at the end of resolve_constraints() after apply_keyword_intent().
+# ---------------------------------------------------------------------------
+
+_HYBRID_MODELS = {"toyota:aqua", "toyota:prius", "toyota:yaris cross", "honda:vezel",
+                  "honda:insight", "honda:grace", "honda:shuttle", "honda:freed",
+                  "haval:h6 hev", "lexus:ct200h"}
+
+_DELUSIONAL_LUXURY_MODELS = {"toyota:land cruiser", "land rover:range rover", "land rover:vogue",
+                             "land rover:defender", "audi:e-tron gt", "porsche:taycan",
+                             "bmw:7 series", "bmw:i7", "lexus:lx600", "mercedes-benz:s-class"}
+
+_BUDGET_HATCHBACKS_NO_ADAS = {"suzuki:mehran", "suzuki:alto", "suzuki:cultus", "suzuki:wagon r",
+                              "suzuki:fx", "suzuki:khyber", "daihatsu:cuore", "daihatsu:charade"}
+
+
+def generate_disclaimers(user_prompt: str, constraints: dict) -> list[str]:
+    """
+    Scans for known conflict patterns and returns a list of advisory disclaimers.
+    These are informational — they do NOT block the pipeline.
+    """
+    disclaimers: list[str] = []
+    prompt_lower = user_prompt.lower()
+
+    # 1. CNG + Hybrid conflict
+    has_cng = "cng" in prompt_lower
+    has_hybrid_kw = any(w in prompt_lower for w in ["hybrid", "aqua", "prius", "vezel"])
+    if has_cng and has_hybrid_kw:
+        disclaimers.append(
+            "⚠️ Warning: Installing CNG on a Japanese Hybrid system (Aqua/Vezel) "
+            "can damage the hybrid battery and is a serious safety hazard."
+        )
+
+    # 2. Disabled + Manual conflict
+    has_disability = any(w in prompt_lower for w in ["disabled", "wheelchair", "disability",
+                                                     "hand controls", "specially abled",
+                                                     "physically challenged"])
+    has_manual = any(w in prompt_lower for w in ["manual", "stick shift", "gear wali"])
+    if has_disability and has_manual:
+        disclaimers.append(
+            "⚠️ Safety Note: Manual clutch operation is difficult with left-leg impairment. "
+            "Automatics have been prioritized for safety with hand controls."
+        )
+
+    # 3. Delusional budget
+    max_budget = constraints.get("max_budget", 0)
+    luxury_kws = ["land cruiser", "v8", "range rover", "defender", "audi e-tron",
+                  "porsche", "taycan", "lexus lx", "bmw 7 series", "s-class"]
+    has_luxury_car_name = any(kw in prompt_lower for kw in luxury_kws)
+    if has_luxury_car_name and 0 < max_budget < 30_000_000:
+        disclaimers.append(
+            "⚠️ Budget Notice: Land Cruiser V8 and Range Rover start well above 1 Crore. "
+            "Showing Pajero/Surf as the closest budget SUV alternatives."
+        )
+
+    # 4. 9+ Passenger seating
+    seating_kws = ["9 people", "9 log", "10 people", "10 log", "11 people",
+                   "9 seater", "10 seater", "11 seater", "12 seater"]
+    if any(kw in prompt_lower for kw in seating_kws):
+        disclaimers.append(
+            "⚠️ Seating Notice: SUVs like Prado/Land Cruiser only seat up to 7 passengers. "
+            "For 9+ people, passenger vans (Hiace/APV) or multiple vehicles are required."
+        )
+
+    # 5. Impossible features on budget hatchbacks
+    impossible_feat_kws = ["panoramic sunroof", "panoramic", "lane assist", "lane keep",
+                           "adaptive cruise", "blind spot monitor"]
+    budget_car_kws = ["mehran", "cultus", "alto", "khyber", "fx", "charade"]
+    has_impossible_feat = any(kw in prompt_lower for kw in impossible_feat_kws)
+    has_budget_car_name = any(kw in prompt_lower for kw in budget_car_kws)
+    if has_impossible_feat and has_budget_car_name:
+        disclaimers.append(
+            "⚠️ Feature Notice: Suzuki Mehran/Cultus do not feature factory "
+            "Panoramic Sunroofs or Lane Assist in Pakistan."
+        )
+
+    return disclaimers
 
 # ---------------------------------------------------------------------------
 # MODEL-FEATURE KNOWLEDGE MAP
@@ -1038,6 +1165,7 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
     "sunroof": {
         "suzuki:mehran", "suzuki:alto", "suzuki:alto 660cc", "suzuki:cultus",
         "suzuki:wagon r", "suzuki:swift", "suzuki:liana", "suzuki:baleno",
+        "suzuki:khyber", "suzuki:fx", "daihatsu:charade",
         "suzuki:every", "suzuki:bolan", "suzuki:apv", "suzuki:hustler", "suzuki:spacia",
         "toyota:vitz", "toyota:passo", "toyota:probox", "toyota:hiace",
         "toyota:yaris", "toyota:aqua", "toyota:rush", "toyota:hilux",
@@ -1055,6 +1183,7 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
     "panoramic sunroof": {
         "suzuki:mehran", "suzuki:alto", "suzuki:alto 660cc", "suzuki:cultus",
         "suzuki:wagon r", "suzuki:swift", "suzuki:liana", "suzuki:baleno",
+        "suzuki:khyber", "suzuki:fx", "daihatsu:charade",
         "suzuki:every", "suzuki:bolan", "suzuki:apv", "suzuki:hustler", "suzuki:spacia",
         "toyota:vitz", "toyota:passo", "toyota:probox", "toyota:hiace",
         "toyota:yaris", "toyota:aqua", "toyota:rush", "toyota:hilux",
@@ -1472,6 +1601,8 @@ def get_eligible_cars(
         # 3. Transmission gate
         if transmission_req == "Automatic" and info["transmission"] == "manual":
             continue
+        if transmission_req == "Manual" and info["transmission"] == "auto":
+            continue
 
         # 4. Drive type filtering
         if drive_req and info.get("drive") != drive_req:
@@ -1491,6 +1622,11 @@ def get_eligible_cars(
 
         # 6. Apex luxury gate
         if is_apex_luxury and max_budget > 0 and hi < max_budget * 0.55:
+            continue
+
+        # 6b. Ultra-luxury tier — exclude Prado at 4+ crore budgets
+        # At 4-5 crore, only Lexus LX600, LC300, Range Rover, Defender, BMW X7, Mercedes GLS
+        if max_budget >= 40_000_000 and key == "toyota:prado":
             continue
 
         # 7. Feature impossible gate — hard exclude models that can NEVER have
@@ -1638,6 +1774,17 @@ def _validate_targets(targets: list, constraints: dict) -> list:
             print(f"[Validator] Dropping {t.make} {t.model} — not a {body_style}")
             continue
 
+        # Transmission gate (second line of defence)
+        transmission_req = constraints.get("transmission")
+        if info and transmission_req:
+            car_trans = info.get("transmission", "both")
+            if transmission_req == "Manual" and car_trans == "auto":
+                print(f"[Validator] Dropping {t.make} {t.model} — auto-only, user wants Manual")
+                continue
+            if transmission_req == "Automatic" and car_trans == "manual":
+                print(f"[Validator] Dropping {t.make} {t.model} — manual-only, user wants Automatic")
+                continue
+
         # Budget gates
         if info and max_budget > 0:
             lo, hi = info["lo"], info["hi"]
@@ -1676,6 +1823,7 @@ class UserIntent(BaseModel):
     origin_pref:       Optional[Literal["JDM", "Local", "European", "Chinese"]]                     = None
     is_luxury_request: bool                                                                          = False
     required_features: list[str]                                                                     = Field(default_factory=list)
+    disclaimers:       list[str]                                                                     = Field(default_factory=list)
     user_prompt:       str                                                                           = Field(default="", exclude=True)  # injected post-extraction, never sent to LLM
 
 
@@ -1767,6 +1915,12 @@ def resolve_constraints(intent: UserIntent) -> dict:
     raw_prompt = getattr(intent, "user_prompt", "") or ""
     if raw_prompt:
         constraints = apply_keyword_intent(raw_prompt, constraints)
+
+    # Generate advisory disclaimers based on prompt + constraints
+    if raw_prompt:
+        constraints["disclaimers"] = generate_disclaimers(raw_prompt, constraints)
+    else:
+        constraints["disclaimers"] = []
 
     return constraints
 

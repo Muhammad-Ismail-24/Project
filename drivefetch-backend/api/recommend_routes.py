@@ -340,6 +340,11 @@ async def run_recommend_pipeline(
         if override_city:
             constraints["city"] = override_city
 
+        # ── Stage 1b: Emit Advisory Disclaimers ───────────────────────────────
+        disclaimers = constraints.get("disclaimers", [])
+        if disclaimers:
+            yield _sse("disclaimers", {"warnings": disclaimers})
+
         # ── Stage 2: Car Selection & Validation ───────────────────────────────
         raw_targets     = await select_car_targets(constraints)
         
@@ -471,6 +476,7 @@ async def run_recommend_pipeline(
             }
             for r in all_recommendations
         ],
+        "disclaimers": constraints.get("disclaimers", []),
         "total": len(output),
     })
     yield _sse("status", {
