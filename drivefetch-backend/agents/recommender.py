@@ -181,7 +181,7 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "RWD", "transmission": "auto",   "tags": {"sports","jdm","performance"}, "chinese": False, "priority": 2},
     "toyota:fielder":          {"lo": 2_500_000,  "hi": 6_000_000,  "styles": {"Sedan"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"family","jdm","cargo"},    "chinese": False, "priority": 3},
-    "toyota:prius":            {"lo": 2_500_000,  "hi": 12_000_000, "styles": {"Sedan"},
+    "toyota:prius":            {"lo": 2_500_000,  "hi": 12_000_000, "styles": {"Hatchback"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"hybrid","economy","jdm"},  "chinese": False, "priority": 2},
     "toyota:crown":            {"lo": 4_000_000,  "hi": 25_000_000, "styles": {"Sedan"},
                                 "drive": "RWD", "transmission": "auto",   "tags": {"sports","jdm","luxury","status","performance"}, "chinese": False, "priority": 2},
@@ -295,7 +295,7 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
     "nissan:roox":             {"lo": 1_500_000,  "hi": 3_800_000,  "styles": {"Hatchback"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
-    "nissan:note":             {"lo": 3_500_000,  "hi": 6_500_000,  "styles": {"Sedan"},
+    "nissan:note":             {"lo": 3_500_000,  "hi": 6_500_000,  "styles": {"Hatchback"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"hybrid","economy","jdm"},  "chinese": False},
     "nissan:juke":             {"lo": 3_500_000,  "hi": 8_000_000,  "styles": {"Crossover"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"city","sports","jdm"},     "chinese": False},
@@ -305,7 +305,7 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "4x4", "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": False},
 
     # ── Mitsubishi ───────────────────────────────────────────────────────────
-    "mitsubishi:mirage":       {"lo": 2_000_000,  "hi": 4_500_000,  "styles": {"Sedan"},
+    "mitsubishi:mirage":       {"lo": 2_000_000,  "hi": 4_500_000,  "styles": {"Hatchback"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
     "mitsubishi:mini pajero":  {"lo": 800_000,    "hi": 2_500_000,  "styles": {"Mini SUV", "Crossover"},
                                 "drive": "4x4", "transmission": "both", "tags": {"offroad", "city", "economy"}, "chinese": False, "priority": 2},
@@ -387,6 +387,24 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "FWD", "transmission": "auto",   "tags": {"ev","city"},               "chinese": True},
     "gwm:tank 500":            {"lo": 35_000_000, "hi": 45_000_000, "styles": {"SUV"},
                                 "drive": "AWD", "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": True},
+
+    # ── Budget Micro-EVs ─────────────────────────────────────────────────────
+    "honri:ve":                {"lo": 2_000_000,  "hi": 3_200_000,  "styles": {"Hatchback"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"ev","city","economy"},      "chinese": True},
+    "rinco:aria":              {"lo": 2_200_000,  "hi": 3_000_000,  "styles": {"Hatchback"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"ev","city"},                "chinese": True},
+    "metro:enfon":             {"lo": 1_800_000,  "hi": 2_500_000,  "styles": {"Hatchback"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"ev","city"},                "chinese": True},
+    "jac:t8":                  {"lo": 7_000_000,  "hi": 10_000_000, "styles": {"Pickup"},
+                                "drive": "4x4", "transmission": "both",   "tags": {"cargo","offroad"},          "chinese": True},
+    "jac:t9":                  {"lo": 8_500_000,  "hi": 12_000_000, "styles": {"Pickup"},
+                                "drive": "4x4", "transmission": "both",   "tags": {"cargo","offroad"},          "chinese": True},
+    "mg:4 ev":                 {"lo": 10_000_000, "hi": 14_000_000, "styles": {"Hatchback"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"ev","city","sports"},       "chinese": True},
+    "nissan:note e-power":     {"lo": 4_000_000,  "hi": 7_000_000,  "styles": {"Hatchback"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"hybrid","economy","city","jdm"}, "chinese": False, "priority": 2},
+    "nissan:serena e-power":   {"lo": 6_000_000,  "hi": 10_000_000, "styles": {"Van", "MPV"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"hybrid","family","7seat","jdm"}, "chinese": False},
 
     # ── European & Luxury ────────────────────────────────────────────────────
     "bmw:3 series":            {"lo": 6_000_000,  "hi": 25_000_000, "styles": {"Sedan"},
@@ -561,6 +579,15 @@ _CANONICAL_MODEL_MAP: dict[str, str] = {
     "atto 3":                    "Atto 3",
     "tank 500":                  "Tank 500",
     "ora 03":                    "Ora 03",
+    "note e-power":              "Note e-Power",
+    "serena e-power":            "Serena e-Power",
+    "honri ve":                  "VE",
+    "rinco aria":                "Aria",
+    "metro enfon":               "Enfon",
+    "t8":                        "T8",
+    "t9":                        "T9",
+    "4 ev":                      "4 EV",
+    "mg 4":                      "4 EV",
     "3 series":                  "3 Series",
     "5 series":                  "5 Series",
     "7 series":                  "7 Series",
@@ -729,6 +756,16 @@ USE-CASE PRINCIPLES — Highway / Long Route / Touring:
   - Mention expected km/l and approximate Lahore-Islamabad fuel cost in rationale if known
 """,
 
+    "hybrid_ev": """
+USE-CASE PRINCIPLES — Hybrid / Series Hybrid / EV:
+  - CRITICAL DISTINCTION: Series Hybrids (Nissan Note e-Power, Serena e-Power) use a petrol engine ONLY as a generator — the wheels are ALWAYS driven by an electric motor. This gives EV-like driving feel.
+  - Parallel Hybrids (Toyota Aqua, Prius, Honda Grace, Vezel) have both petrol engine and electric motor driving the wheels together.
+  - When user asks for "series hybrid" or "e-Power" → prioritize Nissan Note e-Power and Serena e-Power.
+  - When user asks for "hybrid" generically → include both types, but note the distinction in rationale.
+  - For EV queries: ONLY show cars with 'ev' tag. Budget micro-EVs (Honri VE, Rinco Aria, Metro Enfon) are valid for under 35 lacs.
+  - Avoid: Recommending petrol-only cars for hybrid/EV queries — this is a critical error.
+""",
+
     "accessibility": """
 USE-CASE PRINCIPLES — Accessibility / Disabled Driver:
   - AUTOMATIC ONLY: Hand controls are incompatible with manual clutch operation
@@ -737,6 +774,17 @@ USE-CASE PRINCIPLES — Accessibility / Disabled Driver:
   - Avoid: sports cars (low ride height makes entry/exit painful)
   - Prefer: Sedans with high ride height and wide doors
   - If 7-seat accessible needed: Kia Carnival or Toyota Hiace
+""",
+
+    "monsoon": """
+USE-CASE PRINCIPLES — Monsoon / Flood / High Ground Clearance:
+  - The user is worried about urban flooding and waterlogged streets.
+  - PRIORITY: Crossovers and Mini SUVs with 170mm+ ground clearance.
+  - BEST PICKS: Suzuki Jimny, Daihatsu Terios, Honda Vezel, Kia Stonic, Daihatsu Rocky, Honda BR-V, Toyota C-HR.
+  - For SUV budgets: Fortuner, Pajero, Prado have the best wading depth.
+  - AVOID: Low-clearance sedans (Corolla, Civic, City) — they will hydro-lock in 1-foot standing water.
+  - AVOID: Kei hatchbacks (Alto, Mira) — extremely vulnerable to water ingress.
+  - Mention ground clearance in rationale if known.
 """,
 }
 
@@ -774,8 +822,12 @@ def _get_relevant_principles(use_case: str | None, is_luxury: bool) -> str:
             block = _USE_CASE_PRINCIPLES["commercial_cargo"]
         elif "highway_touring" in uc_lower:
             block = _USE_CASE_PRINCIPLES["highway_touring"]
+        elif any(w in uc_lower for w in ["monsoon", "flood", "waterlogging"]):
+            block = _USE_CASE_PRINCIPLES["monsoon"]
         elif "accessibility" in uc_lower:
             block = _USE_CASE_PRINCIPLES["accessibility"]
+        elif any(w in uc_lower for w in ["hybrid", "ev", "electric", "e-power"]):
+            block = _USE_CASE_PRINCIPLES["hybrid_ev"]
         else:
             block = _USE_CASE_PRINCIPLES["general"]
 
@@ -924,6 +976,22 @@ KEYWORD_INTENT_MAP: list[dict] = [
         "exclude_keywords": [],
         "force_body_style":  "SUV",
         "use_case_override": "offroad",
+        "force_transmission": None,
+        "max_budget_cap":    None,
+        "append_features":   [],
+    },
+
+    # ── Monsoon / Flood / Ground Clearance ────────────────────────────────
+    # Trigger: flood, monsoon, waterlogging, ground clearance keywords
+    # Result: force Crossover/SUV/Mini SUV, avoid low-clearance cars
+    {
+        "intent_id":        "monsoon_flood",
+        "keywords":         ["flood", "flooded", "monsoon", "waterlogging", "pani", "paani",
+                             "rain water", "hydro-lock", "ground clearance", "oonchi gaari",
+                             "high clearance", "water logged"],
+        "exclude_keywords": [],
+        "force_body_style":  "Crossover",
+        "use_case_override": "city",
         "force_transmission": None,
         "max_budget_cap":    None,
         "append_features":   [],
@@ -1482,6 +1550,7 @@ def get_eligible_cars(
     required_features: list[str] | None = None,
     is_youth_query: bool = False,
     drive_req: str | None = None,
+    powertrain_req: str | None = None,
 ) -> str:
     """
     Returns a priority-weighted, fit-score-sorted eligible car list as a prompt string.
@@ -1604,6 +1673,14 @@ def get_eligible_cars(
         if transmission_req == "Manual" and info["transmission"] == "auto":
             continue
 
+        # 3b. Powertrain gate (Hybrid/EV)
+        if powertrain_req:
+            car_tags = info.get("tags", set())
+            if powertrain_req == "hybrid" and "hybrid" not in car_tags:
+                continue
+            if powertrain_req == "ev" and "ev" not in car_tags:
+                continue
+
         # 4. Drive type filtering
         if drive_req and info.get("drive") != drive_req:
             # Allow 4x4 when AWD is requested, but do NOT allow FWD for 4x4 queries
@@ -1668,7 +1745,18 @@ def get_eligible_cars(
         # Youth penalty — kei box vans deprioritised for young buyer queries
         youth_penalty = -0.20 if (is_youth_query and key in _KEI_BOX_VANS) else 0.0
 
-        final_score = fit_score + priority_boost + youth_penalty
+        # Sedan tiering: boost C-segment/mid-size sedans for higher budgets
+        sedan_tier_boost = 0.0
+        if body_style == "Sedan" and max_budget >= 3_500_000:
+            _C_SEGMENT_SEDANS = {
+                "toyota:corolla", "honda:civic", "toyota:premio", "toyota:allion",
+                "hyundai:elantra", "hyundai:sonata", "honda:accord", "toyota:camry",
+                "toyota:mark x", "toyota:crown", "mazda:mazda3", "subaru:impreza",
+            }
+            if key in _C_SEGMENT_SEDANS:
+                sedan_tier_boost = 0.20
+
+        final_score = fit_score + priority_boost + youth_penalty + sedan_tier_boost
 
         # Display string with JDM / feature trim annotations
         display = f"{make.title()} {model.title()}"
@@ -1686,12 +1774,45 @@ def get_eligible_cars(
         scored.append((final_score, display, lo, hi, note))
 
     if not scored:
-        style_note = f" matching body style '{body_style}'" if body_style else ""
-        feat_note  = " with sunroof" if needs_sunroof else ""
-        return (
-            f"No eligible cars found{style_note}{feat_note} for this budget. "
-            "Return an empty array []."
-        )
+        # If feature gates blocked everything, retry WITHOUT feature gates
+        # and inject a warning into the output string
+        if active_feature_gates:
+            # Re-run the loop without feature filtering
+            for key, info in CAR_REGISTRY.items():
+                lo = info["lo"]
+                hi = info["hi"]
+                make, model = key.split(":", 1)
+                if body_style and body_style not in info["styles"]:
+                    continue
+                if info["chinese"] and not allow_chinese:
+                    continue
+                if transmission_req == "Automatic" and info["transmission"] == "manual":
+                    continue
+                if transmission_req == "Manual" and info["transmission"] == "auto":
+                    continue
+                if powertrain_req:
+                    car_tags = info.get("tags", set())
+                    if powertrain_req == "hybrid" and "hybrid" not in car_tags:
+                        continue
+                    if powertrain_req == "ev" and "ev" not in car_tags:
+                        continue
+                if max_budget > 0 and max_budget < lo * 0.80:
+                    continue
+                if min_budget > 0 and hi < min_budget * 0.80:
+                    continue
+                if key.lower() in excluded_lower:
+                    continue
+                display = f"{make.title()} {model.title()}"
+                scored.append((0.5, display, lo, hi, " [feature not available — showing closest alternative]"))
+            scored.sort(key=lambda x: x[0], reverse=True)
+
+        if not scored:
+            style_note = f" matching body style '{body_style}'" if body_style else ""
+            feat_note  = " with sunroof" if needs_sunroof else ""
+            return (
+                f"No eligible cars found{style_note}{feat_note} for this budget. "
+                "Return an empty array []."
+            )
 
     # Sort by final_score descending — best fit + highest priority appears first
     scored.sort(key=lambda x: x[0], reverse=True)
@@ -1819,8 +1940,10 @@ class UserIntent(BaseModel):
     body_style:        Optional[Literal["SUV", "Mini SUV", "Sedan", "Hatchback", "Pickup", "Crossover", "Van", "MPV"]] = None
     transmission:      Optional[Literal["Automatic", "Manual"]]                                     = None
     drive:             Optional[Literal["4x4", "AWD", "FWD", "RWD"]]                                = None
+    powertrain:        Optional[Literal["hybrid", "ev"]]                                             = None
     use_case:          Optional[str]                                                                 = None
     origin_pref:       Optional[Literal["JDM", "Local", "European", "Chinese"]]                     = None
+    direct_model:      Optional[str]                                                                 = Field(default=None, description="Explicitly mentioned car model (e.g. 'Civic', 'Vitz', 'Prado')")
     is_luxury_request: bool                                                                          = False
     required_features: list[str]                                                                     = Field(default_factory=list)
     strategy_summary:  str                                                                           = Field(default="", description="A friendly 2-sentence summary explaining the search interpretation and car strategy.")
@@ -1859,6 +1982,9 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "  Map 'van', 'mpv', '11 seater', '7 seater' -> MPV or Van.\n"
         "- origin_pref: 'Japanese' or 'JDM' -> JDM. 'European' -> European. "
         "'Chinese' -> Chinese. 'local' -> Local.\n"
+        "- direct_model: If the user explicitly mentions a specific car model (e.g. 'Civic', 'Vitz', 'Prado'), capture it here.\n"
+        "- powertrain: 'hybrid' if user mentions hybrid/HEV/e-power/aqua/prius. "
+        "'ev' if user mentions electric/EV/battery car/BEV. Leave null otherwise.\n"
         "- strategy_summary: Write a friendly 2-sentence summary explaining how you "
         "interpreted the request and what kind of cars you will prioritize. "
         "Example: 'You are looking for a fun daily driver for campus commutes with "
@@ -1925,11 +2051,33 @@ def resolve_constraints(intent: UserIntent) -> dict:
     if raw_prompt:
         constraints = apply_keyword_intent(raw_prompt, constraints)
 
+    # Detect powertrain from LLM extraction or prompt heuristics
+    powertrain = intent.powertrain
+    if not powertrain and raw_prompt:
+        prompt_lower_pt = raw_prompt.lower()
+        if any(w in prompt_lower_pt for w in ["electric", "100% electric", "battery car", "fully electric", " ev ", "bev"]):
+            powertrain = "ev"
+        elif any(w in prompt_lower_pt for w in ["hybrid", "e-power", "hev"]):
+            powertrain = "hybrid"
+    constraints["powertrain"] = powertrain
+
+    # Auto-enable Chinese gate for EV queries (most budget EVs are Chinese)
+    if powertrain == "ev":
+        constraints["allow_chinese"] = True
+
     # Generate advisory disclaimers based on prompt + constraints
     if raw_prompt:
         constraints["disclaimers"] = generate_disclaimers(raw_prompt, constraints)
     else:
         constraints["disclaimers"] = []
+
+    # Detect direct model request and override strategy summary
+    if intent.direct_model:
+        model_lower = intent.direct_model.lower().strip()
+        # Direct lookup first, or fallback to the provided string if not in the alias map
+        mapped_model = _CANONICAL_MODEL_MAP.get(model_lower, intent.direct_model)
+        if mapped_model:
+            constraints["strategy_summary"] = f"You specifically asked for a {mapped_model.title()}. We've included budget-eligible variants of the {mapped_model.title()} alongside its closest market competitors to give you a complete picture."
 
     return constraints
 
@@ -1985,6 +2133,7 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         required_features=required_features,
         is_youth_query=is_youth_query,
         drive_req=drive,
+        powertrain_req=constraints.get("powertrain"),
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
@@ -2141,6 +2290,7 @@ async def get_fallback_recommendations(
         excluded_models=excluded_models,
         required_features=required_features,
         drive_req=drive,
+        powertrain_req=constraints.get("powertrain"),
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
@@ -2215,6 +2365,7 @@ async def get_extended_recommendations(
         excluded_models=excluded_models,
         required_features=required_features,
         drive_req=drive,
+        powertrain_req=original_constraints.get("powertrain"),
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)

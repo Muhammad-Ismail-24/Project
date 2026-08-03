@@ -590,7 +590,7 @@ def _score_listing(
 
     if req_city_str:
         req_cities    = [c.strip() for c in re.split(r',|\band\b', req_city_str) if c.strip()]
-        city_matched  = any(rc in car_city_lower or rc in title_lower for rc in req_cities)
+        city_matched  = any(rc in car_city_lower for rc in req_cities)
         city_score    = 30.0 if city_matched else 10.0
     else:
         city_score = 30.0 if car_city_lower else 15.0

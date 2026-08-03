@@ -179,7 +179,7 @@ async def _scrape_one(
         listings, _ = await execute_search_pipeline(
             make=make,
             model=model,
-            city="",                   # soft city — enforced by recommend_normalizer
+            city=override_city or "",  # physical location query to platform
             max_budget=scraper_budget,
             min_budget=min_budget,
             color="",
@@ -353,8 +353,19 @@ async def run_recommend_pipeline(
     recommendations = _deduplicate_and_format_targets(raw_targets, constraints)
 
     if not recommendations:
+        # Emit strategy brief with disclaimers even on empty results —
+        # gives user meaningful feedback instead of a dead-end error.
+        disclaimers = constraints.get("disclaimers", [])
+        summary = constraints.get("strategy_summary", "")
+        if disclaimers or summary:
+            yield _sse("strategy", {
+                "summary":     summary,
+                "disclaimers": disclaimers,
+                "targets":     [],
+            })
         yield _sse("error", {
-            "message": "Could not understand your requirements. Please try rephrasing."
+            "message": "No cars matched your exact combination of features and budget. "
+                       "Try removing a specific feature requirement or adjusting your budget range."
         })
         return
 
