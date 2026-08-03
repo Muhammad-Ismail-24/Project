@@ -182,25 +182,46 @@ _MODEL_ALIAS_MAP: dict[str, list[str]] = {
 # ---------------------------------------------------------------------------
 
 _TRIM_CONFLICTS: dict[str, list[str]] = {
-    "awd":       ["fwd", "alpha", "alpha fwd", "2wd"],
-    "4x4":       ["fwd", "2wd", "alpha fwd"],
-    "fwd":       ["awd", "4x4", "4wd", "xdrive", "quattro"],
-    "alpha":     ["awd", "fwd", "4x4"],
-    "manual":    ["auto", "automatic", "cvt", "ags", "prosmatec", "easytronic",
-                  "tiptronic", "dct", "pdk"],
-    "automatic": ["manual", "mt"],
-    "auto":      ["manual", "mt"],
-    "cvt":       ["manual", "mt"],
-    "pdk":       ["manual", "mt"],
-    "dct":       ["manual", "mt"],
-    "hybrid":    ["non-hybrid", "non hybrid", "petrol only"],
-    "petrol":    ["diesel", "ev", "electric", "hybrid", "plug-in"],
-    "diesel":    ["petrol", "ev", "electric", "hybrid"],
-    "turbo":     ["naturally aspirated", "na engine"],
-    "essence":   ["trophy"],
-    "trophy":    ["essence"],
-    "v6":        ["v8", "v12"],
-    "v8":        ["v6", "v12"],
+
+    # ── Drivetrain / Transmission ──────────────────────────────────────────
+    "awd":          ["fwd", "alpha", "alpha fwd", "2wd"],
+    "4x4":          ["fwd", "2wd", "alpha fwd"],
+    "fwd":          ["awd", "4x4", "4wd", "xdrive", "quattro"],
+    "alpha":        ["awd", "fwd", "4x4"],
+    "manual":       ["auto", "automatic", "cvt", "ags", "prosmatec", "easytronic",
+                     "tiptronic", "dct", "pdk"],
+    "automatic":    ["manual", "mt"],
+    "auto":         ["manual", "mt"],
+    "cvt":          ["manual", "mt"],
+    "pdk":          ["manual", "mt"],
+    "dct":          ["manual", "mt"],
+    "hybrid":       ["non-hybrid", "non hybrid", "petrol only"],
+    "petrol":       ["diesel", "ev", "electric", "hybrid", "plug-in"],
+    "diesel":       ["petrol", "ev", "electric", "hybrid"],
+    "turbo":        ["naturally aspirated", "na engine"],
+    "essence":      ["trophy"],
+    "trophy":       ["essence"],
+    "v6":           ["v8", "v12"],
+    "v8":           ["v6", "v12"],
+
+    # ── Corolla trim-tier conflicts ────────────────────────────────────────
+    "grande":       ["gli", "xli", "dx", "se saloon", "2d", "2.0d"],
+    "altis":        ["gli", "xli", "dx", "se saloon"],
+    "altis grande": ["gli", "xli", "dx", "se saloon"],
+
+    # ── Civic trim-tier conflicts ──────────────────────────────────────────
+    "oriel":        ["exi", "vti prosmatec", "standard"],
+    "rs":           ["exi", "vti", "oriel", "standard"],
+
+    # ── City trim-tier conflicts ───────────────────────────────────────────
+    "aspire":       ["vario", "steermatic"],
+    "rs city":      ["aspire", "vario"],
+
+    # ── Sportage / Sorento ────────────────────────────────────────────────
+    "alpha awd":    ["fwd", "alpha fwd"],
+    "alpha fwd":    ["awd", "alpha awd"],
+    "fwd sorento":  ["awd", "4x4"],
+    "awd sorento":  ["fwd"],
 }
 
 # ---------------------------------------------------------------------------
@@ -603,7 +624,7 @@ def _score_listing(
         if trim_in_title:
             trim_score = 25.0   # Title match: seller declared trim in headline
         elif trim_in_desc:
-            trim_score = 12.0   # Description match: lazy seller, still valid
+            trim_score = 15.0   # Description match: lazy seller, still valid
         else:
             # Neither found — check for hard conflicts before passing listing through
             search_clean = search_text.replace("-", "")

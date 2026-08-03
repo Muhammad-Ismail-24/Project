@@ -339,6 +339,94 @@ Extract trim only when user explicitly mentions a variant:
 "2D", "4D", "Executive", "Standard", "Turbo", "Hybrid", "EV"
 "1.5", "1.8", "2.0" (engine displacement → goes into trim, not a separate field)
 
+=== NICKNAME TO YEAR TRANSLATION PROTOCOL ===
+Pakistani buyers use community generation nicknames instead of model years.
+When you detect a nickname, you MUST translate it to min_year/max_year bounds,
+UNLESS the user has already explicitly stated years (explicit years always win).
+
+The core principle: a nickname tells you the GENERATION the buyer wants.
+Map it to the year range that generation was sold in Pakistan.
+If the user also states a budget, use it as a cross-check:
+a "Reborn" Civic at 60 lacs is contradictory (Reborn ended 2012, prices are lower)
+— but still respect the nickname years and let the normalizer handle price filtering.
+
+HONDA CIVIC NICKNAMES:
+┌─────────────────────────────────────────────────────────────────────┐
+│ "Eagle Eye" → min_year: 2004, max_year: 2006                        │
+│   (7th gen facelift — distinctive sharp headlights)                  │
+│   Example: "Eagle Eye Civic Lahore under 18 lakh"                   │
+│   → make: Honda, model: Civic, min_year: 2004, max_year: 2006       │
+│                                                                       │
+│ "Reborn" → min_year: 2006, max_year: 2012                           │
+│   (8th gen — most liquid used market segment for Civic in Pakistan)  │
+│   Example: "Reborn Civic Oriel chahiye under 30 lakh"               │
+│   → make: Honda, model: Civic, trim: Oriel, min_year: 2006,         │
+│     max_year: 2012                                                   │
+│                                                                       │
+│ "Rebirth" → min_year: 2013, max_year: 2015                          │
+│   (9th gen — less common, sometimes called "FB" gen locally)         │
+│   Example: "Rebirth Civic Karachi"                                   │
+│   → make: Honda, model: Civic, min_year: 2013, max_year: 2015       │
+│                                                                       │
+│ "Civic X" / "Civic 10th Gen" / "Turbo Civic" → min_year: 2016,     │
+│   max_year: 2021                                                      │
+│   (10th gen — turbo era, RS/Oriel trims)                             │
+│   Example: "Civic X RS Islamabad under 55 lakh"                     │
+│   → make: Honda, model: Civic, trim: RS, min_year: 2016,            │
+│     max_year: 2021                                                   │
+│                                                                       │
+│ "Civic XI" / "Civic 11th Gen" → min_year: 2022, max_year: 0        │
+│   (Current gen — Standard/Oriel/RS trims)                            │
+│   Example: "new gen Civic RS under 1 crore"                         │
+│   → make: Honda, model: Civic, trim: RS, min_year: 2022, max_year:0 │
+└─────────────────────────────────────────────────────────────────────┘
+
+TOYOTA COROLLA NICKNAMES:
+┌─────────────────────────────────────────────────────────────────────┐
+│ "Indus Shape" / "Indus Corolla" → min_year: 1993, max_year: 2001   │
+│   (Classic boxy Corolla assembled by Indus Motor Company)           │
+│   Example: "Indus Shape Corolla Lahore"                             │
+│   → make: Toyota, model: Corolla, min_year: 1993, max_year: 2001   │
+│                                                                       │
+│ "Dolphin" / "Dolphin Shape" → min_year: 2002, max_year: 2008       │
+│   (E120 gen — rounded dolphin-like front fascia)                     │
+│   Example: "dolphin shape corolla gli under 12 lakh"               │
+│   → make: Toyota, model: Corolla, trim: GLi, min_year: 2002,        │
+│     max_year: 2008                                                   │
+└─────────────────────────────────────────────────────────────────────┘
+
+HONDA CITY NICKNAMES:
+┌─────────────────────────────────────────────────────────────────────┐
+│ "Chooha Shape" / "Mouse Shape" → min_year: 2004, max_year: 2008    │
+│   (3rd gen City — narrow, pointed nose resembling a mouse)          │
+│   Example: "chooha shape city aspire lahore"                        │
+│   → make: Honda, model: City, trim: Aspire, min_year: 2004,         │
+│     max_year: 2008                                                   │
+└─────────────────────────────────────────────────────────────────────┘
+
+ADDITIONAL COMMON GENERATION REFERENCES:
+┌─────────────────────────────────────────────────────────────────────┐
+│ "Potohar" → Suzuki Potohar (Jimny-based) → make: Suzuki,            │
+│   model: Potohar (treat as Jimny variant), set no year bounds        │
+│                                                                       │
+│ "2000 model" / "2000 CC" → engine displacement, NOT year            │
+│   Do NOT set min_year/max_year from CC references                   │
+│                                                                       │
+│ "Old shape" / "purana shape" → add -5 to current gen start year    │
+│   as a soft max_year. E.g. "old shape Civic" → max_year: 2015       │
+│   (one generation back from current 2022 gen)                        │
+│                                                                       │
+│ "New shape" / "naya shape" / "latest" → min_year: current_gen_start │
+│   E.g. "new shape Civic" → min_year: 2022                           │
+│   E.g. "new shape Corolla" → min_year: 2017 (facelift gen)          │
+└─────────────────────────────────────────────────────────────────────┘
+
+NICKNAME PROTOCOL DECISION TREE:
+1. Does the query contain a known nickname? → YES: apply year bounds from table above
+2. Did user also explicitly state years? → YES: use EXPLICIT YEARS, ignore nickname years
+3. Did user state only one bound (e.g. "Reborn Civic under 2010")? → Set max_year: 2010, min_year: 2006 (nickname floor)
+4. Is the nickname ambiguous (applies to multiple makes/models)? → Use market context to resolve
+
 === YEAR EXTRACTION ===
 "2019 Civic" → min_year: 2019, max_year: 2019
 "Civic 2018 se 2022 tak" → min_year: 2018, max_year: 2022
@@ -413,7 +501,27 @@ Output: {"make": "Daihatsu", "model": "Atrai Wagon", "city": "Lahore", "max_budg
 
 Example 12 — Chinese new entrant:
 Input: "changan deepal s7 lahore under 80 lakh"
-Output: {"make": "Changan", "model": "Deepal S7", "city": "Lahore", "max_budget": 8000000, "color": null, "trim": null, "min_year": 0, "max_year": 0}"""
+Output: {"make": "Changan", "model": "Deepal S7", "city": "Lahore", "max_budget": 8000000, "color": null, "trim": null, "min_year": 0, "max_year": 0}
+
+Example 13 — Civic generation nickname (Reborn):
+Input: "Reborn Civic Oriel chahiye islamabad under 30 lakh"
+Output: {"make": "Honda", "model": "Civic", "city": "Islamabad and Rawalpindi", "min_budget": 2100000, "max_budget": 3000000, "color": null, "trim": "Oriel", "min_year": 2006, "max_year": 2012}
+
+Example 14 — Corolla generation nickname (Dolphin):
+Input: "dolphin shape corolla gli under 12 lakh lahore mein"
+Output: {"make": "Toyota", "model": "Corolla", "city": "Lahore", "min_budget": 840000, "max_budget": 1200000, "color": null, "trim": "GLi", "min_year": 2002, "max_year": 2008}
+
+Example 15 — Civic nickname with explicit year override:
+Input: "Eagle Eye Civic 2005 only karachi"
+Output: {"make": "Honda", "model": "Civic", "city": "Karachi", "max_budget": null, "color": null, "trim": null, "min_year": 2005, "max_year": 2005}
+
+Example 16 — City nickname (Chooha Shape):
+Input: "chooha shape honda city aspire karachi under 15 lakh"
+Output: {"make": "Honda", "model": "City", "city": "Karachi", "min_budget": 1050000, "max_budget": 1500000, "color": null, "trim": "Aspire", "min_year": 2004, "max_year": 2008}
+
+Example 17 — Civic X with trim:
+Input: "Civic X RS Islamabad under 55 lakh"
+Output: {"make": "Honda", "model": "Civic", "city": "Islamabad and Rawalpindi", "min_budget": 3850000, "max_budget": 5500000, "color": null, "trim": "RS", "min_year": 2016, "max_year": 2021}"""
 
 
 async def _execute_openrouter_call(user_input: str) -> str:

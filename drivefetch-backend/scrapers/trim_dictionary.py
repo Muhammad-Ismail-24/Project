@@ -665,11 +665,15 @@ def resolve_canonical_trim(
     is_budget_search: bool = False
 ) -> str:
     """
-    Resolves canonical trim slug for platforms.
-    ALWAYS bypasses strict vr_ slugs on PakWheels for known multi-generation trims
-    (e.g., Oriel, Aspire, GLi) so normalizer.py can filter them reliably across all years.
+    Sanitizes raw trim, checks against CANONICAL_TRIM_MAP via model,
+    and returns exact platform slug. 
     """
     if not raw_trim or not model:
+        return ""
+
+    # 🚀 THE MASTER SWITCH: Disable trim injection for PakWheels entirely.
+    # Rely on Year + Budget pushdown, and let normalizer.py do the filtering.
+    if platform == "pakwheels":
         return ""
         
     model_clean = model.lower().strip()
@@ -677,11 +681,7 @@ def resolve_canonical_trim(
     
     if raw_trim_clean in GENERIC_TRIM_TAGS:
         return ""
-
-    # THE FIX: ALWAYS bypass PakWheels URL injection for Multi-Gen Trims
-    if platform == "pakwheels" and raw_trim_clean in MULTI_GEN_TRIMS:
-        return ""
-
+        
     key = f"{model_clean}:{raw_trim_clean}"
     if key in CANONICAL_TRIM_MAP:
         return CANONICAL_TRIM_MAP[key].get(platform, "")

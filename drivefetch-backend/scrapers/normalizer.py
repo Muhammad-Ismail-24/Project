@@ -458,17 +458,56 @@ TRIM_ALIASES: dict[str, list[str]] = {
 }
 
 # NEW: Explicit Negative Match Conflicts
+# Two categories:
+#   1. Drivetrain / transmission conflicts (original)
+#   2. Trim-tier conflicts — if user asks for a higher trim, veto listings
+#      that explicitly declare a lower/different trim in title or description.
+#      These only fire when the LOWER trim is explicitly present in the text
+#      (never veto on absence — that's the lazy-seller pass-through path).
 TRIM_CONFLICTS: dict[str, list[str]] = {
-    "awd":       ["fwd", "alpha"],
-    "fwd":       ["awd", "alpha"],
-    "alpha":     ["awd", "fwd"],
-    "manual":    ["auto", "automatic", "cvt", "ags", "prosmatec"],
-    "automatic": ["manual", "mt"],
-    "auto":      ["manual", "mt"],
-    "hybrid":    ["non-hybrid", "non hybrid"],
-    "petrol":    ["diesel", "ev", "electric"],
-    "diesel":    ["petrol", "ev", "electric"],
-    "essence":   ["trophy"]
+
+    # ── Drivetrain / Transmission ──────────────────────────────────────────
+    "awd":        ["fwd", "alpha", "alpha fwd", "2wd"],
+    "4x4":        ["fwd", "2wd", "alpha fwd"],
+    "fwd":        ["awd", "4x4", "4wd", "xdrive", "quattro"],
+    "alpha":      ["awd", "fwd", "4x4"],
+    "manual":     ["auto", "automatic", "cvt", "ags", "prosmatec", "easytronic",
+                   "tiptronic", "dct", "pdk"],
+    "automatic":  ["manual", "mt"],
+    "auto":       ["manual", "mt"],
+    "cvt":        ["manual", "mt"],
+    "hybrid":     ["non-hybrid", "non hybrid", "petrol only"],
+    "petrol":     ["diesel", "ev", "electric", "hybrid", "plug-in"],
+    "diesel":     ["petrol", "ev", "electric", "hybrid"],
+    "essence":    ["trophy"],
+    "trophy":     ["essence"],
+    "v6":         ["v8", "v12"],
+    "v8":         ["v6", "v12"],
+
+    # ── Corolla trim-tier conflicts ────────────────────────────────────────
+    # If user wants Grande/Altis (top tier), reject if title explicitly says
+    # GLi or XLi (lower tier). The reverse is NOT added — if someone wants
+    # a GLi, finding a Grande title is fine (seller may be mis-titling).
+    "grande":     ["gli", "xli", "dx", "se saloon", "2d", "2.0d"],
+    "altis":      ["gli", "xli", "dx", "se saloon"],
+    "altis grande": ["gli", "xli", "dx", "se saloon"],
+
+    # ── Civic trim-tier conflicts ──────────────────────────────────────────
+    # Oriel is higher than VTi and EXi — if title says EXi when user wants Oriel, veto.
+    "oriel":      ["exi", "vti prosmatec", "standard"],
+    "rs":         ["exi", "vti", "oriel", "standard"],   # RS is top — exclude all lower
+
+    # ── City trim-tier conflicts ───────────────────────────────────────────
+    "aspire":     ["vario", "steermatic"],       # Aspire is higher than Vario
+    "rs city":    ["aspire", "vario"],
+
+    # ── Sportage trim conflicts ────────────────────────────────────────────
+    "alpha awd":  ["fwd", "alpha fwd"],
+    "alpha fwd":  ["awd", "alpha awd"],
+
+    # ── Kia Sorento ──────────────────────────────────────────────────────────
+    "fwd sorento":["awd", "4x4"],
+    "awd sorento":["fwd"],
 }
 
 COMMON_COLORS = ["black", "white", "silver", "grey", "gray", "red", "blue",
