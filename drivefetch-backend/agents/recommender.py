@@ -796,38 +796,33 @@ def _get_relevant_principles(use_case: str | None, is_luxury: bool) -> str:
 
 KEYWORD_INTENT_MAP: list[dict] = [
 
-    # ── Student / University — Fuel Economy ──────────────────────────────────
-    # Trigger: student + fuel/economy/mileage keywords
-    # Result: force Hatchback + student_economy use_case
-    # The LLM frequently recommends Civic/Corolla for students asking for
-    # fuel-efficient cars. This forces hatchbacks instead.
+    # ── 1. Student / University — Sports & Style (CHECKED FIRST) ─────────────
+    # Triggers on sports/performance/slang keywords for young drivers
     {
-        "intent_id":        "student_fuel_economy",
-        "keywords":         ["student", "university", "uni ", "college", "petrol kam",
-                             "fuel efficient", "fuel economy", "mileage", "avg ", "average",
-                             "km per litre", "km/litre", "fuel mileage", "bachane wali",
-                             "sasta chalana", "cheap to run"],
-        "exclude_keywords": ["sports", "fast", "sporty", "powerful", "looks", "style",
-                             "drifting", "racing", "turbo"],
-        "force_body_style":  "Hatchback",
-        "use_case_override": "student_economy",
-        "force_transmission": None,   # don't force — user may want auto or manual
+        "intent_id":        "student_sports",
+        "keywords":         ["pick", "pick achi", "pick acchi", "maza", "zara maza", 
+                             "shashka", "chaska", "bhagane", "bhaganay", "sporty", 
+                             "fast", "looks", "style", "drifting", "racing", "fun driving", "speed"],
+        "exclude_keywords": ["petrol kam", "fuel efficient", "fuel economy", "mileage",
+                             "average", "km per litre", "bachane wali", "sasta"],
+        "force_body_style":  None,    # Allow sporty hatchbacks (Swift/Vitz) or sedans
+        "use_case_override": "student_sports",
+        "force_transmission": None,
         "max_budget_cap":    None,
         "append_features":   [],
     },
 
-    # ── Student / University — Sports & Style ────────────────────────────────
-    # Trigger: student + sports/looks keywords (WITHOUT fuel economy)
-    # Result: student_sports use_case (no body_style force — allow hatchback or sedan)
+    # ── 2. Student / University — Fuel Economy ───────────────────────────────
+    # MUST contain explicit fuel-saving keywords
     {
-        "intent_id":        "student_sports",
-        "keywords":         ["student", "university", "uni ", "college", "youngster",
-                             "young", "boy", "guys", "sporty", "fast", "looks", "style",
-                             "drifting", "racing", "fun driving"],
-        "exclude_keywords": ["petrol kam", "fuel efficient", "fuel economy", "mileage",
-                             "average", "km per litre", "bachane wali", "sasta"],
-        "force_body_style":  None,    # let LLM decide — sports hatchback or sedan both valid
-        "use_case_override": "student_sports",
+        "intent_id":        "student_fuel_economy",
+        "keywords":         ["petrol kam", "fuel efficient", "fuel economy", "mileage", 
+                             "km per litre", "km/litre", "fuel mileage", "bachane wali",
+                             "sasta chalana", "cheap to run", "avg kam"],
+        "exclude_keywords": ["sports", "fast", "sporty", "powerful", "looks", "style",
+                             "drifting", "racing", "turbo", "pick", "maza"],
+        "force_body_style":  "Hatchback",
+        "use_case_override": "student_economy",
         "force_transmission": None,
         "max_budget_cap":    None,
         "append_features":   [],
