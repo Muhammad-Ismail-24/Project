@@ -866,6 +866,16 @@ def _get_relevant_principles(use_case: str | None, is_luxury: bool) -> str:
 # ---------------------------------------------------------------------------
 
 KEYWORD_INTENT_MAP: list[dict] = [
+    {
+        "intent_id":        "hyper_miler",
+        "keywords":         ["20 km/l", "20km/l", "25 km/l", "maximum average", "best average", "30 km/l", "kam fuel"],
+        "exclude_keywords": [],
+        "force_body_style":  None,
+        "use_case_override": "student_economy",
+        "force_transmission": None,
+        "max_budget_cap":    None,
+        "append_features":   [],
+    },
 
     # ── 1. Student / University — Sports & Style (CHECKED FIRST) ─────────────
     # Triggers on sports/performance/slang keywords for young drivers
@@ -1127,6 +1137,13 @@ def apply_keyword_intent(user_prompt: str, constraints: dict) -> dict:
                     existing.append(feat)
             constraints["required_features"] = existing
 
+        if intent_id == "hyper_miler":
+            # If they have the budget for a hybrid, force hybrid. Otherwise, force max 1000cc.
+            if constraints.get("max_budget", 0) >= 2_500_000:
+                constraints["powertrain"] = "hybrid"
+            else:
+                constraints["max_cc"] = 1000
+
         constraints["intent_id"] = intent_id
         return constraints  # first match wins
 
@@ -1210,6 +1227,15 @@ def generate_disclaimers(user_prompt: str, constraints: dict) -> list[str]:
         disclaimers.append(
             "⚠️ Feature Notice: Suzuki Mehran/Cultus do not feature factory "
             "Panoramic Sunroofs or Lane Assist in Pakistan."
+        )
+
+    # 7. EV Infrastructure Warning
+    has_ev_kw = any(w in prompt_lower for w in ["ev", "electric", "battery car", "zero emission"])
+    if has_ev_kw or constraints.get("powertrain") == "ev":
+        disclaimers.append(
+            "⚠️ EV Infrastructure Notice: Public DC fast chargers are currently limited across Pakistan. "
+            "Ensure you have provisions for a 7kW/11kW home AC wallbox charger (ideally with solar net-metering) "
+            "for reliable daily urban commuting."
         )
 
     return disclaimers
@@ -1992,6 +2018,9 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "automatic hatchbacks like the Suzuki Swift and Toyota Vitz over sluggish 660cc "
         "eco-cars or high-maintenance project vehicles.' Always be specific to the "
         "user's actual request — never generic.\n"
+        "  IMPORTANT: If the user asks for a mathematically impossible combination in the Pakistani market "
+        "(e.g., a 7-seater sports car with <5s 0-100 under 25 Lakhs, or a brand new luxury SUV under 30 Lakhs), "
+        "you MUST explicitly state in this summary which constraints you had to drop or trade-off to find realistic options.\n"
         "- Leave null if not clearly stated — do not guess."
     )
     response = await client.aio.models.generate_content(
