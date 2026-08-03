@@ -168,7 +168,7 @@ async def _scrape_one(
     GENERIC_POWERTRAIN_TAGS = {
         "ev", "electric", "hev", "phev", "hybrid",
         "petrol", "diesel", "cng", "awd", "fwd", "4x4", "4wd",
-        "all trims", "any", "none" # <-- Add these to intercept LLM hallucinated instructions
+        "all trims", "any", "none" # <-- Intercepts LLM hallucinated instructions
     }
     trim_raw     = rec.get("trim") or ""
     trim_for_url = trim_raw if trim_raw.lower() not in GENERIC_POWERTRAIN_TAGS else ""
@@ -327,15 +327,29 @@ async def run_recommend_pipeline(
     # ── Stage 1: Intent Extraction & Constraint Resolution ─────────────────
     yield _sse("status", {"message": "🧠 Analysing your requirements...", "stage": "mapping"})
 
-    intent = await extract_intent(user_prompt)
-    if override_budget is not None and override_budget > 0:
-        intent.max_budget = override_budget
-    constraints = resolve_constraints(intent)
-    if override_city:
-        constraints["city"] = override_city
+    try:
+        intent = await extract_intent(user_prompt)
+        
+        # Inject the raw prompt into the intent object so apply_keyword_intent 
+        # can scan it for Python-level overrides.
+        intent.user_prompt = user_prompt
+        
+        if override_budget is not None and override_budget > 0:
+            intent.max_budget = override_budget
+        constraints = resolve_constraints(intent)
+        if override_city:
+            constraints["city"] = override_city
 
-    # ── Stage 2: Car Selection & Validation ───────────────────────────────
-    raw_targets     = await select_car_targets(constraints)
+        # ── Stage 2: Car Selection & Validation ───────────────────────────────
+        raw_targets     = await select_car_targets(constraints)
+        
+    except Exception as e:
+        print(f"[API Error] Google Gemini failed during mapping/selection: {e}")
+        yield _sse("error", {
+            "message": "The AI matchmaker is currently experiencing high demand and is overloaded. Please wait a few seconds and try again."
+        })
+        return
+
     recommendations = _deduplicate_and_format_targets(raw_targets, constraints)
 
     if not recommendations:
@@ -398,10 +412,14 @@ async def run_recommend_pipeline(
             "failed":  failed_labels,
         })
 
-        fallback_recs = await get_fallback_recommendations(
-            constraints=constraints,
-            excluded_models=tried_models,
-        )
+        try:
+            fallback_recs = await get_fallback_recommendations(
+                constraints=constraints,
+                excluded_models=tried_models,
+            )
+        except Exception as e:
+            print(f"[API Error] Google Gemini failed during fallback selection: {e}")
+            fallback_recs = []
 
         if fallback_recs:
             fb_names   = [_target_label(r) for r in fallback_recs]
@@ -538,18 +556,27 @@ async def recommend_extend(request: Request):
             "stage":   "extending",
         })
 
-        # Re-extract intent + constraints (same as main pipeline)
-        intent = await extract_intent(user_prompt)
-        if budget is not None and budget > 0:
-            intent.max_budget = budget
-        constraints = resolve_constraints(intent)
-        if city:
-            constraints["city"] = city
+        try:
+            # Re-extract intent + constraints (same as main pipeline)
+            intent = await extract_intent(user_prompt)
+            intent.user_prompt = user_prompt  # Inject raw prompt for the Python Keyword Mapper
+            
+            if budget is not None and budget > 0:
+                intent.max_budget = budget
+            constraints = resolve_constraints(intent)
+            if city:
+                constraints["city"] = city
 
-        extended_targets = await get_extended_recommendations(
-            original_constraints=constraints,
-            excluded_models=exclude_models,
-        )
+            extended_targets = await get_extended_recommendations(
+                original_constraints=constraints,
+                excluded_models=exclude_models,
+            )
+        except Exception as e:
+            print(f"[API Error] Google Gemini failed during extension: {e}")
+            yield _sse("error", {
+                "message": "The AI matchmaker is currently experiencing high demand. Please try again in a few moments."
+            })
+            return
 
         if not extended_targets:
             yield _sse("extension_results", {
