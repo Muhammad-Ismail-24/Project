@@ -125,9 +125,9 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "FWD", "transmission": "both",   "tags": {"economy","city","family"}, "chinese": False, "priority": 2},
     "suzuki:swift":            {"lo": 1_200_000,  "hi": 5_200_000,  "styles": {"Hatchback"},
                                 "drive": "FWD", "transmission": "both",   "tags": {"economy","city","sports"}, "chinese": False, "priority": 2},
-    "suzuki:baleno":           {"lo": 1_000_000,  "hi": 2_500_000,  "styles": {"Sedan"},
+    "suzuki:baleno":           {"lo": 1_000_000,  "hi": 1_600_000,  "styles": {"Sedan"},
                                 "drive": "FWD", "transmission": "both",   "tags": {"economy","city","family"}, "chinese": False, "priority": 3},
-    "suzuki:liana":            {"lo": 1_200_000,  "hi": 2_800_000,  "styles": {"Sedan"},
+    "suzuki:liana":            {"lo": 1_200_000,  "hi": 1_800_000,  "styles": {"Sedan"},
                                 "drive": "FWD", "transmission": "both",   "tags": {"economy","family"},        "chinese": False, "priority": 3},
     "suzuki:hustler":          {"lo": 1_800_000,  "hi": 4_000_000,  "styles": {"Hatchback"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
@@ -149,11 +149,11 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "FWD", "transmission": "manual", "tags": {"economy","city"},          "chinese": False, "priority": 2},
     "suzuki:khyber":           {"lo": 300_000,   "hi": 1_200_000, "styles": {"Hatchback"},
                                 "drive": "FWD", "transmission": "manual", "tags": {"economy","city"},          "chinese": False, "priority": 2},
-    "suzuki:margalla":         {"lo": 400_000,   "hi": 1_500_000, "styles": {"Sedan"},
+    "suzuki:margalla":         {"lo": 400_000,   "hi": 1_200_000, "styles": {"Sedan"},
                                 "drive": "FWD", "transmission": "manual", "tags": {"economy","family"},        "chinese": False, "priority": 2},
-    "daihatsu:charade":        {"lo": 250_000,   "hi": 1_000_000, "styles": {"Hatchback"},
+    "daihatsu:charade":        {"lo": 250_000,   "hi": 800_000,  "styles": {"Hatchback"},
                                 "drive": "FWD", "transmission": "both",   "tags": {"economy","city"},          "chinese": False, "priority": 2},
-    "nissan:sunny":            {"lo": 500_000,   "hi": 1_800_000, "styles": {"Sedan"},
+    "nissan:sunny":            {"lo": 500_000,   "hi": 1_500_000, "styles": {"Sedan"},
                                 "drive": "FWD", "transmission": "both",   "tags": {"economy","family"},        "chinese": False, "priority": 2},
 
     # ── Toyota ───────────────────────────────────────────────────────────────
@@ -651,6 +651,74 @@ USE-CASE PRINCIPLES — General (no specific use case stated):
   - If budget is wide, pick 1 reliable mainstream (Toyota/Honda) + 1 alternative make to show diversity
   - Never recommend niche sports or offroad cars for unspecified use cases
 """,
+
+    "student_economy": """
+USE-CASE PRINCIPLES — Student / University / Fuel Economy:
+  - HARD RULE: NEVER recommend Civic, Corolla, or City for a student asking for fuel-efficient transport.
+    These cars cost 2–5x more to run monthly than a 660cc kei car.
+  - PRIORITY ORDER for 660–800cc kei hatchbacks: Suzuki Alto 660cc, Nissan Dayz, Daihatsu Mira/Move, Suzuki Every
+  - For budgets under PKR 20 lacs: Suzuki Alto, Cultus, Wagon R, Passo are the correct picks
+  - For budgets PKR 20–40 lacs: Toyota Vitz, Honda Fit, Suzuki Swift (all have >15km/l highway)
+  - AUTOMATIC PREFERRED: Students in stop-and-go traffic benefit enormously from auto/AGS transmission
+  - Avoid: Sedans (heavy, expensive, poor fuel economy for city use)
+  - Avoid: Large hatchbacks (Honda Freed, Stepwgn) — too big, too costly
+  - Avoid: APV, Bolan, Every (vans) — these are commercial, not student cars
+  - Mention fuel economy figures in rationale if known (Alto ~20km/l, Vitz ~15km/l city)
+""",
+
+    "student_sports": """
+USE-CASE PRINCIPLES — Student / University / Sports & Style:
+  - Student who wants looks/fun — fuel economy is NOT their primary concern
+  - For budgets under PKR 20 lacs: Suzuki Swift (sporty hatchback), Toyota Vitz (fun JDM feel)
+  - For budgets PKR 20–40 lacs: Suzuki Swift (newer), Honda Fit RS, Toyota Aqua G-Sports
+  - For budgets PKR 40–80 lacs: Honda Civic (sporty sedan), Toyota Mark X (V6, genuine sports)
+  - AVOID: Recommending Alto or Mira for "sporty student" — they have no sports character
+  - AVOID: Recommending Corolla GLi — it is the definition of boring for a young buyer
+  - Manual transmission is fine and preferred for sporty buyers
+  - JDM trim hints: Vitz RS, Fit RS, Aqua G-Sports, Mark X 250G are the fun-spec variants
+""",
+
+    "first_car": """
+USE-CASE PRINCIPLES — First Car / New Driver:
+  - HARD RULE: First car = small, automatic, cheap to repair. New drivers WILL have minor accidents.
+  - PRIORITY: Suzuki Alto, Suzuki Cultus AGS, Toyota Passo, Daihatsu Mira (small, forgiving, cheap panels)
+  - AUTOMATIC ONLY: Manual transmission is dangerous for new drivers in Pakistani city traffic
+  - Cheap parts essential — avoid anything where a minor panel job costs 50K+
+  - Avoid: Civic, Corolla (too expensive to repair after inevitable dings)
+  - Avoid: Large body (Vezel, Sportage) — hard to park for beginners
+  - Mention insurance and low repair cost in rationale
+""",
+
+    "commercial_cargo": """
+USE-CASE PRINCIPLES — Commercial / Cargo / Loader:
+  - User needs a cargo carrier, not a passenger car
+  - PRIORITY: Suzuki Bolan (payload king, cheap), Suzuki Every (bigger, more modern), Suzuki APV (passenger+cargo)
+  - For heavier loads: Toyota Hiace is the correct answer regardless of higher price
+  - Avoid: passenger hatchbacks and sedans — they have no cargo capacity
+  - Avoid: premium vans (Alphard, Vellfire) — wrong segment entirely
+  - Mention payload/cargo floor dimensions in rationale if known
+""",
+
+    "highway_touring": """
+USE-CASE PRINCIPLES — Highway / Long Route / Touring:
+  - Highway use = fuel economy at 100–120km/h, ride comfort, boot space for luggage
+  - PRIORITY SEDANS: Corolla (most proven), City (comfortable), Premio/Allion (smooth highway ride)
+  - HYBRID BONUS: Aqua, Prius excel at 20–25km/l on highway — mention this
+  - Avoid: kei cars (Alto, Vitz) for long highway — uncomfortable at highway speed
+  - Avoid: heavy SUVs (Fortuner, Prado) unless the route involves mountain/off-road sections
+  - Automatic preferred for relaxed long-distance driving
+  - Mention expected km/l and approximate Lahore-Islamabad fuel cost in rationale if known
+""",
+
+    "accessibility": """
+USE-CASE PRINCIPLES — Accessibility / Disabled Driver:
+  - AUTOMATIC ONLY: Hand controls are incompatible with manual clutch operation
+  - Spacious cabin entry: look for wider door openings (Corolla, City, Civic)
+  - Avoid: kei cars (very difficult for wheelchair transfer, low roofline)
+  - Avoid: sports cars (low ride height makes entry/exit painful)
+  - Prefer: Sedans with high ride height and wide doors
+  - If 7-seat accessible needed: Kia Carnival or Toyota Hiace
+""",
 }
 
 
@@ -675,8 +743,20 @@ def _get_relevant_principles(use_case: str | None, is_luxury: bool) -> str:
             block = _USE_CASE_PRINCIPLES["sports"]
         elif any(w in uc_lower for w in ["luxury", "premium", "vip", "aura", "status", "boss"]):
             block = _USE_CASE_PRINCIPLES["luxury"]
-        elif any(w in uc_lower for w in ["ride", "uber", "careem", "commercial", "taxi"]):
+        elif any(w in uc_lower for w in ["ride", "uber", "careem", "commercial", "taxi", "sawari", "kiraya"]):
             block = _USE_CASE_PRINCIPLES["ride_sharing"]
+        elif "student_economy" in uc_lower:
+            block = _USE_CASE_PRINCIPLES["student_economy"]
+        elif "student_sports" in uc_lower:
+            block = _USE_CASE_PRINCIPLES["student_sports"]
+        elif "first_car" in uc_lower:
+            block = _USE_CASE_PRINCIPLES["first_car"]
+        elif "commercial_cargo" in uc_lower:
+            block = _USE_CASE_PRINCIPLES["commercial_cargo"]
+        elif "highway_touring" in uc_lower:
+            block = _USE_CASE_PRINCIPLES["highway_touring"]
+        elif "accessibility" in uc_lower:
+            block = _USE_CASE_PRINCIPLES["accessibility"]
         else:
             block = _USE_CASE_PRINCIPLES["general"]
 
@@ -686,6 +766,263 @@ def _get_relevant_principles(use_case: str | None, is_luxury: bool) -> str:
 
     return block.strip()
 
+
+
+
+# ---------------------------------------------------------------------------
+# KEYWORD INTENT MAP
+#
+# Python-level query intent interceptor that runs BEFORE the LLM sees anything.
+# Maps raw user phrase patterns to hard constraints that override LLM guesses.
+#
+# Architecture:
+#   1. apply_keyword_intent() is called in resolve_constraints() with user_prompt.
+#   2. It scans prompt for keyword matches and injects overrides into constraints.
+#   3. Overrides take precedence over LLM-extracted body_style and use_case.
+#
+# Rule design:
+#   - keywords: ANY of these in prompt (lowercase) triggers the intent
+#   - exclude_keywords: if ANY of these are also present, intent is NOT triggered
+#     (allows disambiguation between overlapping intents)
+#   - force_body_style: hard-overrides body_style in constraints dict
+#   - use_case_override: replaces use_case in constraints dict
+#   - force_transmission: hard-overrides transmission
+#   - max_budget_cap: if stated budget exceeds this, cap it (prevents luxury
+#     cars surfacing for frugal use cases)
+#   - append_features: adds to required_features list
+#
+# Add new intents here as you discover new failure patterns in production.
+# ---------------------------------------------------------------------------
+
+KEYWORD_INTENT_MAP: list[dict] = [
+
+    # ── Student / University — Fuel Economy ──────────────────────────────────
+    # Trigger: student + fuel/economy/mileage keywords
+    # Result: force Hatchback + student_economy use_case
+    # The LLM frequently recommends Civic/Corolla for students asking for
+    # fuel-efficient cars. This forces hatchbacks instead.
+    {
+        "intent_id":        "student_fuel_economy",
+        "keywords":         ["student", "university", "uni ", "college", "petrol kam",
+                             "fuel efficient", "fuel economy", "mileage", "avg ", "average",
+                             "km per litre", "km/litre", "fuel mileage", "bachane wali",
+                             "sasta chalana", "cheap to run"],
+        "exclude_keywords": ["sports", "fast", "sporty", "powerful", "looks", "style",
+                             "drifting", "racing", "turbo"],
+        "force_body_style":  "Hatchback",
+        "use_case_override": "student_economy",
+        "force_transmission": None,   # don't force — user may want auto or manual
+        "max_budget_cap":    None,
+        "append_features":   [],
+    },
+
+    # ── Student / University — Sports & Style ────────────────────────────────
+    # Trigger: student + sports/looks keywords (WITHOUT fuel economy)
+    # Result: student_sports use_case (no body_style force — allow hatchback or sedan)
+    {
+        "intent_id":        "student_sports",
+        "keywords":         ["student", "university", "uni ", "college", "youngster",
+                             "young", "boy", "guys", "sporty", "fast", "looks", "style",
+                             "drifting", "racing", "fun driving"],
+        "exclude_keywords": ["petrol kam", "fuel efficient", "fuel economy", "mileage",
+                             "average", "km per litre", "bachane wali", "sasta"],
+        "force_body_style":  None,    # let LLM decide — sports hatchback or sedan both valid
+        "use_case_override": "student_sports",
+        "force_transmission": None,
+        "max_budget_cap":    None,
+        "append_features":   [],
+    },
+
+    # ── First Car / New Driver ────────────────────────────────────────────────
+    # Trigger: first car, new driver, learning, beginner keywords
+    # Result: force small Hatchback, automatic preferred for safety
+    # New drivers in Pakistan should not be in large sedans or SUVs.
+    {
+        "intent_id":        "first_car",
+        "keywords":         ["first car", "pehli gaari", "new driver", "abhi seekhna",
+                             "beginner", "learning to drive", "practice car", "driving school",
+                             "sikhna hai", "abhi license"],
+        "exclude_keywords": [],
+        "force_body_style":  "Hatchback",
+        "use_case_override": "first_car",
+        "force_transmission": "Automatic",   # auto easier for learners
+        "max_budget_cap":    None,
+        "append_features":   [],
+    },
+
+    # ── Rickshaw / Loader Replacement — Commercial ────────────────────────────
+    # Trigger: loader, cargo, goods, dukaan, shop delivery keywords
+    # Result: force Van body_style, commercial use_case
+    {
+        "intent_id":        "commercial_cargo",
+        "keywords":         ["loader", "cargo", "goods", "delivery", "dukaan", "shop",
+                             "saman uthana", "commercial", "suzuki loader", "redi", "redi gaari"],
+        "exclude_keywords": ["family", "passenger", "7 seater", "school run"],
+        "force_body_style":  "Van",
+        "use_case_override": "commercial_cargo",
+        "force_transmission": None,
+        "max_budget_cap":    None,
+        "append_features":   [],
+    },
+
+    # ── School Run / Kids Pickup ──────────────────────────────────────────────
+    # Trigger: kids, school, pickup kids keywords
+    # Result: family use_case, small crossover or sedan (NOT van unless 7-seat)
+    {
+        "intent_id":        "school_run",
+        "keywords":         ["school run", "kids pickup", "bachon ko", "bachon ki",
+                             "pickup kids", "school ke baad", "school drop"],
+        "exclude_keywords": ["7 seater", "van", "8 seater"],
+        "force_body_style":  "Sedan",
+        "use_case_override": "family",
+        "force_transmission": None,
+        "max_budget_cap":    None,
+        "append_features":   [],
+    },
+
+    # ── Fuel Station / Rural Long Route ──────────────────────────────────────
+    # Trigger: highway, long route, motorway, petrol pump, rural keywords
+    # Result: fuel economy use_case, no body style force (sedan fine for highway)
+    {
+        "intent_id":        "highway_long_route",
+        "keywords":         ["highway", "motorway", "long route", "lahore karachi",
+                             "islamabad lahore", "long drive", "out of city", "tour",
+                             "saffari", "petrol pump se dur", "rural"],
+        "exclude_keywords": ["offroad", "4x4", "mountain", "northern"],
+        "force_body_style":  None,
+        "use_case_override": "highway_touring",
+        "force_transmission": None,
+        "max_budget_cap":    None,
+        "append_features":   [],
+    },
+
+    # ── Northern Areas / Mountains / Offroad ─────────────────────────────────
+    # Trigger: northern areas, KPK, AJK, mountains, bumpy road keywords
+    # Result: force SUV + offroad use_case
+    # LLM sometimes picks Crossover/Vezel for "northern areas" queries.
+    # This forces true SUVs instead.
+    {
+        "intent_id":        "northern_offroad",
+        "keywords":         ["northern areas", "naran", "kaghan", "hunza", "gilgit",
+                             "azad kashmir", "ajk", "murree", "kpk", "khyber",
+                             "mountain road", "bumpy road", "rough road", "off road",
+                             "offroad", "jungle", "dirt road", "kaccha rasta"],
+        "exclude_keywords": [],
+        "force_body_style":  "SUV",
+        "use_case_override": "offroad",
+        "force_transmission": None,
+        "max_budget_cap":    None,
+        "append_features":   [],
+    },
+
+    # ── Uber / Careem / Ride Sharing ─────────────────────────────────────────
+    # Trigger: uber, careem, taxi, ride sharing keywords
+    # Result: ride_sharing use_case, no body_style force (sedan preferred but let LLM confirm)
+    {
+        "intent_id":        "ride_sharing",
+        "keywords":         ["uber", "careem", "indriver", "bykea", "ride share",
+                             "ride-sharing", "taxi", "cab service", "passenger service",
+                             "kiraya car", "sawari"],
+        "exclude_keywords": [],
+        "force_body_style":  None,
+        "use_case_override": "ride_sharing",
+        "force_transmission": None,
+        "max_budget_cap":    None,
+        "append_features":   [],
+    },
+
+    # ── Wife / Lady Driver ────────────────────────────────────────────────────
+    # Trigger: wife, lady, female, begum, amma driving keywords
+    # Result: automatic preferred, small body, city use_case
+    {
+        "intent_id":        "lady_driver",
+        "keywords":         ["wife", "begum", "lady driver", "female driver", "amma",
+                             "mother driving", "baji driving", "aurat"],
+        "exclude_keywords": ["sports", "fast", "powerful"],
+        "force_body_style":  "Hatchback",
+        "use_case_override": "city",
+        "force_transmission": "Automatic",
+        "max_budget_cap":    None,
+        "append_features":   [],
+    },
+
+    # ── Disabled / Accessibility ──────────────────────────────────────────────
+    # Trigger: wheelchair, disabled, hand controls, accessibility keywords
+    # Result: automatic forced, spacious body preferred
+    {
+        "intent_id":        "accessibility",
+        "keywords":         ["wheelchair", "disabled", "hand controls", "specially abled",
+                             "disability", "physically challenged", "hand operated"],
+        "exclude_keywords": [],
+        "force_body_style":  None,
+        "use_case_override": "accessibility",
+        "force_transmission": "Automatic",
+        "max_budget_cap":    None,
+        "append_features":   [],
+    },
+]
+
+
+def apply_keyword_intent(user_prompt: str, constraints: dict) -> dict:
+    """
+    Scans user_prompt against KEYWORD_INTENT_MAP and injects hard overrides
+    into the constraints dict. Called at the END of resolve_constraints().
+
+    Priority: first matching intent wins (list is ordered by specificity).
+    If no intent matches, constraints are returned unchanged.
+
+    Overrides applied:
+      - force_body_style   → constraints["body_style"]
+      - use_case_override  → constraints["use_case"]
+      - force_transmission → constraints["transmission"]
+      - max_budget_cap     → clips constraints["max_budget"] if over cap
+      - append_features    → extends constraints["required_features"]
+
+    Also injects "intent_id" into constraints so downstream functions
+    (e.g. _get_relevant_principles) can detect the triggered intent.
+    """
+    prompt_lower = user_prompt.lower()
+
+    for intent in KEYWORD_INTENT_MAP:
+        keywords         = intent.get("keywords", [])
+        exclude_keywords = intent.get("exclude_keywords", [])
+
+        # Check if ANY keyword matches
+        if not any(kw in prompt_lower for kw in keywords):
+            continue
+
+        # Check if ANY exclusion keyword also matches — if so, skip this intent
+        if exclude_keywords and any(ex in prompt_lower for ex in exclude_keywords):
+            continue
+
+        # ── Apply all overrides ───────────────────────────────────────────────
+        intent_id = intent["intent_id"]
+        print(f"[IntentMapper] Triggered intent: '{intent_id}' from prompt: '{user_prompt[:60]}'")
+
+        if intent.get("force_body_style"):
+            constraints["body_style"] = intent["force_body_style"]
+
+        if intent.get("use_case_override"):
+            constraints["use_case"] = intent["use_case_override"]
+
+        if intent.get("force_transmission"):
+            constraints["transmission"] = intent["force_transmission"]
+
+        if intent.get("max_budget_cap") and constraints.get("max_budget", 0) > intent["max_budget_cap"]:
+            constraints["max_budget"] = intent["max_budget_cap"]
+            constraints["min_budget"] = int(intent["max_budget_cap"] * 0.70)
+
+        if intent.get("append_features"):
+            existing = constraints.get("required_features", [])
+            for feat in intent["append_features"]:
+                if feat not in existing:
+                    existing.append(feat)
+            constraints["required_features"] = existing
+
+        constraints["intent_id"] = intent_id
+        return constraints  # first match wins
+
+    return constraints
 
 # ---------------------------------------------------------------------------
 # MODEL-FEATURE KNOWLEDGE MAP
@@ -1344,10 +1681,18 @@ class UserIntent(BaseModel):
     origin_pref:       Optional[Literal["JDM", "Local", "European", "Chinese"]]                     = None
     is_luxury_request: bool                                                                          = False
     required_features: list[str]                                                                     = Field(default_factory=list)
+    user_prompt:       str                                                                           = Field(default="", exclude=True)  # injected post-extraction, never sent to LLM
 
 
 async def extract_intent(user_prompt: str) -> UserIntent:
-    """Phase 1 LLM call — pure signal extraction, temperature 0.0."""
+    """
+    Phase 1 LLM call — pure signal extraction, temperature 0.0.
+
+    After this returns, the CALLER (recommend_routes.py) must inject:
+        intent.user_prompt = user_prompt
+    before calling resolve_constraints(intent), so apply_keyword_intent()
+    has the raw string available for Python-level intent overrides.
+    """
     prompt = (
         f"Extract the user's car search intent from this query: '{user_prompt}'\n\n"
         "Rules:\n"
@@ -1404,7 +1749,7 @@ def resolve_constraints(intent: UserIntent) -> dict:
         or (intent.is_luxury_request and max_budget >= 10_000_000)
     )
 
-    return {
+    constraints = {
         "min_budget":        min_budget,
         "max_budget":        max_budget,
         "min_year":          0,
@@ -1417,7 +1762,18 @@ def resolve_constraints(intent: UserIntent) -> dict:
         "origin_pref":       intent.origin_pref,
         "is_luxury_request": intent.is_luxury_request,
         "required_features": intent.required_features,
+        "intent_id":         None,
     }
+
+    # Apply keyword intent overrides — must receive raw user_prompt.
+    # Called here so body_style/use_case/transmission overrides propagate
+    # through the full pipeline (get_eligible_cars, select_car_targets, normalizer).
+    # user_prompt is injected by the caller (recommend_routes.py) via intent.user_prompt.
+    raw_prompt = getattr(intent, "user_prompt", "") or ""
+    if raw_prompt:
+        constraints = apply_keyword_intent(raw_prompt, constraints)
+
+    return constraints
 
 
 # ---------------------------------------------------------------------------
