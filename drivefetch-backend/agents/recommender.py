@@ -713,15 +713,16 @@ USE-CASE PRINCIPLES — Student / University / Fuel Economy:
 """,
 
     "student_sports": """
-USE-CASE PRINCIPLES — Student / University / Sports & Style:
-  - Student who wants looks/fun — fuel economy is NOT their primary concern
-  - For budgets under PKR 20 lacs: Suzuki Swift (sporty hatchback), Toyota Vitz (fun JDM feel)
-  - For budgets PKR 20–40 lacs: Suzuki Swift (newer), Honda Fit RS, Toyota Aqua G-Sports
-  - For budgets PKR 40–80 lacs: Honda Civic (sporty sedan), Toyota Mark X (V6, genuine sports)
-  - AVOID: Recommending Alto or Mira for "sporty student" — they have no sports character
-  - AVOID: Recommending Corolla GLi — it is the definition of boring for a young buyer
-  - Manual transmission is fine and preferred for sporty buyers
-  - JDM trim hints: Vitz RS, Fit RS, Aqua G-Sports, Mark X 250G are the fun-spec variants
+USE-CASE PRINCIPLES — Student / Youth / Sports & Style:
+  - PAKISTANI MARKET REALITY: Honda Civic and Suzuki Swift are the ultimate "youth / student / boy" cars in Pakistan.
+  - Civic Generation Brackets for Young Buyers:
+    • Budget PKR 12–18 Lacs: Honda Civic Eagle Eye (2004–2006 VTi/EXi) & Suzuki Swift
+    • Budget PKR 18–28 Lacs: Honda Civic Reborn (2007–2012 i-VTEC / Hardtop / Oriel)
+    • Budget PKR 28–42 Lacs: Honda Civic Rebirth (2013–2016 i-VTEC) & Honda Fit RS
+    • Budget PKR 42–70 Lacs: Honda Civic X (2016–2021 Turbo RS / Oriel) & Toyota Mark X
+  - HARD RULE: For young/student buyers seeking style, sports, or looks, ALWAYS prioritize Honda Civic and Suzuki Swift over "uncle/family" cars.
+  - STRICTLY AVOID: Suzuki Liana, Suzuki Baleno, Suzuki Margalla, or Toyota Corolla GLi/XLi for young/youth style queries — these are family/uncle commuter cars in Pakistan with zero youth appeal.
+  - Manual transmission is highly preferred for young sporty drivers.
 """,
 
     "first_car": """
@@ -1782,7 +1783,18 @@ def get_eligible_cars(
             if key in _C_SEGMENT_SEDANS:
                 sedan_tier_boost = 0.20
 
-        final_score = fit_score + priority_boost + youth_penalty + sedan_tier_boost
+        # Youth Sports/Style Boost & Penalty
+        youth_style_score = 0.0
+        if is_youth_query:
+            _YOUTH_PREFERRED = {"honda:civic", "suzuki:swift", "toyota:vitz", "toyota:mark x", "subaru:impreza"}
+            _YOUTH_DISLIKED   = {"suzuki:liana", "suzuki:baleno", "suzuki:margalla"}
+            
+            if key in _YOUTH_PREFERRED:
+                youth_style_score = +0.25  # Boost Civic/Swift/Vitz to the top for young buyers
+            elif key in _YOUTH_DISLIKED:
+                youth_style_score = -0.35  # Heavily penalize boring uncle cars
+
+        final_score = fit_score + priority_boost + youth_penalty + sedan_tier_boost + youth_style_score
 
         # Display string with JDM / feature trim annotations
         display = f"{make.title()} {model.title()}"
