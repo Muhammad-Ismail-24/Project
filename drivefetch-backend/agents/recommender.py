@@ -1823,6 +1823,7 @@ class UserIntent(BaseModel):
     origin_pref:       Optional[Literal["JDM", "Local", "European", "Chinese"]]                     = None
     is_luxury_request: bool                                                                          = False
     required_features: list[str]                                                                     = Field(default_factory=list)
+    strategy_summary:  str                                                                           = Field(default="", description="A friendly 2-sentence summary explaining the search interpretation and car strategy.")
     disclaimers:       list[str]                                                                     = Field(default_factory=list)
     user_prompt:       str                                                                           = Field(default="", exclude=True)  # injected post-extraction, never sent to LLM
 
@@ -1858,6 +1859,13 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "  Map 'van', 'mpv', '11 seater', '7 seater' -> MPV or Van.\n"
         "- origin_pref: 'Japanese' or 'JDM' -> JDM. 'European' -> European. "
         "'Chinese' -> Chinese. 'local' -> Local.\n"
+        "- strategy_summary: Write a friendly 2-sentence summary explaining how you "
+        "interpreted the request and what kind of cars you will prioritize. "
+        "Example: 'You are looking for a fun daily driver for campus commutes with "
+        "responsive acceleration under PKR 25 Lacs. We have prioritized punchy 1.3L "
+        "automatic hatchbacks like the Suzuki Swift and Toyota Vitz over sluggish 660cc "
+        "eco-cars or high-maintenance project vehicles.' Always be specific to the "
+        "user's actual request — never generic.\n"
         "- Leave null if not clearly stated — do not guess."
     )
     response = await client.aio.models.generate_content(
@@ -1904,8 +1912,9 @@ def resolve_constraints(intent: UserIntent) -> dict:
         "use_case":          intent.use_case,
         "origin_pref":       intent.origin_pref,
         "is_luxury_request": intent.is_luxury_request,
-        "required_features": intent.required_features,
-        "intent_id":         None,
+        "required_features":  intent.required_features,
+        "strategy_summary":   intent.strategy_summary or "",
+        "intent_id":          None,
     }
 
     # Apply keyword intent overrides — must receive raw user_prompt.

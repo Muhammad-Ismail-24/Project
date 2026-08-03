@@ -340,11 +340,6 @@ async def run_recommend_pipeline(
         if override_city:
             constraints["city"] = override_city
 
-        # ── Stage 1b: Emit Advisory Disclaimers ───────────────────────────────
-        disclaimers = constraints.get("disclaimers", [])
-        if disclaimers:
-            yield _sse("disclaimers", {"warnings": disclaimers})
-
         # ── Stage 2: Car Selection & Validation ───────────────────────────────
         raw_targets     = await select_car_targets(constraints)
         
@@ -365,6 +360,17 @@ async def run_recommend_pipeline(
 
     target_names   = [_target_label(r) for r in recommendations]
     target_objects = [{"make": r.get("make"), "model": r.get("model")} for r in recommendations]
+
+    # ── Stage 2.5: Stream Matchmaker Strategy Brief (BEFORE SCRAPING) ─────
+    yield _sse("strategy", {
+        "summary":     constraints.get("strategy_summary", ""),
+        "disclaimers": constraints.get("disclaimers", []),
+        "targets":     [
+            {"make": r.get("make"), "model": r.get("model"), "trim": r.get("trim")}
+            for r in recommendations
+        ],
+    })
+
     yield _sse("status", {
         "message": f"🔍 Searching for: {', '.join(target_names)}",
         "stage":   "scraping",

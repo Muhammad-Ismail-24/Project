@@ -33,6 +33,7 @@ export default function RecommendPage() {
   const [extTargets, setExtTargets]     = useState([]);
   const [extListings, setExtListings]   = useState([]);
   const [extDone, setExtDone]           = useState(false);
+  const [strategyBrief, setStrategyBrief] = useState(null);
   const eventSourceRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -54,6 +55,7 @@ export default function RecommendPage() {
     setExtListings([]);
     setExtDone(false);
     setExtLoading(false);
+    setStrategyBrief(null);
     setStatus("Connecting to AI Engine...");
 
     if (eventSourceRef.current) eventSourceRef.current.close();
@@ -98,6 +100,14 @@ export default function RecommendPage() {
               setStatus(data.message || "");
               if (data.stage) setStage(data.stage);
               if (data.targets) setTargets(data.targets.map(t => ({ label: t, rationale: "" })));
+            }
+
+            if (eventType === "strategy") {
+              setStrategyBrief({
+                summary: data.summary || "",
+                disclaimers: data.disclaimers || [],
+                targets: data.targets || [],
+              });
             }
 
             if (eventType === "results") {
@@ -156,6 +166,7 @@ export default function RecommendPage() {
     setExtListings([]);
     setExtDone(false);
     setExtLoading(false);
+    setStrategyBrief(null);
     inputRef.current?.focus();
   };
 
@@ -343,6 +354,44 @@ export default function RecommendPage() {
             </div>
           )}
         </div>
+
+        {/* ── Strategy Brief Card (appears instantly before scraping) ─── */}
+        {strategyBrief && (
+          <div className="mb-8 bg-white/60 backdrop-blur-xl border border-white/70 shadow-xl rounded-2xl p-6 md:p-7"
+               style={{ animation: 'fadeSlideUp 0.5s ease-out both' }}
+          >
+            <div className="flex items-center gap-2.5 mb-3 border-b border-black/8 pb-3">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-black/8 text-black/80 font-bold text-base">
+                🧠
+              </span>
+              <h3 className="text-[11px] font-bold tracking-[0.12em] text-black/60 uppercase">
+                DriveFetch Matchmaker Strategy
+              </h3>
+            </div>
+
+            {/* Strategy Summary Text */}
+            {strategyBrief.summary && (
+              <p className="text-sm leading-relaxed text-black/80 font-medium">
+                {strategyBrief.summary}
+              </p>
+            )}
+
+            {/* Real-Time Advisory & Safety Disclaimers */}
+            {strategyBrief.disclaimers && strategyBrief.disclaimers.length > 0 && (
+              <div className="mt-4 flex flex-col gap-2 pt-3 border-t border-black/8">
+                {strategyBrief.disclaimers.map((warning, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-2.5 rounded-xl border border-amber-600/20 bg-amber-500/10 p-3 text-xs font-medium text-amber-800 leading-relaxed"
+                  >
+                    <span className="text-sm shrink-0">⚠️</span>
+                    <span>{warning}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Loading State ──────────────────────────────────────────── */}
         {loading && (
