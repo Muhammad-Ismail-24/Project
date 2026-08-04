@@ -1239,6 +1239,14 @@ def generate_disclaimers(user_prompt: str, constraints: dict) -> list[str]:
             "for reliable daily urban commuting."
         )
 
+    # 8. Panoramic vs. Single-Pane Sunroof Confusion
+    if "panoramic" in prompt_lower and any(w in prompt_lower for w in ["grande", "civic", "vezel", "raize"]):
+        disclaimers.append(
+            "⚠️ Specification Notice: Corolla Grande, Civic Oriel, and Honda Vezel feature standard "
+            "single-pane sunroofs in Pakistan. Recommending MG HS, Haval Jolion, or Oshan X7 for "
+            "full panoramic glass roofs."
+        )
+
     return disclaimers
 
 # ---------------------------------------------------------------------------
@@ -1282,16 +1290,23 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
         "suzuki:every", "suzuki:bolan", "suzuki:apv", "suzuki:hustler", "suzuki:spacia",
         "toyota:vitz", "toyota:passo", "toyota:probox", "toyota:hiace",
         "toyota:yaris", "toyota:aqua", "toyota:rush", "toyota:hilux",
-        "toyota:corolla",   # Grande has regular sunroof, NOT panoramic
+        "toyota:corolla",   # Grande has regular single-pane sunroof, NOT panoramic
+        "toyota:raize",     # single-pane sunroof only in Z grade
+        "toyota:c-hr",      # single-pane sunroof only
         "toyota:allion", "toyota:premio", "toyota:mark x",
         "honda:n-box", "honda:n-wgn", "honda:fit", "honda:freed", "honda:br-v",
-        "honda:city", "honda:civic",    # regular sunroof only in PK spec
+        "honda:city", "honda:civic",    # regular single-pane sunroof only in PK spec
+        "honda:vezel",      # single-pane sunroof only in Z/RS grade
+        "honda:hr-v",       # single-pane sunroof only in PK CKD
         "hyundai:santro", "hyundai:elantra",
-        "kia:sportage",                 # regular sunroof only in PK spec
+        "kia:sportage",                 # regular single-pane sunroof only in PK CKD
         "kia:picanto", "kia:stonic",
         "daihatsu:cuore", "daihatsu:mira", "daihatsu:move", "daihatsu:tanto",
         "daihatsu:cast", "daihatsu:hijet",
         "nissan:dayz", "nissan:roox",
+        "subaru:xv",        # single-pane sunroof only
+        "mazda:cx-5",       # single-pane sunroof only in PK
+        "mazda:cx-3",       # single-pane sunroof only
         "changan:alsvin", "changan:karvaan",
         "proton:saga", "mazda:demio", "mitsubishi:mirage", "suzuki:jimny",
     },
@@ -1299,11 +1314,17 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
     # ── Push Start / Keyless Entry ───────────────────────────────────────────
     "push start": {
         "suzuki:mehran", "suzuki:bolan",
+        "suzuki:wagon r",   # local Pak Suzuki Wagon R uses key ignition only
+        "suzuki:cultus",    # local Pak Suzuki Cultus uses key ignition only
+        "suzuki:alto",      # local Pak Suzuki Alto uses key ignition only
         "daihatsu:cuore", "daihatsu:hijet",
         "hyundai:santro", "toyota:probox", "changan:karvaan",
     },
     "keyless entry": {
         "suzuki:mehran", "suzuki:bolan",
+        "suzuki:wagon r",   # local Pak Suzuki Wagon R uses key ignition only
+        "suzuki:cultus",    # local Pak Suzuki Cultus uses key ignition only
+        "suzuki:alto",      # local Pak Suzuki Alto uses key ignition only
         "daihatsu:cuore", "daihatsu:hijet",
         "hyundai:santro", "toyota:probox", "changan:karvaan",
     },
@@ -1485,6 +1506,31 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
         "changan:alsvin", "changan:karvaan",
         "proton:saga", "mazda:demio", "subaru:impreza",
     },
+
+    # ── Memory Seats ─────────────────────────────────────────────────────────
+    # Pakistani CKD assemblers (Lucky Motors, Hyundai Nishat) explicitly omit
+    # driver seat memory buttons from local spec. International specs ≠ PK spec.
+    "memory seats": {
+        "suzuki:mehran", "suzuki:alto", "suzuki:alto 660cc", "suzuki:cultus",
+        "suzuki:liana", "suzuki:baleno", "suzuki:swift", "suzuki:wagon r",
+        "suzuki:every", "suzuki:bolan", "suzuki:apv", "suzuki:jimny",
+        "toyota:vitz", "toyota:passo", "toyota:probox", "toyota:hiace",
+        "toyota:corolla", "toyota:yaris", "toyota:hilux", "toyota:aqua",
+        "toyota:rush", "toyota:raize", "toyota:allion", "toyota:premio",
+        "honda:n-box", "honda:n-wgn", "honda:fit", "honda:freed",
+        "honda:city", "honda:civic", "honda:br-v", "honda:grace",
+        "honda:vezel", "honda:hr-v",
+        "hyundai:santro", "hyundai:elantra",
+        "hyundai:tucson",   # PK CKD explicitly omits memory seats
+        "kia:picanto", "kia:stonic",
+        "kia:sportage",     # PK CKD explicitly omits memory seats
+        "daihatsu:cuore", "daihatsu:mira", "daihatsu:move", "daihatsu:tanto",
+        "daihatsu:cast", "daihatsu:hijet",
+        "nissan:dayz", "nissan:roox",
+        "mitsubishi:mirage",
+        "changan:alsvin", "changan:karvaan",
+        "proton:saga", "mazda:demio",
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -1653,6 +1699,11 @@ def get_eligible_cars(
         "blind spot":              "blind spot monitor",
         "bsm":                     "blind spot monitor",
         "blind spot monitor":      "blind spot monitor",
+        "memory seats":            "memory seats",
+        "memory seat":             "memory seats",
+        "seat memory":             "memory seats",
+        "driver memory":           "memory seats",
+        "driver seat memory":      "memory seats",
     }
 
     active_feature_gates: set[str] = set()
@@ -2235,7 +2286,20 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         "8. TRIM: For sunroof-required queries, use the trim specified in the list. "
         "Otherwise leave empty unless a trim meaningfully changes the car.\n"
         "9. RATIONALE: 1 buyer-friendly sentence — explain WHY this specific car "
-        "fits this specific buyer. No generic descriptions."
+        "fits this specific buyer. No generic descriptions.\n"
+        "10. PANORAMIC SUNROOF RULE: A 'Panoramic Sunroof' is a full-length glass roof spanning "
+        "most of the cabin ceiling. In Pakistan, Corolla Altis Grande, Civic Oriel, Honda Vezel, "
+        "Toyota Raize, Subaru XV, and Mazda CX-5 feature SINGLE-PANE sunroofs only. You MUST NOT "
+        "recommend them when a Panoramic Sunroof is requested. Pick true panoramic options like "
+        "MG HS, Haval Jolion, Haval H6, or Changan Oshan X7.\n"
+        "11. PUSH START RULE: Local Pak Suzuki models (Wagon R VXL/AGS, Cultus VXL/AGS, Alto VXL AGS) "
+        "use traditional key ignition — NEVER recommend them for Push Start queries. For Toyota Vitz, "
+        "base 'F 1.0' uses key ignition; you MUST explicitly set trim to 'Jewela', 'F Safety Edition', "
+        "or 'U Grade' when Push Start is required.\n"
+        "12. MEMORY SEATS CKD RULE: Locally assembled Kia Sportage and Hyundai Tucson in Pakistan "
+        "DO NOT feature driver seat memory buttons — this feature was explicitly omitted by local "
+        "assemblers. For memory seat queries under 1 Crore, restrict picks to Haval Jolion/H6, "
+        "Changan Oshan X7 FutureSense, Hyundai Sonata 2.5L, or luxury imports."
     )
 
     response = await client.aio.models.generate_content(
