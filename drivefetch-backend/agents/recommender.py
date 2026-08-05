@@ -1262,6 +1262,14 @@ def generate_disclaimers(user_prompt: str, constraints: dict) -> list[str]:
             "full panoramic glass roofs."
         )
 
+    # 9. CKD Memory Seat Omission Confusion
+    if "memory" in prompt_lower and any(w in prompt_lower for w in ["seat", "driver"]):
+        disclaimers.append(
+            "⚠️ Specification Notice: Locally assembled (PKDM) Kia Sportage and Hyundai Tucson do "
+            "not feature driver seat memory functions. Recommending Haval Jolion, Haval H6, or "
+            "Changan Oshan X7 FutureSense which retain this global specification."
+        )
+
     return disclaimers
 
 # ---------------------------------------------------------------------------
@@ -1739,6 +1747,11 @@ def get_eligible_cars(
         "seat memory":             "memory seats",
         "driver memory":           "memory seats",
         "driver seat memory":      "memory seats",
+        "memory function":         "memory seats",
+        "memory":                  "memory seats",
+        "power tailgate":          "power tailgate",
+        "auto trunk":              "power tailgate",
+        "electric tailgate":       "power tailgate",
     }
 
     active_feature_gates: set[str] = set()
