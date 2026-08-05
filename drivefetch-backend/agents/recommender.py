@@ -1244,8 +1244,8 @@ def generate_disclaimers(user_prompt: str, constraints: dict) -> list[str]:
 
     # 7. EV Infrastructure Warning
     # Replace raw "ev" substring checks with regex word boundary matching \bev\b
-    has_ev_kw = bool(re.search(r'\bev\b', prompt_lower)) or any(
-        w in prompt_lower for w in ["electric", "battery car", "zero emission", "fully electric", "bev"]
+    has_ev_kw = bool(re.search(r'\b(ev|bev)\b', prompt_lower)) or any(
+        w in prompt_lower for w in ["electric car", "electric vehicle", "battery car", "zero emission", "fully electric"]
     )
     if has_ev_kw or constraints.get("powertrain") == "ev":
         disclaimers.append(
@@ -1323,6 +1323,21 @@ _FEATURE_EXCLUSIVE_ALLOWLIST: dict[str, set[str]] = {
         "land rover:range rover", "land rover:range rover sport", "land rover:velar",
         "mercedes-benz:gle", "mercedes-benz:gls", "mercedes-benz:s-class",
         "bmw:x5", "bmw:x7", "bmw:7 series", "bmw:i7",
+    },
+
+    # Ventilated seats — present in PK market only in premium trims of these models.
+    # Local CKD economy/mid sedans (Civic, Elantra, City, Corolla) do not have this feature.
+    "ventilated seats": {
+        "hyundai:sonata", "hyundai:santa fe", "hyundai:palisade",
+        "haval:jolion", "haval:h6", "haval:h6 hev",
+        "changan:oshan x7", "changan:deepal l07", "changan:deepal s07",
+        "chery:tiggo 8 pro",
+        "kia:sorento", "kia:carnival",
+        "toyota:camry", "toyota:land cruiser", "toyota:prado", "toyota:crown",
+        "lexus:lx570", "lexus:lx600", "lexus:rx", "lexus:es",
+        "audi:e-tron gt", "porsche:taycan",
+        "bmw:7 series", "bmw:i7",
+        "mercedes-benz:s-class",
     },
 
     "memory seats": {
@@ -1427,6 +1442,8 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
         "mitsubishi:mirage", "mitsubishi:asx",
         "changan:alsvin", "changan:karvaan",
         "proton:saga", "mazda:demio", "mazda:mazda3", "subaru:impreza", "mg:zs",
+        # PKDM CKD variants lack radar unit — passive/fixed-speed cruise only
+        "honda:hr-v", "hyundai:tucson", "kia:sportage",
     },
     "auto parking": {
         # Only very recent luxury imports — BMW 5/7 series 2019+,
@@ -1574,6 +1591,40 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
     # Pakistani CKD assemblers strip memory seats from local specs of many
     # international cars. An allowlist of the ~25 cars that genuinely have it
     # is safer than a blocklist that grows with every new model year.
+
+    # ── Electric Parking Brake ───────────────────────────────────────────────
+    # Mechanical lever handbrakes are standard on budget/economy cars and older
+    # platforms. EPB is a mid-range+ feature absent on all Suzuki budget models,
+    # base Toyota sedans, and older Honda CKD variants.
+    "electric parking brake": {
+        "toyota:corolla", "toyota:yaris", "toyota:fortuner", "toyota:hilux",
+        "toyota:vitz", "toyota:passo", "toyota:aqua", "toyota:rush",
+        "honda:city", "honda:br-v",
+        "hyundai:elantra",
+        "kia:picanto", "kia:stonic",
+        "suzuki:mehran", "suzuki:alto", "suzuki:alto 660cc", "suzuki:cultus",
+        "suzuki:wagon r", "suzuki:swift", "suzuki:bolan", "suzuki:every",
+        "changan:alsvin", "changan:karvaan",
+        "daihatsu:mira", "daihatsu:cuore", "daihatsu:move", "daihatsu:hijet", "daihatsu:tanto",
+        "nissan:dayz", "mitsubishi:mirage",
+    },
+
+    # ── Dual Zone Climate ────────────────────────────────────────────────────
+    # Single-zone auto A/C is standard on budget / entry hatchbacks and sedans.
+    # Dual-zone requires separate HVAC zones — absent on all Suzuki budget cars,
+    # small hatchbacks, and base-spec CKD sedans like Yaris, City, Alsvin.
+    "dual zone climate": {
+        "toyota:yaris", "toyota:vitz", "toyota:aqua", "toyota:passo",
+        "toyota:rush", "toyota:raize", "toyota:corolla",
+        "honda:city", "honda:br-v", "honda:fit", "honda:n-wgn", "honda:n-box", "honda:freed",
+        "suzuki:swift", "suzuki:cultus", "suzuki:wagon r",
+        "suzuki:alto", "suzuki:alto 660cc", "suzuki:mehran",
+        "kia:picanto", "kia:stonic",
+        "changan:alsvin", "changan:karvaan",
+        "mitsubishi:mirage",
+        "nissan:dayz",
+        "daihatsu:mira", "daihatsu:move", "daihatsu:cast",
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -1752,6 +1803,28 @@ def get_eligible_cars(
         "power tailgate":          "power tailgate",
         "auto trunk":              "power tailgate",
         "electric tailgate":       "power tailgate",
+        # ── Ventilated / Cooled Seats ────────────────────────────────────────
+        "ventilated seats":        "ventilated seats",
+        "ventilated seat":         "ventilated seats",
+        "ventilated":              "ventilated seats",
+        "seat cooling":            "ventilated seats",
+        "cooled seats":            "ventilated seats",
+        "cooled seat":             "ventilated seats",
+        "cooling seats":           "ventilated seats",
+        # ── Electric Parking Brake ───────────────────────────────────────────
+        "epb":                     "electric parking brake",
+        "electric parking brake":  "electric parking brake",
+        "electronic parking brake":"electric parking brake",
+        "auto hold":               "electric parking brake",
+        "brake hold":              "electric parking brake",
+        # ── Dual Zone Climate ────────────────────────────────────────────────
+        "dual zone":               "dual zone climate",
+        "dual-zone":               "dual zone climate",
+        "dual zone ac":            "dual zone climate",
+        "dual zone climate":       "dual zone climate",
+        "dual zone air":           "dual zone climate",
+        "2 zone climate":          "dual zone climate",
+        "two zone climate":        "dual zone climate",
     }
 
     active_feature_gates: set[str] = set()
