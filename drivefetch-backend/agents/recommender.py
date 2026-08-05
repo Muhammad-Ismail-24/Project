@@ -125,9 +125,9 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "FWD", "transmission": "both",   "tags": {"economy","city","family"}, "chinese": False, "priority": 2},
     "suzuki:swift":            {"lo": 1_200_000,  "hi": 5_200_000,  "styles": {"Hatchback"},
                                 "drive": "FWD", "transmission": "both",   "tags": {"economy","city","sports"}, "chinese": False, "priority": 2},
-    "suzuki:baleno":           {"lo": 1_000_000,  "hi": 1_600_000,  "styles": {"Sedan"},
+    "suzuki:baleno":           {"lo": 800_000,    "hi": 1_500_000,  "styles": {"Sedan"},
                                 "drive": "FWD", "transmission": "both",   "tags": {"economy","city","family"}, "chinese": False, "priority": 3},
-    "suzuki:liana":            {"lo": 1_200_000,  "hi": 1_800_000,  "styles": {"Sedan"},
+    "suzuki:liana":            {"lo": 1_000_000,  "hi": 1_700_000,  "styles": {"Sedan"},
                                 "drive": "FWD", "transmission": "both",   "tags": {"economy","family"},        "chinese": False, "priority": 3},
     "suzuki:hustler":          {"lo": 1_800_000,  "hi": 4_000_000,  "styles": {"Hatchback"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
@@ -169,7 +169,7 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm","family"}, "chinese": False},
     "toyota:probox":           {"lo": 2_000_000,  "hi": 4_500_000,  "styles": {"Van"},
                                 "drive": "FWD", "transmission": "both",   "tags": {"cargo","economy","jdm"},   "chinese": False},
-    "toyota:corolla":          {"lo": 2_000_000,  "hi": 8_500_000,  "styles": {"Sedan"},
+    "toyota:corolla":          {"lo": 800_000,    "hi": 8_500_000,  "styles": {"Sedan"},
                                 "drive": "FWD", "transmission": "both",   "tags": {"family","city","economy","reliability","resale"}, "chinese": False, "priority": 1},
     "toyota:yaris":            {"lo": 3_500_000,  "hi": 6_000_000,  "styles": {"Sedan"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"family","city","reliability","resale"}, "chinese": False, "priority": 1},
@@ -219,9 +219,9 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
     "honda:fit":               {"lo": 2_000_000,  "hi": 5_500_000,  "styles": {"Hatchback"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
-    "honda:city":              {"lo": 1_500_000,  "hi": 6_000_000,  "styles": {"Sedan"},
+    "honda:city":              {"lo": 1_000_000,  "hi": 6_000_000,  "styles": {"Sedan"},
                                 "drive": "FWD", "transmission": "both",   "tags": {"economy","family","city","reliability","resale"}, "chinese": False, "priority": 1},
-    "honda:civic":             {"lo": 2_000_000,  "hi": 9_500_000,  "styles": {"Sedan"},
+    "honda:civic":             {"lo": 1_000_000,  "hi": 9_500_000,  "styles": {"Sedan"},
                                 "drive": "FWD", "transmission": "both",   "tags": {"family","city","sports","reliability","resale"},  "chinese": False, "priority": 1},
     "honda:grace":             {"lo": 3_500_000,  "hi": 6_500_000,  "styles": {"Sedan"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"family","hybrid","jdm"},   "chinese": False},
@@ -325,15 +325,15 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "AWD", "transmission": "auto",   "tags": {"awd","city","jdm"},        "chinese": False},
     "subaru:forester":         {"lo": 4_500_000,  "hi": 9_000_000,  "styles": {"Crossover"},
                                 "drive": "AWD", "transmission": "auto",   "tags": {"awd","family","offroad"},  "chinese": False},
-    "subaru:brz":              {"lo": 4_500_000,  "hi": 10_000_000, "styles": {"Sedan"},
-                                "drive": "FWD", "transmission": "both",   "tags": {"sports","performance","jdm"}, "chinese": False},
+    "subaru:brz":              {"lo": 4_500_000,  "hi": 10_000_000, "styles": {"Coupe"},
+                                "drive": "RWD", "transmission": "both",   "tags": {"sports","performance","jdm"}, "chinese": False},
 
     # ── Mazda ────────────────────────────────────────────────────────────────
     "mazda:demio":             {"lo": 2_500_000,  "hi": 4_500_000,  "styles": {"Hatchback"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
     "mazda:mazda3":            {"lo": 3_000_000,  "hi": 7_000_000,  "styles": {"Sedan"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"sports","city","jdm"},     "chinese": False},
-    "mazda:rx-8":              {"lo": 1_500_000,  "hi": 4_000_000,  "styles": {"Sedan"},
+    "mazda:rx-8":              {"lo": 1_500_000,  "hi": 4_000_000,  "styles": {"Coupe"},
                                 "drive": "RWD", "transmission": "both",   "tags": {"sports","performance","jdm"}, "chinese": False},
     "mazda:cx-3":              {"lo": 4_000_000,  "hi": 7_000_000,  "styles": {"Crossover"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"city","jdm"},              "chinese": False},
@@ -349,7 +349,7 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "FWD", "transmission": "auto",   "tags": {"family","city"},           "chinese": True},
     "mg:rx5":                  {"lo": 4_500_000,  "hi": 9_000_000,  "styles": {"Crossover"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"family","city"},           "chinese": True},
-    "mg:cyberster":            {"lo": 15_000_000, "hi": 25_000_000, "styles": {"Sedan"},
+    "mg:cyberster":            {"lo": 15_000_000, "hi": 25_000_000, "styles": {"Coupe"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"ev","sports","luxury"},    "chinese": True},
     "changan:alsvin":          {"lo": 3_200_000,  "hi": 4_800_000,  "styles": {"Sedan"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","family"}, "chinese": True},
@@ -475,15 +475,15 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status","performance"}, "chinese": False},
     "porsche:taycan":          {"lo": 40_000_000, "hi": 85_000_000, "styles": {"Sedan"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"ev","luxury","performance"}, "chinese": False},
-    "porsche:cayman":          {"lo": 20_000_000, "hi": 40_000_000, "styles": {"Sedan"},
+    "porsche:cayman":          {"lo": 20_000_000, "hi": 40_000_000, "styles": {"Coupe"},
                                 "drive": "RWD", "transmission": "both",   "tags": {"sports","performance","luxury"}, "chinese": False, "priority": 2},
-    "toyota:supra":            {"lo": 15_000_000, "hi": 30_000_000, "styles": {"Sedan"},
+    "toyota:supra":            {"lo": 15_000_000, "hi": 30_000_000, "styles": {"Coupe"},
                                 "drive": "RWD", "transmission": "both",   "tags": {"sports","performance","jdm"}, "chinese": False, "priority": 2},
-    "nissan:fairlady z":       {"lo": 8_000_000,  "hi": 20_000_000, "styles": {"Sedan"},
+    "nissan:fairlady z":       {"lo": 8_000_000,  "hi": 20_000_000, "styles": {"Coupe"},
                                 "drive": "RWD", "transmission": "both",   "tags": {"sports","performance","jdm"}, "chinese": False, "priority": 2},
-    "nissan:350z":             {"lo": 5_000_000,  "hi": 12_000_000, "styles": {"Sedan"},
+    "nissan:350z":             {"lo": 5_000_000,  "hi": 12_000_000, "styles": {"Coupe"},
                                 "drive": "RWD", "transmission": "both",   "tags": {"sports","performance","jdm"}, "chinese": False, "priority": 2},
-    "nissan:370z":             {"lo": 8_000_000,  "hi": 18_000_000, "styles": {"Sedan"},
+    "nissan:370z":             {"lo": 8_000_000,  "hi": 18_000_000, "styles": {"Coupe"},
                                 "drive": "RWD", "transmission": "both",   "tags": {"sports","performance","jdm"}, "chinese": False, "priority": 2},
     "bmw:m3":                  {"lo": 15_000_000, "hi": 40_000_000, "styles": {"Sedan"},
                                 "drive": "RWD", "transmission": "both",   "tags": {"sports","performance","luxury"}, "chinese": False, "priority": 1},
@@ -631,9 +631,13 @@ _USE_CASE_PRINCIPLES: dict[str, str] = {
     "family": """
 USE-CASE PRINCIPLES — Family / Daily:
   - PAKISTANI MARKET REALITY: "Family car" strongly means a SEDAN with a trunk ("diggi"). 
-  - If budget >= PKR 1,000_000 (10 Lacs), YOU MUST prioritize Sedans (Margalla, Baleno, Liana, City, Corolla, Civic) over hatchbacks.
-  - DO NOT recommend hatchbacks (Passo, Vitz, Wagon R) for family queries unless the budget physically cannot afford a reliable sedan.
-  - HARD RULE: DO NOT recommend Vans or MPVs (APV, Bolan, Every) for "family" unless the user EXPLICITLY types "7 seater" or "van".
+  - BUDGET & GENERATION HIERARCHY FOR FAMILY SEDANS:
+    • Under 15 Lacs: Suzuki Liana, Suzuki Baleno, Suzuki Margalla, Nissan Sunny (Budget entry sedans).
+    • 18–28 Lacs: Toyota Corolla 9th Gen ("Anda Shape" GLi/XLi/Altis), Honda Civic 7th Gen ("Eagle Eye" VTi/EXi), Honda City 5th Gen (i-DSI / Vario).
+    • 28–42 Lacs: Toyota Corolla 10th Gen (Gli/Altis), Honda Civic 8th Gen ("Reborn") / 9th Gen ("Rebirth"), Honda City (Aspire 1.5).
+    • 42–75 Lacs: Toyota Corolla Grande (11th Gen), Honda Civic X (10th Gen Turbo RS / Oriel), Hyundai Elantra.
+  - STRICT HARD VETO: NEVER recommend Suzuki Liana, Baleno, or Margalla if the user's budget is 18 Lacs or higher. At 18+ Lacs, Toyota Corolla (Anda shape), Honda Civic (Eagle Eye), and Honda City are the absolute "bosses" of the family segment in Pakistan.
+  - HARD RULE: DO NOT recommend Vans or MPVs (APV, Bolan, Every) for "family" unless the user EXPLICITLY requests "7 seater" or "van".
   - Prioritise: boot space, rear legroom, air conditioning effectiveness, reliability.
 """,
 
@@ -1802,15 +1806,27 @@ def get_eligible_cars(
         if any(ex in display_lower for ex in excluded_lower):
             continue
 
-        # Fit score
+        # Fit score (Generation-Aware Affordability Logic)
+        # A multi-generation car (Corolla 8L-85L) should score high at 20L because
+        # older generations (Anda Shape) are physically affordable at that budget.
         if max_budget > 0:
-            midpoint  = (lo + hi) / 2
-            centered  = 1.0 - abs(max_budget - midpoint) / max(midpoint, 1)
-            overlap   = max(0, min(max_budget, hi) - max(min_budget, lo))
-            coverage  = overlap / max(hi - lo, 1)
-            fit_score = 0.6 * coverage + 0.4 * max(0.0, min(1.0, centered))
+            if max_budget >= lo:
+                # Budget covers at least the entry generation of this model
+                bracket_span = max(hi - lo, 1)
+                affordability = (max_budget - lo) / bracket_span
+
+                # Base score for any car where the budget covers at least the entry generation
+                fit_score = 0.85
+
+                # If budget is extremely high relative to a cheap car (e.g., 50L budget for Mehran/Liana),
+                # penalize so the user gets recommended cars matching their status/budget, not cheap economy cars.
+                if max_budget > hi * 1.3:
+                    fit_score = max(0.20, 0.85 - ((max_budget - hi) / max_budget))
+            else:
+                # Budget is slightly below 'lo' floor (passed 80% leniency check)
+                fit_score = 0.40
         else:
-            fit_score = 0.5
+            fit_score = 0.50
 
         # Priority boost — prevents Liana/Baleno ranking above Corolla/Civic
         # Reliability/resale bonus — Toyota/Honda with "reliability" tag get +0.10 extra
@@ -1845,7 +1861,15 @@ def get_eligible_cars(
             elif key in _YOUTH_DISLIKED:
                 youth_style_score = -0.35  # Heavily penalize boring uncle cars
 
-        final_score = fit_score + priority_boost + youth_penalty + sedan_tier_boost + youth_style_score
+        # 18 Lacs+ Uncle Car Penalty
+        # Pakistani buyers spending 18+ Lacs expect Corolla/Civic/City, not Liana/Baleno
+        budget_tier_penalty = 0.0
+        if max_budget >= 1_800_000:
+            _ENTRY_LEVEL_SEDANS = {"suzuki:liana", "suzuki:baleno", "suzuki:margalla", "nissan:sunny"}
+            if key in _ENTRY_LEVEL_SEDANS:
+                budget_tier_penalty = -0.50  # Heavy penalty: wipes out Liana/Baleno for 18L+ budgets
+
+        final_score = fit_score + priority_boost + youth_penalty + sedan_tier_boost + youth_style_score + budget_tier_penalty
 
         # Display string with JDM / feature trim annotations
         display = f"{make.title()} {model.title()}"
@@ -2026,7 +2050,7 @@ def _validate_targets(targets: list, constraints: dict) -> list:
 
 class UserIntent(BaseModel):
     max_budget:        Optional[int]                                                                 = None
-    body_style:        Optional[Literal["SUV", "Mini SUV", "Sedan", "Hatchback", "Pickup", "Crossover", "Van", "MPV"]] = None
+    body_style:        Optional[Literal["SUV", "Mini SUV", "Sedan", "Hatchback", "Pickup", "Crossover", "Van", "MPV", "Coupe"]] = None
     transmission:      Optional[Literal["Automatic", "Manual"]]                                     = None
     drive:             Optional[Literal["4x4", "AWD", "FWD", "RWD"]]                                = None
     powertrain:        Optional[Literal["hybrid", "ev"]]                                             = None
@@ -2069,6 +2093,7 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "  Map 'small car', 'hatchback' -> Hatchback.\n"
         "  Map 'pickup', 'truck', 'dala' -> Pickup.\n"
         "  Map 'van', 'mpv', '11 seater', '7 seater' -> MPV or Van.\n"
+        "  Map 'sports car', '2 door', 'coupe', 'rx8', '350z', 'supra', 'brz' -> Coupe.\n"
         "- origin_pref: 'Japanese' or 'JDM' -> JDM. 'European' -> European. "
         "'Chinese' -> Chinese. 'local' -> Local.\n"
         "- direct_model: If the user explicitly mentions a specific car model (e.g. 'Civic', 'Vitz', 'Prado'), capture it here.\n"
