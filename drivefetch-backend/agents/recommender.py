@@ -49,6 +49,7 @@ KEY DESIGN DECISIONS:
 import os
 import json
 import traceback
+import re
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -291,6 +292,8 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "AWD", "transmission": "both",   "tags": {"offroad","family"},        "chinese": False},
 
     # ── Nissan ───────────────────────────────────────────────────────────────
+    "nissan:clipper":          {"lo": 1_200_000,  "hi": 2_600_000,  "styles": {"Van"},
+                                "drive": "FWD", "transmission": "both",   "tags": {"cargo","economy","jdm"},   "chinese": False, "cc": 660},
     "nissan:dayz":             {"lo": 1_500_000,  "hi": 3_500_000,  "styles": {"Hatchback"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
     "nissan:roox":             {"lo": 1_500_000,  "hi": 3_800_000,  "styles": {"Hatchback"},
@@ -329,6 +332,8 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "RWD", "transmission": "both",   "tags": {"sports","performance","jdm"}, "chinese": False},
 
     # ── Mazda ────────────────────────────────────────────────────────────────
+    "mazda:scrum":             {"lo": 1_200_000,  "hi": 2_500_000,  "styles": {"Van"},
+                                "drive": "FWD", "transmission": "both",   "tags": {"cargo","economy","jdm"},   "chinese": False, "cc": 660},
     "mazda:demio":             {"lo": 2_500_000,  "hi": 4_500_000,  "styles": {"Hatchback"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
     "mazda:mazda3":            {"lo": 3_000_000,  "hi": 7_000_000,  "styles": {"Sedan"},
@@ -543,6 +548,9 @@ _CANONICAL_MODEL_MAP: dict[str, str] = {
     "civic fc":                  "Civic",
     "civic oriel":               "Civic",
     "civic vti":                 "Civic",
+    "clipper":                   "Clipper",
+    "nissan clipper":            "Clipper",
+    "scrum":                     "Scrum",
     "city aspire":               "City",
     "city prosmatec":            "City",
     "br-v":                      "BR-V",
@@ -1235,7 +1243,10 @@ def generate_disclaimers(user_prompt: str, constraints: dict) -> list[str]:
         )
 
     # 7. EV Infrastructure Warning
-    has_ev_kw = any(w in prompt_lower for w in ["ev", "electric", "battery car", "zero emission"])
+    # Replace raw "ev" substring checks with regex word boundary matching \bev\b
+    has_ev_kw = bool(re.search(r'\bev\b', prompt_lower)) or any(
+        w in prompt_lower for w in ["electric", "battery car", "zero emission", "fully electric", "bev"]
+    )
     if has_ev_kw or constraints.get("powertrain") == "ev":
         disclaimers.append(
             "⚠️ EV Infrastructure Notice: Public DC fast chargers are currently limited across Pakistan. "
@@ -2061,6 +2072,7 @@ class UserIntent(BaseModel):
     required_features: list[str]                                                                     = Field(default_factory=list)
     strategy_summary:  str                                                                           = Field(default="", description="A friendly 2-sentence summary explaining the search interpretation and car strategy.")
     disclaimers:       list[str]                                                                     = Field(default_factory=list)
+    current_car:       Optional[str]                                                                 = None
     user_prompt:       str                                                                           = Field(default="", exclude=True)  # injected post-extraction, never sent to LLM
 
 
@@ -2096,6 +2108,7 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "  Map 'sports car', '2 door', 'coupe', 'rx8', '350z', 'supra', 'brz' -> Coupe.\n"
         "- origin_pref: 'Japanese' or 'JDM' -> JDM. 'European' -> European. "
         "'Chinese' -> Chinese. 'local' -> Local.\n"
+        "- current_car: If the user states they currently own, are upgrading from, or are replacing a specific car (e.g., 'upgrading from Bolan', 'replacing my Mehran'), extract that model name here (e.g. 'Bolan', 'Mehran').\n"
         "- direct_model: If the user explicitly mentions a specific car model (e.g. 'Civic', 'Vitz', 'Prado'), capture it here.\n"
         "- powertrain: 'hybrid' if user mentions hybrid/HEV/e-power/aqua/prius. "
         "'ev' if user mentions electric/EV/battery car/BEV. Leave null otherwise.\n"
@@ -2143,6 +2156,10 @@ def resolve_constraints(intent: UserIntent) -> dict:
         or (intent.is_luxury_request and max_budget >= 10_000_000)
     )
 
+    excluded_models = []
+    if intent.current_car:
+        excluded_models.append(intent.current_car)
+
     constraints = {
         "min_budget":        min_budget,
         "max_budget":        max_budget,
@@ -2158,6 +2175,7 @@ def resolve_constraints(intent: UserIntent) -> dict:
         "required_features":  intent.required_features,
         "strategy_summary":   intent.strategy_summary or "",
         "intent_id":          None,
+        "excluded_models":    excluded_models,
     }
 
     # Apply keyword intent overrides — must receive raw user_prompt.
