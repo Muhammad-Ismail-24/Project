@@ -4,7 +4,7 @@ from google import genai
 from google.genai import types
 from models.car_schema import CarListing
 from typing import List
-from agents.config import settings, async_retry
+from agents.config import settings, async_retry, generate_content_resilient
 
 # Setup default fallback analysis dictionary if API fails
 DEFAULT_AI_ANALYSIS = {
@@ -59,18 +59,16 @@ def _sanitize_json_response(raw_text: str) -> str:
     return text.strip()
 
 
-# Retries=3: allows 3 re-attempts on 429 with 15s sleep between each
-@async_retry(retries=3, delay=2.0)
 async def _execute_gemini_call(client: genai.Client, system_instruction: str, prompt: str):
-    """Executes the async Gemini call wrapped inside the retry handler."""
-    return await client.aio.models.generate_content(
-        model="gemini-3.5-flash-lite",
+    """Executes the async Gemini call wrapped inside the global retry handler."""
+    return await generate_content_resilient(
         contents=prompt,
         config=types.GenerateContentConfig(
             system_instruction=system_instruction,
             response_mime_type="application/json",
             max_output_tokens=8000
-        )
+        ),
+        client=client
     )
 
 
@@ -144,8 +142,8 @@ async def evaluate_scraped_listings(listings: List[CarListing], original_user_qu
         )
 
         # Execute API call with retries
-        response = await _execute_gemini_call(client, system_instruction, prompt)
-        response_text = response.text.strip()
+        response_text = await _execute_gemini_call(client, system_instruction, prompt)
+        response_text = response_text.strip()
         
         # Parse the JSON response with sanitization
         try:
@@ -235,17 +233,17 @@ async def evaluate_single_listing(listing: dict, original_user_query: str) -> di
             "Perform the appraisal and return the JSON object:"
         )
 
-        response = await client.aio.models.generate_content(
-            model="gemini-3.5-flash-lite",
+        response_text = await generate_content_resilient(
             contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 response_mime_type="application/json",
                 max_output_tokens=2000
-            )
+            ),
+            client=client
         )
 
-        response_text = response.text.strip()
+        response_text = response_text.strip()
         sanitized = _sanitize_json_response(response_text)
         parsed = json.loads(sanitized)
 

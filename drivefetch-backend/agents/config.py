@@ -2,6 +2,8 @@ import os
 import asyncio
 import functools
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from google import genai
+from google.genai import types
 
 class Settings(BaseSettings):
     """Central configuration management using Pydantic Settings.
@@ -57,3 +59,55 @@ def async_retry(retries: int = 2, delay: float = 1.0):
         return wrapper
     return decorator
 
+
+# Centralized Model Config
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+ai_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+
+PRIMARY_MODEL = "gemini-3.5-flash-lite"
+FALLBACK_MODELS = ["gemini-3.1-flash-lite"]
+
+async def generate_content_resilient(
+    contents,
+    config: types.GenerateContentConfig,
+    client: genai.Client = None
+) -> str:
+    """
+    Centralized execution wrapper for all Gemini API calls across DriveFetch agents.
+    Handles 503 UNAVAILABLE, 429 Rate Limits, and high demand spikes via 
+    exponential backoff and fallback model failover.
+    """
+    if client is None:
+        client = ai_client
+        
+    models_to_try = [PRIMARY_MODEL] + FALLBACK_MODELS
+    
+    for model_name in models_to_try:
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                response = await client.aio.models.generate_content(
+                    model=model_name,
+                    contents=contents,
+                    config=config,
+                )
+                return response.text
+            except Exception as e:
+                err_str = str(e)
+                is_transient = any(
+                    phrase in err_str 
+                    for phrase in ["503", "429", "UNAVAILABLE", "high demand", "Quota", "RESOURCE_EXHAUSTED"]
+                )
+                
+                if is_transient and attempt < max_retries - 1:
+                    wait_time = (attempt + 1) * 2.0
+                    print(f"[Gemini Retry] {model_name} busy/rate-limited. Retrying in {wait_time}s (Attempt {attempt + 1}/{max_retries})...")
+                    await asyncio.sleep(wait_time)
+                elif is_transient:
+                    print(f"[Gemini Fallback] {model_name} failed after retries. Failing over to next model...")
+                    break
+                else:
+                    # Non-transient error (e.g. invalid key or malformed prompt)
+                    raise e
+
+    raise RuntimeError("CRITICAL: All Gemini AI models (Primary + Fallbacks) are currently unavailable due to high Google API demand.")

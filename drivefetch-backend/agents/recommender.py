@@ -61,7 +61,7 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 client = genai.Client(api_key=GEMINI_API_KEY)
 
-_GEMINI_MODEL = "gemini-3.5-flash-lite"
+from agents.config import generate_content_resilient
 
 
 # ---------------------------------------------------------------------------
@@ -2124,8 +2124,7 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "you MUST explicitly state in this summary which constraints you had to drop or trade-off to find realistic options.\n"
         "- Leave null if not clearly stated — do not guess."
     )
-    response = await client.aio.models.generate_content(
-        model=_GEMINI_MODEL,
+    response_text = await generate_content_resilient(
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -2133,7 +2132,7 @@ async def extract_intent(user_prompt: str) -> UserIntent:
             temperature=0.0,
         ),
     )
-    return UserIntent.model_validate_json(response.text)
+    return UserIntent.model_validate_json(response_text)
 
 
 def resolve_constraints(intent: UserIntent) -> dict:
@@ -2345,8 +2344,7 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         "Changan Oshan X7 FutureSense, Hyundai Sonata 2.5L, or luxury imports."
     )
 
-    response = await client.aio.models.generate_content(
-        model=_GEMINI_MODEL,
+    response_text = await generate_content_resilient(
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -2356,9 +2354,9 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
     )
 
     try:
-        return [CarTargetRaw.model_validate(item) for item in json.loads(response.text)]
+        return [CarTargetRaw.model_validate(item) for item in json.loads(response_text)]
     except Exception as e:
-        print(f"[Selector] Parse failed: {e}\nRaw: {response.text[:300]}")
+        print(f"[Selector] Parse failed: {e}\nRaw: {response_text[:300]}")
         return []
 
 
@@ -2466,8 +2464,7 @@ async def get_fallback_recommendations(
     )
 
     try:
-        response = await client.aio.models.generate_content(
-            model=_GEMINI_MODEL,
+        response_text = await generate_content_resilient(
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -2475,7 +2472,7 @@ async def get_fallback_recommendations(
                 temperature=0.25,
             ),
         )
-        raw_list = json.loads(response.text)
+        raw_list = json.loads(response_text)
         if len(raw_list) > 1:
             raw_list = [raw_list[0]]
         valid = [CarTargetRaw.model_validate(item) for item in raw_list]
@@ -2542,8 +2539,7 @@ async def get_extended_recommendations(
     )
 
     try:
-        response = await client.aio.models.generate_content(
-            model=_GEMINI_MODEL,
+        response_text = await generate_content_resilient(
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -2551,7 +2547,7 @@ async def get_extended_recommendations(
                 temperature=0.3,
             ),
         )
-        raw_list = json.loads(response.text)
+        raw_list = json.loads(response_text)
         valid = [CarTargetRaw.model_validate(item) for item in raw_list]
         valid = _validate_targets(valid, original_constraints)
         return _deduplicate_and_format(valid, original_constraints)

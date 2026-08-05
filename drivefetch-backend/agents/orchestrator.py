@@ -3,7 +3,7 @@ import re
 from google import genai
 from google.genai import types
 from openai import AsyncOpenAI
-from agents.config import settings, async_retry
+from agents.config import settings, async_retry, generate_content_resilient
 
 # Default fallback dictionary in case of API failure
 FALLBACK_QUERY_DATA = {
@@ -553,7 +553,6 @@ async def _execute_openrouter_call(user_input: str) -> str:
     return response.choices[0].message.content or ""
 
 
-@async_retry(retries=2, delay=1.0)
 async def _execute_gemini_primary_orchestrate(user_input: str) -> str:
     """Primary handler using Google Gemini to parse and structure queries."""
     api_key = settings.gemini_api_key
@@ -563,15 +562,15 @@ async def _execute_gemini_primary_orchestrate(user_input: str) -> str:
     client = genai.Client(api_key=api_key)
     system_prompt = _build_system_prompt()
 
-    response = await client.aio.models.generate_content(
-        model="gemini-3.5-flash-lite",
+    response_text = await generate_content_resilient(
         contents=user_input,
         config=types.GenerateContentConfig(
             system_instruction=system_prompt,
             response_mime_type="application/json"
-        )
+        ),
+        client=client
     )
-    return response.text or ""
+    return response_text or ""
 
 
 async def parse_user_query(user_input: str) -> dict:

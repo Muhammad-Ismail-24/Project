@@ -12,7 +12,7 @@ so the AI introduces itself by that name and signs its answers with it.
 from google import genai
 from google.genai import types
 from openai import AsyncOpenAI
-from agents.config import settings, async_retry
+from agents.config import settings, async_retry, generate_content_resilient, PRIMARY_MODEL
 
 # Returned when BOTH primary and fallback APIs fail.
 CHATBOT_FALLBACK_RESPONSE = (
@@ -75,15 +75,15 @@ async def _execute_gemini_fallback_chat(formatted_messages: list) -> str:
     if not gemini_history:
         return ""
 
-    response = await client.aio.models.generate_content(
-        model="gemini-3.5-flash-lite",
+    response_text = await generate_content_resilient(
         contents=gemini_history,
         config=types.GenerateContentConfig(
             system_instruction=system_instruction
-        )
+        ),
+        client=client
     )
 
-    return response.text or ""
+    return response_text or ""
 
 
 def _build_system_prompt(agent_name: str) -> str:
