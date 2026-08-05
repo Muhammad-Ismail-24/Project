@@ -1277,6 +1277,70 @@ def generate_disclaimers(user_prompt: str, constraints: dict) -> list[str]:
 # Feature keys must match keys in _FEATURE_KEYWORDS in recommend_normalizer.py.
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# EXCLUSIVE FEATURE ALLOWLIST
+#
+# For rare/premium features where maintaining a blocklist is brittle:
+# instead of listing every car that DOESN'T have the feature, we list the
+# ~10-20 cars that DO.  If a user requests a feature in this dict, ONLY the
+# models listed here pass the Python gate.  Everything else is silently dropped
+# before the LLM ever sees the eligible list.
+#
+# When to use Allowlist vs Blocklist:
+#   Allowlist  — rare features present in <20 cars in the Pakistan market
+#                (panoramic sunroof, memory seats, 360-camera, HUD, …)
+#   Blocklist  — common features absent in <30 economy cars
+#                (sunroof, push start, back camera, …)
+#
+# Keys must match keys used in _FEAT_NORMALISE inside get_eligible_cars().
+# Values are "make:model" strings in the same format as CAR_REGISTRY keys.
+# ---------------------------------------------------------------------------
+
+_FEATURE_EXCLUSIVE_ALLOWLIST: dict[str, set[str]] = {
+
+    "panoramic sunroof": {
+        # Chinese crossovers / SUVs with factory panoramic glass roofs
+        "mg:hs", "mg:zs ev", "mg:rx5",
+        "haval:jolion", "haval:h6", "haval:h6 hev",
+        "changan:oshan x7", "changan:uni-t", "changan:deepal s07", "changan:deepal l07",
+        "chery:tiggo 8 pro",
+        # Korean SUVs
+        "hyundai:santa fe", "hyundai:sonata", "hyundai:palisade",
+        "kia:sorento", "kia:carnival",
+        # Malaysian / other
+        "proton:x70",
+        # European / luxury
+        "audi:e-tron", "audi:e-tron gt", "audi:q7", "audi:q8",
+        "porsche:macan", "porsche:cayenne", "porsche:taycan",
+        "land rover:range rover", "land rover:range rover sport", "land rover:velar",
+        "mercedes-benz:gle", "mercedes-benz:gls", "mercedes-benz:s-class",
+        "bmw:x5", "bmw:x7", "bmw:7 series", "bmw:i7",
+    },
+
+    "memory seats": {
+        # Chinese premium
+        "haval:jolion", "haval:h6", "haval:h6 hev",
+        "changan:oshan x7", "changan:uni-t", "changan:deepal s07", "changan:deepal l07",
+        "chery:tiggo 8 pro",
+        # Korean mid-size / large
+        "hyundai:sonata", "hyundai:santa fe", "hyundai:palisade",
+        "kia:sorento", "kia:carnival",
+        # Japanese luxury sedans
+        "honda:accord", "toyota:camry", "toyota:crown",
+        "toyota:land cruiser", "toyota:prado",
+        "lexus:es", "lexus:rx", "lexus:lx", "lexus:lx570", "lexus:lx600",
+        # European
+        "audi:a6", "audi:a7", "audi:q7", "audi:q8", "audi:e-tron",
+        "bmw:5 series", "bmw:7 series", "bmw:x5", "bmw:x7",
+        "mercedes-benz:e-class", "mercedes-benz:s-class",
+        "mercedes-benz:gle", "mercedes-benz:gls",
+        "porsche:cayenne", "porsche:panamera", "porsche:macan",
+        "land rover:range rover", "land rover:range rover sport",
+        "land rover:defender", "land rover:velar",
+    },
+}
+
+
 _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
 
     # ── Sunroof / Panoramic ──────────────────────────────────────────────────
@@ -1298,33 +1362,9 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
         "proton:saga",
         "mazda:demio",
     },
-    "panoramic sunroof": {
-        "suzuki:mehran", "suzuki:alto", "suzuki:alto 660cc", "suzuki:cultus",
-        "suzuki:wagon r", "suzuki:swift", "suzuki:liana", "suzuki:baleno",
-        "suzuki:khyber", "suzuki:fx", "daihatsu:charade",
-        "suzuki:every", "suzuki:bolan", "suzuki:apv", "suzuki:hustler", "suzuki:spacia",
-        "toyota:vitz", "toyota:passo", "toyota:probox", "toyota:hiace",
-        "toyota:yaris", "toyota:aqua", "toyota:rush", "toyota:hilux",
-        "toyota:corolla",   # Grande has regular single-pane sunroof, NOT panoramic
-        "toyota:raize",     # single-pane sunroof only in Z grade
-        "toyota:c-hr",      # single-pane sunroof only
-        "toyota:allion", "toyota:premio", "toyota:mark x",
-        "honda:n-box", "honda:n-wgn", "honda:fit", "honda:freed", "honda:br-v",
-        "honda:city", "honda:civic",    # regular single-pane sunroof only in PK spec
-        "honda:vezel",      # single-pane sunroof only in Z/RS grade
-        "honda:hr-v",       # single-pane sunroof only in PK CKD
-        "hyundai:santro", "hyundai:elantra",
-        "kia:sportage",                 # regular single-pane sunroof only in PK CKD
-        "kia:picanto", "kia:stonic",
-        "daihatsu:cuore", "daihatsu:mira", "daihatsu:move", "daihatsu:tanto",
-        "daihatsu:cast", "daihatsu:hijet",
-        "nissan:dayz", "nissan:roox",
-        "subaru:xv",        # single-pane sunroof only
-        "mazda:cx-5",       # single-pane sunroof only in PK
-        "mazda:cx-3",       # single-pane sunroof only
-        "changan:alsvin", "changan:karvaan",
-        "proton:saga", "mazda:demio", "mitsubishi:mirage", "suzuki:jimny",
-    },
+    # "panoramic sunroof" — MOVED to _FEATURE_EXCLUSIVE_ALLOWLIST (allowlist pattern).
+    # Too many false positives maintaining a ~150-car blocklist.
+    # Now only the ~20 cars that actually have it pass the gate.
 
     # ── Push Start / Keyless Entry ───────────────────────────────────────────
     "push start": {
@@ -1522,30 +1562,10 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
         "proton:saga", "mazda:demio", "subaru:impreza",
     },
 
-    # ── Memory Seats ─────────────────────────────────────────────────────────
-    # Pakistani CKD assemblers (Lucky Motors, Hyundai Nishat) explicitly omit
-    # driver seat memory buttons from local spec. International specs ≠ PK spec.
-    "memory seats": {
-        "suzuki:mehran", "suzuki:alto", "suzuki:alto 660cc", "suzuki:cultus",
-        "suzuki:liana", "suzuki:baleno", "suzuki:swift", "suzuki:wagon r",
-        "suzuki:every", "suzuki:bolan", "suzuki:apv", "suzuki:jimny",
-        "toyota:vitz", "toyota:passo", "toyota:probox", "toyota:hiace",
-        "toyota:corolla", "toyota:yaris", "toyota:hilux", "toyota:aqua",
-        "toyota:rush", "toyota:raize", "toyota:allion", "toyota:premio",
-        "honda:n-box", "honda:n-wgn", "honda:fit", "honda:freed",
-        "honda:city", "honda:civic", "honda:br-v", "honda:grace",
-        "honda:vezel", "honda:hr-v",
-        "hyundai:santro", "hyundai:elantra",
-        "hyundai:tucson",   # PK CKD explicitly omits memory seats
-        "kia:picanto", "kia:stonic",
-        "kia:sportage",     # PK CKD explicitly omits memory seats
-        "daihatsu:cuore", "daihatsu:mira", "daihatsu:move", "daihatsu:tanto",
-        "daihatsu:cast", "daihatsu:hijet",
-        "nissan:dayz", "nissan:roox",
-        "mitsubishi:mirage",
-        "changan:alsvin", "changan:karvaan",
-        "proton:saga", "mazda:demio",
-    },
+    # "memory seats" — MOVED to _FEATURE_EXCLUSIVE_ALLOWLIST (allowlist pattern).
+    # Pakistani CKD assemblers strip memory seats from local specs of many
+    # international cars. An allowlist of the ~25 cars that genuinely have it
+    # is safer than a blocklist that grows with every new model year.
 }
 
 # ---------------------------------------------------------------------------
@@ -1799,16 +1819,34 @@ def get_eligible_cars(
         if max_budget >= 40_000_000 and key == "toyota:prado":
             continue
 
-        # 7. Feature impossible gate — hard exclude models that can NEVER have
-        #    any of the requested features. Uses _FEATURE_IMPOSSIBLE dict.
-        #    Models not in the dict for a given feature pass through (unknown = allow).
+        # 7. Hybrid Feature Gate (Allowlist + Blocklist)
+        #
+        #    A. Exclusive Allowlist (_FEATURE_EXCLUSIVE_ALLOWLIST):
+        #       For rare/premium features.  If the feature has an allowlist,
+        #       the car MUST appear in that set — everything else is excluded.
+        #       This is mathematically bulletproof: no matter how many new
+        #       models enter the market, the gate never leaks.
+        #
+        #    B. Impossible Blocklist (_FEATURE_IMPOSSIBLE):
+        #       For common features.  If the car appears in the blocked set for
+        #       a feature, it is excluded.  Unlisted cars pass through
+        #       (unknown = allow, LLM decides).
+        #
+        #    Both checks run per feature; the first failure short-circuits.
         if active_feature_gates:
             skip = False
             for feat_key in active_feature_gates:
-                impossible_set = _FEATURE_IMPOSSIBLE.get(feat_key, set())
-                if key in impossible_set:
-                    skip = True
-                    break
+                # A. Check Exclusive Allowlist first (strict inclusion)
+                if feat_key in _FEATURE_EXCLUSIVE_ALLOWLIST:
+                    if key not in _FEATURE_EXCLUSIVE_ALLOWLIST[feat_key]:
+                        skip = True
+                        break
+                # B. Check Impossible Blocklist (strict exclusion)
+                else:
+                    impossible_set = _FEATURE_IMPOSSIBLE.get(feat_key, set())
+                    if key in impossible_set:
+                        skip = True
+                        break
             if skip:
                 continue
 
