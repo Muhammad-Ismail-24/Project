@@ -138,12 +138,16 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm","family"}, "chinese": False},
     "suzuki:jimny":            {"lo": 2_500_000,  "hi": 8_500_000,  "styles": {"Crossover", "Mini SUV"},
                                 "drive": "4x4", "transmission": "both",   "tags": {"offroad","awd","jdm"},     "chinese": False},
-    "suzuki:every":            {"lo": 1_000_000,  "hi": 3_000_000,  "styles": {"Van"},
-                                "drive": "FWD", "transmission": "both",   "tags": {"cargo","economy","jdm"},   "chinese": False},
+    # suzuki:every defined above under APV section
     "suzuki:bolan":            {"lo": 500_000,    "hi": 2_000_000,  "styles": {"Van"},
                                 "drive": "RWD", "transmission": "manual", "tags": {"cargo","economy"},         "chinese": False},
     "suzuki:apv":              {"lo": 1_500_000,  "hi": 3_500_000,  "styles": {"Van", "MPV"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"commercial","7seat"},      "chinese": False},
+    "suzuki:fronx":            {"lo": 5_800_000,  "hi": 7_500_000,  "styles": {"Crossover", "Hatchback"},
+                                "drive": "FWD", "transmission": "both",   "tags": {"city","economy","hybrid","sports"}, "chinese": False, "priority": 2},
+    # Suzuki Every CKD (locally assembled since 2025, 660cc mild-hybrid)
+    "suzuki:every":            {"lo": 1_000_000,  "hi": 3_200_000,  "styles": {"Van"},
+                                "drive": "FWD", "transmission": "both",   "tags": {"cargo","economy","jdm"},   "chinese": False},
 
     # ── Legacy / Retro ──────────────────────────────────────────────────────────
     "suzuki:fx":               {"lo": 150_000,   "hi": 600_000,   "styles": {"Hatchback"},
@@ -212,6 +216,17 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "4x4", "transmission": "auto",   "tags": {"luxury","status","offroad","awd","reliability","resale"}, "chinese": False, "priority": 1},
     "toyota:land cruiser":     {"lo": 2_500_000, "hi": 90_000_000, "styles": {"SUV"},
                                 "drive": "4x4", "transmission": "auto",   "tags": {"luxury","status","offroad","awd","reliability","resale"}, "chinese": False, "priority": 1},
+    # Toyota Harrier — premium JDM crossover, popular as used import; 4th gen (XU80) widely available
+    "toyota:harrier":          {"lo": 4_000_000,  "hi": 18_000_000, "styles": {"Crossover"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"luxury","city","hybrid","jdm","status"}, "chinese": False, "priority": 2},
+    # Toyota Corolla Cross — CKD hybrid, launched 2023, competing with HR-V e:HEV at ~89–103 lacs
+    "toyota:corolla cross":    {"lo": 8_500_000,  "hi": 11_500_000, "styles": {"Crossover"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"family","hybrid","city","reliability","resale"}, "chinese": False, "priority": 1},
+    # Toyota 86 / GR86 — rare but present as personal imports; RWD sports coupe
+    "toyota:86":               {"lo": 5_000_000,  "hi": 12_000_000, "styles": {"Coupe"},
+                                "drive": "RWD", "transmission": "both",   "tags": {"sports","performance","jdm"}, "chinese": False, "priority": 2},
+    # Toyota Fortuner 2024 facelift — upgraded specs, still same segment
+    # (kept as existing "toyota:fortuner" entry — price range updated below)
 
     # ── Honda ────────────────────────────────────────────────────────────────
     "honda:n-box":             {"lo": 1_800_000,  "hi": 4_200_000,  "styles": {"Hatchback"},
@@ -244,6 +259,15 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "AWD", "transmission": "auto",   "tags": {"family","awd","jdm"},      "chinese": False},
     "honda:accord":            {"lo": 4_500_000,  "hi": 12_000_000, "styles": {"Sedan"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"luxury","family","jdm"},   "chinese": False},
+    # Honda HR-V e:HEV — CKD locally assembled hybrid; Honda's first local hybrid, launched July 2025
+    "honda:hr-v e:hev":        {"lo": 8_800_000,  "hi": 11_000_000, "styles": {"Crossover"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"hybrid","city","family","reliability"}, "chinese": False, "priority": 1},
+    # Honda N-One — 660cc JDM kei hatchback, used imports from Japan popular in major cities
+    "honda:n-one":             {"lo": 1_800_000,  "hi": 3_500_000,  "styles": {"Hatchback"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
+    # Honda Zest / Life — 660cc kei import variants also seen on PakWheels
+    "honda:life":              {"lo": 900_000,    "hi": 2_000_000,  "styles": {"Hatchback"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"economy","city","jdm"},    "chinese": False},
 
     # ── Hyundai ──────────────────────────────────────────────────────────────
     "hyundai:santro":          {"lo": 700_000,    "hi": 1_800_000,  "styles": {"Hatchback"},
@@ -260,6 +284,18 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "FWD", "transmission": "both",   "tags": {"cargo"},                   "chinese": False},
     "hyundai:palisade":        {"lo": 18_000_000, "hi": 35_000_000, "styles": {"Crossover"},
                                 "drive": "AWD", "transmission": "auto",   "tags": {"luxury","family","7seat","awd"}, "chinese": False},
+    # Hyundai Elantra Hybrid — 7th gen, launched Oct 2024 in Pakistan, ~70 lacs
+    "hyundai:elantra hybrid":  {"lo": 6_800_000,  "hi": 8_500_000,  "styles": {"Sedan"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"hybrid","family","city"},   "chinese": False, "priority": 2},
+    # Hyundai Tucson Hybrid 4th gen — April 2025 launch; FWD ~1.09cr, AWD ~1.2cr
+    "hyundai:tucson hybrid":   {"lo": 10_500_000, "hi": 13_500_000, "styles": {"Crossover"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"hybrid","family","awd","city"}, "chinese": False, "priority": 1},
+    # Hyundai Sonata N-Line — sports sedan, 8th gen, available via CBU import ~95 lacs
+    "hyundai:sonata n-line":   {"lo": 9_000_000,  "hi": 12_000_000, "styles": {"Sedan"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"luxury","sports","family"}, "chinese": False, "priority": 2},
+    # Hyundai Ioniq 5 — EV crossover, CBU import available ~2.2–3.5 crore
+    "hyundai:ioniq 5":         {"lo": 22_000_000, "hi": 38_000_000, "styles": {"Crossover"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"ev","luxury","performance","awd"}, "chinese": False},
 
     # ── Kia ──────────────────────────────────────────────────────────────────
     "kia:picanto":             {"lo": 2_500_000,  "hi": 3_800_000,  "styles": {"Hatchback"},
@@ -268,10 +304,18 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "FWD", "transmission": "auto",   "tags": {"city","family"},           "chinese": False},
     "kia:sportage":            {"lo": 5_500_000,  "hi": 10_000_000, "styles": {"Crossover"},
                                 "drive": "AWD", "transmission": "auto",   "tags": {"family","city","awd"},     "chinese": False},
-    "kia:sorento":             {"lo": 7_500_000,  "hi": 11_000_000, "styles": {"Crossover"},
-                                "drive": "AWD", "transmission": "auto",   "tags": {"family","7seat","awd"},    "chinese": False},
+    # Kia Sorento — updated: 4th gen hybrid expected 2025/26; 7-seat crossover flagship
+    "kia:sorento":             {"lo": 7_500_000,  "hi": 14_000_000, "styles": {"Crossover"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"family","7seat","awd","hybrid"}, "chinese": False, "priority": 2},
     "kia:carnival":            {"lo": 9_000_000,  "hi": 18_000_000, "styles": {"Van", "MPV"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"luxury","family","7seat"}, "chinese": False},
+    # Kia Sportage L — 5th generation (long wheelbase), CKD, Jan 2025 launch
+    # Alpha 2.0L: 88.99L, FWD: 1.05cr, HEV hybrid: 1.16cr (all FWD)
+    "kia:sportage l":          {"lo": 8_800_000,  "hi": 13_500_000, "styles": {"Crossover"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"family","city","hybrid"},  "chinese": False, "priority": 1},
+    # Kia EV6 — electric sports crossover, CBU import ~2.8–4 crore
+    "kia:ev6":                 {"lo": 28_000_000, "hi": 42_000_000, "styles": {"Crossover"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"ev","sports","luxury","performance","awd"}, "chinese": False},
 
     # ── Daihatsu ─────────────────────────────────────────────────────────────
     "daihatsu:cuore":          {"lo": 600_000,    "hi": 1_600_000,  "styles": {"Hatchback"},
@@ -306,6 +350,18 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "AWD", "transmission": "auto",   "tags": {"family","awd"},            "chinese": False},
     "nissan:patrol":           {"lo": 20_000_000, "hi": 55_000_000, "styles": {"SUV"},
                                 "drive": "4x4", "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": False},
+    # Nissan Kicks — compact crossover JDM import; growing used-market presence
+    "nissan:kicks":            {"lo": 4_000_000,  "hi": 7_000_000,  "styles": {"Crossover"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"city","jdm"},              "chinese": False},
+    # Nissan Serena — petrol 8-seater MPV (non-e-Power variant); popular used import
+    "nissan:serena":           {"lo": 3_500_000,  "hi": 8_000_000,  "styles": {"Van", "MPV"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"family","7seat","jdm"},    "chinese": False},
+    # Nissan Leaf — EV hatchback; CBU used imports from Japan; growing niche
+    "nissan:leaf":             {"lo": 3_500_000,  "hi": 7_500_000,  "styles": {"Hatchback"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"ev","city","economy","jdm"}, "chinese": False},
+    # Nissan Elgrand — large luxury MPV/van; premium JDM import, smaller market
+    "nissan:elgrand":          {"lo": 4_000_000,  "hi": 12_000_000, "styles": {"Van"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"luxury","7seat","jdm","family"}, "chinese": False},
 
     # ── Mitsubishi ───────────────────────────────────────────────────────────
     "mitsubishi:mirage":       {"lo": 2_000_000,  "hi": 4_500_000,  "styles": {"Hatchback"},
@@ -320,6 +376,15 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "4x4", "transmission": "auto",   "tags": {"offroad","awd","status"},  "chinese": False},
     "mitsubishi:pajero sport": {"lo": 8_000_000,  "hi": 18_000_000, "styles": {"SUV"},
                                 "drive": "4x4", "transmission": "auto",   "tags": {"offroad","awd","status"},  "chinese": False},
+    # Mitsubishi Eclipse Cross — sleek compact crossover, PHEV variant available; CBU import
+    "mitsubishi:eclipse cross": {"lo": 6_000_000,  "hi": 12_000_000, "styles": {"Crossover"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"city","awd","sports","jdm"}, "chinese": False},
+    # Mitsubishi Xpander — 7-seat MPV crossover, popular in Southeast Asia, some Pakistan import
+    "mitsubishi:xpander":      {"lo": 5_000_000,  "hi": 8_000_000,  "styles": {"Van", "MPV"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"family","7seat"},          "chinese": False},
+    # Mitsubishi L200 (Triton) — pickup truck, popular alternative to Hilux Revo
+    "mitsubishi:l200":         {"lo": 5_000_000,  "hi": 12_000_000, "styles": {"Pickup"},
+                                "drive": "4x4", "transmission": "both",   "tags": {"offroad","cargo","awd"},   "chinese": False, "priority": 2},
 
     # ── Subaru ───────────────────────────────────────────────────────────────
     "subaru:impreza":          {"lo": 2_500_000,  "hi": 6_000_000,  "styles": {"Sedan"},
@@ -344,6 +409,18 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "FWD", "transmission": "auto",   "tags": {"city","jdm"},              "chinese": False},
     "mazda:cx-5":              {"lo": 5_500_000,  "hi": 9_500_000,  "styles": {"Crossover"},
                                 "drive": "AWD", "transmission": "auto",   "tags": {"family","awd","jdm"},      "chinese": False},
+    # Mazda CX-30 — compact crossover, JDM import; between CX-3 and CX-5
+    "mazda:cx-30":             {"lo": 6_000_000,  "hi": 10_000_000, "styles": {"Crossover"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"city","awd","sports","jdm"}, "chinese": False},
+    # Mazda CX-8 — 7-seat large crossover; JDM import, premium segment
+    "mazda:cx-8":              {"lo": 9_000_000,  "hi": 18_000_000, "styles": {"Crossover"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"luxury","family","7seat","awd","jdm"}, "chinese": False},
+    # Mazda MX-5 (Miata) — rare but present; convertible/roadster, RWD sports icon
+    "mazda:mx-5":              {"lo": 4_000_000,  "hi": 9_000_000,  "styles": {"Coupe"},
+                                "drive": "RWD", "transmission": "both",   "tags": {"sports","performance","jdm"}, "chinese": False},
+    # Mazda6 — large family sedan, growing JDM import popularity
+    "mazda:mazda6":            {"lo": 5_000_000,  "hi": 10_000_000, "styles": {"Sedan"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"family","luxury","jdm"},   "chinese": False},
 
     # ── Chinese & New Entrants ────────────────────────────────────────────────
     "mg:zs":                   {"lo": 4_500_000,  "hi": 6_500_000,  "styles": {"Crossover"},
@@ -392,6 +469,103 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "FWD", "transmission": "auto",   "tags": {"ev","city"},               "chinese": True},
     "gwm:tank 500":            {"lo": 35_000_000, "hi": 45_000_000, "styles": {"SUV"},
                                 "drive": "AWD", "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": True},
+    # GWM Tank 300 — off-road body-on-frame SUV, increasingly popular; ~2.5–3.5 crore
+    "gwm:tank 300":            {"lo": 22_000_000, "hi": 38_000_000, "styles": {"SUV"},
+                                "drive": "4x4", "transmission": "auto",   "tags": {"offroad","awd","status","luxury"}, "chinese": True},
+    # Haval Jolion HEV — Jolion with mild-hybrid, ~93 lacs; direct rival to Corolla Cross HEV
+    "haval:jolion hev":        {"lo": 8_800_000,  "hi": 10_500_000, "styles": {"Crossover"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"hybrid","family","city"},   "chinese": True},
+    # Haval H7 — large 7-seat flagship SUV from Haval Pakistan
+    "haval:h7":                {"lo": 12_000_000, "hi": 17_000_000, "styles": {"SUV"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"family","7seat","luxury","awd"}, "chinese": True},
+    # Changan CS75 Plus — locally assembled midsize crossover, popular upgrade from Alsvin
+    "changan:cs75 plus":       {"lo": 9_000_000,  "hi": 12_000_000, "styles": {"Crossover"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"family","city"},            "chinese": True},
+    # Changan UNI-V — sporty coupe-crossover; 1.5T engine; unique design; CKD
+    "changan:uni-v":           {"lo": 9_000_000,  "hi": 12_000_000, "styles": {"Crossover"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"sports","city","family"},   "chinese": True},
+    # Changan Karvaan Plus — upgraded Karvaan with 1.2L UG variant and ABS/airbags
+    "changan:karvaan plus":    {"lo": 2_800_000,  "hi": 4_000_000,  "styles": {"Van"},
+                                "drive": "FWD", "transmission": "both",   "tags": {"cargo","family","economy"}, "chinese": True},
+
+    # ── Jetour (Chery sub-brand, United Motors) ───────────────────────────────
+    # Jetour Dashing — futuristic 5-seat crossover, 1.5T; CKD; ~78.99 lacs
+    "jetour:dashing":          {"lo": 7_000_000,  "hi": 9_500_000,  "styles": {"Crossover"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"city","sports","family"},   "chinese": True, "priority": 2},
+    # Jetour X70 Plus — 7-seat crossover, 1.5T; CKD; ~82.99 lacs
+    "jetour:x70 plus":         {"lo": 7_800_000,  "hi": 10_500_000, "styles": {"Crossover"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"family","7seat","city"},    "chinese": True},
+    # Jetour T1 — rugged body-on-frame SUV; 4WD; PHEV variant; ~1.1–1.3 crore
+    "jetour:t1":               {"lo": 10_500_000, "hi": 14_000_000, "styles": {"SUV"},
+                                "drive": "4x4", "transmission": "auto",   "tags": {"offroad","awd","family","status"}, "chinese": True},
+    # Jetour T2 — larger/more expensive off-roader; Defender-rivalling design; ~1.28 crore
+    "jetour:t2":               {"lo": 12_000_000, "hi": 15_000_000, "styles": {"SUV"},
+                                "drive": "4x4", "transmission": "auto",   "tags": {"offroad","awd","luxury","status"}, "chinese": True},
+
+    # ── Omoda & Jaecoo (Chery export brands, Nishat Motors) ───────────────────
+    # Omoda E5 — pure electric compact SUV; CKD Faisalabad; ~89 lacs
+    "omoda:e5":                {"lo": 8_500_000,  "hi": 10_500_000, "styles": {"Crossover"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"ev","city","family"},       "chinese": True, "priority": 2},
+    # Jaecoo J6 — gasoline compact SUV; CBU; ~1.08 crore
+    "jaecoo:j6":               {"lo": 9_500_000,  "hi": 12_000_000, "styles": {"Crossover"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"city","awd","family"},      "chinese": True},
+    # Jaecoo J7 — PHEV SUV; locally assembled; strong off-road capability
+    "jaecoo:j7":               {"lo": 11_000_000, "hi": 15_000_000, "styles": {"SUV"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"hybrid","offroad","awd","family"}, "chinese": True},
+    # Jaecoo J5 HEV — compact hybrid crossover; Jan 2026; ~66.99 lacs
+    "jaecoo:j5":               {"lo": 6_500_000,  "hi": 9_000_000,  "styles": {"Crossover"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"hybrid","city","economy"},  "chinese": True},
+
+    # ── Zeekr (Geely sub-brand, Capital Smart Motors) ─────────────────────────
+    # Zeekr X — premium compact electric SUV; ~1.9 crore; fastest Chinese EV launched in PK
+    "zeekr:x":                 {"lo": 18_000_000, "hi": 22_000_000, "styles": {"Crossover"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"ev","luxury","performance","awd"}, "chinese": True},
+    # Zeekr 7X — mid-size electric SUV; ~2.5–2.7 crore; fastest Chinese car in PK
+    "zeekr:7x":                {"lo": 24_000_000, "hi": 30_000_000, "styles": {"Crossover"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"ev","luxury","performance","awd","status"}, "chinese": True},
+    # Zeekr 009 — ultra-luxury electric MPV; ~4.9 crore; most expensive Chinese car in PK
+    "zeekr:009":               {"lo": 45_000_000, "hi": 55_000_000, "styles": {"Van"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"ev","luxury","status","7seat"}, "chinese": True},
+
+    # ── JAC ──────────────────────────────────────────────────────────────────
+    # JAC T9 Hunter — diesel pickup; 2.0T; launched Jan 2025; cheapest diesel truck
+    "jac:t9 hunter":           {"lo": 9_000_000,  "hi": 12_000_000, "styles": {"Pickup"},
+                                "drive": "4x4", "transmission": "both",   "tags": {"cargo","offroad"},          "chinese": True},
+    # JAC Frixon 2X — 4x2 pickup; ~87.75 lacs; more affordable entry
+    "jac:frixon 2x":           {"lo": 8_200_000,  "hi": 10_000_000, "styles": {"Pickup"},
+                                "drive": "FWD", "transmission": "both",   "tags": {"cargo","economy"},          "chinese": True},
+
+    # ── BYD expanded lineup ───────────────────────────────────────────────────
+    # BYD Sea Lion 7 (Sealion 7) — large electric crossover; CBU; ~2.5–3.5 crore
+    "byd:sealion 7":           {"lo": 25_000_000, "hi": 38_000_000, "styles": {"Crossover"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"ev","luxury","performance","awd"}, "chinese": True},
+    # BYD Han — executive electric sedan; ~3–4 crore
+    "byd:han":                 {"lo": 28_000_000, "hi": 42_000_000, "styles": {"Sedan"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"ev","luxury","performance","status"}, "chinese": True},
+
+    # ── Forthing (Capital Smart Motors) ──────────────────────────────────────
+    # Forthing Friday — first officially launched REEV (range-extended EV) in Pakistan
+    "forthing:friday":         {"lo": 10_000_000, "hi": 13_000_000, "styles": {"SUV"},
+                                "drive": "4x4", "transmission": "auto",   "tags": {"ev","hybrid","offroad","awd"}, "chinese": True},
+
+    # ── Chery direct brand ────────────────────────────────────────────────────
+    # Chery Tiggo 7 Pro — midsize crossover; between Tiggo 4 Pro and Tiggo 8 Pro
+    "chery:tiggo 7 pro":       {"lo": 6_500_000,  "hi": 9_000_000,  "styles": {"Crossover"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"family","city"},            "chinese": True},
+    # Chery Omoda 5 EV — electric version of Omoda 5; CBU; competing with BYD Atto 3
+    "chery:omoda 5 ev":        {"lo": 9_000_000,  "hi": 12_000_000, "styles": {"Crossover"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"ev","city","family"},       "chinese": True},
+
+    # ── MG expanded lineup ────────────────────────────────────────────────────
+    # MG HS PHEV — plug-in hybrid crossover; ~85 lacs; CKD locally assembled
+    "mg:hs phev":              {"lo": 8_000_000,  "hi": 10_500_000, "styles": {"Crossover"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"hybrid","family","city"},   "chinese": True},
+    # MG Hector — large 6-seat crossover; premium segment; ~1.1 crore
+    "mg:hector":               {"lo": 10_000_000, "hi": 13_000_000, "styles": {"Crossover"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"family","7seat","luxury"},  "chinese": True},
+    # MG 7 — sporty flagship sedan from MG Pakistan
+    "mg:7":                    {"lo": 8_000_000,  "hi": 11_000_000, "styles": {"Sedan"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"sports","luxury","family"}, "chinese": True},
 
     # ── Budget Micro-EVs ─────────────────────────────────────────────────────
     "honri:ve":                {"lo": 2_000_000,  "hi": 3_200_000,  "styles": {"Hatchback"},
@@ -432,6 +606,24 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "FWD", "transmission": "auto",   "tags": {"ev","luxury","status"},    "chinese": False},
     "bmw:ix":                  {"lo": 35_000_000, "hi": 55_000_000, "styles": {"Crossover"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"ev","luxury"},             "chinese": False},
+    # BMW 1 Series — entry compact hatchback; used import; growing used market
+    "bmw:1 series":            {"lo": 4_000_000,  "hi": 12_000_000, "styles": {"Hatchback"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"luxury","sports","city"},  "chinese": False},
+    # BMW 2 Series Coupe — sporty 2-door; Deewan import; popular used German import
+    "bmw:2 series":            {"lo": 5_000_000,  "hi": 18_000_000, "styles": {"Coupe"},
+                                "drive": "RWD", "transmission": "both",   "tags": {"sports","luxury","performance"}, "chinese": False},
+    # BMW 4 Series — sporty coupe/gran coupe; used and CBU imports
+    "bmw:4 series":            {"lo": 9_000_000,  "hi": 28_000_000, "styles": {"Coupe"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"sports","luxury","performance"}, "chinese": False},
+    # BMW M4 — high-performance version of 4 Series; RWD/AWD; very rare but present
+    "bmw:m4":                  {"lo": 25_000_000, "hi": 55_000_000, "styles": {"Coupe"},
+                                "drive": "RWD", "transmission": "auto",   "tags": {"sports","performance","luxury"}, "chinese": False, "priority": 1},
+    # BMW iX3 — electric version of X3; ~3–4.5 crore CBU
+    "bmw:ix3":                 {"lo": 28_000_000, "hi": 45_000_000, "styles": {"Crossover"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"ev","luxury","awd"},       "chinese": False},
+    # BMW i5 — electric 5-series; new in Pakistan ~2.5 crore (cheapest BMW per PakWheels 2026)
+    "bmw:i5":                  {"lo": 24_000_000, "hi": 35_000_000, "styles": {"Sedan"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"ev","luxury","family"},    "chinese": False},
     "mercedes-benz:cla":       {"lo": 7_000_000,  "hi": 18_000_000, "styles": {"Sedan"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"luxury","sports","status"}, "chinese": False},
     "mercedes-benz:c-class":   {"lo": 6_000_000,  "hi": 30_000_000, "styles": {"Sedan"},
@@ -448,6 +640,42 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "AWD", "transmission": "auto",   "tags": {"luxury","status","awd"},   "chinese": False},
     "mercedes-benz:gls":       {"lo": 30_000_000, "hi": 75_000_000, "styles": {"SUV"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"luxury","status","7seat"}, "chinese": False},
+    # Mercedes A-Class — entry luxury compact hatchback; used imports from Germany
+    "mercedes-benz:a-class":   {"lo": 6_000_000,  "hi": 15_000_000, "styles": {"Hatchback"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"luxury","sports","city"},  "chinese": False},
+    # Mercedes GLA 200 — compact entry luxury crossover; used import; growing popularity
+    "mercedes-benz:gla 200":   {"lo": 6_500_000,  "hi": 14_000_000, "styles": {"Crossover"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"luxury","city"},           "chinese": False},
+    # Mercedes GLC 300 (coupe/standard) — flagship mid luxury crossover
+    "mercedes-benz:glc 300":   {"lo": 14_000_000, "hi": 40_000_000, "styles": {"Crossover"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"luxury","status","awd"},   "chinese": False},
+    # Mercedes AMG C63 / E63 — performance variants; rare personal imports
+    "mercedes-benz:amg":       {"lo": 18_000_000, "hi": 70_000_000, "styles": {"Sedan"},
+                                "drive": "RWD", "transmission": "auto",   "tags": {"sports","performance","luxury","status"}, "chinese": False, "priority": 2},
+    # Mercedes EQS — flagship electric sedan; ultra-luxury
+    "mercedes-benz:eqs":       {"lo": 50_000_000, "hi": 100_000_000,"styles": {"Sedan"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"ev","luxury","status"},    "chinese": False},
+    # Volkswagen Passat — European mid-size sedan; used personal imports; ~36 lacs+
+    "volkswagen:passat":       {"lo": 3_500_000,  "hi": 12_000_000, "styles": {"Sedan"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"family","luxury","city"},  "chinese": False},
+    # Volkswagen Tiguan — compact crossover; popular German import alternative to BMW X1
+    "volkswagen:tiguan":       {"lo": 6_000_000,  "hi": 16_000_000, "styles": {"Crossover"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"family","luxury","awd"},   "chinese": False},
+    # Volkswagen Golf — iconic hot-hatch; personal imports, rare but present
+    "volkswagen:golf":         {"lo": 4_000_000,  "hi": 10_000_000, "styles": {"Hatchback"},
+                                "drive": "FWD", "transmission": "both",   "tags": {"sports","city","luxury"},  "chinese": False},
+    # Volkswagen Amarok — pickup truck; diesel; used German imports
+    "volkswagen:amarok":       {"lo": 6_000_000,  "hi": 15_000_000, "styles": {"Pickup"},
+                                "drive": "4x4", "transmission": "auto",   "tags": {"offroad","cargo","awd"},   "chinese": False},
+    # Audi A1 — entry luxury compact hatchback; used German imports, growing
+    "audi:a1":                 {"lo": 3_500_000,  "hi": 8_000_000,  "styles": {"Hatchback"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"luxury","sports","city"},  "chinese": False},
+    # Audi RS4 / RS6 — high-performance Audi wagons/sedans; rare but sought-after
+    "audi:rs6":                {"lo": 25_000_000, "hi": 60_000_000, "styles": {"Sedan"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"sports","performance","luxury","status"}, "chinese": False, "priority": 1},
+    # Audi Q4 e-tron — compact electric SUV; growing luxury EV segment
+    "audi:q4 e-tron":          {"lo": 18_000_000, "hi": 30_000_000, "styles": {"Crossover"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"ev","luxury","awd"},       "chinese": False},
     "audi:a3":                 {"lo": 5_000_000,  "hi": 12_000_000, "styles": {"Sedan","Hatchback"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"luxury","sports","city"},  "chinese": False},
     "audi:a4":                 {"lo": 6_500_000,  "hi": 20_000_000, "styles": {"Sedan"},
@@ -619,6 +847,123 @@ _CANONICAL_MODEL_MAP: dict[str, str] = {
     "350z":                      "350Z",
     "370z":                      "370Z",
     "cayman":                    "Cayman",
+    # ── New 2025/2026 additions ───────────────────────────────────────────────
+    "fronx":                     "Fronx",
+    "suzuki fronx":              "Fronx",
+    "corolla cross":             "Corolla Cross",
+    "toyota corolla cross":      "Corolla Cross",
+    "harrier":                   "Harrier",
+    "toyota harrier":            "Harrier",
+    "toyota 86":                 "86",
+    "gr86":                      "86",
+    "hrv ehev":                  "HR-V e:HEV",
+    "hr-v ehev":                 "HR-V e:HEV",
+    "hrv hybrid":                "HR-V e:HEV",
+    "n-one":                     "N-One",
+    "none":                      "N-One",   # careful: only if context is clear
+    "elantra hybrid":            "Elantra Hybrid",
+    "tucson hybrid":             "Tucson Hybrid",
+    "sonata n-line":             "Sonata N-Line",
+    "sonata nline":              "Sonata N-Line",
+    "ioniq5":                    "Ioniq 5",
+    "ioniq 5":                   "Ioniq 5",
+    "sportage l":                "Sportage L",
+    "sportage 5th gen":          "Sportage L",
+    "ev6":                       "EV6",
+    "kia ev6":                   "EV6",
+    "kicks":                     "Kicks",
+    "nissan kicks":              "Kicks",
+    "serena":                    "Serena",
+    "nissan serena":             "Serena",
+    "leaf":                      "Leaf",
+    "nissan leaf":               "Leaf",
+    "elgrand":                   "Elgrand",
+    "eclipse cross":             "Eclipse Cross",
+    "xpander":                   "Xpander",
+    "l200":                      "L200",
+    "triton":                    "L200",
+    "mitsubishi triton":         "L200",
+    "cx-30":                     "CX-30",
+    "cx30":                      "CX-30",
+    "cx-8":                      "CX-8",
+    "cx8":                       "CX-8",
+    "mx-5":                      "MX-5",
+    "miata":                     "MX-5",
+    "mazda6":                    "Mazda6",
+    "mazda 6":                   "Mazda6",
+    "jolion hev":                "Jolion HEV",
+    "haval jolion hev":          "Jolion HEV",
+    "h7":                        "H7",
+    "haval h7":                  "H7",
+    "tank 300":                  "Tank 300",
+    "cs75":                      "CS75 Plus",
+    "cs75 plus":                 "CS75 Plus",
+    "uni-v":                     "UNI-V",
+    "univ":                      "UNI-V",
+    "karvaan plus":              "Karvaan Plus",
+    "dashing":                   "Dashing",
+    "jetour dashing":            "Dashing",
+    "x70 plus":                  "X70 Plus",
+    "jetour x70":                "X70 Plus",
+    "jetour t1":                 "T1",
+    "jetour t2":                 "T2",
+    "omoda e5":                  "E5",
+    "omoda5 ev":                 "E5",
+    "jaecoo j5":                 "J5",
+    "jaecoo j6":                 "J6",
+    "jaecoo j7":                 "J7",
+    "zeekr x":                   "X",
+    "zeekr 7x":                  "7X",
+    "zeekr 009":                 "009",
+    "t9 hunter":                 "T9 Hunter",
+    "jac t9 hunter":             "T9 Hunter",
+    "frixon":                    "Frixon 2X",
+    "jac frixon":                "Frixon 2X",
+    "sealion 7":                 "Sealion 7",
+    "byd sealion":               "Sealion 7",
+    "byd han":                   "Han",
+    "forthing friday":           "Friday",
+    "tiggo 7 pro":               "Tiggo 7 Pro",
+    "omoda 5 ev":                "Omoda 5 EV",
+    "hs phev":                   "HS PHEV",
+    "mg hs phev":                "HS PHEV",
+    "mg hector":                 "Hector",
+    "hector":                    "Hector",
+    "mg7":                       "MG 7",
+    "mg 7":                      "MG 7",
+    # German imports
+    "1 series":                  "1 Series",
+    "2 series":                  "2 Series",
+    "4 series":                  "4 Series",
+    "m4":                        "M4",
+    "bmw m4":                    "M4",
+    "ix3":                       "iX3",
+    "bmw ix3":                   "iX3",
+    "i5":                        "i5",
+    "bmw i5":                    "i5",
+    "a-class":                   "A-Class",
+    "mercedes a class":          "A-Class",
+    "gla 200":                   "GLA 200",
+    "glc 300":                   "GLC 300",
+    "amg c63":                   "AMG",
+    "amg e63":                   "AMG",
+    "eqs":                       "EQS",
+    "mercedes eqs":              "EQS",
+    "passat":                    "Passat",
+    "vw passat":                 "Passat",
+    "tiguan":                    "Tiguan",
+    "vw tiguan":                 "Tiguan",
+    "golf":                      "Golf",
+    "vw golf":                   "Golf",
+    "amarok":                    "Amarok",
+    "vw amarok":                 "Amarok",
+    "a1":                        "A1",
+    "audi a1":                   "A1",
+    "rs6":                       "RS6",
+    "audi rs6":                  "RS6",
+    "rs4":                       "RS6",   # scraper will use RS6 as proxy for RS variants
+    "q4 e-tron":                 "Q4 e-tron",
+    "q4 etron":                  "Q4 e-tron",
 }
 
 
@@ -653,8 +998,14 @@ USE-CASE PRINCIPLES — Family / Daily:
 USE-CASE PRINCIPLES — City Commute:
   - Prioritise: fuel economy, parking ease (shorter wheelbase), maneuverability
   - Rank higher: hatchbacks and small crossovers over large sedans for tight city streets
-  - For budgets under PKR 30 lacs: hatchbacks (Swift, Vitz, Passo) beat sedans on practicality
-  - For budgets PKR 30–60 lacs: Vezel, C-HR, Stonic offer the best city crossover experience
+  - For budgets under PKR 30 lacs: hatchbacks (Swift, Vitz, Passo, Alto) beat sedans on practicality
+  - For budgets PKR 30–65 lacs: Vezel, C-HR, Kia Stonic offer the best city crossover experience
+  - NEW 2025/26 CITY CROSSOVERS:
+    • Suzuki Fronx (60–71 lacs, mild-hybrid option, Suzuki network) — excellent new city XUV
+    • Jaecoo J5 HEV (67 lacs, hybrid, most affordable locally assembled hybrid crossover)
+    • Jetour Dashing (79 lacs, futuristic styling, 1.5T)
+    • Honda HR-V e:HEV (88–104 lacs, dual-motor hybrid, best fuel efficiency in the segment)
+    • Toyota Corolla Cross HEV (85–103 lacs, AWD available, Toyota reliability)
   - Automatic transmission is strongly preferred for stop-and-go Lahore/Karachi traffic
   - Avoid: large body-on-frame SUVs (Fortuner, Prado) — fuel costs are punishing for city-only use
   - Avoid: sports cars with stiff suspension — Pakistani road conditions punish ride quality
@@ -665,28 +1016,46 @@ USE-CASE PRINCIPLES — SUV / Off-road / Northern Areas:
   - HARD SEPARATION: True SUVs (Land Cruiser, Prado, Pajero, Patrol, Fortuner, Revo) have ladder-frame chassis or true 4x4 systems.
   - Crossovers (Sportage, Tucson, Vezel, Rush) are unibody city cars — NEVER recommend crossovers when the user asks for a true SUV or rugged 4x4.
   - Old Land Cruisers (LC80/LC100), Prados, and Pajeros from 1990-2005 are extremely popular in Pakistan for rough terrain. Recommend them if budget is under 5 crore!
+  - NEW 2025/26 OFF-ROAD OPTIONS:
+    • Jetour T1 (1.05–1.4 crore) — body-on-frame SUV, PHEV variant, solid 4WD; new but promising
+    • Jetour T2 (1.2–1.5 crore) — larger Defender-rivalling SUV, PHEV; top Chinese off-roader in PK
+    • GWM Tank 300 (2.2–3.8 crore) — proven ladder-frame, PHEV, strong off-road spec; Tank 500 for premium
+    • Forthing Friday (1–1.3 crore) — REEV (range-extended EV), off-road capable; first REEV in Pakistan
+    • Mitsubishi L200 Triton — diesel pickup alternative to Hilux with better interior
+    • JAC T9 Hunter — cheapest diesel pickup (diesel engine), alternative to Hilux Revo for budget buyers
+  - Chinese off-road SUVs now have official dealer networks; parts availability is improving.
 """,
 
     "sports": """
 USE-CASE PRINCIPLES — Sports / Performance / Fun Driving:
   - Prioritise: rear-wheel drive, manual option, engine character, suspension tuning
-  - JDM hierarchy for sports (budget ascending): RX-8 → Subaru BRZ/Impreza WRX → Mark X V6 → Crown Athlete → BMW 3 Series M-Sport
-  - For budgets under PKR 50 lacs: Mark X (V6, RWD) and Subaru Impreza (WRX, AWD) are the top choices
-  - Mazda3 is sporty but FWD — mention this limitation in rationale
-  - Avoid: recommending Corolla, City, or Civic as "sports" picks — they are commuter cars
-  - If automatic requested for sports: Mark X, Crown Athlete, BMW 3 Series — all auto
-  - If manual allowed: Impreza WRX, BRZ, RX-8 have genuine manual options
+  - PAKISTANI SPORTS CAR HIERARCHY BY BUDGET (ascending):
+    • Under 30 Lacs: Mazda RX-8 (rotary, RWD), Honda Civic old-gen (sporty FWD)
+    • 30–60 Lacs: Subaru BRZ (RWD), Subaru Impreza WRX (AWD), Toyota Mark X V6 (RWD), Toyota 86/GR86 (RWD)
+    • 60–100 Lacs: Crown Athlete V6 (RWD), BMW 3 Series (RWD auto), Nissan 350Z/370Z (RWD), BMW 2 Series coupe
+    • 1–2 Crore: BMW M3 (RWD/AWD), BMW M4 (RWD/AWD), Porsche Cayman (RWD), Nissan Fairlady Z (RWD)
+    • 2+ Crore: Porsche 911, Porsche Taycan (EV), Mercedes AMG, Zeekr 7X (EV performance)
+  - AVOID recommending Corolla, City, or Civic as "sports" picks — they are commuter cars
+  - JDM sports imports: Toyota Supra (very rare), GR86, Mark X, Crown Athlete, Impreza WRX — genuine options
+  - German sports options: BMW M3/M4 are the gold standard for track-capable sedans in Pakistan
+  - Mazda RX-8 caveat: unique rotary engine — mention reliability concerns (requires high-rev driving)
+  - If automatic requested for sports: Mark X, Crown Athlete, BMW 3/5 M-Sport, BMW 4 Series — all auto
+  - If manual allowed: Impreza WRX, BRZ, Toyota 86, RX-8, BMW M4 MT have genuine manual options
 """,
 
     "luxury": """
 USE-CASE PRINCIPLES — Luxury / Status / Aura:
   - HARD RULE: If budget >= PKR 3 crore (30M), NEVER recommend Fortuner or Sportage — these are mid-tier, not luxury
-  - Budget 1–3 crore: Prado, Patrol, BMW X5, Lexus RX are the correct status picks
-  - Budget 3–8 crore: Land Cruiser, Range Rover, BMW X7, Porsche Cayenne territory
-  - Budget above 8 crore: LX600, Range Rover Vogue, Defender, high-spec LC300
+  - Budget 70 Lacs–1.5 Crore: BMW 3 Series, Mercedes C-Class, Audi A4, Toyota Harrier (hybrid luxury JDM)
+  - Budget 1.5–3 crore: Prado, Patrol, BMW X5, Lexus RX — correct status picks
+  - Budget 3–8 crore: Land Cruiser, Range Rover, BMW X7, Porsche Cayenne, GWM Tank 500
+  - Budget above 8 crore: LX600, Range Rover Vogue, Defender, high-spec LC300, Zeekr 009 MPV
+  - CHINESE LUXURY SPECIAL CASE: GWM Tank 300/500 are accepted as "status" in the Chinese crossover space.
+    Zeekr 7X/009 are legitimate luxury EVs competing with German imports.
+  - ELECTRIC LUXURY TIER (2025+): Zeekr 7X (2.5cr), BYD Han (3cr+), Mercedes EQS, Porsche Taycan, Audi e-tron GT
   - Pakistani status hierarchy (SUVs): Mehran < Cultus < Civic < Corolla < Fortuner < Prado < Land Cruiser < LX600/Range Rover
-  - For sedans with luxury: BMW 3/5 Series, Mercedes C/E Class, Audi A4/A6, Porsche Panamera
-  - Avoid: recommending non-luxury brands (Suzuki, Kia Stonic, Haval) for luxury-intent queries regardless of what's on the eligible list
+  - For sedans with luxury: BMW 3/5 Series, Mercedes C/E Class, Audi A4/A6, Porsche Panamera, Hyundai Sonata N-Line
+  - Avoid: recommending non-luxury brands (Suzuki, Kia Stonic, Haval Jolion) for luxury-intent queries regardless of what's on the eligible list
 """,
 
     "ride_sharing": """
@@ -702,9 +1071,11 @@ USE-CASE PRINCIPLES — Ride Sharing / Commercial:
     "general": """
 USE-CASE PRINCIPLES — General (no specific use case stated):
   - Default to reliability and resale value as primary ranking factors
-  - RELIABILITY HIERARCHY in Pakistan: Toyota > Honda > Suzuki > Kia/Hyundai > Chinese brands
+  - RELIABILITY HIERARCHY in Pakistan: Toyota > Honda > Suzuki > Kia/Hyundai > Chery-group (Jetour/Jaecoo/Omoda) > Haval/MG > other Chinese brands
   - RESALE VALUE HIERARCHY: Toyota Corolla/Civic/City hold the best resale in their respective segments
   - Toyota and Honda get a reliability/resale bonus — prefer them over equally-priced alternatives
+  - NEW 2025/26 MARKET CONTEXT: Chinese brands are now mainstream and legitimate. Jetour, Jaecoo, Omoda, Haval, MG have established dealer and parts networks in Pakistan's major cities. They are valid picks, especially for budget-conscious buyers who want crossover/SUV body styles.
+  - HYBRID IS NOW MAINSTREAM: At 65–120 lacs, buyers should consider hybrid variants (Fronx, Jaecoo J5, Corolla Cross, HR-V e:HEV, Jolion HEV, Sportage L HEV, Tucson Hybrid). Note this in rationale.
   - Prefer models with established parts supply chains in major Pakistani cities (Lahore, Karachi, Islamabad)
   - If budget is wide, pick 1 reliable mainstream (Toyota/Honda) + 1 alternative make to show diversity
   - Never recommend niche sports or offroad cars for unspecified use cases
@@ -773,9 +1144,21 @@ USE-CASE PRINCIPLES — Highway / Long Route / Touring:
 USE-CASE PRINCIPLES — Hybrid / Series Hybrid / EV:
   - CRITICAL DISTINCTION: Series Hybrids (Nissan Note e-Power, Serena e-Power) use a petrol engine ONLY as a generator — the wheels are ALWAYS driven by an electric motor. This gives EV-like driving feel.
   - Parallel Hybrids (Toyota Aqua, Prius, Honda Grace, Vezel) have both petrol engine and electric motor driving the wheels together.
+  - LOCALLY ASSEMBLED HYBRIDS (2024-2026, best value and parts availability):
+    • Toyota Corolla Cross HEV — ~98–103 lacs (CKD, Toyota reliability, AWD)
+    • Honda HR-V e:HEV — ~90–104 lacs (CKD, Honda's first local hybrid, dual-motor)
+    • Haval Jolion HEV — ~93 lacs (CKD, Chinese, value-oriented)
+    • Kia Sportage L HEV — ~1.16 crore (CKD, 5th gen)
+    • Hyundai Tucson Hybrid — ~1.09–1.2 crore (CKD, AWD variant available)
+    • Haval H6 HEV — ~1.14 crore (CKD, AWD)
+    • MG HS PHEV — ~85 lacs (plug-in hybrid)
+    • Jaecoo J5 HEV — ~67 lacs (most affordable locally assembled hybrid crossover 2026)
+    • Suzuki Fronx Hybrid — ~64–68 lacs (mild hybrid, most affordable hybrid XUV)
+    • Hyundai Elantra Hybrid — ~70–80 lacs (hybrid sedan)
   - When user asks for "series hybrid" or "e-Power" → prioritize Nissan Note e-Power and Serena e-Power.
   - When user asks for "hybrid" generically → include both types, but note the distinction in rationale.
   - For EV queries: ONLY show cars with 'ev' tag. Budget micro-EVs (Honri VE, Rinco Aria, Metro Enfon) are valid for under 35 lacs.
+  - PREMIUM EVs in Pakistan: Zeekr X/7X, BYD Seal, BYD Sealion 7, Omoda E5, MG 4 EV, Hyundai Ioniq 5, Kia EV6.
   - Avoid: Recommending petrol-only cars for hybrid/EV queries — this is a critical error.
 """,
 
@@ -1243,9 +1626,13 @@ def generate_disclaimers(user_prompt: str, constraints: dict) -> list[str]:
         )
 
     # 7. EV Infrastructure Warning
-    # Replace raw "ev" substring checks with regex word boundary matching \bev\b
+    # Use strict word-boundary regex for "ev"/"bev" and only multi-word phrases for
+    # "electric" so that "electric parking brake" / "electric tailgate" never trigger.
     has_ev_kw = bool(re.search(r'\b(ev|bev)\b', prompt_lower)) or any(
-        w in prompt_lower for w in ["electric car", "electric vehicle", "battery car", "zero emission", "fully electric"]
+        w in prompt_lower for w in [
+            "electric car", "electric vehicle", "electric suv", "electric sedan",
+            "battery car", "zero emission", "fully electric",
+        ]
     )
     if has_ev_kw or constraints.get("powertrain") == "ev":
         disclaimers.append(
@@ -1263,11 +1650,37 @@ def generate_disclaimers(user_prompt: str, constraints: dict) -> list[str]:
         )
 
     # 9. CKD Memory Seat Omission Confusion
-    if "memory" in prompt_lower and any(w in prompt_lower for w in ["seat", "driver"]):
+    if "memory" in prompt_lower and any(w in prompt_lower for w in ["seat", "driver", "function"]):
         disclaimers.append(
             "⚠️ Specification Notice: Locally assembled (PKDM) Kia Sportage and Hyundai Tucson do "
             "not feature driver seat memory functions. Recommending Haval Jolion, Haval H6, or "
             "Changan Oshan X7 FutureSense which retain this global specification."
+        )
+
+    # 10. EPB / Mechanical Handbrake Warning
+    if any(w in prompt_lower for w in ["epb", "electric parking", "electronic parking", "auto hold", "brake hold"]):
+        disclaimers.append(
+            "⚠️ Specification Notice: The Toyota Corolla (all PKDM variants including Grande) and "
+            "Toyota Yaris use traditional mechanical pull-handbrakes. For EPB with Auto-Hold, "
+            "consider the Honda Civic Oriel/RS, MG HS, Haval Jolion, Haval H6, or Oshan X7."
+        )
+
+    # 11. Adaptive / Radar Cruise — PKDM Passive Cruise vs True Radar ACC
+    if any(w in prompt_lower for w in ["adaptive cruise", "radar cruise", "radar", "honda sensing", "distance keeping"]):
+        disclaimers.append(
+            "⚠️ Specification Notice: The locally assembled Hyundai Tucson, Kia Sportage, and "
+            "Honda HR-V ship with passive fixed-speed cruise only — radar distance-keeping is "
+            "stripped in PKDM CKD spec. For true radar ACC, specify Honda Civic RS (Honda Sensing), "
+            "Haval Jolion, Haval H6, MG HS, or Changan Oshan X7 FutureSense."
+        )
+
+    # 12. Ventilated Seats — Elantra Hybrid vs Base Elantra
+    if any(w in prompt_lower for w in ["ventilated", "cooling seat", "cooled seat", "seat cooling"]):
+        disclaimers.append(
+            "⚠️ Specification Notice: The base Hyundai Elantra 2.0 GLS omits ventilated seat "
+            "cooling. If considering the Elantra, you must specifically select the Elantra Hybrid "
+            "variant to get this feature. Alternatively, the Haval H6, Haval Jolion, MG HS, and "
+            "Oshan X7 FutureSense include ventilated seats across their standard configurations."
         )
 
     return disclaimers
@@ -1305,19 +1718,26 @@ def generate_disclaimers(user_prompt: str, constraints: dict) -> list[str]:
 # ---------------------------------------------------------------------------
 
 _FEATURE_EXCLUSIVE_ALLOWLIST: dict[str, set[str]] = {
+    # ---------------------------------------------------------------------------
+    # Only features present in <25 cars in the Pakistan used/new market are here.
+    # Everything else uses the blocklist pattern in _FEATURE_IMPOSSIBLE.
+    # Sources: PakWheels, official Lucky/Hyundai Nishat/Changan specs, gari.pk.
+    # ---------------------------------------------------------------------------
 
+    # ── Panoramic Sunroof ────────────────────────────────────────────────────
+    # Standard single-pane sunroofs (Corolla Grande, Civic Oriel, Vezel, Jolion
+    # petrol base, Raize) do NOT qualify — this allowlist is panoramic-only.
+    # Honda Civic RS has a panoramic sunroof per Honda Atlas official specs.
     "panoramic sunroof": {
-        # Chinese crossovers / SUVs with factory panoramic glass roofs
+        "honda:civic",              # RS trim only — has full panoramic sunroof
         "mg:hs", "mg:zs ev", "mg:rx5",
-        "haval:jolion", "haval:h6", "haval:h6 hev",
-        "changan:oshan x7", "changan:uni-t", "changan:deepal s07", "changan:deepal l07",
+        "haval:jolion", "haval:h6", "haval:h6 hev", "haval:h6 phev",
+        "changan:oshan x7",         # FutureSense trim only
+        "changan:uni-t", "changan:deepal s07", "changan:deepal l07",
         "chery:tiggo 8 pro",
-        # Korean SUVs
         "hyundai:santa fe", "hyundai:sonata", "hyundai:palisade",
         "kia:sorento", "kia:carnival",
-        # Malaysian / other
         "proton:x70",
-        # European / luxury
         "audi:e-tron", "audi:e-tron gt", "audi:q7", "audi:q8",
         "porsche:macan", "porsche:cayenne", "porsche:taycan",
         "land rover:range rover", "land rover:range rover sport", "land rover:velar",
@@ -1325,13 +1745,43 @@ _FEATURE_EXCLUSIVE_ALLOWLIST: dict[str, set[str]] = {
         "bmw:x5", "bmw:x7", "bmw:7 series", "bmw:i7",
     },
 
-    # Ventilated seats — present in PK market only in premium trims of these models.
-    # Local CKD economy/mid sedans (Civic, Elantra, City, Corolla) do not have this feature.
-    "ventilated seats": {
-        "hyundai:sonata", "hyundai:santa fe", "hyundai:palisade",
-        "haval:jolion", "haval:h6", "haval:h6 hev",
-        "changan:oshan x7", "changan:deepal l07", "changan:deepal s07",
+    # ── Memory Seats ─────────────────────────────────────────────────────────
+    # Kia Sportage, Hyundai Tucson, Honda HR-V, Honda Civic, Toyota Corolla
+    # PKDM CKD units strip out driver seat memory — confirmed by Hyundai Nishat
+    # and Lucky Motors local spec sheets.
+    # Kia Sorento AWD HEV retains 14-way power + memory per Lucky Motors PK page.
+    "memory seats": {
+        "haval:jolion", "haval:h6", "haval:h6 hev", "haval:h6 phev",
+        "changan:oshan x7",         # FutureSense trim only (not Comfort)
+        "changan:uni-t", "changan:deepal s07", "changan:deepal l07",
         "chery:tiggo 8 pro",
+        "hyundai:sonata", "hyundai:santa fe", "hyundai:palisade",
+        "kia:sorento", "kia:carnival",
+        "honda:accord",
+        "toyota:camry", "toyota:crown", "toyota:land cruiser", "toyota:prado",
+        "lexus:es", "lexus:rx", "lexus:lx", "lexus:lx570", "lexus:lx600",
+        "audi:a6", "audi:a7", "audi:q7", "audi:q8", "audi:e-tron",
+        "bmw:5 series", "bmw:7 series", "bmw:x5", "bmw:x7",
+        "mercedes-benz:e-class", "mercedes-benz:s-class",
+        "mercedes-benz:gle", "mercedes-benz:gls",
+        "porsche:cayenne", "porsche:panamera", "porsche:macan",
+        "land rover:range rover", "land rover:range rover sport",
+        "land rover:defender", "land rover:velar",
+    },
+
+    # ── Ventilated / Cooled Seats ────────────────────────────────────────────
+    # Research confirms: Haval H6 (all trims), Haval Jolion (all trims verified
+    # per PakWheels), Oshan X7 FutureSense, MG HS (confirmed gari.pk / zigwheels),
+    # Kia Sorento (top trim). Hyundai Elantra 2.0 GLS omits this; Elantra Hybrid
+    # retains it — include elantra but LLM must push Hybrid trim via disclaimer.
+    "ventilated seats": {
+        "mg:hs",
+        "haval:jolion", "haval:h6", "haval:h6 hev", "haval:h6 phev",
+        "changan:oshan x7",         # FutureSense only
+        "changan:deepal l07", "changan:deepal s07",
+        "chery:tiggo 8 pro",
+        "hyundai:elantra",          # ⚠ Hybrid trim only — disclaimer #12 fires
+        "hyundai:sonata", "hyundai:santa fe", "hyundai:palisade",
         "kia:sorento", "kia:carnival",
         "toyota:camry", "toyota:land cruiser", "toyota:prado", "toyota:crown",
         "lexus:lx570", "lexus:lx600", "lexus:rx", "lexus:es",
@@ -1340,26 +1790,136 @@ _FEATURE_EXCLUSIVE_ALLOWLIST: dict[str, set[str]] = {
         "mercedes-benz:s-class",
     },
 
-    "memory seats": {
-        # Chinese premium
-        "haval:jolion", "haval:h6", "haval:h6 hev",
-        "changan:oshan x7", "changan:uni-t", "changan:deepal s07", "changan:deepal l07",
+    # ── 360-Degree Surround View Camera ─────────────────────────────────────
+    # Confirmed present on Pakistan-market units:
+    # Oshan X7 FutureSense (Wikipedia + Changan South), MG HS (zigwheels / gari.pk),
+    # Haval H6 (pakdrive.com.pk official specs), Jolion (PakWheels ADAS Level 2),
+    # Kia Sorento AWD HEV (Lucky Motors PK page), Toyota Raize (JDM import spec).
+    # NOT on local Sportage, Tucson, Civic, Corolla, HR-V PKDM units.
+    "360 camera": {
+        "mg:hs",
+        "haval:jolion", "haval:h6", "haval:h6 hev", "haval:h6 phev",
+        "changan:oshan x7",         # FutureSense trim only
+        "changan:uni-t",
+        "changan:deepal s07", "changan:deepal l07",
         "chery:tiggo 8 pro",
-        # Korean mid-size / large
-        "hyundai:sonata", "hyundai:santa fe", "hyundai:palisade",
         "kia:sorento", "kia:carnival",
-        # Japanese luxury sedans
-        "honda:accord", "toyota:camry", "toyota:crown",
+        "hyundai:santa fe", "hyundai:sonata", "hyundai:palisade",
+        "toyota:raize",             # JDM Z grade import only
         "toyota:land cruiser", "toyota:prado",
-        "lexus:es", "lexus:rx", "lexus:lx", "lexus:lx570", "lexus:lx600",
-        # European
-        "audi:a6", "audi:a7", "audi:q7", "audi:q8", "audi:e-tron",
+        "lexus:lx600",
+        "audi:e-tron", "audi:q7", "audi:q8",
+        "porsche:cayenne", "porsche:taycan",
+        "bmw:7 series", "bmw:i7", "bmw:x5", "bmw:x7",
+        "mercedes-benz:s-class", "mercedes-benz:gle", "mercedes-benz:gls",
+        "land rover:range rover", "land rover:range rover sport",
+    },
+
+    # ── Head-Up Display (HUD) ────────────────────────────────────────────────
+    # Confirmed on PK market: Haval H6 2026 facelift (PakWheels official),
+    # Haval Jolion (PakWheels ADAS listing), Kia Sorento AWD HEV (Lucky Motors),
+    # Deepal S07/L07. NOT on Kia Sportage/Tucson/Civic/Corolla PKDM.
+    "head up display": {
+        "haval:jolion", "haval:h6", "haval:h6 hev", "haval:h6 phev",
+        "changan:deepal s07", "changan:deepal l07",
+        "kia:sorento",              # AWD HEV trim — color HUD per Lucky Motors PK
+        "kia:carnival",
+        "toyota:raize",             # JDM Z grade only
+        "audi:a7", "audi:q8", "audi:e-tron gt",
         "bmw:5 series", "bmw:7 series", "bmw:x5", "bmw:x7",
-        "mercedes-benz:e-class", "mercedes-benz:s-class",
-        "mercedes-benz:gle", "mercedes-benz:gls",
-        "porsche:cayenne", "porsche:panamera", "porsche:macan",
+        "mercedes-benz:s-class",
+        "porsche:cayenne", "porsche:taycan",
+        "lexus:rx", "lexus:lx600",
+    },
+
+    # ── Power / Electric Tailgate ────────────────────────────────────────────
+    # Confirmed per Wikipedia Oshan X7 (FutureSense), MG HS (zigwheels feature
+    # list), Haval H6 (spec sheets), Toyota Fortuner/LC/Prado (local spec),
+    # Hyundai Tucson & Santa Fe (Hyundai Nishat PK), Kia Sportage top trim,
+    # Kia Sorento, Honda CR-V/Vezel, Toyota Yaris Cross (CBU import).
+    # NOTE: Tucson/Sportage are in the ALLOWLIST here because their top trims
+    # DO have power tailgate even though they lack memory seats / ACC.
+    "power tailgate": {
+        "mg:hs", "mg:rx5",
+        "haval:jolion", "haval:h6", "haval:h6 hev", "haval:h6 phev",
+        "changan:oshan x7",         # FutureSense only
+        "changan:uni-t",
+        "chery:tiggo 8 pro",
+        "hyundai:tucson", "hyundai:santa fe", "hyundai:palisade",
+        "kia:sportage",             # top Alpha / AWD trims
+        "kia:sorento", "kia:carnival",
+        "toyota:fortuner", "toyota:land cruiser", "toyota:prado",
+        "toyota:yaris cross",       # CBU import
+        "honda:cr-v", "honda:vezel",
+        "proton:x70",
+        "audi:e-tron", "audi:q5", "audi:q7", "audi:q8",
+        "bmw:x3", "bmw:x5", "bmw:x7",
+        "mercedes-benz:glc", "mercedes-benz:gle", "mercedes-benz:gls",
+        "porsche:macan", "porsche:cayenne",
         "land rover:range rover", "land rover:range rover sport",
         "land rover:defender", "land rover:velar",
+    },
+
+    # ── Massaging Seats ──────────────────────────────────────────────────────
+    # Extremely rare in Pakistan market. Confirmed only on luxury/premium imports
+    # and top-spec Kia Carnival/Sorento AWD HEV. Deepal L07 global spec includes
+    # it but PK CKD spec needs verification — include with LLM trim caveat.
+    "massaging seats": {
+        "kia:carnival",             # Prestige trim has rear massage
+        "kia:sorento",              # AWD HEV top trim
+        "changan:deepal l07",       # Global spec — verify PK trim
+        "bmw:7 series", "bmw:i7",
+        "mercedes-benz:s-class",
+        "porsche:panamera", "porsche:cayenne",
+        "land rover:range rover",
+        "lexus:lx600",
+    },
+
+    # ── Wireless Charging ────────────────────────────────────────────────────
+    # Confirmed on PK market units:
+    # Honda Civic Oriel/RS (Honda Atlas official announcement PakWheels),
+    # Hyundai Elantra 2.0 GLS (wheelsbuster.com), Hyundai Sonata (wheelsbuster),
+    # Haval Jolion (global spec retained in PK), Haval H6, MG HS,
+    # Oshan X7 FutureSense (Changan South), Kia Sorento (Lucky Motors PK).
+    # NOT on Toyota Corolla/Yaris (no wireless pad in PKDM), Honda City,
+    # Suzuki budget range, or Changan Alsvin.
+    "wireless charging": {
+        "honda:civic",              # Oriel & RS trims
+        "hyundai:elantra", "hyundai:elantra hybrid",
+        "hyundai:sonata", "hyundai:santa fe", "hyundai:palisade", "hyundai:tucson",
+        "mg:hs",
+        "haval:jolion", "haval:h6", "haval:h6 hev", "haval:h6 phev",
+        "changan:oshan x7",
+        "changan:deepal s07", "changan:deepal l07",
+        "chery:tiggo 8 pro",
+        "kia:sorento", "kia:carnival", "kia:sportage",  # top trims
+        "toyota:crown", "toyota:land cruiser", "toyota:camry",
+        "honda:accord", "honda:cr-v",
+        "audi:a6", "audi:a7", "audi:e-tron", "audi:q7", "audi:q8",
+        "bmw:5 series", "bmw:7 series", "bmw:x5",
+        "mercedes-benz:e-class", "mercedes-benz:s-class", "mercedes-benz:gle",
+        "porsche:cayenne", "porsche:taycan",
+        "land rover:range rover", "land rover:range rover sport", "land rover:defender",
+        "lexus:rx", "lexus:lx600",
+    },
+
+    # ── Premium Audio (Bose / Harman Kardon / JBL) ───────────────────────────
+    # Confirmed on PK market: Kia Sorento AWD HEV = 12-speaker Bose
+    # (Lucky Motors PK page). Kia Carnival = 12-speaker Bose (Bose Automotive site).
+    # Haval H6 / Jolion — base 6-speaker, upgraded trims 8-speaker; no Bose/HK brand.
+    # Toyota Camry / Crown JDM imports carry JBL. Budget/CKD sedans: standard only.
+    "premium audio": {
+        "kia:sorento",              # 12-speaker Bose (AWD HEV trim)
+        "kia:carnival",             # 12-speaker Bose (Prestige trim)
+        "toyota:camry",             # JBL on higher JDM imports
+        "toyota:crown", "toyota:land cruiser",
+        "honda:accord",
+        "lexus:es", "lexus:rx", "lexus:lx", "lexus:lx570", "lexus:lx600",
+        "audi:a6", "audi:a7", "audi:q7", "audi:q8", "audi:e-tron gt",
+        "bmw:5 series", "bmw:7 series", "bmw:x5", "bmw:x7",
+        "mercedes-benz:e-class", "mercedes-benz:s-class", "mercedes-benz:gle",
+        "porsche:cayenne", "porsche:panamera", "porsche:taycan",
+        "land rover:range rover", "land rover:range rover sport",
     },
 }
 
@@ -1415,9 +1975,14 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
         "toyota:vitz", "toyota:passo", "toyota:probox", "toyota:hiace",
         "toyota:corolla", "toyota:yaris", "toyota:hilux",
         "honda:n-box", "honda:n-wgn", "honda:fit", "honda:freed",
-        "honda:city", "honda:civic", "honda:br-v",
+        "honda:city", "honda:br-v",
+        # honda:civic RS has Honda Sensing incl. LKAS — excluded from blocklist.
+        # Standard / Oriel lack it — disclaimer #11 directs user to RS trim.
+        "honda:hr-v",       # PKDM CKD: no lane keep
         "hyundai:santro", "hyundai:i10",
+        "hyundai:tucson",   # PKDM CKD: no lane keep
         "kia:picanto",
+        "kia:sportage",     # PKDM CKD: no lane keep
         "daihatsu:cuore", "daihatsu:mira", "daihatsu:move", "daihatsu:tanto",
         "daihatsu:cast", "daihatsu:hijet",
         "nissan:dayz", "nissan:roox",
@@ -1433,17 +1998,21 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
         "toyota:corolla", "toyota:yaris", "toyota:hilux",
         "toyota:allion", "toyota:premio", "toyota:mark x",
         "honda:n-box", "honda:n-wgn", "honda:fit", "honda:freed",
-        "honda:city", "honda:civic", "honda:br-v", "honda:grace",
+        "honda:city", "honda:br-v", "honda:grace",
+        # honda:civic RS has Honda Sensing radar ACC — EXCLUDED from this blocklist.
+        # Oriel/Standard only have passive fixed-speed cruise.
+        # Disclaimer #11 tells user to pick RS.
+        "honda:hr-v",       # PKDM CKD: passive cruise only, no radar
         "hyundai:santro", "hyundai:elantra",
+        "hyundai:tucson",   # PKDM CKD: passive cruise only, no radar
         "kia:picanto", "kia:stonic",
+        "kia:sportage",     # PKDM CKD: passive cruise only, no radar
         "daihatsu:cuore", "daihatsu:mira", "daihatsu:move", "daihatsu:tanto",
         "daihatsu:cast", "daihatsu:hijet",
         "nissan:dayz", "nissan:roox",
         "mitsubishi:mirage", "mitsubishi:asx",
         "changan:alsvin", "changan:karvaan",
         "proton:saga", "mazda:demio", "mazda:mazda3", "subaru:impreza", "mg:zs",
-        # PKDM CKD variants lack radar unit — passive/fixed-speed cruise only
-        "honda:hr-v", "hyundai:tucson", "kia:sportage",
     },
     "auto parking": {
         # Only very recent luxury imports — BMW 5/7 series 2019+,
@@ -1587,20 +2156,24 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
         "proton:saga", "mazda:demio", "subaru:impreza",
     },
 
-    # "memory seats" — MOVED to _FEATURE_EXCLUSIVE_ALLOWLIST (allowlist pattern).
-    # Pakistani CKD assemblers strip memory seats from local specs of many
-    # international cars. An allowlist of the ~25 cars that genuinely have it
-    # is safer than a blocklist that grows with every new model year.
+    # "memory seats"   — MOVED to _FEATURE_EXCLUSIVE_ALLOWLIST (allowlist pattern).
+    # "ventilated seats"— MOVED to _FEATURE_EXCLUSIVE_ALLOWLIST (allowlist pattern).
+    # "360 camera"     — MOVED to _FEATURE_EXCLUSIVE_ALLOWLIST (allowlist pattern).
+    # "head up display"— MOVED to _FEATURE_EXCLUSIVE_ALLOWLIST (allowlist pattern).
+    # "power tailgate" — MOVED to _FEATURE_EXCLUSIVE_ALLOWLIST (allowlist pattern).
+    # "massaging seats"— MOVED to _FEATURE_EXCLUSIVE_ALLOWLIST (allowlist pattern).
+    # "wireless charging"— MOVED to _FEATURE_EXCLUSIVE_ALLOWLIST (allowlist pattern).
+    # "premium audio"  — MOVED to _FEATURE_EXCLUSIVE_ALLOWLIST (allowlist pattern).
 
     # ── Electric Parking Brake ───────────────────────────────────────────────
-    # Mechanical lever handbrakes are standard on budget/economy cars and older
-    # platforms. EPB is a mid-range+ feature absent on all Suzuki budget models,
-    # base Toyota sedans, and older Honda CKD variants.
+    # Mechanical pull-lever handbrakes confirmed on these PKDM models.
+    # EPB starts appearing on mid-range CUVs — not on any Suzuki budget car,
+    # base Toyota sedans, base Honda sedans, Daihatsu keis, or Changan Alsvin.
     "electric parking brake": {
         "toyota:corolla", "toyota:yaris", "toyota:fortuner", "toyota:hilux",
         "toyota:vitz", "toyota:passo", "toyota:aqua", "toyota:rush",
         "honda:city", "honda:br-v",
-        "hyundai:elantra",
+        "hyundai:elantra",          # base GLS trim; Hybrid trim has EPB
         "kia:picanto", "kia:stonic",
         "suzuki:mehran", "suzuki:alto", "suzuki:alto 660cc", "suzuki:cultus",
         "suzuki:wagon r", "suzuki:swift", "suzuki:bolan", "suzuki:every",
@@ -1609,13 +2182,15 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
         "nissan:dayz", "mitsubishi:mirage",
     },
 
-    # ── Dual Zone Climate ────────────────────────────────────────────────────
-    # Single-zone auto A/C is standard on budget / entry hatchbacks and sedans.
-    # Dual-zone requires separate HVAC zones — absent on all Suzuki budget cars,
-    # small hatchbacks, and base-spec CKD sedans like Yaris, City, Alsvin.
+    # ── Dual Zone Climate Control ────────────────────────────────────────────
+    # Single-zone or manual dial climate confirmed for budget/entry CKD models.
+    # Note: Honda Civic Oriel/RS DOES have dual-zone per Honda Atlas official spec
+    # for the American reference model; the local PKDM Civic also has dual-zone
+    # on Oriel and RS — so civic is NOT in this blocklist.
     "dual zone climate": {
         "toyota:yaris", "toyota:vitz", "toyota:aqua", "toyota:passo",
         "toyota:rush", "toyota:raize", "toyota:corolla",
+        # toyota:corolla: single-zone auto AC on all PKDM trims incl. Grande
         "honda:city", "honda:br-v", "honda:fit", "honda:n-wgn", "honda:n-box", "honda:freed",
         "suzuki:swift", "suzuki:cultus", "suzuki:wagon r",
         "suzuki:alto", "suzuki:alto 660cc", "suzuki:mehran",
@@ -1623,7 +2198,23 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
         "changan:alsvin", "changan:karvaan",
         "mitsubishi:mirage",
         "nissan:dayz",
-        "daihatsu:mira", "daihatsu:move", "daihatsu:cast",
+        "daihatsu:mira", "daihatsu:move", "daihatsu:cast", "daihatsu:cuore",
+    },
+
+    # ── Rear AC Vents ────────────────────────────────────────────────────────
+    # Confirmed absent on kei/budget hatches and compact sedans under 1.3L.
+    # Honda City and most Suzukis confirmed no rear vents in PKDM spec.
+    # NOTE: Honda Civic (all trims) DOES have rear AC vents per Honda Atlas PK.
+    "rear ac vents": {
+        "toyota:yaris", "toyota:vitz", "toyota:aqua", "toyota:passo", "toyota:raize",
+        "honda:city", "honda:fit", "honda:n-wgn", "honda:n-box", "honda:freed",
+        "suzuki:swift", "suzuki:cultus", "suzuki:wagon r",
+        "suzuki:alto", "suzuki:alto 660cc", "suzuki:mehran",
+        "kia:picanto", "kia:stonic",
+        "changan:alsvin",
+        "mitsubishi:mirage",
+        "nissan:dayz",
+        "daihatsu:mira", "daihatsu:move", "daihatsu:cast", "daihatsu:cuore",
     },
 }
 
@@ -1777,33 +2368,12 @@ def get_eligible_cars(
         "reverse camera":          "back camera",
         "parking camera":          "back camera",
         "backup camera":           "back camera",
+        # ── Heated Seats ─────────────────────────────────────────────────────
         "heated seats":            "heated seats",
         "seat warmer":             "heated seats",
-        "ventilated seats":        "heated seats",
-        "leather seats":           "leather seats",
-        "leather":                 "leather seats",
-        "4wd":                     "4wd",
-        "4x4":                     "4wd",
-        "awd":                     "4wd",
-        "four wheel drive":        "4wd",
-        "all wheel drive":         "4wd",
-        "hybrid":                  "hybrid",
-        "hev":                     "hybrid",
-        "phev":                    "hybrid",
-        "blind spot":              "blind spot monitor",
-        "bsm":                     "blind spot monitor",
-        "blind spot monitor":      "blind spot monitor",
-        "memory seats":            "memory seats",
-        "memory seat":             "memory seats",
-        "seat memory":             "memory seats",
-        "driver memory":           "memory seats",
-        "driver seat memory":      "memory seats",
-        "memory function":         "memory seats",
-        "memory":                  "memory seats",
-        "power tailgate":          "power tailgate",
-        "auto trunk":              "power tailgate",
-        "electric tailgate":       "power tailgate",
-        # ── Ventilated / Cooled Seats ────────────────────────────────────────
+        "seat heating":            "heated seats",
+        "warm seats":              "heated seats",
+        # ── Ventilated / Cooled Seats (separate gate from heated) ────────────
         "ventilated seats":        "ventilated seats",
         "ventilated seat":         "ventilated seats",
         "ventilated":              "ventilated seats",
@@ -1811,12 +2381,51 @@ def get_eligible_cars(
         "cooled seats":            "ventilated seats",
         "cooled seat":             "ventilated seats",
         "cooling seats":           "ventilated seats",
+        "seat ventilation":        "ventilated seats",
+        # ── Massaging Seats ──────────────────────────────────────────────────
+        "massaging seats":         "massaging seats",
+        "massage seats":           "massaging seats",
+        "massage seat":            "massaging seats",
+        "seat massage":            "massaging seats",
+        # ── Leather Seats ────────────────────────────────────────────────────
+        "leather seats":           "leather seats",
+        "leather":                 "leather seats",
+        # ── 4WD / AWD ────────────────────────────────────────────────────────
+        "4wd":                     "4wd",
+        "4x4":                     "4wd",
+        "awd":                     "4wd",
+        "four wheel drive":        "4wd",
+        "all wheel drive":         "4wd",
+        # ── Hybrid / Powertrain ──────────────────────────────────────────────
+        "hybrid":                  "hybrid",
+        "hev":                     "hybrid",
+        "phev":                    "hybrid",
+        # ── Blind Spot Monitor ───────────────────────────────────────────────
+        "blind spot":              "blind spot monitor",
+        "bsm":                     "blind spot monitor",
+        "blind spot monitor":      "blind spot monitor",
+        # ── Memory Seats ─────────────────────────────────────────────────────
+        "memory seats":            "memory seats",
+        "memory seat":             "memory seats",
+        "seat memory":             "memory seats",
+        "driver memory":           "memory seats",
+        "driver seat memory":      "memory seats",
+        "memory function":         "memory seats",
+        "memory":                  "memory seats",
+        # ── Power Tailgate ───────────────────────────────────────────────────
+        "power tailgate":          "power tailgate",
+        "auto trunk":              "power tailgate",
+        "electric tailgate":       "power tailgate",
+        "hands free trunk":        "power tailgate",
+        "hands-free trunk":        "power tailgate",
+        "electric trunk":          "power tailgate",
         # ── Electric Parking Brake ───────────────────────────────────────────
         "epb":                     "electric parking brake",
         "electric parking brake":  "electric parking brake",
         "electronic parking brake":"electric parking brake",
         "auto hold":               "electric parking brake",
         "brake hold":              "electric parking brake",
+        "e-brake":                 "electric parking brake",
         # ── Dual Zone Climate ────────────────────────────────────────────────
         "dual zone":               "dual zone climate",
         "dual-zone":               "dual zone climate",
@@ -1825,6 +2434,55 @@ def get_eligible_cars(
         "dual zone air":           "dual zone climate",
         "2 zone climate":          "dual zone climate",
         "two zone climate":        "dual zone climate",
+        "dual zone temperature":   "dual zone climate",
+        # ── Rear AC Vents ────────────────────────────────────────────────────
+        "rear ac":                 "rear ac vents",
+        "rear vents":              "rear ac vents",
+        "rear ac vents":           "rear ac vents",
+        "rear air conditioning":   "rear ac vents",
+        "back ac":                 "rear ac vents",
+        "back vents":              "rear ac vents",
+        # ── 360 Camera ───────────────────────────────────────────────────────
+        "360 camera":              "360 camera",
+        "360 view":                "360 camera",
+        "360 degree camera":       "360 camera",
+        "surround camera":         "360 camera",
+        "surround view":           "360 camera",
+        "bird eye":                "360 camera",
+        "birds eye view":          "360 camera",
+        # ── Head-Up Display ──────────────────────────────────────────────────
+        "hud":                     "head up display",
+        "head up display":         "head up display",
+        "head-up display":         "head up display",
+        "heads up display":        "head up display",
+        "windshield display":      "head up display",
+        # ── Digital Instrument Cluster ───────────────────────────────────────
+        "digital cluster":         "digital instrument cluster",
+        "digital meter":           "digital instrument cluster",
+        "digital gauge":           "digital instrument cluster",
+        "virtual cockpit":         "digital instrument cluster",
+        "digital dashboard":       "digital instrument cluster",
+        "fully digital cluster":   "digital instrument cluster",
+        # ── Wireless Charging ────────────────────────────────────────────────
+        "wireless charging":       "wireless charging",
+        "wireless charger":        "wireless charging",
+        "qi charging":             "wireless charging",
+        "qi charger":              "wireless charging",
+        "wireless phone charging": "wireless charging",
+        # ── Premium Audio ─────────────────────────────────────────────────────
+        "premium audio":           "premium audio",
+        "premium sound":           "premium audio",
+        "bose":                    "premium audio",
+        "harman kardon":           "premium audio",
+        "harman":                  "premium audio",
+        "jbl":                     "premium audio",
+        "premium speakers":        "premium audio",
+        # ── ADAS alias catches ───────────────────────────────────────────────
+        "radar":                   "adaptive cruise control",
+        "radar cruise":            "adaptive cruise control",
+        "honda sensing":           "adaptive cruise control",
+        "toyota safety sense":     "adaptive cruise control",
+        "distance keeping":        "adaptive cruise control",
     }
 
     active_feature_gates: set[str] = set()
