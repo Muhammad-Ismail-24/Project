@@ -1683,6 +1683,20 @@ def generate_disclaimers(user_prompt: str, constraints: dict) -> list[str]:
             "Oshan X7 FutureSense include ventilated seats across their standard configurations."
         )
 
+    # 13. Engine CC / Token Tax Bracket Warning
+    if any(w in prompt_lower for w in [
+        "1500cc", "under 1500cc", "1300cc", "under 1300cc",
+        "low tax", "token tax", "save tax", "tax bracket", "low token", "cheap token",
+        "1.5l", "1.5 l", "1.3l", "1.3 l",
+    ]):
+        disclaimers.append(
+            "⚠️ Tax Bracket Notice: You requested a vehicle under 1500cc for lower annual token tax. "
+            "Please note that models like the Hyundai Elantra (1.6L/2.0L), Kia Sportage (2.0L), "
+            "Honda Civic (1.5T), Toyota Corolla Altis Grande (1.8L), and Hyundai Tucson (2.0L) "
+            "fall into higher token tax brackets. We have strictly prioritised 1.0L to 1.5L options "
+            "such as Toyota Yaris, Honda City, Suzuki Swift, Suzuki Cultus, and Changan Alsvin."
+        )
+
     return disclaimers
 
 # ---------------------------------------------------------------------------
@@ -2483,6 +2497,27 @@ def get_eligible_cars(
         "honda sensing":           "adaptive cruise control",
         "toyota safety sense":     "adaptive cruise control",
         "distance keeping":        "adaptive cruise control",
+        # ── Engine CC / Token Tax Brackets ──────────────────────────────────
+        # Maps user intent around Pakistan annual token tax brackets.
+        # Vehicles up to 1000cc pay lowest rate. 1001-1300cc next tier.
+        # 1301-1600cc higher. Users say "low tax"/"1500cc" to avoid 1601-1800cc bracket.
+        "under 1500cc":            "under 1500cc",
+        "1500cc":                  "under 1500cc",
+        "under 1300cc":            "under 1300cc",
+        "1300cc":                  "under 1300cc",
+        "1.5l":                    "under 1500cc",
+        "1.5 l":                   "under 1500cc",
+        "1.5 litre":               "under 1500cc",
+        "1.5 liter":               "under 1500cc",
+        "1.3l":                    "under 1300cc",
+        "1.3 l":                   "under 1300cc",
+        "1.3 litre":               "under 1300cc",
+        "low tax":                 "under 1500cc",
+        "token tax":               "under 1500cc",
+        "save tax":                "under 1500cc",
+        "tax bracket":             "under 1500cc",
+        "low token":               "under 1500cc",
+        "cheap token":             "under 1500cc",
     }
 
     active_feature_gates: set[str] = set()
@@ -2902,8 +2937,10 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "eco-cars or high-maintenance project vehicles.' Always be specific to the "
         "user's actual request — never generic.\n"
         "  IMPORTANT: If the user asks for a mathematically impossible combination in the Pakistani market "
-        "(e.g., a 7-seater sports car with <5s 0-100 under 25 Lakhs, or a brand new luxury SUV under 30 Lakhs), "
-        "you MUST explicitly state in this summary which constraints you had to drop or trade-off to find realistic options.\n"
+        "(e.g., a 7-seater sports coupe under 25 Lakhs, or a brand new luxury SUV under 30 Lakhs), "
+        "you MUST set `body_style` to null, `powertrain` to null, and `required_features` to [] in this JSON "
+        "to allow realistic fallback cars to appear, while explicitly explaining the trade-offs "
+        "made in this strategy_summary.\n"
         "- Leave null if not clearly stated — do not guess."
     )
     response_text = await generate_content_resilient(
@@ -3123,7 +3160,16 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         "12. MEMORY SEATS CKD RULE: Locally assembled Kia Sportage and Hyundai Tucson in Pakistan "
         "DO NOT feature driver seat memory buttons — this feature was explicitly omitted by local "
         "assemblers. For memory seat queries under 1 Crore, restrict picks to Haval Jolion/H6, "
-        "Changan Oshan X7 FutureSense, Hyundai Sonata 2.5L, or luxury imports."
+        "Changan Oshan X7 FutureSense, Hyundai Sonata 2.5L, or luxury imports.\n"
+        "13. ENGINE CC / TAX RULE: If the buyer mentions 'under 1500cc', 'low tax', 'token tax', "
+        "'1.5L', 'under 1300cc', or '1.3L', you MUST strictly exclude models whose standard "
+        "Pakistani-market engine is above 1500cc. This means DO NOT recommend: Hyundai Elantra "
+        "(1.6L/2.0L), Kia Sportage (2.0L), Hyundai Tucson (2.0L), Honda Civic (1.5T turbo — "
+        "sits in a higher token bracket despite being 1.5L due to turbo displacement rating), "
+        "Toyota Corolla Altis/Grande (1.6L/1.8L), or Kia Stonic (1.4T). Instead recommend "
+        "explicit sub-1500cc cars: Toyota Yaris (1.3L), Honda City (1.2L/1.5L), Suzuki Swift "
+        "(1.2L), Suzuki Cultus (1.0L), Changan Alsvin (1.5L), Toyota Vitz (1.0L/1.3L), or "
+        "Suzuki Wagon R (1.0L). For 'under 1300cc' requests, further restrict to 1.0L–1.3L only."
     )
 
     response_text = await generate_content_resilient(
