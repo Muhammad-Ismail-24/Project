@@ -2230,6 +2230,49 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
         "nissan:dayz",
         "daihatsu:mira", "daihatsu:move", "daihatsu:cast", "daihatsu:cuore",
     },
+
+    # ── Engine Displacement < 1300cc Hard Gate ───────────────────────────────
+    # Hard-blocks every model whose Pakistani market variants are ALL above 1300cc.
+    # This is a BLOCKLIST (not an allowlist) — unlisted models pass through and
+    # the LLM ranking Rule 13 handles further exclusion.
+    #
+    # Intentionally NOT blocked (sub-1300cc variants exist in PK market):
+    #   toyota:corolla  — 1.3L XLi / GLi exist alongside 1.6L / 1.8L
+    #   honda:city      — 1.2L i-DSI / 1.3L i-VTEC variants exist
+    #   suzuki:*        — all are sub-1300cc natively
+    #   toyota:yaris    — 1.0L / 1.3L VVTI variants
+    #   toyota:vitz     — 1.0L / 1.3L variants
+    #   changan:alsvin  — 1.5L but used-market 1.0L/1.3L trims exist
+    #
+    # MG ZS excluded from this block because it is only relevant for EV queries
+    # (MG ZS EV) — the petrol MG ZS is 1.5L so it IS blocked correctly.
+    "under 1300cc": {
+        # Honda — all PK variants above 1300cc
+        "honda:civic", "honda:accord", "honda:cr-v", "honda:hr-v",
+        "honda:vezel", "honda:br-v",
+        # Hyundai — all PK variants above 1300cc
+        "hyundai:elantra", "hyundai:sonata", "hyundai:tucson",
+        "hyundai:santa fe", "hyundai:palisade",
+        # Kia — all PK variants above 1300cc
+        "kia:sportage", "kia:sorento", "kia:carnival", "kia:stonic",
+        # Toyota large / premium — no 1.3L variant
+        "toyota:premio", "toyota:allion", "toyota:mark x",
+        "toyota:crown", "toyota:camry", "toyota:prius",
+        "toyota:c-hr", "toyota:fortuner", "toyota:hilux",
+        "toyota:land cruiser", "toyota:prado", "toyota:raize",
+        # JDM imports — no sub-1300cc variant in PK market
+        "mazda:mazda3", "mazda:cx-5", "mazda:cx-3",
+        "subaru:impreza", "subaru:xv", "subaru:forester",
+        "mitsubishi:asx",
+        # Other
+        "proton:x70",
+        # Chinese crossovers / SUVs — all 1.5T or above in PK
+        "haval:jolion", "haval:jolion hev", "haval:h6", "haval:h6 hev", "haval:h6 phev",
+        "mg:hs", "mg:zs",
+        "changan:oshan x7", "changan:uni-t",
+        "changan:deepal s07", "changan:deepal l07",
+        "chery:tiggo 4 pro", "chery:tiggo 8 pro", "chery:tiggo 7 pro",
+    },
 }
 
 # ---------------------------------------------------------------------------
