@@ -14,7 +14,7 @@ export default function About() {
 
       <div className="max-w-3xl w-full">
         <h1 className="text-4xl md:text-5xl font-black tracking-tighter mb-6 md:mb-8 text-black text-center">
-          About GaariGuru
+          About DriveFetch
         </h1>
         
         {/* Frosted Glass Panel */}
@@ -30,7 +30,7 @@ export default function About() {
           <section>
             <h2 className="text-lg md:text-xl font-semibold tracking-tight mb-2 md:mb-3">Our Solution</h2>
             <p className="text-black leading-relaxed text-base md:text-lg font-bold">
-              GaariGuru is an AI-powered aggregator. Our autonomous web scrapers ingest data from the top platforms in real-time. We then pass this data through highly tuned Large Language Models to normalize prices, flag suspicious listing details (like "showered for fresh look"), and grade the vehicle's market liquidity.
+              DriveFetch is an AI-powered aggregator. Our autonomous web scrapers ingest data from the top platforms in real-time. We then pass this data through highly tuned Large Language Models to normalize prices, flag suspicious listing details (like "showered for fresh look"), and grade the vehicle's market liquidity.
             </p>
           </section>
 

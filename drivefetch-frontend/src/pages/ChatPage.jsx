@@ -66,7 +66,7 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
   const { assistantName: agentName, setAssistantName: setAgentName } =
-    useOutletContext() || { assistantName: 'GaariGuru Expert', setAssistantName: () => {} };
+    useOutletContext() || { assistantName: 'DriveFetch Expert', setAssistantName: () => {} };
   const [isGuest, setIsGuest] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(true);

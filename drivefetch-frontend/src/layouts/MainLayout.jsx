@@ -10,10 +10,10 @@ export default function MainLayout() {
   const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
 
-  const [assistantName, setAssistantName] = useState('GaariGuru Expert');
+  const [assistantName, setAssistantName] = useState('DriveFetch Expert');
 
   const handleNameBlur = async (e) => {
-    const newName = e.target.value.trim() || 'GaariGuru Expert';
+    const newName = e.target.value.trim() || 'DriveFetch Expert';
     setAssistantName(newName);
     try {
       await fetch('/api/chat/agent', {
