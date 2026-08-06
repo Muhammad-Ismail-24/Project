@@ -78,7 +78,7 @@ export default function MainLayout() {
             </button>
 
             <Link to="/" className="text-xl sm:text-2xl font-black tracking-tighter text-black hover:opacity-70 transition-opacity duration-200 inline-block">
-              GaariGuru
+              DriveFetch
             </Link>
           </div>
 
