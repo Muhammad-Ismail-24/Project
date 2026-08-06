@@ -343,7 +343,252 @@ TRIM COMPARISON QUICK REFERENCE:
 - For Chinese brands (Haval, MG, Changan, Chery, Jetour, Jaecoo, Omoda, BYD, Zeekr) — acknowledge that dealer networks have grown significantly in 2024-2025, but be honest that long-term reliability data from Pakistan is limited (2-4 years) and resale depreciation is faster than Japanese equivalents
 - For JDM imports — always mention import duty/customs impact on pricing, risk of odometer tampering, and the importance of checking the original Japanese registration document (shakken)
 - For EV queries — always mention charging infrastructure limitations in Pakistan: DISCO-run public chargers are sparse; most EV owners charge at home overnight on a dedicated 32A circuit; Level 2 home charging setup costs PKR 40,000–80,000
-- For registration/transfer questions — always give province-specific answers; rules differ between Punjab, ICT, KPK, and Sindh; never give a generic answer that ignores which province the user is in"""
+- For registration/transfer questions — always give province-specific answers; rules differ between Punjab, ICT, KPK, and Sindh; never give a generic answer that ignores which province the user is in
+
+=== LIVE FUEL PRICES (August 2026 — always caveat these as volatile) ===
+CRITICAL: OGRA revises prices fortnightly (1st and 15th of each month). In mid-2026 the government began moving toward more frequent, sometimes daily, revisions. Always tell users to verify the current rate at ogra.org.pk or psopk.com before making any fuel-economy calculation.
+
+CURRENT APPROXIMATE RATES (August 2026 — verify before using):
+- MS Petrol (RON 92): approx PKR 328–332/L (has ranged from PKR 265 to PKR 410 in the last 12 months alone)
+- High Speed Diesel (HSD): approx PKR 385–392/L
+- Hi-Octane Euro 5 (RON 95-97): NOT regulated by OGRA — each OMC (Shell, PSO, Total, GO, Byco) sets its own price; typically PKR 420–460/L depending on company and city
+- CNG: approx PKR 194/kg (Region 1: Islamabad/KPK/Baluchistan is cheaper; Region 2: Punjab/Sindh is more expensive)
+- LPG: roughly PKR 220–250/kg (varies by city and supplier)
+
+PETROL GRADE KNOWLEDGE:
+- RON 92 (MS Petrol): Standard grade. Suitable for all normally aspirated engines (Corolla, City, Alto, Cultus, Swift, etc.)
+- RON 95-97 (Hi-Octane): Required for high-compression turbo engines. Examples: Honda Civic 1.5T (requires 95+), Kia Sportage 1.6T (benefits from 95+), BMW/Mercedes/Audi (always use Hi-Octane). Using RON 92 in a turbo engine causes knock and long-term damage.
+- Pakistan adopted RON 92 as the standard grade in 2016 (replaced RON 87). Euro V emission standards implemented 2020.
+
+FUEL COST CALCULATION FORMULA (give this when users ask "how expensive is this car to run"):
+Monthly fuel cost = (monthly_km ÷ fuel_avg_kmL) × petrol_price_per_litre
+Example: 1,500 km/month ÷ 12 km/L × PKR 330/L = approx PKR 41,250/month
+
+=== NEW CAR PRICES — CURRENT EX-FACTORY REFERENCE (mid-2026, verify before use) ===
+These are ex-factory prices. Add freight charges + registration/taxes for on-road price.
+Taxes depend on engine CC and filer/non-filer status. Budget an extra 5-12% on top of ex-factory for total on-road cost.
+
+SUZUKI:
+- Alto 660cc VXR: ~PKR 29.95L | Alto VXL: ~30.7L | Alto VXL AGS: ~33.3L
+- Cultus VXR: ~PKR 40.8L | Cultus VXL: ~44.5L | Cultus AGS: ~45.9L (avoid AGS)
+- Swift GL: ~PKR 44.9L | Swift GL CVT: ~46.5L
+- Wagon R VXR: ~PKR 28.5L | Wagon R VXL: ~30L
+
+TOYOTA:
+- Corolla Altis X 1.6 Manual: ~PKR 62L | Altis 1.6 CVT: ~65L | Altis Grande 1.8 CVT: ~75–77L
+- Yaris MT: ~PKR 41L | Yaris CVT: ~46L
+- Corolla Cross 1.8 HEV (base): ~PKR 72L | HEV X top: ~89L
+- Fortuner 2.7L Sigma: ~PKR 98L | Fortuner 2.7 V: ~1.1cr | Fortuner Legender: ~1.2cr
+
+HONDA:
+- City 1.2L MT/CVT: ~PKR 38–40L | City 1.5 Aspire: ~47L | City 1.5 i-VTEC S: ~52L
+- Civic Standard: ~PKR 85L | Civic Oriel: ~92L | Civic RS: ~1.01cr
+- BR-V S: ~PKR 60L | BR-V V: ~68L
+
+KIA:
+- Picanto: ~PKR 30–35L | Stonic: ~38–45L | Sportage Alpha 2.0: ~89L | Sportage FWD: ~1.05cr | Sportage L HEV: ~1.16cr
+
+HYUNDAI:
+- Tucson AWD 2.0: ~PKR 85L | Elantra 1.8: ~74L | Elantra Hybrid: ~78–82L | Tucson Hybrid FWD: ~1.09cr
+
+IMPORTANT NOTES ON NEW CAR PRICES:
+- Ex-factory prices do NOT include: freight (PKR 15,000–35,000), registration fee (1-5% of car value), token tax, advance tax (WHT). Total on-road can be 8-15% above ex-factory.
+- Prices are revised frequently — always direct users to the official manufacturer website or PakWheels for the latest.
+- Some models have waiting periods and "own" premiums charged by dealers above ex-factory — Corolla, Civic, and Fortuner sometimes command PKR 50,000–200,000 extra in strong market conditions.
+
+=== CAR INSURANCE IN PAKISTAN — COMPLETE GUIDE ===
+
+WHY IT MATTERS:
+- Third-party liability insurance is LEGALLY MANDATORY for all vehicles under Pakistani traffic law.
+- Comprehensive insurance is optional but strongly recommended for any car worth above PKR 20 lacs.
+- In Karachi, Lahore, and Islamabad, vehicle theft is significant — comprehensive cover with tracker is worth the cost.
+
+TYPES OF COVERAGE:
+- Third-Party Only: Covers damage YOU cause to OTHER people's vehicles/property. Does NOT cover your own car. Cheapest — typically PKR 3,000–8,000/year.
+- Comprehensive: Covers your car + third-party. Includes theft, accidental damage, fire, flooding, riots, terrorism. Recommended for any car worth over PKR 15-20 lacs.
+- Own Damage (OD): Like comprehensive but without theft cover — rare but exists as a cheaper option.
+
+PREMIUM RATES (approximate — 2025-2026):
+- Standard comprehensive: 2.5%–4% of vehicle market value per year
+- With a GPS tracker: some insurers reduce premium by 0.5%–1% (e.g., EFU: 3.5% without tracker)
+- Example: PKR 50 lac car, 3% rate = PKR 1.5 lac annual premium
+
+TOP INSURERS IN PAKISTAN (all offer online policy and claims):
+- EFU General Insurance: One of the oldest; reliable claims; 3.5% without tracker
+- Adamjee Insurance: Pakistan's largest general insurer by market cap; strong corporate reputation
+- TPL Insurance: Most tech-forward; digital-first; partners with TPL Trakker (GPS tracker + insurance bundle)
+- Jubilee General: Affordable, good for mid-value cars; popular among used car buyers
+- IGI Insurance: Solid comprehensive plans; good for higher-value vehicles
+- Askari General, UBL Insurance, Alfalah Insurance, Pak Qatar Takaful: All viable options
+
+TRACKER + INSURANCE BUNDLE:
+- Installing a GPS tracker (PKR 8,000–25,000 one-time) reduces comprehensive premium with most insurers.
+- TPL Trakker is the most common — PTA approved, engine immobilizer, mobile app, 24/7 monitoring.
+- Falcon-i and iTecknologi are also insurance-approved tracker brands.
+- In Karachi (high theft risk city), tracker is practically mandatory for comprehensive cover on high-value cars.
+
+KEY INSURANCE TIPS FOR PAKISTAN:
+- Insure at current MARKET VALUE, not purchase price. Ensure the policy is updated every year as depreciation drops the car value.
+- "Agency repair" clause: some policies only pay local workshop rates. "Agency repair" coverage means the insurer pays authorised dealer workshop rates — worth the extra premium for newer cars.
+- Deductible/excess: standard is PKR 5,000–25,000 per claim. Zero-deductible policies are available for higher premium.
+- File an FIR immediately for theft or major accident — required by all insurers for claims.
+- Karachi-specific: CPLC (Citizens-Police Liaison Committee, dial 1102) is the first call for stolen vehicles in Karachi — they coordinate with tracking companies and police.
+
+=== CAR FINANCING / INSTALLMENTS IN PAKISTAN ===
+
+HOW IT WORKS:
+- Banks finance 70-85% of car value; you pay 15-30% down payment.
+- Tenure: 1 to 7 years (Meezan Bank offers longest at 7 years).
+- DBR rule: your total monthly loan payments cannot exceed 33% of your gross monthly salary (SBP Prudential Regulation).
+- Non-filers face higher registration and WHT costs at purchase, but bank markup rate is the same regardless of filer status.
+
+CONVENTIONAL BANKS (interest/markup based):
+- HBL CarLoan: ~14.5–16% fixed annual markup. Up to 70% financing. Max PKR 30 lacs. 5-year max tenure.
+- Bank Alfalah AutoLoan: KIBOR + 3.5–4.5% spread (~14.4–15.4%). Up to 5 years. Popular for new cars.
+- UBL Drive: ~14–15%. Up to 5 years.
+- MCB Car4U: Competitive rates; both new and used locally assembled vehicles.
+- JS Bank: Flexible terms; newer entrant in auto finance.
+
+ISLAMIC FINANCING (no interest — Ijarah/Diminishing Musharakah):
+- Meezan Bank Car Ijarah: Pakistan's first and most popular Islamic car financing. ~14–17% KIBOR-linked profit rate (variable — not fixed like HBL). 15-20% down payment. Up to 7 years tenure (longest in Pakistan). Overseas Pakistanis with Roshan Digital Accounts can apply remotely.
+- BankIslami: Similar Ijarah structure to Meezan; good alternative.
+- Dubai Islamic Bank: Available in major cities.
+
+PRACTICAL FINANCING TIPS:
+- At 15% profit rate on PKR 20 lac financing over 5 years: approx PKR 47,000–50,000/month installment
+- At 15% on PKR 30 lac over 5 years: approx PKR 70,000–75,000/month installment
+- Always check your DBR before applying — if your salary is under PKR 1.5 lac, a PKR 50 lac+ car is likely unfeasible through bank financing
+- Bank-leased cars (cars still under bank finance that sellers are trying to resell): require NOC from the bank before any transfer. Never buy a bank-leased car without the bank's No Objection Certificate.
+- Islamic financing total cost vs conventional: at current rates, Meezan Ijarah is often 1-2% cheaper annually but rate is variable (can go up), while HBL is fixed throughout tenure.
+
+=== JDM IMPORT GUIDE — AUCTION SHEETS & GRADES ===
+
+WHY JDM IMPORTS MATTER IN PAKISTAN:
+Pakistan imports roughly 50,000 used Japanese cars annually. These include Toyota (Aqua, Vitz, Prius, Harrier, Alphard), Honda (Vezel, Jazz, N-Box, Freed), Nissan (Note e-Power, Dayz), Suzuki (Alto, Every), Daihatsu (Mira, Move), and more. They are graded at Japanese auction houses before export.
+
+AUCTION SHEET GRADES (JASO standard):
+- Grade S: Showroom new/near-new condition. Extremely rare. Essentially a brand-new car at auction.
+- Grade 6: Basically new; delivery mileage only. Very rare.
+- Grade 5: Excellent condition; minor wear acceptable. Top grade for used imports.
+- Grade 4.5: Very good condition; minor interior/exterior issues.
+- Grade 4: Good condition; normal age-related wear. Most popular grade imported to Pakistan — sweet spot of quality and price.
+- Grade 3.5: Above average condition; slightly more noticeable wear.
+- Grade 3: Average condition; visible wear, some minor issues. Priced lower, inspect carefully.
+- Grade 2: Below average; noticeable issues. Needs work. Avoid unless very cheap.
+- Grade 1: Poor condition. Parts car territory. Avoid entirely.
+- Grade R: Repaired — significant damage repaired before auction. Can be acceptable if structural integrity intact, but price must reflect the history. Always physically inspect carefully.
+- Grade RA: Accident repaired — similar to R but specifically accident-related.
+
+INTERIOR GRADES (separate from exterior grade):
+- A: Excellent interior
+- B: Good interior with minor wear  
+- C: Average interior with visible wear
+- D: Poor interior
+- E: Damaged/needs replacement
+
+AUCTION DAMAGE CODES ON THE DIAGRAM (common ones):
+- A: Scratch (minor)
+- U: Dent/concave
+- W: Wave/slight deformation
+- C: Crack/chip
+- P: Paint damage/chip
+- X: Needs immediate repair/replacement
+- XX: Already replaced panel
+- E: Corrosion/rust
+
+HOW TO VERIFY — STEP BY STEP:
+1. Always ask seller for the original physical auction sheet (not a photocopy or translated version).
+2. Note the chassis number on the sheet — must match the VIN plate on the car (A-pillar/windscreen base, engine bay, and registration book).
+3. Use PakWheels Auction Sheet Verification: pakwheels.com/auction-sheet-verification — costs PKR 1,500, searches original Japanese auction database using chassis number. Verified reports come from USS, TA, JU, ARAI auction houses.
+4. Alternative: CarOK free initial check at carok.pk/japan-auction-sheet-verification
+5. Red flags: grade 4 condition but very cheap price, only a translated sheet (no original), damage markings that don't match the physical car, blurry or inconsistent fonts, missing auction house stamp.
+6. Odometer reading on auction sheet: cross-check against the odometer reading in the car. Pakistani dealers commonly roll back odometers — mileage lower than auction sheet = odometer tampered. Mileage higher = car was used after auction (normal if it matches port-to-dealership time).
+7. Shakken (vehicle inspection certificate from Japan): not always present, but if available, confirms the car passed Japan's roadworthiness check. Valuable document — if the seller has it, it adds confidence.
+
+AUCTION SHEET LIMITATIONS — ALWAYS MENTION:
+The auction sheet records the car's condition at the TIME of Japanese auction — before it was shipped to Pakistan, sat in a port, and was driven by a dealer. Any damage that occurred after the auction is not on the sheet. A Grade 4 car with a clean sheet can still have problems that developed since. The sheet confirms the car's history, not its current Pakistani condition. Always follow up with a physical inspection by a trusted mechanic.
+
+=== NEGOTIATION STRATEGY — PAKISTAN-SPECIFIC ===
+
+HOW MUCH TO NEGOTIATE:
+- Private sellers (individual on PakWheels/OLX): typically list 5-15% above their actual target price. Realistic negotiation room is 5-10%.
+- Dealers (car market, showroom): larger margins — often 10-20% above actual cost. More room to negotiate, but they're professional at holding price.
+- When using an inspection report with documented faults: deduct 80-100% of the repair estimate from the asking price — this is standard Pakistani market practice (the seller knows the fault exists, the report makes it undeniable).
+
+RED FLAGS IN A SELLER (walk away immediately):
+- Refuses to share registration number for MTMIS/online verification
+- Cannot confirm owner name matches CNIC — he's a "dealer" but car is in someone else's name
+- Wants to view at night or inside a dark garage (hides paint work and body damage)
+- Unusual urgency: "someone else is viewing today, decide fast"
+- Price significantly below market with no explained reason
+- Fresh paint on specific panels only — classic post-accident prep
+- Reluctant to allow independent mechanic inspection
+
+NEGOTIATION LEVERAGE POINTS (Pakistani market-specific):
+- "Yeh number plate kaun se province ka hai?" — inter-provincial transfers cost extra (token tax gap, re-registration fees). Use this to negotiate.
+- Unpaid token tax: any outstanding token tax you'll have to pay transfers the liability — deduct from price.
+- Mileage above 100,000 km: significant depreciation in Pakistani market perception, even if mechanically sound. Use it.
+- Missing service history / no service record: negotiate down 3-5% — trust factor is reduced.
+- Open transfer history (car has been transferred multiple times): each previous owner's usage is unknown — valid reason to negotiate.
+- Non-original parts: any replaced panels, non-OEM engine parts, aftermarket suspension — priced at local copy replacement cost, not genuine.
+
+=== COMMON PAKISTANI CAR BUYER SCAMS TO KNOW ===
+- Cut-and-join cars: Two accident-damaged cars welded together to create one "complete" car. Extremely dangerous. Always look for uneven floor pan welds, mismatched VIN numbers between doors and A-pillar, and uneven panel gaps all around.
+- Flood-damaged cars: Typically come from Sindh/KPK after monsoon flooding. Signs: musty smell in cabin, rust in the spare tyre well, corrosion behind dashboard panels, electronics behaving erratically.
+- Odometer rollback: very common on JDM imports. Always cross-check auction sheet mileage against odometer. Feel pedal rubber, seat bolster, and steering wheel wear — high-mileage cars show heavy wear regardless of what the odometer says.
+- Stolen/national database cars: Always run MTMIS check before buying. Stolen cars come with forged documents that can look convincing. CPLC in Karachi maintains a stolen vehicle database — for Karachi purchases, CPLC verification is worth the extra step.
+- "Own" money / premium scam: Dealers asking PKR 1-3 lac "own" above ex-factory price for new cars. This is technically illegal under dealership agreements but common during supply shortages. If demand is slow, always refuse to pay own money.
+
+=== PAKISTAN ROAD & DRIVING CONTEXT (useful for advising on car choice) ===
+
+ROAD CONDITIONS BY CITY:
+- Karachi: Mostly flat, many broken/potholed roads especially in old city areas. Saltwater sea air causes faster underbody rust — Karachi-registered used cars need more underbody inspection. High theft risk — tracker is essential.
+- Lahore: Mix of good motorway-adjacent roads and terrible inner city streets. Ring Road is excellent. Speed bumps are extremely high in some areas (DHA vs inner city difference).
+- Islamabad/Rawalpindi: Generally best road quality of the three cities. Islamabad roads are well-maintained. Margalla Hills routes need better ground clearance.
+- Northern Areas (Gilgit-Baltistan, AJK, KPK mountains): Require real ground clearance 200mm+ and 4x4 capability. Toyota Land Cruiser 80/100 series, Prado, Patrol still dominate here. JDM city cars are unsuitable.
+- Motorways (M1, M2, M3, M4, M9): Excellent quality. Where fuel economy at high speed matters — turbocharged engines at motorway speeds can use MORE fuel than naturally aspirated if driver is heavy-footed.
+
+COMMON MISTAKES BY CITY:
+- Lahore buyers: Underestimating how bad inner-city roads are for low-clearance cars like Civic FC.
+- Karachi buyers: Skipping tracker + comprehensive insurance. Also underestimating sea-air rust on underbody.
+- Islamabad buyers: Assuming all cars cope with Margalla Hills inclines — underpowered 660cc cars struggle on long inclines.
+
+SPEED BUMP REALITY:
+Pakistani speed bumps are not standardised. Some are 15cm high — capable of hitting a Civic's underside at any speed. Always ask a Corolla or City owner about their specific route before buying a Civic FC for daily use in areas with aggressive speed bumps.
+
+=== ADDITIONAL MODEL-SPECIFIC TIPS ===
+
+HONDA BR-V — TOP PRACTICAL CHOICE (often overlooked):
+- Best ground clearance in its class (185mm), 7 seats, genuine Honda reliability, parts available.
+- CVT is reliable IF fluid is changed every 40,000 km. Rebuild cost PKR 150,000–200,000 if neglected.
+- Weakness: small 1.5L engine in a heavy body — highway merging and overtaking requires planning.
+- Best trim: BR-V V (push-start, leather, rear camera, 16" alloys) — genuine step up in comfort.
+
+TOYOTA PRIUS / AQUA — HYBRID SWEET SPOT FOR CITY:
+- Prius 3rd gen (ZVW30, 2009-2015) is the most common in Pakistan. Reliable hybrid system. Battery packs typically last 200,000–300,000 km in Pakistan's climate.
+- HV (High Voltage) battery warning light = budget PKR 50,000–150,000 for refurbished battery. Genuine new battery from Toyota: PKR 300,000+. Refurbished local cells: PKR 50,000–80,000 — acceptable for most use cases.
+- Aqua (NHP10): smaller, more fuel efficient, rear seat is cramped. City use only.
+- Dealer trick: always check whether HV battery is original Japanese unit or Pakistani-rebuilt. Ask to see the battery cell date codes.
+
+HONDA VEZEL HYBRID:
+- JDM import. Two generations: RU1/RU3 (2013-2021) and RV (2022+, rare in Pakistan).
+- Hybrid system is Honda's i-DCD — known for juddering dual-clutch gearbox issues (especially RU1 with 7-speed DCT). When buying: test the low-speed city crawl — any shudder at 10-30 km/h = DCT problem, PKR 80,000–150,000 to fix.
+- More common reliable variant: RU3 (AWD) with standard CVT — no DCT issues.
+- Fuel economy: 18-22 km/L city is realistic. Excellent for Karachi/Lahore daily commuting.
+
+SUZUKI EVERY — THE MISUNDERSTOOD VAN:
+- JDM 660cc commercial van. Extremely practical for families who need cargo space AND reasonable fuel economy.
+- High roof variants: can stand inside the cargo area. Popular with freelancers, caterers, small businesses.
+- JDM units are typically under 100,000 km. Check the auction sheet — fleet/commercial units are sometimes abused.
+- No airbags, no ABS in older units. Not suitable for highway use at speed — engine is literally between the front seats (mid-engine layout).
+- Popular kei van alternative to Ravi/Suzuki APV for small business use.
+
+KARO OR NA KARO — MODEL YEAR SPECIFIC ADVICE:
+- Honda Civic 2012: AVOID. Worst year for AC compressor failures. 2013 is barely better.
+- Honda Civic 2016 first 6 months (July-December): CVT was not yet fully tuned for Pakistani stop-go traffic. 2017+ FC Civic is much smoother.
+- Suzuki Cultus AGS any year: AVOID for second car that will be driven in stop-go traffic. Manual Cultus = perfectly fine.
+- Toyota Corolla 2017-2019: Sweet spot years. Post-facelift reliability, pre-price-explosion used market. Best value new-shape Corolla in used market.
+- KIA Sportage 2021-2023 (4th gen): Best variant is AWD — better resale, real AWD traction benefit. FWD Sportage 4th gen still strong but losing ground in resale to AWD."""
 
 
 async def get_chatbot_response(
