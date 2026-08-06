@@ -1448,6 +1448,35 @@ KEYWORD_INTENT_MAP: list[dict] = [
         "max_budget_cap":    None,
         "append_features":   [],
     },
+
+    # ── Civic Generation Nicknames ────────────────────────────────────────────
+    # "Eagle Eye" = 7th gen Civic (2001-2005). Budget sports/daily driver.
+    # "Reborn" = 8th gen Civic (2006-2011). Slightly higher budget, still sporty.
+    # These are extremely common Pakistani used-car vernacular terms.
+    {
+        "intent_id":        "civic_eagle_eye",
+        "keywords":         ["eagle eye", "eagle-eye", "7th gen civic", "7th gen",
+                             "sev gen civic", "civic 2001", "civic 2002", "civic 2003",
+                             "civic 2004", "civic 2005"],
+        "exclude_keywords": ["reborn", "8th gen", "9th gen", "10th gen", "11th gen"],
+        "force_body_style":  "Sedan",
+        "use_case_override": "student_sports",
+        "force_transmission": None,
+        "max_budget_cap":    2_000_000,
+        "append_features":   [],
+    },
+    {
+        "intent_id":        "civic_reborn",
+        "keywords":         ["reborn", "8th gen civic", "8th gen",
+                             "civic 2006", "civic 2007", "civic 2008",
+                             "civic 2009", "civic 2010", "civic 2011"],
+        "exclude_keywords": ["eagle eye", "7th gen", "9th gen", "10th gen", "11th gen"],
+        "force_body_style":  "Sedan",
+        "use_case_override": "student_sports",
+        "force_transmission": None,
+        "max_budget_cap":    2_800_000,
+        "append_features":   [],
+    },
 ]
 
 
@@ -1934,6 +1963,19 @@ _FEATURE_EXCLUSIVE_ALLOWLIST: dict[str, set[str]] = {
         "mercedes-benz:e-class", "mercedes-benz:s-class", "mercedes-benz:gle",
         "porsche:cayenne", "porsche:panamera", "porsche:taycan",
         "land rover:range rover", "land rover:range rover sport",
+    },
+
+    # ── Series Hybrid / e-Power ──────────────────────────────────────────────
+    # Series hybrid architecture: petrol engine never drives wheels directly —
+    # it acts only as a generator. In PK market this means:
+    #   Nissan Note e-Power (1.2L series hybrid hatchback)
+    #   Nissan Serena e-Power (2.0L series hybrid MPV/van)
+    #   Forthing Friday (1.5T series hybrid SUV — Chinese REEV)
+    # Standard parallel HEV (Aqua, Prius, Vezel HEV) do NOT qualify here.
+    "series hybrid": {
+        "nissan:note e-power",
+        "nissan:serena e-power",
+        "forthing:friday",
     },
 }
 
@@ -2540,6 +2582,17 @@ def get_eligible_cars(
         "honda sensing":           "adaptive cruise control",
         "toyota safety sense":     "adaptive cruise control",
         "distance keeping":        "adaptive cruise control",
+        # ── Series Hybrid / e-Power ──────────────────────────────────────────
+        # Series hybrid = petrol engine acts ONLY as generator; wheels driven
+        # purely by electric motor. In Pakistan: Nissan Note/Serena e-Power,
+        # Forthing Friday. NOT to be confused with parallel HEV (Aqua, Prius).
+        "series hybrid":           "series hybrid",
+        "e-power":                 "series hybrid",
+        "epower":                  "series hybrid",
+        "e power":                 "series hybrid",
+        "range extender":          "series hybrid",
+        "reev":                    "series hybrid",
+        "range extended":          "series hybrid",
         # ── Engine CC / Token Tax Brackets ──────────────────────────────────
         # Maps user intent around Pakistan annual token tax brackets.
         # Vehicles up to 1000cc pay lowest rate. 1001-1300cc next tier.
@@ -2980,6 +3033,10 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "name here (e.g. 'Bolan', 'Mehran').\n"
         "- direct_model: If the user explicitly mentions a specific car model (e.g. 'Civic', "
         "'Vitz', 'Prado'), capture it here.\n"
+        "- excluded_models: Extract any car model the user explicitly forbids or vetoes. "
+        "Examples: 'no Corolla' -> ['Corolla'], 'strictly NO Fortuner or Sportage' -> "
+        "['Fortuner', 'Sportage'], 'without Civic' -> ['Civic']. "
+        "Leave as empty list [] if no explicit exclusion is stated.\n"
         "- powertrain: Extract 'hybrid' if user mentions hybrid/HEV/e-power/aqua/prius. "
         "Extract 'ev' if user mentions electric/EV/100% electric/battery car/BEV/zero emission. "
         "Leave null otherwise.\n"
@@ -3002,6 +3059,13 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "Infrastructure mismatches (e.g., EV + no chargers at destination), lifestyle mismatches "
         "(e.g., sports car + family of 5), or subjective impracticality DO NOT qualify as "
         "impossible — extract the signals faithfully and let disclaimers handle the warnings.\n"
+        "  CRITICAL RULE FOR 7-SEATER + SUB-1200CC GRIDLOCK: If a user requests a 7-seater family "
+        "vehicle AND simultaneously requests an engine under 1200cc (e.g. 'under 1000cc', 'under 1.2L', "
+        "'660cc', '800cc', '1000cc'), this combination is mathematically impossible in Pakistan — "
+        "no 7-seater MPV or van in the PK market uses an engine below 1200cc. "
+        "You MUST drop the CC constraint from required_features (set required_features to []) to allow "
+        "1.3L–1.5L 7-seater MPVs like Honda BR-V (1.5L) and Suzuki APV (1.3L) to appear, and "
+        "explicitly explain this trade-off in strategy_summary.\n"
         "- Leave null if not clearly stated — do not guess."
     )
     response_text = await generate_content_resilient(
@@ -3064,6 +3128,37 @@ def resolve_constraints(intent: UserIntent) -> dict:
     raw_prompt = getattr(intent, "user_prompt", "") or ""
     if raw_prompt:
         constraints = apply_keyword_intent(raw_prompt, constraints)
+
+    # ── Explicit Negative Model Exclusion Scanner ─────────────────────────────
+    # Scans the raw prompt for prohibition phrases like "no Fortuner",
+    # "strictly no Corolla", "without Sportage", "don't want Civic"
+    # and injects the vetoed models into constraints["excluded_models"].
+    # Uses a two-pass approach: broad negative-keyword pattern first,
+    # then a tighter single-word "no X" fallback.
+    if raw_prompt:
+        prompt_lower_ex = raw_prompt.lower()
+        veto_patterns = [
+            # Catches: "no fortuner", "strictly no corolla", "without sportage",
+            #          "don't want civic", "except hilux"
+            r'\b(?:strictly\s+no|without|don\'t\s+want|dont\s+want|except)\s+([a-z0-9][a-z0-9\s\-]*?)(?=\s+(?:or|and|with|for|under|must|having|but|\.|,)|$)',
+            r'\bno\s+([a-z0-9][a-z0-9\s\-]*?)(?=\s+(?:or|and|with|for|under|must|having|but|\.|,)|$)',
+        ]
+        already_excluded = {m.lower() for m in constraints["excluded_models"]}
+        for pattern in veto_patterns:
+            for match in re.findall(pattern, prompt_lower_ex):
+                candidate = match.strip()
+                if not candidate or len(candidate) > 30:
+                    continue
+                # Match candidate against registry — check model name and full key
+                for reg_key in CAR_REGISTRY:
+                    make, model = reg_key.split(":", 1)
+                    if candidate in model or candidate == make or candidate in reg_key:
+                        # Add both bare model name and "make model" form
+                        for form in (model, f"{make} {model}"):
+                            if form not in already_excluded:
+                                constraints["excluded_models"].append(form)
+                                already_excluded.add(form)
+                        break
 
     # Detect powertrain from LLM extraction or prompt heuristics
     powertrain = intent.powertrain
@@ -3218,10 +3313,12 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         "use traditional key ignition — NEVER recommend them for Push Start queries. For Toyota Vitz, "
         "base 'F 1.0' uses key ignition; you MUST explicitly set trim to 'Jewela', 'F Safety Edition', "
         "or 'U Grade' when Push Start is required.\n"
-        "12. MEMORY SEATS CKD RULE: Locally assembled Kia Sportage and Hyundai Tucson in Pakistan "
-        "DO NOT feature driver seat memory buttons — this feature was explicitly omitted by local "
-        "assemblers. For memory seat queries under 1 Crore, restrict picks to Haval Jolion/H6, "
-        "Changan Oshan X7 FutureSense, Hyundai Sonata 2.5L, or luxury imports.\n"
+        "12. MEMORY SEATS CKD RULE: Locally assembled Kia Sportage, Hyundai Tucson, and base-spec "
+        "Kia Sorento (non-AWD HEV trim) in Pakistan DO NOT feature driver seat memory buttons — "
+        "this feature was explicitly omitted by local assemblers or only present in the top AWD HEV "
+        "variant which exceeds 1 Crore. For memory seat queries under 1 Crore PKR, you MUST restrict "
+        "picks strictly to Chinese crossovers (Haval Jolion, Haval H6, Changan Oshan X7 FutureSense, "
+        "Chery Tiggo 8 Pro), Hyundai Sonata 2.5L, or luxury imports.\n"
         "13. ENGINE CC / TAX RULE: If the buyer mentions 'under 1500cc', 'low tax', 'token tax', "
         "'1.5L', 'under 1300cc', or '1.3L', you MUST strictly exclude models whose standard "
         "Pakistani-market engine is above 1500cc. This means DO NOT recommend: Hyundai Elantra "
