@@ -1508,6 +1508,7 @@ def apply_keyword_intent(user_prompt: str, constraints: dict) -> dict:
     _EXPLICIT_HATCHBACK_KW = {"hatchback", "small car", "choti gaari"}
     _EXPLICIT_SUV_KW = {"suv", "jeep", "4x4"}
     _EXPLICIT_VAN_KW = {"van", "mpv", "hiace", "7 seater", "8 seater", "9 seater", "11 seater"}
+    _EXPLICIT_CROSSOVER_KW = {"crossover", "cuv", "cross"}
     _EXPLICIT_MANUAL_KW = {"manual", "stick shift", "gear wali"}
     _EXPLICIT_SEATING_KW = {"9 people", "9 log", "10 people", "11 people", "9 seater", "10 seater", "11 seater"}
     
@@ -1515,8 +1516,16 @@ def apply_keyword_intent(user_prompt: str, constraints: dict) -> dict:
     has_explicit_hatch = any(kw in prompt_lower for kw in _EXPLICIT_HATCHBACK_KW)
     has_explicit_suv   = any(kw in prompt_lower for kw in _EXPLICIT_SUV_KW)
     has_explicit_van   = any(kw in prompt_lower for kw in _EXPLICIT_VAN_KW)
+    has_explicit_crossover = any(kw in prompt_lower for kw in _EXPLICIT_CROSSOVER_KW)
     has_explicit_manual = any(kw in prompt_lower for kw in _EXPLICIT_MANUAL_KW)
-    has_explicit_body = has_explicit_sedan or has_explicit_hatch or has_explicit_suv or has_explicit_van
+    # has_explicit_body gates the force_body_style override below (Tests 41 & 46) —
+    # whenever True, KEYWORD_INTENT_MAP rules like northern_offroad ("SUV") or
+    # commercial_cargo ("Van") must NEVER silently overwrite an explicitly
+    # stated body style, including "crossover"/"cuv"/"cross".
+    has_explicit_body = (
+        has_explicit_sedan or has_explicit_hatch or has_explicit_suv
+        or has_explicit_van or has_explicit_crossover
+    )
 
     for intent in KEYWORD_INTENT_MAP:
         keywords         = intent.get("keywords", [])
@@ -2367,6 +2376,21 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
         "changan:deepal s07", "changan:deepal l07",
         "chery:tiggo 4 pro", "chery:tiggo 8 pro", "chery:tiggo 7 pro",
     },
+
+    # ── Regular Fuel / High-Altitude HOBC-Sensitivity Gate (Test 42 & 46) ────
+    # Direct-Injection Turbo (GDI/TGDI) engines are compression- and heat-
+    # sensitive: at high altitude (northern areas, low-HOBC fuel-station
+    # regions) they are prone to knocking on regular 92 RON pump fuel and are
+    # engineered around premium/HOBC. When the user explicitly asks for
+    # regular-fuel compatibility or reports engine knocking, these GDI/TGDI
+    # engines are hard-blocked so only NA/MPI vehicles (Sportage Alpha MPI,
+    # Tucson FWD MPI, Corolla 1.8 NA, etc.) remain eligible.
+    "regular fuel": {
+        "honda:civic",          # 1.5L VTEC Turbo — GDI, HOBC/95 RON recommended
+        "mg:hs",                 # 1.5T GDI
+        "changan:oshan x7",      # 1.5T TGDI
+        "haval:h6",              # 2.0T GDI
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -2448,6 +2472,10 @@ _SUNROOF_TRIM_KNOWLEDGE: dict[str, list[str]] = {
 #     kei box vans (Wagon R, Bolan, Every) even if budget-eligible.
 # ---------------------------------------------------------------------------
 
+_JDM_HYBRID_RECENT_IMPORTS = {"toyota:aqua", "toyota:prius"}
+_JDM_HYBRID_RECENT_FLOOR   = 3_600_000  # ~36 Lakhs PKR — realistic floor for a 2016+ (<=10yr) unit
+
+
 def get_eligible_cars(
     max_budget: int,
     min_budget: int,
@@ -2460,6 +2488,8 @@ def get_eligible_cars(
     is_youth_query: bool = False,
     drive_req: str | None = None,
     powertrain_req: str | None = None,
+    min_year_req: int = 0,
+    is_luxury_request: bool = False,
 ) -> str:
     """
     Returns a priority-weighted, fit-score-sorted eligible car list as a prompt string.
@@ -2681,6 +2711,17 @@ def get_eligible_cars(
         "tax bracket":             "under 1500cc",
         "low token":               "under 1500cc",
         "cheap token":             "under 1500cc",
+        # ── High-Altitude Fuel Sensitivity / HOBC-GDI Knocking Gate ──────────
+        # Users at altitude (northern areas) or without reliable HOBC/95 RON
+        # access flag GDI/TGDI turbo engines as knock-prone on regular pump
+        # fuel. Normalise all phrasings to the "regular fuel" gate so only
+        # NA/MPI engines (Sportage Alpha MPI, Tucson FWD MPI, Corolla 1.8 NA)
+        # pass through.
+        "no hobc":                 "regular fuel",
+        "regular fuel":            "regular fuel",
+        "92 ron":                  "regular fuel",
+        "no knocking":             "regular fuel",
+        "engine knocking":         "regular fuel",
     }
 
     active_feature_gates: set[str] = set()
@@ -2713,6 +2754,19 @@ def get_eligible_cars(
         lo    = info["lo"]
         hi    = info["hi"]
         make, model = key.split(":", 1)
+
+        # 0b. JDM Hybrid Age-Price Floor Adjustment (Test 48 patch)
+        # A 2016+ (<=10yr old) Toyota Aqua/Prius realistically starts around
+        # PKR 36 Lakhs in the Pakistani used market — the registry's blanket
+        # floor also covers much older, cheaper units. When the user requests
+        # a recent-year hybrid (or explicitly asks for hybrid on one of these
+        # JDM imports), elevate the floor so a stale cheap-old-gen unit can't
+        # silently satisfy a budget that can't actually reach a 2016+ example.
+        if key in _JDM_HYBRID_RECENT_IMPORTS and min_year_req >= 2016:
+            # Fires whenever the model itself is an imported JDM hybrid — being
+            # in _JDM_HYBRID_RECENT_IMPORTS already satisfies the "powertrain is
+            # hybrid OR model is an imported JDM hybrid" condition on its own.
+            lo = max(lo, _JDM_HYBRID_RECENT_FLOOR)
 
         # 1. Body style gate
         # SUV and Crossover are treated as interchangeable — Pakistani buyers use
@@ -2761,9 +2815,20 @@ def get_eligible_cars(
         if min_budget > 0 and hi < min_budget * 0.80:
             continue
 
-        # 6. Apex luxury gate
-        if is_apex_luxury and max_budget > 0 and hi < max_budget * 0.55:
-            continue
+        # 6. Apex Luxury / Luxury Tag Gate — PATCHED (Test 43: gate leakage)
+        # Previous logic (`is_apex_luxury and hi < max_budget * 0.55` alone)
+        # let mass-market commuter sedans (Civic/Corolla) leak into 1cr+ "boss
+        # car" queries whenever their upper trim price crept toward ~95 Lakhs.
+        # New rule: apex luxury OR an explicit luxury request at 1cr+ budget
+        # ONLY allows models carrying the "luxury" or "status" tag — Corolla,
+        # Civic, Yaris, and City are hard-blocked from serving as VIP/boss
+        # alternatives regardless of how high their ceiling price reaches.
+        _luxury_tier_active = is_apex_luxury or (is_luxury_request and max_budget >= 10_000_000)
+        if _luxury_tier_active:
+            if not ({"luxury", "status"} & info.get("tags", set())):
+                continue
+            if max_budget > 0 and hi < max_budget * 0.55:
+                continue
 
         # 6b. Ultra-luxury tier — exclude Prado at 4+ crore budgets
         # At 4-5 crore, only Lexus LX600, LC300, Range Rover, Defender, BMW X7, Mercedes GLS
@@ -2968,12 +3033,13 @@ def get_eligible_cars(
 # ---------------------------------------------------------------------------
 
 def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]]:
-    max_budget      = constraints.get("max_budget", 0)
-    min_budget      = constraints.get("min_budget", 0)
-    allow_chinese   = constraints.get("allow_chinese", False)
-    body_style      = constraints.get("body_style")
-    is_apex         = constraints.get("is_apex_luxury", False)
-    excluded_models = {m.lower() for m in (constraints.get("excluded_models") or [])}
+    max_budget        = constraints.get("max_budget", 0)
+    min_budget        = constraints.get("min_budget", 0)
+    allow_chinese     = constraints.get("allow_chinese", False)
+    body_style        = constraints.get("body_style")
+    is_apex           = constraints.get("is_apex_luxury", False)
+    is_luxury_request = constraints.get("is_luxury_request", False)
+    excluded_models   = {m.lower() for m in (constraints.get("excluded_models") or [])}
 
     valid:           list     = []
     dropped_reasons: list[str] = []
@@ -3047,9 +3113,15 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
                 dropped_reasons.append(reason)
                 continue
 
-        # 6. Apex luxury gate
-        if is_apex and info and max_budget > 0:
-            if info["hi"] < max_budget * 0.55:
+        # 6. Apex Luxury / Luxury Tag Gate — PATCHED (Test 43, mirrors get_eligible_cars)
+        _luxury_tier_active_v = is_apex or (is_luxury_request and max_budget >= 10_000_000)
+        if _luxury_tier_active_v and info:
+            if not ({"luxury", "status"} & info.get("tags", set())):
+                reason = f"Dropped {t.make} {t.model}: Lacks luxury/status tag required for apex luxury query."
+                print(f"[Validator] Dropping {t.make} {t.model} — no luxury/status tag for apex luxury query")
+                dropped_reasons.append(reason)
+                continue
+            if max_budget > 0 and info["hi"] < max_budget * 0.55:
                 reason = f"Dropped {t.make} {t.model}: Too affordable (max PKR {info['hi']:,}) for apex luxury query."
                 print(f"[Validator] Dropping {t.make} {t.model} — too cheap for apex luxury query")
                 dropped_reasons.append(reason)
@@ -3070,6 +3142,7 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
 
 class UserIntent(BaseModel):
     max_budget:        Optional[int]                                                                 = None
+    min_year:          Optional[int]                                                                 = Field(default=None, description="Earliest acceptable model year, e.g. 'not older than 10 years' in 2026 -> 2016")
     body_style:        Optional[Literal["SUV", "Mini SUV", "Sedan", "Hatchback", "Pickup", "Crossover", "Van", "MPV", "Coupe"]] = None
     transmission:      Optional[Literal["Automatic", "Manual"]]                                     = None
     drive:             Optional[Literal["4x4", "AWD", "FWD", "RWD"]]                                = None
@@ -3108,6 +3181,11 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "  '1 crore' -> 10000000,  '5 crore'  -> 50000000,  '10 crore' -> 100000000\n"
         "  '20 lacs' -> 2000000,   '50 lacs'  -> 5000000,   '80 lacs'  -> 8000000\n"
         "  Always convert — never leave as text.\n"
+        "- min_year: Extract an earliest acceptable model year if the user states an age or\n"
+        "  recency constraint. Convert relative age statements using the current year (2026):\n"
+        "  'not older than 10 years' -> 2016,  'max 5 years old' -> 2021,\n"
+        "  'within last 3 years' -> 2023,  '2018 or newer' -> 2018,  'not before 2020' -> 2020.\n"
+        "  Leave null if no age/year constraint is stated — never guess.\n"
         "- use_case: brief phrase — 'family daily', 'city commute', 'offroad adventure',\n"
         "  'sports driving', 'ride sharing'. Infer from context if clear.\n"
         "- is_luxury_request: true ONLY for explicit words: 'luxury', 'premium', 'aura',\n"
@@ -3202,7 +3280,7 @@ def resolve_constraints(intent: UserIntent) -> dict:
     constraints = {
         "min_budget":        min_budget,
         "max_budget":        max_budget,
-        "min_year":          0,
+        "min_year":          intent.min_year or 0,
         "is_apex_luxury":    is_apex_luxury,
         "allow_chinese":     True,  # Market Shift: Chinese crossovers are now mainstream
         "body_style":        intent.body_style,
@@ -3250,6 +3328,46 @@ def resolve_constraints(intent: UserIntent) -> dict:
                                     constraints["excluded_models"].append(form)
                                     already_excluded.add(form)
 
+    # ── Conditional Negation & Nested Boolean Expansion (Test 45) ────────────
+    # Handles double-negative / nested-conditional phrasing that the flat veto
+    # regex above cannot parse:
+    #   "Sedan that isn't Honda"                  -> exclude every non-Honda sedan
+    #   "don't give me any sedan that isn't Honda" -> same
+    #   "no Suzuki unless it's not a hatchback"    -> exclude every Suzuki hatchback
+    #   "never recommend any Suzuki unless ... not a hatchback" -> same
+    if raw_prompt:
+        prompt_lower_neg = raw_prompt.lower()
+        already_excluded_neg = {m.lower() for m in constraints["excluded_models"]}
+
+        # Pattern A: "sedan that isn't [a] <make>" — expands to every Sedan
+        # in the registry whose make does NOT match the stated make.
+        _SEDAN_NOT_MAKE_RE = re.compile(r"sedan\s+that\s+isn'?t\s+(?:a\s+)?([a-z]+)")
+        for neg_match in _SEDAN_NOT_MAKE_RE.finditer(prompt_lower_neg):
+            target_make = neg_match.group(1).strip()
+            if not target_make:
+                continue
+            for reg_key, reg_info in CAR_REGISTRY.items():
+                make, model = reg_key.split(":", 1)
+                if "Sedan" in reg_info["styles"] and make != target_make:
+                    for form in (model, f"{make} {model}"):
+                        if form not in already_excluded_neg:
+                            constraints["excluded_models"].append(form)
+                            already_excluded_neg.add(form)
+
+        # Pattern B: "no/never recommend any suzuki unless ... not [a] hatchback"
+        # — expands to every Hatchback-bodied Suzuki model in the registry.
+        _SUZUKI_UNLESS_NOT_HATCH_RE = re.compile(
+            r"(?:no|never\s+recommend\s+any)\s+suzuki\s+unless.*?not\s+(?:a\s+)?hatchback"
+        )
+        if _SUZUKI_UNLESS_NOT_HATCH_RE.search(prompt_lower_neg):
+            for reg_key, reg_info in CAR_REGISTRY.items():
+                make, model = reg_key.split(":", 1)
+                if make == "suzuki" and "Hatchback" in reg_info["styles"]:
+                    for form in (model, f"{make} {model}"):
+                        if form not in already_excluded_neg:
+                            constraints["excluded_models"].append(form)
+                            already_excluded_neg.add(form)
+
     # Detect powertrain from LLM extraction or prompt heuristics
     powertrain = intent.powertrain
     if not powertrain and raw_prompt:
@@ -3269,6 +3387,28 @@ def resolve_constraints(intent: UserIntent) -> dict:
         constraints["disclaimers"] = generate_disclaimers(raw_prompt, constraints)
     else:
         constraints["disclaimers"] = []
+
+    # ── Contraband / NCP Legal Compliance Intercept (Test 47) ────────────────
+    # NCP ("Non-Custom Paid") vehicles are illegal to operate outside
+    # Pakistan's designated border/tribal regions. If the raw prompt requests
+    # NCP/non-custom-paid vehicles, strip that intent from any extracted
+    # signals so it can never influence which cars get recommended, and
+    # inject a compliance disclaimer so the pipeline continues cleanly with
+    # legal, tax-paid alternatives. Placed AFTER the disclaimers assignment
+    # above so this disclaimer is appended, not overwritten.
+    _CONTRABAND_TERMS = ("ncp", "non-custom", "non custom paid", "non custom")
+    if raw_prompt and any(term in raw_prompt.lower() for term in _CONTRABAND_TERMS):
+        constraints["required_features"] = [
+            f for f in constraints.get("required_features", [])
+            if not any(term in f.lower() for term in _CONTRABAND_TERMS)
+        ]
+        if intent.direct_model and any(term in intent.direct_model.lower() for term in _CONTRABAND_TERMS):
+            intent.direct_model = None
+        constraints["disclaimers"].append(
+            "⚠️ Legal Compliance Notice: Non-Custom Paid (NCP) vehicles are strictly illegal "
+            "outside border regions in Pakistan. The engine has automatically filtered for "
+            "legally registered, tax-paid alternatives in your target city."
+        )
 
     # Detect direct model request and override strategy summary
     if intent.direct_model:
@@ -3333,6 +3473,8 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         is_youth_query=is_youth_query,
         drive_req=drive,
         powertrain_req=constraints.get("powertrain"),
+        min_year_req=constraints.get("min_year", 0),
+        is_luxury_request=is_luxury,
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
@@ -3531,6 +3673,8 @@ async def get_validated_car_targets(constraints: dict) -> list[dict]:
                 excluded_models  = constraints.get("excluded_models"),
                 required_features= constraints.get("required_features", []),
                 powertrain_req   = constraints.get("powertrain"),
+                min_year_req     = constraints.get("min_year", 0),
+                is_luxury_request= constraints.get("is_luxury_request", False),
             )
 
             # Already-picked valid makes/models — tell LLM not to repeat them
@@ -3613,6 +3757,8 @@ async def get_fallback_recommendations(
         required_features=required_features,
         drive_req=drive,
         powertrain_req=constraints.get("powertrain"),
+        min_year_req=constraints.get("min_year", 0),
+        is_luxury_request=is_luxury,
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
@@ -3687,6 +3833,8 @@ async def get_extended_recommendations(
         required_features=required_features,
         drive_req=drive,
         powertrain_req=original_constraints.get("powertrain"),
+        min_year_req=original_constraints.get("min_year", 0),
+        is_luxury_request=is_luxury,
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
