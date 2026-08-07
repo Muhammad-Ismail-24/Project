@@ -2889,7 +2889,7 @@ def get_eligible_cars(
 # already filtered, but catches edge cases where LLM ignores the list.
 # ---------------------------------------------------------------------------
 
-def _validate_targets(targets: list, constraints: dict) -> list:
+def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]]:
     max_budget      = constraints.get("max_budget", 0)
     min_budget      = constraints.get("min_budget", 0)
     allow_chinese   = constraints.get("allow_chinese", False)
@@ -2897,7 +2897,9 @@ def _validate_targets(targets: list, constraints: dict) -> list:
     is_apex         = constraints.get("is_apex_luxury", False)
     excluded_models = {m.lower() for m in (constraints.get("excluded_models") or [])}
 
-    valid = []
+    valid:           list     = []
+    dropped_reasons: list[str] = []
+
     for t in targets:
         make_lower    = t.make.lower().strip()
         model_lower   = t.model.lower().strip()
@@ -2913,12 +2915,16 @@ def _validate_targets(targets: list, constraints: dict) -> list:
             for ex in excluded_models
         )
         if is_vetoed:
+            reason = f"Dropped {t.make} {t.model}: Explicitly vetoed by user."
             print(f"[Validator] Hard-dropping {t.make} {t.model} — matches excluded_models veto")
+            dropped_reasons.append(reason)
             continue
 
         # 2. Chinese gate
         if info and info["chinese"] and not allow_chinese:
+            reason = f"Dropped {t.make} {t.model}: Chinese brand not requested by user."
             print(f"[Validator] Dropping {t.make} {t.model} — Chinese brand not requested")
+            dropped_reasons.append(reason)
             continue
 
         # 3. Body style gate — SUV/Crossover treated as interchangeable (mirror of gate in get_eligible_cars)
@@ -2929,7 +2935,9 @@ def _validate_targets(targets: list, constraints: dict) -> list:
             elif body_style == "Crossover":
                 allowed_styles.add("SUV")
             if not any(style in info["styles"] for style in allowed_styles):
+                reason = f"Dropped {t.make} {t.model}: Body style '{'/'.join(info['styles'])}' does not match requested '{body_style}'."
                 print(f"[Validator] Dropping {t.make} {t.model} — not a {body_style}")
+                dropped_reasons.append(reason)
                 continue
 
         # 4. Transmission gate
@@ -2937,26 +2945,36 @@ def _validate_targets(targets: list, constraints: dict) -> list:
         if info and transmission_req:
             car_trans = info.get("transmission", "both")
             if transmission_req == "Manual" and car_trans == "auto":
+                reason = f"Dropped {t.make} {t.model}: Auto-only car, user requires Manual."
                 print(f"[Validator] Dropping {t.make} {t.model} — auto-only, user wants Manual")
+                dropped_reasons.append(reason)
                 continue
             if transmission_req == "Automatic" and car_trans == "manual":
+                reason = f"Dropped {t.make} {t.model}: Manual-only car, user requires Automatic."
                 print(f"[Validator] Dropping {t.make} {t.model} — manual-only, user wants Automatic")
+                dropped_reasons.append(reason)
                 continue
 
         # 5. Budget gates
         if info and max_budget > 0:
             lo, hi = info["lo"], info["hi"]
             if max_budget < lo * 0.85:
+                reason = f"Dropped {t.make} {t.model}: Budget floor PKR {lo:,} is unreachable at PKR {max_budget:,}."
                 print(f"[Validator] Dropping {t.make} {t.model} — floor PKR {lo:,} unreachable")
+                dropped_reasons.append(reason)
                 continue
             if min_budget > 0 and hi < min_budget * 0.80:
+                reason = f"Dropped {t.make} {t.model}: Price ceiling PKR {hi:,} is below budget floor PKR {min_budget:,}."
                 print(f"[Validator] Dropping {t.make} {t.model} — ceiling PKR {hi:,} below budget floor")
+                dropped_reasons.append(reason)
                 continue
 
         # 6. Apex luxury gate
         if is_apex and info and max_budget > 0:
             if info["hi"] < max_budget * 0.55:
+                reason = f"Dropped {t.make} {t.model}: Too affordable (max PKR {info['hi']:,}) for apex luxury query."
                 print(f"[Validator] Dropping {t.make} {t.model} — too cheap for apex luxury query")
+                dropped_reasons.append(reason)
                 continue
 
         valid.append(t)
@@ -2964,9 +2982,8 @@ def _validate_targets(targets: list, constraints: dict) -> list:
     # ── Safety net REMOVED ────────────────────────────────────────────────────
     # The old `return [targets[0]]` fallback was resurrecting vetoed cars.
     # If everything was legitimately dropped (veto, wrong style, wrong budget),
-    # we return [] and let the caller (recommend_routes Stage 3.5) handle it
-    # with a proper self-healing fallback scrape instead.
-    return valid
+    # we return [] and let the caller handle it with a proper self-healing fallback.
+    return valid, dropped_reasons
 
 
 # ---------------------------------------------------------------------------
@@ -3328,7 +3345,16 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         "Toyota Corolla Altis/Grande (1.6L/1.8L), or Kia Stonic (1.4T). Instead recommend "
         "explicit sub-1500cc cars: Toyota Yaris (1.3L), Honda City (1.2L/1.5L), Suzuki Swift "
         "(1.2L), Suzuki Cultus (1.0L), Changan Alsvin (1.5L), Toyota Vitz (1.0L/1.3L), or "
-        "Suzuki Wagon R (1.0L). For 'under 1300cc' requests, further restrict to 1.0L–1.3L only."
+        "Suzuki Wagon R (1.0L). For 'under 1300cc' requests, further restrict to 1.0L–1.3L only.\n"
+        "14. TRIM-BUDGET REALITY: Multi-generation cars (Honda Civic, Toyota Corolla) span from "
+        "10 Lakhs to 1 Crore+ in the used market. If a user's budget is UNDER 35 Lakhs PKR, "
+        "you MUST NOT recommend modern turbo or premium trims. Specifically: DO NOT recommend "
+        "'Civic 1.5T', 'Civic RS', 'Civic Oriel 1.5T', 'Corolla Altis Grande', or 'Corolla Altis X' "
+        "for budgets under 35 Lakhs. You MUST explicitly name the older generation trim that "
+        "actually exists in the used market at that price — e.g., 'Civic VTi Oriel' (2004–2012), "
+        "'Civic Reborn 1.8 VTi' (2006–2012), 'Corolla XLi' (2002–2014), 'Corolla GLi' (2008–2019). "
+        "Budget under 20 Lakhs: only specify 7th gen (Eagle Eye 2001–2005) or 8th gen (Reborn "
+        "2006–2011) Civic trims. Budget 20–35 Lakhs: 9th gen Civic (2012–2016) trims allowed."
     )
 
     response_text = await generate_content_resilient(
@@ -3352,7 +3378,7 @@ def _deduplicate_and_format(
     constraints: dict,
 ) -> list[dict]:
     """Phase 2 Python gate — validate, canonicalize, deduplicate, format to 9-key contract."""
-    validated = _validate_targets(raw_targets, constraints)
+    validated, _dropped = _validate_targets(raw_targets, constraints)
 
     seen:      set[tuple[str, str]] = set()
     formatted: list[dict]           = []
@@ -3391,6 +3417,97 @@ def _deduplicate_and_format(
 # Keep this alias so the route file doesn't need changes.
 # ---------------------------------------------------------------------------
 _deduplicate_and_format_targets = _deduplicate_and_format
+
+
+# ---------------------------------------------------------------------------
+# AGENTIC SELF-CORRECTION WRAPPER
+# Wraps select_car_targets with a one-shot LLM retry when the validator drops
+# cars. Keeps the pipeline honest: if the LLM hallucinated a vetoed/out-of-
+# budget/wrong-style car, this loop fires exactly once to replace it with a
+# valid substitute from the same eligible list.
+# ---------------------------------------------------------------------------
+
+async def get_validated_car_targets(constraints: dict) -> list[dict]:
+    """
+    Agentic loop: fetch targets → validate → if any dropped AND total valid < 3,
+    ask LLM once to self-correct with replacement picks from the same eligible list.
+    Returns the final formatted list via _deduplicate_and_format.
+    """
+    raw_targets = await select_car_targets(constraints)
+    valid_targets, dropped_reasons = _validate_targets(raw_targets, constraints)
+
+    # Only trigger self-correction if:
+    #  (a) at least one car was dropped, AND
+    #  (b) we ended up with fewer valid picks than we started with
+    # This avoids a needless extra LLM call when all 3 passed first time.
+    if dropped_reasons and len(valid_targets) < len(raw_targets):
+        needed = max(0, 3 - len(valid_targets))
+        print(
+            f"[Fallback] {len(dropped_reasons)} car(s) dropped — triggering self-correction "
+            f"to find {needed} replacement(s). Reasons:\n  " + "\n  ".join(dropped_reasons)
+        )
+
+        if needed > 0:
+            # Re-fetch the eligible list so the replacement prompt is grounded
+            eligible_list = get_eligible_cars(
+                max_budget       = constraints.get("max_budget", 0),
+                min_budget       = constraints.get("min_budget", 0),
+                allow_chinese    = constraints.get("allow_chinese", False),
+                body_style       = constraints.get("body_style"),
+                is_apex_luxury   = constraints.get("is_apex_luxury", False),
+                transmission_req = constraints.get("transmission"),
+                excluded_models  = constraints.get("excluded_models"),
+                required_features= constraints.get("required_features", []),
+                powertrain_req   = constraints.get("powertrain"),
+            )
+
+            # Already-picked valid makes/models — tell LLM not to repeat them
+            already_picked = [
+                f"{v.make} {v.model}" for v in valid_targets
+            ]
+
+            correction_prompt = (
+                f"Your previous vehicle recommendations failed strict system validation "
+                f"for the following reasons:\n"
+                + "\n".join(f"  - {r}" for r in dropped_reasons)
+                + f"\n\nELIGIBLE CARS (pre-verified by Python — pick ONLY from this list):\n"
+                + eligible_list
+                + f"\n\nAlready picked (do NOT repeat): {json.dumps(already_picked)}"
+                + f"\n\nTASK: Return EXACTLY {needed} NEW replacement car(s) from the eligible "
+                f"list above that do NOT violate any of the validation rules listed. "
+                "Return ONLY the JSON array for the replacements — no commentary."
+            )
+
+            try:
+                response_text = await generate_content_resilient(
+                    contents=correction_prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=list[CarTargetRaw],
+                        temperature=0.2,
+                    ),
+                )
+                replacement_raws = [
+                    CarTargetRaw.model_validate(item)
+                    for item in json.loads(response_text)
+                ]
+                valid_replacements, still_dropped = _validate_targets(
+                    replacement_raws, constraints
+                )
+                if still_dropped:
+                    print(
+                        f"[Fallback] Correction still dropped {len(still_dropped)} car(s) "
+                        f"on second pass — accepting partial result."
+                    )
+                valid_targets.extend(valid_replacements)
+                print(
+                    f"[Fallback] Self-correction complete — "
+                    f"{len(valid_replacements)} replacement(s) added."
+                )
+            except Exception as e:
+                print(f"[Fallback] Self-correction LLM call failed: {e}")
+
+    return _deduplicate_and_format(valid_targets, constraints)
 
 
 # ---------------------------------------------------------------------------
