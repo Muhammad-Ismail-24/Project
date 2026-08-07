@@ -2648,8 +2648,17 @@ def get_eligible_cars(
         make, model = key.split(":", 1)
 
         # 1. Body style gate
-        if body_style and body_style not in info["styles"]:
-            continue
+        # SUV and Crossover are treated as interchangeable — Pakistani buyers use
+        # both terms for the same category. Kia Sorento, Oshan X7, Tiggo 8 Pro etc.
+        # are classified as "Crossover" in registry but must pass an "SUV" query.
+        if body_style:
+            allowed_styles = {body_style}
+            if body_style == "SUV":
+                allowed_styles.add("Crossover")
+            elif body_style == "Crossover":
+                allowed_styles.add("SUV")
+            if not any(style in info["styles"] for style in allowed_styles):
+                continue
 
         # 2. Chinese gate
         if info["chinese"] and not allow_chinese:
@@ -2811,45 +2820,17 @@ def get_eligible_cars(
         scored.append((final_score, display, lo, hi, note))
 
     if not scored:
-        # If feature gates blocked everything, retry WITHOUT feature gates
-        # and inject a warning into the output string
-        if active_feature_gates:
-            # Re-run the loop without feature filtering
-            for key, info in CAR_REGISTRY.items():
-                lo = info["lo"]
-                hi = info["hi"]
-                make, model = key.split(":", 1)
-                if body_style and body_style not in info["styles"]:
-                    continue
-                if info["chinese"] and not allow_chinese:
-                    continue
-                if transmission_req == "Automatic" and info["transmission"] == "manual":
-                    continue
-                if transmission_req == "Manual" and info["transmission"] == "auto":
-                    continue
-                if powertrain_req:
-                    car_tags = info.get("tags", set())
-                    if powertrain_req == "hybrid" and "hybrid" not in car_tags:
-                        continue
-                    if powertrain_req == "ev" and "ev" not in car_tags:
-                        continue
-                if max_budget > 0 and max_budget < lo * 0.80:
-                    continue
-                if min_budget > 0 and hi < min_budget * 0.80:
-                    continue
-                if key.lower() in excluded_lower:
-                    continue
-                display = f"{make.title()} {model.title()}"
-                scored.append((0.5, display, lo, hi, " [feature not available — showing closest alternative]"))
-            scored.sort(key=lambda x: x[0], reverse=True)
-
-        if not scored:
-            style_note = f" matching body style '{body_style}'" if body_style else ""
-            feat_note  = " with sunroof" if needs_sunroof else ""
-            return (
-                f"No eligible cars found{style_note}{feat_note} for this budget. "
-                "Return an empty array []."
-            )
+        # Do NOT silently drop feature requirements and retry — that caused the LLM
+        # to hallucinate random cars that didn't have the requested features.
+        # Instead, return an explicit impossibility message so the caller can handle
+        # it gracefully (Stage 3.5 self-healing fallback in recommend_routes.py).
+        style_note = f" matching body style '{body_style}'" if body_style else ""
+        feat_note  = f" with required features [{', '.join(sorted(active_feature_gates))}]" if active_feature_gates else ""
+        return (
+            f"No eligible cars found{style_note}{feat_note} for this budget. "
+            "The combination you are looking for is mathematically impossible in Pakistan. "
+            "Return an empty array []."
+        )
 
     # Sort by final_score descending — best fit + highest priority appears first
     scored.sort(key=lambda x: x[0], reverse=True)
@@ -2909,30 +2890,49 @@ def get_eligible_cars(
 # ---------------------------------------------------------------------------
 
 def _validate_targets(targets: list, constraints: dict) -> list:
-    max_budget    = constraints.get("max_budget", 0)
-    min_budget    = constraints.get("min_budget", 0)
-    allow_chinese = constraints.get("allow_chinese", False)
-    body_style    = constraints.get("body_style")
-    is_apex       = constraints.get("is_apex_luxury", False)
+    max_budget      = constraints.get("max_budget", 0)
+    min_budget      = constraints.get("min_budget", 0)
+    allow_chinese   = constraints.get("allow_chinese", False)
+    body_style      = constraints.get("body_style")
+    is_apex         = constraints.get("is_apex_luxury", False)
+    excluded_models = {m.lower() for m in (constraints.get("excluded_models") or [])}
 
     valid = []
     for t in targets:
-        make_lower  = t.make.lower().strip()
-        model_lower = t.model.lower().strip()
-        key         = f"{make_lower}:{model_lower}"
-        info        = CAR_REGISTRY.get(key)
+        make_lower    = t.make.lower().strip()
+        model_lower   = t.model.lower().strip()
+        key           = f"{make_lower}:{model_lower}"
+        info          = CAR_REGISTRY.get(key)
+        display_lower = f"{make_lower} {model_lower}"
 
-        # Chinese gate
+        # 1. Strict veto / exclusion gate
+        # Checks both bare model name and "make model" form against excluded_models.
+        # This is the final enforcement line — a vetoed car NEVER passes through.
+        is_vetoed = any(
+            ex in display_lower or ex in model_lower or display_lower in ex
+            for ex in excluded_models
+        )
+        if is_vetoed:
+            print(f"[Validator] Hard-dropping {t.make} {t.model} — matches excluded_models veto")
+            continue
+
+        # 2. Chinese gate
         if info and info["chinese"] and not allow_chinese:
             print(f"[Validator] Dropping {t.make} {t.model} — Chinese brand not requested")
             continue
 
-        # Body style gate (second line of defence)
-        if info and body_style and body_style not in info["styles"]:
-            print(f"[Validator] Dropping {t.make} {t.model} — not a {body_style}")
-            continue
+        # 3. Body style gate — SUV/Crossover treated as interchangeable (mirror of gate in get_eligible_cars)
+        if info and body_style:
+            allowed_styles = {body_style}
+            if body_style == "SUV":
+                allowed_styles.add("Crossover")
+            elif body_style == "Crossover":
+                allowed_styles.add("SUV")
+            if not any(style in info["styles"] for style in allowed_styles):
+                print(f"[Validator] Dropping {t.make} {t.model} — not a {body_style}")
+                continue
 
-        # Transmission gate (second line of defence)
+        # 4. Transmission gate
         transmission_req = constraints.get("transmission")
         if info and transmission_req:
             car_trans = info.get("transmission", "both")
@@ -2943,7 +2943,7 @@ def _validate_targets(targets: list, constraints: dict) -> list:
                 print(f"[Validator] Dropping {t.make} {t.model} — manual-only, user wants Automatic")
                 continue
 
-        # Budget gates
+        # 5. Budget gates
         if info and max_budget > 0:
             lo, hi = info["lo"], info["hi"]
             if max_budget < lo * 0.85:
@@ -2953,7 +2953,7 @@ def _validate_targets(targets: list, constraints: dict) -> list:
                 print(f"[Validator] Dropping {t.make} {t.model} — ceiling PKR {hi:,} below budget floor")
                 continue
 
-        # Apex luxury gate
+        # 6. Apex luxury gate
         if is_apex and info and max_budget > 0:
             if info["hi"] < max_budget * 0.55:
                 print(f"[Validator] Dropping {t.make} {t.model} — too cheap for apex luxury query")
@@ -2961,10 +2961,11 @@ def _validate_targets(targets: list, constraints: dict) -> list:
 
         valid.append(t)
 
-    if not valid and targets:
-        print("[Validator] All targets dropped — returning first original as safety fallback.")
-        return [targets[0]]
-
+    # ── Safety net REMOVED ────────────────────────────────────────────────────
+    # The old `return [targets[0]]` fallback was resurrecting vetoed cars.
+    # If everything was legitimately dropped (veto, wrong style, wrong budget),
+    # we return [] and let the caller (recommend_routes Stage 3.5) handle it
+    # with a proper self-healing fallback scrape instead.
     return valid
 
 
