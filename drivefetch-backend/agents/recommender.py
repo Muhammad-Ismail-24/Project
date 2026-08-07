@@ -3204,7 +3204,7 @@ def resolve_constraints(intent: UserIntent) -> dict:
         "max_budget":        max_budget,
         "min_year":          0,
         "is_apex_luxury":    is_apex_luxury,
-        "allow_chinese":     intent.origin_pref == "Chinese",
+        "allow_chinese":     True,  # Market Shift: Chinese crossovers are now mainstream
         "body_style":        intent.body_style,
         "transmission":      intent.transmission,
         "drive":             intent.drive,
@@ -3226,36 +3226,29 @@ def resolve_constraints(intent: UserIntent) -> dict:
         constraints = apply_keyword_intent(raw_prompt, constraints)
 
     # ── Explicit Negative Model Exclusion Scanner ─────────────────────────────
-    # Scans the raw prompt for prohibition phrases like "no Fortuner",
-    # "strictly no Corolla", "without Sportage", "don't want Civic"
-    # and injects the vetoed models into constraints["excluded_models"].
-    # Uses a two-pass approach: broad negative-keyword pattern first,
-    # then a tighter single-word "no X" fallback.
     if raw_prompt:
         prompt_lower_ex = raw_prompt.lower()
+        # Modified regex to capture the entire string up to the next condition/punctuation
         veto_patterns = [
-            # Catches: "no fortuner", "strictly no corolla", "without sportage",
-            #          "don't want civic", "except hilux", "no Corolla." (punctuation-safe)
-            # Uses [\.,] character class so "no Corolla." (no space before period) is handled.
-            r'\b(?:strictly\s+no|without|don\'t\s+want|dont\s+want|except)\s+([a-z0-9][a-z0-9\s\-]*?)(?=\s+(?:or|and|with|for|under|must|having|but)\b|[\.,!?]|$)',
-            r'\bno\s+([a-z0-9][a-z0-9\s\-]*?)(?=\s+(?:or|and|with|for|under|must|having|but)\b|[\.,!?]|$)',
+            r'\b(?:strictly\s+no|without|don\'t\s+want|dont\s+want|except)\s+([a-z0-9\s\-\,]+?)(?=\s+(?:for|under|must|having|but)\b|[\.,]|$)',
+            r'\bno\s+([a-z0-9\s\-\,]+?)(?=\s+(?:for|under|must|having|but)\b|[\.,]|$)'
         ]
         already_excluded = {m.lower() for m in constraints["excluded_models"]}
         for pattern in veto_patterns:
             for match in re.findall(pattern, prompt_lower_ex):
-                candidate = match.strip()
-                if not candidate or len(candidate) > 30:
-                    continue
-                # Match candidate against registry — check model name and full key
-                for reg_key in CAR_REGISTRY:
-                    make, model = reg_key.split(":", 1)
-                    if candidate in model or candidate == make or candidate in reg_key:
-                        # Add both bare model name and "make model" form
-                        for form in (model, f"{make} {model}"):
-                            if form not in already_excluded:
-                                constraints["excluded_models"].append(form)
-                                already_excluded.add(form)
-                        break
+                # Split compound vetoes like "Toyota or Honda"
+                for sub_candidate in re.split(r'\s+or\s+|\s+and\s+|,', match):
+                    candidate = sub_candidate.strip()
+                    if not candidate or len(candidate) > 30:
+                        continue
+                    
+                    for reg_key in CAR_REGISTRY:
+                        make, model = reg_key.split(":", 1)
+                        if candidate in model or candidate == make or candidate in reg_key:
+                            for form in (model, f"{make} {model}"):
+                                if form not in already_excluded:
+                                    constraints["excluded_models"].append(form)
+                                    already_excluded.add(form)
 
     # Detect powertrain from LLM extraction or prompt heuristics
     powertrain = intent.powertrain
