@@ -1965,6 +1965,58 @@ _FEATURE_EXCLUSIVE_ALLOWLIST: dict[str, set[str]] = {
         "land rover:range rover", "land rover:range rover sport",
     },
 
+    # ── 7-Seater / Third Row ─────────────────────────────────────────────────
+    # Hard allowlist: only vehicles physically capable of seating 7 in the PK
+    # used/new market. Jimny (2-seat cargo + small rear), Terios (5-seat only),
+    # Alto, Swift, Vitz, Corolla, Civic — all 4/5-seat only, physically blocked.
+    #
+    # toyota:rush intentionally EXCLUDED — PK market Rush is 5-seat only
+    # (the 3rd-row variant is a different regional spec not available here).
+    # nissan:serena e-power included because it's 7/8-seat even in the e-Power trim.
+    "7 seater": {
+        # Budget vans / MPVs
+        "suzuki:apv", "suzuki:bolan", "suzuki:every",
+        # Toyota — 7/8-seat variants confirmed in PK
+        "toyota:fortuner",          # 7-seat with 3rd row
+        "toyota:prado",             # 7-seat with 3rd row
+        "toyota:land cruiser",      # 8-seat
+        "toyota:sienta",            # 7-seat van
+        "toyota:alphard",           # 7/8-seat luxury van
+        "toyota:vellfire",          # 7/8-seat luxury van
+        "toyota:hiace",             # 11-15 seat van
+        # Honda
+        "honda:br-v",               # 7-seat with 3rd row (PK spec confirmed)
+        "honda:freed",              # 7-seat compact van
+        "honda:stepwgn",            # 8-seat JDM van
+        # Hyundai
+        "hyundai:santa fe",         # 7-seat with 3rd row
+        "hyundai:palisade",         # 8-seat
+        # Kia
+        "kia:sorento",              # 7-seat with 3rd row
+        "kia:carnival",             # 8-seat MPV
+        # Chinese
+        "changan:oshan x7",         # 7-seat with 3rd row
+        "chery:tiggo 8 pro",        # 7-seat with 3rd row
+        "mg:hector",                # 7-seat version available in PK
+        "jetour:x70 plus",          # 7-seat with 3rd row
+        "haval:h7",                 # 7-seat with 3rd row
+        # Nissan
+        "nissan:serena", "nissan:serena e-power",
+        "nissan:elgrand",           # 7/8-seat van
+        "nissan:patrol",            # 8-seat
+        # Mitsubishi
+        "mitsubishi:pajero",        # 7-seat
+        "mitsubishi:pajero sport",  # 7-seat
+        "mitsubishi:xpander",       # 7-seat MPV
+        # Mazda
+        "mazda:cx-8",               # 6/7-seat
+        # Luxury / imports
+        "land rover:discovery",     # 7-seat
+        "bmw:x7",                   # 7-seat
+        "mercedes-benz:gls",        # 7-seat
+        "zeekr:009",                # 7-seat luxury van
+    },
+
     # ── Series Hybrid / e-Power ──────────────────────────────────────────────
     # Series hybrid architecture: petrol engine never drives wheels directly —
     # it acts only as a generator. In PK market this means:
@@ -2582,6 +2634,21 @@ def get_eligible_cars(
         "honda sensing":           "adaptive cruise control",
         "toyota safety sense":     "adaptive cruise control",
         "distance keeping":        "adaptive cruise control",
+        # ── 7-Seater / Third Row ─────────────────────────────────────────────
+        # Hard allowlist gate — prevents 4-seaters / kei cars from passing
+        # a 7-seater query. Jimny, Terios, Alto, Swift etc. are physically blocked.
+        "7 seater":                "7 seater",
+        "7-seater":                "7 seater",
+        "7 seat":                  "7 seater",
+        "7 seats":                 "7 seater",
+        "seven seater":            "7 seater",
+        "seven seat":              "7 seater",
+        "third row":               "7 seater",
+        "3rd row":                 "7 seater",
+        "third row seat":          "7 seater",
+        "8 seater":                "7 seater",   # 8-seaters are a superset, same gate
+        "8-seater":                "7 seater",
+        "family van":              "7 seater",
         # ── Series Hybrid / e-Power ──────────────────────────────────────────
         # Series hybrid = petrol engine acts ONLY as generator; wheels driven
         # purely by electric motor. In Pakistan: Nissan Note/Serena e-Power,
@@ -2723,6 +2790,17 @@ def get_eligible_cars(
                 # A. Check Exclusive Allowlist first (strict inclusion)
                 if feat_key in _FEATURE_EXCLUSIVE_ALLOWLIST:
                     if key not in _FEATURE_EXCLUSIVE_ALLOWLIST[feat_key]:
+                        skip = True
+                        break
+                    # STRICT PKDM BUDGET OVERRIDE:
+                    # Kia Sorento base/mid trims in Pakistan omit memory seats.
+                    # Only the AWD HEV trim (₹1Cr+) retains them.
+                    # Physically delete Sorento from memory seat queries under 1 Crore
+                    # so the LLM cannot see it and cannot hallucinate it.
+                    if (feat_key == "memory seats"
+                            and key == "kia:sorento"
+                            and max_budget > 0
+                            and max_budget < 10_000_000):
                         skip = True
                         break
                 # B. Check Impossible Blocklist (strict exclusion)
@@ -3157,9 +3235,10 @@ def resolve_constraints(intent: UserIntent) -> dict:
         prompt_lower_ex = raw_prompt.lower()
         veto_patterns = [
             # Catches: "no fortuner", "strictly no corolla", "without sportage",
-            #          "don't want civic", "except hilux"
-            r'\b(?:strictly\s+no|without|don\'t\s+want|dont\s+want|except)\s+([a-z0-9][a-z0-9\s\-]*?)(?=\s+(?:or|and|with|for|under|must|having|but|\.|,)|$)',
-            r'\bno\s+([a-z0-9][a-z0-9\s\-]*?)(?=\s+(?:or|and|with|for|under|must|having|but|\.|,)|$)',
+            #          "don't want civic", "except hilux", "no Corolla." (punctuation-safe)
+            # Uses [\.,] character class so "no Corolla." (no space before period) is handled.
+            r'\b(?:strictly\s+no|without|don\'t\s+want|dont\s+want|except)\s+([a-z0-9][a-z0-9\s\-]*?)(?=\s+(?:or|and|with|for|under|must|having|but)\b|[\.,!?]|$)',
+            r'\bno\s+([a-z0-9][a-z0-9\s\-]*?)(?=\s+(?:or|and|with|for|under|must|having|but)\b|[\.,!?]|$)',
         ]
         already_excluded = {m.lower() for m in constraints["excluded_models"]}
         for pattern in veto_patterns:
