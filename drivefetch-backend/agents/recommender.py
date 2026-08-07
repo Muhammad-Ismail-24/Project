@@ -2472,8 +2472,14 @@ _SUNROOF_TRIM_KNOWLEDGE: dict[str, list[str]] = {
 #     kei box vans (Wagon R, Bolan, Every) even if budget-eligible.
 # ---------------------------------------------------------------------------
 
-_JDM_HYBRID_RECENT_IMPORTS = {"toyota:aqua", "toyota:prius"}
+_JDM_HYBRID_RECENT_IMPORTS = {"toyota:aqua", "toyota:prius", "honda:insight", "honda:grace", "nissan:note e-power"}
 _JDM_HYBRID_RECENT_FLOOR   = 3_600_000  # ~36 Lakhs PKR — realistic floor for a 2016+ (<=10yr) unit
+_JDM_HYBRID_RECENT_FLOOR_2018 = 3_800_000  # ~38 Lakhs PKR — stricter floor for a 2018+ unit specifically
+
+# City micro-EVs — short real-world range (<150km), suitable ONLY for in-city
+# commuting. Physically incapable of inter-city highway trips (e.g. Islamabad
+# to Lahore is 380km). Hard-blocked when a highway/long-range EV is requested.
+_CITY_MICRO_EVS = {"honri:ve", "rinco:aria", "metro:enfon"}
 
 
 def get_eligible_cars(
@@ -2490,6 +2496,7 @@ def get_eligible_cars(
     powertrain_req: str | None = None,
     min_year_req: int = 0,
     is_luxury_request: bool = False,
+    is_highway_ev: bool = False,
 ) -> str:
     """
     Returns a priority-weighted, fit-score-sorted eligible car list as a prompt string.
@@ -2755,18 +2762,31 @@ def get_eligible_cars(
         hi    = info["hi"]
         make, model = key.split(":", 1)
 
-        # 0b. JDM Hybrid Age-Price Floor Adjustment (Test 48 patch)
-        # A 2016+ (<=10yr old) Toyota Aqua/Prius realistically starts around
-        # PKR 36 Lakhs in the Pakistani used market — the registry's blanket
-        # floor also covers much older, cheaper units. When the user requests
-        # a recent-year hybrid (or explicitly asks for hybrid on one of these
-        # JDM imports), elevate the floor so a stale cheap-old-gen unit can't
-        # silently satisfy a budget that can't actually reach a 2016+ example.
+        # 0b. JDM Hybrid Age-Price Floor Adjustment (Test 48 patch, extended)
+        # A 2016+ (<=10yr old) Toyota Aqua/Prius/Honda Insight/Grace/Nissan Note
+        # e-Power realistically starts around PKR 36 Lakhs in the Pakistani used
+        # market — the registry's blanket floor also covers much older, cheaper
+        # units. When the user requests a recent-year hybrid (or explicitly asks
+        # for hybrid on one of these JDM imports), elevate the floor so a stale
+        # cheap-old-gen unit can't silently satisfy a budget that can't actually
+        # reach a 2016+ example. A 2018+ request tightens the floor further to
+        # ~38 Lakhs, since 2018+ units are scarcer and command a premium.
         if key in _JDM_HYBRID_RECENT_IMPORTS and min_year_req >= 2016:
             # Fires whenever the model itself is an imported JDM hybrid — being
             # in _JDM_HYBRID_RECENT_IMPORTS already satisfies the "powertrain is
             # hybrid OR model is an imported JDM hybrid" condition on its own.
-            lo = max(lo, _JDM_HYBRID_RECENT_FLOOR)
+            if min_year_req >= 2018:
+                lo = max(lo, _JDM_HYBRID_RECENT_FLOOR_2018)
+            else:
+                lo = max(lo, _JDM_HYBRID_RECENT_FLOOR)
+
+        # 0c. City Micro-EV Highway Hard-Gate
+        # Honri VE, Rinco Aria, Metro Enfon have real-world ranges under 150km —
+        # physically incapable of inter-city highway trips. When the user's query
+        # signals a highway/long-range EV need, these are deleted outright rather
+        # than silently scored low, so the LLM can never see or pick them.
+        if is_highway_ev and key in _CITY_MICRO_EVS:
+            continue
 
         # 1. Body style gate
         # SUV and Crossover are treated as interchangeable — Pakistani buyers use
@@ -3052,10 +3072,12 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
         display_lower = f"{make_lower} {model_lower}"
 
         # 1. Strict veto / exclusion gate
-        # Checks both bare model name and "make model" form against excluded_models.
-        # This is the final enforcement line — a vetoed car NEVER passes through.
+        # Checks make, model, and "make model" form independently against
+        # excluded_models. Checking make_lower separately closes a leak where
+        # a bare-make veto ("no Haval") could theoretically miss a model whose
+        # display string construction differs from the registry key format.
         is_vetoed = any(
-            ex in display_lower or ex in model_lower or display_lower in ex
+            ex in display_lower or ex in model_lower or ex in make_lower or display_lower in ex
             for ex in excluded_models
         )
         if is_vetoed:
@@ -3382,11 +3404,38 @@ def resolve_constraints(intent: UserIntent) -> dict:
     if powertrain == "ev":
         constraints["allow_chinese"] = True
 
+    # ── EV Highway / Long-Range Detection ─────────────────────────────────────
+    # City micro-EVs (Honri VE, Rinco Aria, Metro Enfon) have real-world ranges
+    # under 150km and cannot physically complete inter-city highway journeys.
+    # When an EV query pairs with highway/long-distance signals, flag it so
+    # get_eligible_cars() can hard-delete the micro-EVs from the eligible list
+    # rather than letting the LLM hallucinate them into a 380km Islamabad-to-
+    # Lahore recommendation.
+    is_highway_ev = False
+    if powertrain == "ev" and raw_prompt:
+        prompt_lower_hwy = raw_prompt.lower()
+        _HIGHWAY_EV_KEYWORDS = (
+            "highway", "motorway", "lahore", "islamabad to lahore",
+            "karachi to lahore", "long route", "long drive", "long distance",
+            "inter-city", "intercity", "300km", "400km", "380km", "range",
+        )
+        if any(kw in prompt_lower_hwy for kw in _HIGHWAY_EV_KEYWORDS):
+            is_highway_ev = True
+    constraints["is_highway_ev"] = is_highway_ev
+
     # Generate advisory disclaimers based on prompt + constraints
     if raw_prompt:
         constraints["disclaimers"] = generate_disclaimers(raw_prompt, constraints)
     else:
         constraints["disclaimers"] = []
+
+    if is_highway_ev:
+        constraints["disclaimers"].append(
+            "⚠️ EV Range Notice: City micro-EVs (Honri VE, Rinco Aria) have a real-world "
+            "range under 150 km and cannot execute inter-city highway journeys (e.g., "
+            "Islamabad to Lahore is 380 km). Long-range 300km+ EVs start above 70 Lakhs "
+            "PKR in Pakistan."
+        )
 
     # ── Contraband / NCP Legal Compliance Intercept (Test 47) ────────────────
     # NCP ("Non-Custom Paid") vehicles are illegal to operate outside
@@ -3468,13 +3517,14 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         body_style=body_style,
         is_apex_luxury=is_apex_luxury,
         transmission_req=transmission,
-        excluded_models=None,
+        excluded_models=constraints.get("excluded_models"),
         required_features=required_features,
         is_youth_query=is_youth_query,
         drive_req=drive,
         powertrain_req=constraints.get("powertrain"),
         min_year_req=constraints.get("min_year", 0),
         is_luxury_request=is_luxury,
+        is_highway_ev=constraints.get("is_highway_ev", False),
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
@@ -3675,7 +3725,23 @@ async def get_validated_car_targets(constraints: dict) -> list[dict]:
                 powertrain_req   = constraints.get("powertrain"),
                 min_year_req     = constraints.get("min_year", 0),
                 is_luxury_request= constraints.get("is_luxury_request", False),
+                is_highway_ev    = constraints.get("is_highway_ev", False),
             )
+
+            # ── Empty Eligible List Short-Circuit ─────────────────────────────
+            # If Python found zero legitimately eligible cars (impossible
+            # combination — vetoed brands + strict features, micro-EV highway
+            # gridlock, etc.), do NOT invoke the LLM on an empty list. Doing so
+            # previously caused the LLM to hallucinate vetoed models (e.g.
+            # Haval Jolion HEV appearing despite "NO Haval" in the prompt)
+            # because it had nothing legitimate to choose from. Return early
+            # and let the caller receive a clean, possibly-empty result.
+            if eligible_list.startswith("No eligible cars found"):
+                print(
+                    "[Fallback] Eligible list is empty — skipping LLM self-correction "
+                    "to avoid hallucination on a zero-option list."
+                )
+                return _deduplicate_and_format(valid_targets, constraints)
 
             # Already-picked valid makes/models — tell LLM not to repeat them
             already_picked = [
@@ -3759,6 +3825,7 @@ async def get_fallback_recommendations(
         powertrain_req=constraints.get("powertrain"),
         min_year_req=constraints.get("min_year", 0),
         is_luxury_request=is_luxury,
+        is_highway_ev=constraints.get("is_highway_ev", False),
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
@@ -3798,7 +3865,7 @@ async def get_fallback_recommendations(
         if len(raw_list) > 1:
             raw_list = [raw_list[0]]
         valid = [CarTargetRaw.model_validate(item) for item in raw_list]
-        valid = _validate_targets(valid, constraints)
+        valid, _dropped = _validate_targets(valid, constraints)
         return _deduplicate_and_format(valid, constraints)
     except Exception as e:
         print(f"[FallbackMapper] Failed: {e}")
@@ -3835,6 +3902,7 @@ async def get_extended_recommendations(
         powertrain_req=original_constraints.get("powertrain"),
         min_year_req=original_constraints.get("min_year", 0),
         is_luxury_request=is_luxury,
+        is_highway_ev=original_constraints.get("is_highway_ev", False),
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
@@ -3873,7 +3941,7 @@ async def get_extended_recommendations(
         )
         raw_list = json.loads(response_text)
         valid = [CarTargetRaw.model_validate(item) for item in raw_list]
-        valid = _validate_targets(valid, original_constraints)
+        valid, _dropped = _validate_targets(valid, original_constraints)
         return _deduplicate_and_format(valid, original_constraints)
     except Exception as e:
         print(f"[ExtendedMapper] Failed: {e}")
