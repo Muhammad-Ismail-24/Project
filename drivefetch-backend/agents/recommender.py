@@ -2772,6 +2772,7 @@ def get_eligible_cars(
     transmission_req: str | None = None,
     excluded_models: list[str] | None = None,
     required_features: list[str] | None = None,
+    excluded_features: list[str] | None = None,
     is_youth_query: bool = False,
     drive_req: str | None = None,
     powertrain_req: str | None = None,
@@ -3067,7 +3068,6 @@ def get_eligible_cars(
                 continue
 
         # 7b. Excluded Feature Gate
-        excluded_features = constraints.get("excluded_features", [])
         if excluded_features:
             skip_due_to_exclusion = False
             for excl_feat in excluded_features:
@@ -3632,6 +3632,7 @@ def resolve_constraints(intent: UserIntent) -> dict:
         "origin_pref":       intent.origin_pref,
         "is_luxury_request": intent.is_luxury_request,
         "required_features":  intent.required_features,
+        "excluded_features":  intent.excluded_features,
         "strategy_summary":   intent.strategy_summary or "",
         "intent_id":          None,
         "excluded_models":    excluded_models,
@@ -3956,6 +3957,7 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         transmission_req=transmission,
         excluded_models=constraints.get("excluded_models"),
         required_features=required_features,
+        excluded_features=constraints.get("excluded_features"),
         is_youth_query=is_youth_query,
         drive_req=drive,
         powertrain_req=constraints.get("powertrain"),
@@ -4307,6 +4309,7 @@ async def get_validated_car_targets(constraints: dict) -> list[dict]:
                 transmission_req = constraints.get("transmission"),
                 excluded_models  = constraints.get("excluded_models"),
                 required_features= constraints.get("required_features", []),
+                excluded_features= constraints.get("excluded_features"),
                 powertrain_req   = constraints.get("powertrain"),
                 min_year         = constraints.get("min_year", 0),
                 is_luxury_request= constraints.get("is_luxury_request", False),
@@ -4408,6 +4411,7 @@ async def get_fallback_recommendations(
         transmission_req=transmission,
         excluded_models=excluded_models,
         required_features=required_features,
+        excluded_features=constraints.get("excluded_features"),
         drive_req=drive,
         powertrain_req=constraints.get("powertrain"),
         min_year=constraints.get("min_year", 0),
@@ -4487,6 +4491,7 @@ async def get_extended_recommendations(
         transmission_req=transmission,
         excluded_models=excluded_models,
         required_features=required_features,
+        excluded_features=original_constraints.get("excluded_features"),
         drive_req=drive,
         powertrain_req=original_constraints.get("powertrain"),
         min_year=original_constraints.get("min_year", 0),
