@@ -2472,8 +2472,11 @@ _SUNROOF_TRIM_KNOWLEDGE: dict[str, list[str]] = {
 #     kei box vans (Wagon R, Bolan, Every) even if budget-eligible.
 # ---------------------------------------------------------------------------
 
-_JDM_HYBRID_RECENT_IMPORTS = {"toyota:aqua", "toyota:prius", "honda:insight", "honda:grace", "nissan:note e-power"}
-_JDM_HYBRID_RECENT_FLOOR   = 3_600_000  # ~36 Lakhs PKR — realistic floor for a 2016+ (<=10yr) unit
+_JDM_HYBRID_RECENT_IMPORTS = {
+    "toyota:aqua", "toyota:prius", "honda:insight", "honda:grace", "nissan:note e-power",
+    "honda:shuttle", "toyota:vitz", "toyota:passo", "nissan:note",
+}
+_JDM_HYBRID_RECENT_FLOOR   = 3_200_000  # ~32 Lakhs PKR — realistic floor for a 2016+ (<=10yr) unit
 _JDM_HYBRID_RECENT_FLOOR_2018 = 3_800_000  # ~38 Lakhs PKR — stricter floor for a 2018+ unit specifically
 
 # City micro-EVs — short real-world range (<150km), suitable ONLY for in-city
@@ -2494,7 +2497,7 @@ def get_eligible_cars(
     is_youth_query: bool = False,
     drive_req: str | None = None,
     powertrain_req: str | None = None,
-    min_year_req: int = 0,
+    min_year: int = 0,
     is_luxury_request: bool = False,
     is_highway_ev: bool = False,
 ) -> str:
@@ -2756,29 +2759,40 @@ def get_eligible_cars(
                      "daihatsu:tanto", "nissan:roox", "nissan:dayz"}
 
     scored: list[tuple[float, str, int, int, str]] = []  # (score, display, lo, hi, note)
+    _dropped_by_min_year_floor = 0  # tracks drops caused specifically by the JDM year-price floor
 
     for key, info in CAR_REGISTRY.items():
         lo    = info["lo"]
         hi    = info["hi"]
         make, model = key.split(":", 1)
 
-        # 0b. JDM Hybrid Age-Price Floor Adjustment (Test 48 patch, extended)
-        # A 2016+ (<=10yr old) Toyota Aqua/Prius/Honda Insight/Grace/Nissan Note
-        # e-Power realistically starts around PKR 36 Lakhs in the Pakistani used
-        # market — the registry's blanket floor also covers much older, cheaper
-        # units. When the user requests a recent-year hybrid (or explicitly asks
-        # for hybrid on one of these JDM imports), elevate the floor so a stale
+        # 0b. JDM Hybrid Age-Price Floor Adjustment (Test 48/55 patch, extended)
+        # A 2016+ (<=10yr old) recent-year JDM import — Aqua/Prius/Insight/Grace/
+        # Note e-Power/Shuttle/Vitz/Passo/Note — realistically starts well above
+        # the registry's blanket floor, which also covers much older, cheaper
+        # units of the same model. When the user requests a recent-year hybrid
+        # (or one of these specific JDM imports), elevate the floor so a stale
         # cheap-old-gen unit can't silently satisfy a budget that can't actually
-        # reach a 2016+ example. A 2018+ request tightens the floor further to
-        # ~38 Lakhs, since 2018+ units are scarcer and command a premium.
-        if key in _JDM_HYBRID_RECENT_IMPORTS and min_year_req >= 2016:
-            # Fires whenever the model itself is an imported JDM hybrid — being
-            # in _JDM_HYBRID_RECENT_IMPORTS already satisfies the "powertrain is
-            # hybrid OR model is an imported JDM hybrid" condition on its own.
-            if min_year_req >= 2018:
-                lo = max(lo, _JDM_HYBRID_RECENT_FLOOR_2018)
-            else:
-                lo = max(lo, _JDM_HYBRID_RECENT_FLOOR)
+        # reach a genuinely recent-year example. A 2018+ request tightens the
+        # floor further, since 2018+ units are scarcer and command a premium.
+        #
+        # This is a curated explicit list rather than a blanket "jdm" tag match:
+        # the registry's "jdm" tag also covers unrelated kei-car imports (Suzuki
+        # Alto 660cc, Jimny, Hustler, Spacia, Solio) whose registry floors sit
+        # well under this threshold — sweeping those in on tag alone would
+        # wrongly block legitimate budget kei-import searches that have nothing
+        # to do with the hybrid-import pricing problem this gate targets.
+        #
+        # The budget check here is deliberately STRICT (no grace margin), unlike
+        # the general budget overlap gate later in this loop — a query below the
+        # true elevated floor must be dropped outright, not squeeze through on
+        # a 20% grace band meant for ordinary registry pricing spread.
+        if key in _JDM_HYBRID_RECENT_IMPORTS and min_year >= 2016:
+            effective_lo = _JDM_HYBRID_RECENT_FLOOR_2018 if min_year >= 2018 else _JDM_HYBRID_RECENT_FLOOR
+            lo = max(lo, effective_lo)
+            if max_budget > 0 and max_budget < effective_lo:
+                _dropped_by_min_year_floor += 1
+                continue
 
         # 0c. City Micro-EV Highway Hard-Gate
         # Honri VE, Rinco Aria, Metro Enfon have real-world ranges under 150km —
@@ -2983,6 +2997,16 @@ def get_eligible_cars(
         scored.append((final_score, display, lo, hi, note))
 
     if not scored:
+        # If every candidate was dropped specifically by the JDM year-price floor
+        # gate (rather than body style / features / other constraints), surface a
+        # targeted message naming the year requirement as the actual blocker —
+        # this is more actionable than the generic impossibility message below.
+        if _dropped_by_min_year_floor > 0:
+            return (
+                "No eligible cars found matching your minimum year requirement within "
+                "the specified budget. Return an empty array []."
+            )
+
         # Do NOT silently drop feature requirements and retry — that caused the LLM
         # to hallucinate random cars that didn't have the requested features.
         # Instead, return an explicit impossibility message so the caller can handle
@@ -3341,11 +3365,30 @@ def resolve_constraints(intent: UserIntent) -> dict:
                     candidate = sub_candidate.strip()
                     if not candidate or len(candidate) > 30:
                         continue
-                    
+
+                    # Strip common trailing filler words so "haval models" /
+                    # "changan cars" / "kia vehicles" correctly resolve to the
+                    # bare make name ("haval" / "changan" / "kia") instead of
+                    # silently matching nothing in the registry.
+                    clean_candidate = re.sub(
+                        r'\b(models|model|cars|car|vehicles|vehicle|brand|brands|series)\b',
+                        '', candidate, flags=re.IGNORECASE
+                    ).strip()
+                    if not clean_candidate:
+                        continue
+
                     for reg_key in CAR_REGISTRY:
                         make, model = reg_key.split(":", 1)
-                        if candidate in model or candidate == make or candidate in reg_key:
-                            for form in (model, f"{make} {model}"):
+                        if clean_candidate in model or clean_candidate == make or clean_candidate in reg_key:
+                            forms_to_add = [model, f"{make} {model}"]
+                            # Make-level veto ("no Haval") — also add the bare
+                            # make string itself so is_vetoed's make_lower check
+                            # catches it directly, on top of the per-model sweep
+                            # this loop already performs (no break => every
+                            # matching make:model in the registry gets appended).
+                            if clean_candidate == make:
+                                forms_to_add.append(make)
+                            for form in forms_to_add:
                                 if form not in already_excluded:
                                     constraints["excluded_models"].append(form)
                                     already_excluded.add(form)
@@ -3522,7 +3565,7 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         is_youth_query=is_youth_query,
         drive_req=drive,
         powertrain_req=constraints.get("powertrain"),
-        min_year_req=constraints.get("min_year", 0),
+        min_year=constraints.get("min_year", 0),
         is_luxury_request=is_luxury,
         is_highway_ev=constraints.get("is_highway_ev", False),
     )
@@ -3723,7 +3766,7 @@ async def get_validated_car_targets(constraints: dict) -> list[dict]:
                 excluded_models  = constraints.get("excluded_models"),
                 required_features= constraints.get("required_features", []),
                 powertrain_req   = constraints.get("powertrain"),
-                min_year_req     = constraints.get("min_year", 0),
+                min_year         = constraints.get("min_year", 0),
                 is_luxury_request= constraints.get("is_luxury_request", False),
                 is_highway_ev    = constraints.get("is_highway_ev", False),
             )
@@ -3823,7 +3866,7 @@ async def get_fallback_recommendations(
         required_features=required_features,
         drive_req=drive,
         powertrain_req=constraints.get("powertrain"),
-        min_year_req=constraints.get("min_year", 0),
+        min_year=constraints.get("min_year", 0),
         is_luxury_request=is_luxury,
         is_highway_ev=constraints.get("is_highway_ev", False),
     )
@@ -3900,7 +3943,7 @@ async def get_extended_recommendations(
         required_features=required_features,
         drive_req=drive,
         powertrain_req=original_constraints.get("powertrain"),
-        min_year_req=original_constraints.get("min_year", 0),
+        min_year=original_constraints.get("min_year", 0),
         is_luxury_request=is_luxury,
         is_highway_ev=original_constraints.get("is_highway_ev", False),
     )
