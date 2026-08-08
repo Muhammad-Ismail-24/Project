@@ -2935,7 +2935,7 @@ def get_eligible_cars(
             continue
 
         # 3b. Powertrain gate (Hybrid/EV)
-        if powertrain_req and not is_direct_target:
+        if powertrain_req:
             car_tags = info.get("tags", set())
             if powertrain_req == "hybrid" and "hybrid" not in car_tags:
                 continue
@@ -2992,9 +2992,12 @@ def get_eligible_cars(
         #       (unknown = allow, LLM decides).
         #
         #    Both checks run per feature; the first failure short-circuits.
-        if active_feature_gates and not is_direct_target:
+        if active_feature_gates:
             skip = False
             for feat_key in active_feature_gates:
+                # Direct Model Immunity applies to luxury/comfort features, but NEVER physical reality
+                if is_direct_target and feat_key not in {"7 seater", "series hybrid"}:
+                    continue
                 # A. Check Exclusive Allowlist first (strict inclusion)
                 if feat_key in _FEATURE_EXCLUSIVE_ALLOWLIST:
                     if key not in _FEATURE_EXCLUSIVE_ALLOWLIST[feat_key]:
@@ -3374,10 +3377,14 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
         # skipped via `continue` below, rather than falling through to
         # `valid.append(t)` after merely logging a "Dropped" reason.
         feature_violation = False
-        if required_features and info and not is_direct_target:
+        if required_features and info:
             for feat in required_features:
                 feat_lower = feat.lower().strip()
                 normalised = _FEAT_NORMALISE.get(feat_lower, feat_lower)
+
+                # Direct Model Immunity applies to luxury/comfort features, but NEVER physical reality
+                if is_direct_target and normalised not in {"7 seater", "series hybrid"}:
+                    continue
 
                 # Allowlist check — car MUST be in the set to pass
                 if normalised in _FEATURE_EXCLUSIVE_ALLOWLIST:
@@ -3866,8 +3873,10 @@ def resolve_constraints(intent: UserIntent) -> dict:
             f for f in constraints.get("required_features", [])
             if not any(term in f.lower() for term in _CONTRABAND_TERMS)
         ]
-        # UNCONDITIONALLY wipe direct model so smuggled luxury cars don't get VIP immunity
+        # UNCONDITIONALLY wipe direct model and scrub the strategy summary
         intent.direct_model = None
+        constraints["direct_model"] = None
+        constraints["strategy_summary"] = "We have filtered your request for legally registered, tax-paid vehicles matching your budget."
         constraints["disclaimers"].append(
             "⚠️ Legal Compliance Notice: Non-Custom Paid (NCP) vehicles are strictly illegal "
             "outside border regions in Pakistan. The engine has automatically filtered for "
