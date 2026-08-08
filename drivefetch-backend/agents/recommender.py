@@ -1477,6 +1477,24 @@ KEYWORD_INTENT_MAP: list[dict] = [
         "max_budget_cap":    2_800_000,
         "append_features":   [],
     },
+
+    # ── Deterministic 660cc Kei-Car Feature Injection (Test 66) ────────────────
+    # extract_intent() treats "660cc" as an engine-size statement, not a named
+    # "feature", so it wasn't reliably landing in required_features — meaning
+    # the Python _FEATURE_EXCLUSIVE_ALLOWLIST["660cc"] gate never activated and
+    # 1.5L crossovers (BR-V, Juke) leaked through. This deterministic keyword
+    # match guarantees "660cc" always lands in required_features regardless of
+    # how the LLM classifies the phrase.
+    {
+        "intent_id":        "micro_engine_660cc",
+        "keywords":         ["660cc", "660 cc", "sub 660cc", "sub-660cc"],
+        "exclude_keywords": [],
+        "force_body_style":  None,
+        "use_case_override": None,
+        "force_transmission": None,
+        "max_budget_cap":    None,
+        "append_features":   ["660cc"],
+    },
 ]
 
 
@@ -3475,9 +3493,12 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "vehicle AND simultaneously requests an engine under 1200cc (e.g. 'under 1000cc', 'under 1.2L', "
         "'660cc', '800cc', '1000cc'), this combination is mathematically impossible in Pakistan — "
         "no 7-seater MPV or van in the PK market uses an engine below 1200cc. "
-        "You MUST drop the CC constraint from required_features (set required_features to []) to allow "
-        "1.3L–1.5L 7-seater MPVs like Honda BR-V (1.5L) and Suzuki APV (1.3L) to appear, and "
-        "explicitly explain this trade-off in strategy_summary.\n"
+        "You MUST drop ONLY the engine CC constraint from required_features, but you MUST STRICTLY "
+        "KEEP '7 seater' in required_features. Do NOT set required_features to [] if they asked for "
+        "a 7-seater — that would erase the seating requirement along with the CC constraint. "
+        "This allows 1.3L–1.5L 7-seater MPVs like Honda BR-V (1.5L) and Suzuki APV (1.3L) to appear "
+        "while still enforcing the 7-seat requirement. Explicitly explain this trade-off in "
+        "strategy_summary.\n"
         "- Leave null if not clearly stated — do not guess."
     )
     response_text = await generate_content_resilient(
@@ -3740,6 +3761,11 @@ def resolve_constraints(intent: UserIntent) -> dict:
         if mapped_model:
             constraints["strategy_summary"] = f"You specifically asked for a {mapped_model.title()}. We've included budget-eligible variants of the {mapped_model.title()} alongside its closest market competitors to give you a complete picture."
 
+    # Preserve the raw user prompt so the final AI sanitizer (Phase 3) can
+    # re-check the finished recommendation list against the buyer's original
+    # words one last time, independent of any structured field extraction.
+    constraints["user_prompt"] = raw_prompt
+
     return constraints
 
 
@@ -3957,6 +3983,97 @@ def _deduplicate_and_format(
 _deduplicate_and_format_targets = _deduplicate_and_format
 
 
+class SanitizerVerdict(BaseModel):
+    violating_indices: list[int] = Field(
+        default_factory=list,
+        description=(
+            "0-based indices into the proposed car list that violate a hard user "
+            "constraint and must be removed. Empty list means all cars are compliant."
+        ),
+    )
+    violation_reasons: list[str] = Field(
+        default_factory=list,
+        description="Brief reason for each violation, in the same order as violating_indices.",
+    )
+
+
+async def run_final_ai_sanitizer(formatted_targets: list[dict], user_prompt: str) -> list[dict]:
+    """
+    Phase 3 — Final AI QA Sanitizer (last line of defense).
+
+    Re-checks the fully-formatted, already-Python-validated output against the
+    buyer's raw words one more time, using LLM judgment for constraints that
+    are hard to express as a deterministic Python gate (e.g. "does this model
+    physically seat 7" when a novel phrasing slipped past every upstream gate).
+
+    Design note — index-flagging, not regeneration: the LLM is asked to return
+    WHICH indices violate a hard constraint, not to reproduce the car objects
+    itself. Python then filters using those indices. This guarantees a
+    surviving car's fields are byte-identical to what the deterministic
+    pipeline already produced — the LLM's only power here is to flag a car for
+    removal, never to rewrite make/model/trim/budget/rationale text. Asking an
+    LLM to "echo back the compliant objects" risks subtle drift (reworded
+    rationale, altered budget numbers) even when it's only supposed to filter.
+
+    Fail-open, not fail-empty: if the call errors for any reason, the original
+    list is returned unchanged. A sanitizer hiccup must never zero out an
+    already-valid result — every car here already passed budget, style,
+    transmission, veto, and feature gates before reaching this point, so the
+    prior of "these are fine" is already high.
+    """
+    if not formatted_targets:
+        return []
+
+    car_list_str = "\n".join(
+        f"  [{i}] {c['make']} {c['model']} (trim: {c['trim'] or 'unspecified'}) — {c['rationale']}"
+        for i, c in enumerate(formatted_targets)
+    )
+
+    prompt = (
+        f"You are a strict QA Auditor for an automotive recommendation engine.\n"
+        f"User's raw query: '{user_prompt}'\n\n"
+        f"The system is proposing these cars:\n{car_list_str}\n\n"
+        f"TASK: Check EACH proposed car against the user's HARD constraints only — "
+        f"seating capacity, engine displacement, body style, and explicit brand/model "
+        f"vetoes. Soft preferences, style opinions, or subjective fit are NOT hard "
+        f"constraints and must not cause a flag.\n"
+        f"- If the user asked for a 7-seater, flag any car that does not physically seat 7.\n"
+        f"- If the user asked for a specific engine size (e.g. 660cc), flag any car that "
+        f"is not genuinely that engine size.\n"
+        f"- If the user explicitly vetoed a brand or model, flag it if present in the list.\n"
+        f"Return the 0-based indices of any VIOLATING cars in violating_indices, with a "
+        f"short reason for each in violation_reasons (same order, same length). "
+        f"If every car is compliant, return empty lists for both — do not flag a car just "
+        f"because you would have picked something else."
+    )
+
+    try:
+        response_text = await generate_content_resilient(
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=SanitizerVerdict,
+                temperature=0.0,
+            ),
+        )
+        verdict = SanitizerVerdict.model_validate_json(response_text)
+
+        if verdict.violating_indices:
+            reasons = verdict.violation_reasons or []
+            for pos, idx in enumerate(verdict.violating_indices):
+                if 0 <= idx < len(formatted_targets):
+                    car = formatted_targets[idx]
+                    reason = reasons[pos] if pos < len(reasons) else "flagged by sanitizer"
+                    print(f"[Sanitizer] Flagging {car['make']} {car['model']}: {reason}")
+
+        violating_set = {i for i in verdict.violating_indices if 0 <= i < len(formatted_targets)}
+        return [c for i, c in enumerate(formatted_targets) if i not in violating_set]
+
+    except Exception as e:
+        print(f"[Sanitizer] Failed: {e} — returning original list unfiltered (fail-open)")
+        return formatted_targets
+
+
 # ---------------------------------------------------------------------------
 # AGENTIC SELF-CORRECTION WRAPPER
 # Wraps select_car_targets with a one-shot LLM retry when the validator drops
@@ -4016,7 +4133,8 @@ async def get_validated_car_targets(constraints: dict) -> list[dict]:
                     "[Fallback] Eligible list is empty — skipping LLM self-correction "
                     "to avoid hallucination on a zero-option list."
                 )
-                return _deduplicate_and_format(valid_targets, constraints)
+                formatted = _deduplicate_and_format(valid_targets, constraints)
+                return await run_final_ai_sanitizer(formatted, constraints.get("user_prompt", ""))
 
             # Already-picked valid makes/models — tell LLM not to repeat them
             already_picked = [
@@ -4062,7 +4180,8 @@ async def get_validated_car_targets(constraints: dict) -> list[dict]:
             except Exception as e:
                 print(f"[Fallback] Self-correction LLM call failed: {e}")
 
-    return _deduplicate_and_format(valid_targets, constraints)
+    formatted = _deduplicate_and_format(valid_targets, constraints)
+    return await run_final_ai_sanitizer(formatted, constraints.get("user_prompt", ""))
 
 
 # ---------------------------------------------------------------------------
