@@ -3866,8 +3866,8 @@ def resolve_constraints(intent: UserIntent) -> dict:
             f for f in constraints.get("required_features", [])
             if not any(term in f.lower() for term in _CONTRABAND_TERMS)
         ]
-        if intent.direct_model and any(term in intent.direct_model.lower() for term in _CONTRABAND_TERMS):
-            intent.direct_model = None
+        # UNCONDITIONALLY wipe direct model so smuggled luxury cars don't get VIP immunity
+        intent.direct_model = None
         constraints["disclaimers"].append(
             "⚠️ Legal Compliance Notice: Non-Custom Paid (NCP) vehicles are strictly illegal "
             "outside border regions in Pakistan. The engine has automatically filtered for "
@@ -4224,7 +4224,7 @@ async def run_final_ai_sanitizer(formatted_targets: list[dict], user_prompt: str
         f"is not genuinely that engine size is NON-COMPLIANT.\n"
         f"- If the user explicitly forbids an engine size (e.g., 'no 660cc', 'not 1000cc'), any car featuring that engine size or trim is NON-COMPLIANT.\n"
         f"- If the user explicitly forbids imported JDM cars, any car with origin_type 'Imported JDM' or having 'JDM'/'660cc' in its trim/rationale is NON-COMPLIANT.\n"
-        f"- DIRECT MODEL EXCEPTION: If the user explicitly asks for a specific car by name (e.g., 'Suzuki Alto', 'Civic') in their prompt, DO NOT flag that specific car for body style, engine size, or feature violations. The explicit model request overrides those constraints.\n"
+        f"- DIRECT MODEL EXCEPTION: If the user explicitly asks for a specific car by name (e.g., 'Suzuki Alto'), you may ignore Body Style or Engine Size mismatches for that specific car. HOWEVER, Seating Capacity (e.g., '7-seater') and Powertrain/Fuel (e.g., 'EV', 'Diesel') are absolute laws of physics. If a user asks for a '7-seater Alto', you MUST flag the Alto as NON-COMPLIANT because it physically cannot seat 7 people. Do not violate physical reality.\n"
         f"For each car, return model_name as exactly '{{make}} {{model}}' using the "
         f"make/model fields given above, plus is_compliant, and — only when "
         f"is_compliant is false — a brief rejection_reason. Evaluate every car in the "

@@ -1,33 +1,39 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 // Import Layout
 import MainLayout from './layouts/MainLayout';
 
 // Import Pages
-import Home from './pages/Home';
-import SavedCarsPage from './pages/SavedCarsPage';
-import CalculatorsHub from './pages/CalculatorsHub';
-import ChatPage from './pages/ChatPage';
-import About from './pages/About';
-import RecommendPage from './pages/RecommendPage'; // <--- IMPORT RECOMMENDER PAGE
+const Home = lazy(() => import('./pages/Home'));
+const SavedCarsPage = lazy(() => import('./pages/SavedCarsPage'));
+const CalculatorsHub = lazy(() => import('./pages/CalculatorsHub'));
+const ChatPage = lazy(() => import('./pages/ChatPage'));
+const About = lazy(() => import('./pages/About'));
+const RecommendPage = lazy(() => import('./pages/RecommendPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<MainLayout />}>
-          {/* Default Route */}
-          <Route index element={<Home />} />
-          
-          {/* Page Routes */}
-          <Route path="saved" element={<SavedCarsPage />} />
-          <Route path="calculators" element={<CalculatorsHub />} />
-          <Route path="chat" element={<ChatPage />} />
-          <Route path="about" element={<About />} />
-          <Route path="recommend" element={<RecommendPage />} /> {/* <--- NEW ROUTE */}
-        </Route>
-      </Routes>
+      <Suspense fallback={<div className="flex h-screen items-center justify-center text-gray-500">Loading...</div>}>
+        <Routes>
+          <Route path="/" element={<MainLayout />}>
+            {/* Default Route */}
+            <Route index element={<Home />} />
+            
+            {/* Page Routes */}
+            <Route path="saved" element={<SavedCarsPage />} />
+            <Route path="calculators" element={<CalculatorsHub />} />
+            <Route path="chat" element={<ChatPage />} />
+            <Route path="about" element={<About />} />
+            <Route path="recommend" element={<RecommendPage />} /> {/* <--- NEW ROUTE */}
+            
+            {/* Catch-all 404 Route */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

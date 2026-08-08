@@ -155,7 +155,9 @@ export default function MainLayout() {
 
       {/* Main Content Area */}
       <main className="relative z-10 pt-20">
-        <Outlet context={{ assistantName, setAssistantName }} />
+        <React.Suspense fallback={<div className="flex h-[calc(100vh-5rem)] items-center justify-center text-gray-500">Loading...</div>}>
+          <Outlet context={{ assistantName, setAssistantName }} />
+        </React.Suspense>
       </main>
 
       {/* Preferences Drawer */}

@@ -9,6 +9,7 @@ import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Environment, ContactShadows, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
+import bmwModelUrl from '../assets/bmwm5.glb?url';
 
 // ─── Reveal ────────────────────────────────────────────────────────────────────
 const REVEAL_DURATION    = 1.6;
@@ -39,7 +40,7 @@ const PARALLAX_Y = 0.14;
 
 
 function BmwModel() {
-  const { scene }  = useGLTF('/bmwm5.glb');
+  const { scene }  = useGLTF(bmwModelUrl);
   const carRef     = useRef();
   const materialsRef = useRef([]);
 
@@ -247,4 +248,4 @@ export default function Background3DShell() {
   );
 }
 
-useGLTF.preload('/bmwm5.glb');
+useGLTF.preload(bmwModelUrl);

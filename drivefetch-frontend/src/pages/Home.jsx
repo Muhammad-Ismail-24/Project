@@ -1,7 +1,7 @@
 import { searchCars } from '../utils/api';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { motion } from 'framer-motion';
-import Background3DShell from '../components/Background3DShell';
+const Background3DShell = lazy(() => import('../components/Background3DShell'));
 import SearchBar from '../components/SearchBar';
 import CarResultCard from '../components/CarResultCard';
 import { ShieldCheck, Database, Sparkles, AlertCircle, Loader2, Car } from 'lucide-react';
@@ -115,7 +115,9 @@ export default function Home() {
         />
       </div>
 
-      <Background3DShell />
+      <Suspense fallback={<div className="fixed inset-0 z-0 w-full h-full pointer-events-none bg-transparent"></div>}>
+        <Background3DShell />
+      </Suspense>
 
       <div className="relative z-10 w-full">
 
