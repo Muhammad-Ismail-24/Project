@@ -1478,23 +1478,7 @@ KEYWORD_INTENT_MAP: list[dict] = [
         "append_features":   [],
     },
 
-    # ── Deterministic 660cc Kei-Car Feature Injection (Test 66) ────────────────
-    # extract_intent() treats "660cc" as an engine-size statement, not a named
-    # "feature", so it wasn't reliably landing in required_features — meaning
-    # the Python _FEATURE_EXCLUSIVE_ALLOWLIST["660cc"] gate never activated and
-    # 1.5L crossovers (BR-V, Juke) leaked through. This deterministic keyword
-    # match guarantees "660cc" always lands in required_features regardless of
-    # how the LLM classifies the phrase.
-    {
-        "intent_id":        "micro_engine_660cc",
-        "keywords":         ["660cc", "660 cc", "sub 660cc", "sub-660cc"],
-        "exclude_keywords": [],
-        "force_body_style":  None,
-        "use_case_override": None,
-        "force_transmission": None,
-        "max_budget_cap":    None,
-        "append_features":   ["660cc"],
-    },
+
 ]
 
 
@@ -3619,6 +3603,11 @@ def resolve_constraints(intent: UserIntent) -> dict:
     if intent.current_car:
         excluded_models.append(intent.current_car)
 
+    excluded_features = []
+    for f in intent.excluded_features:
+        f_lower = f.lower().strip()
+        excluded_features.append(_FEAT_NORMALISE.get(f_lower, f_lower))
+
     constraints = {
         "min_budget":        min_budget,
         "max_budget":        max_budget,
@@ -3632,7 +3621,7 @@ def resolve_constraints(intent: UserIntent) -> dict:
         "origin_pref":       intent.origin_pref,
         "is_luxury_request": intent.is_luxury_request,
         "required_features":  intent.required_features,
-        "excluded_features":  intent.excluded_features,
+        "excluded_features":  excluded_features,
         "strategy_summary":   intent.strategy_summary or "",
         "intent_id":          None,
         "excluded_models":    excluded_models,
