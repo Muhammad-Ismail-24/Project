@@ -2757,6 +2757,7 @@ def get_eligible_cars(
     excluded_models: list[str] | None = None,
     required_features: list[str] | None = None,
     excluded_features: list[str] | None = None,
+    direct_model_req: str | None = None,
     is_youth_query: bool = False,
     drive_req: str | None = None,
     powertrain_req: str | None = None,
@@ -2841,6 +2842,12 @@ def get_eligible_cars(
         hi    = info["hi"]
         make, model = key.split(":", 1)
 
+        is_direct_target = False
+        if direct_model_req:
+            dm_lower = direct_model_req.lower()
+            if dm_lower == model.lower() or dm_lower == f"{make} {model}".lower():
+                is_direct_target = True
+
         # 0a. Diesel-Electric Hybrid Paradox — unconditional zero-out (Test 74)
         # No diesel-electric hybrid exists in this registry at any price point
         # or budget — every "hybrid"-tagged model here is petrol-electric.
@@ -2892,7 +2899,7 @@ def get_eligible_cars(
         # SUV and Crossover are treated as interchangeable — Pakistani buyers use
         # both terms for the same category. Kia Sorento, Oshan X7, Tiggo 8 Pro etc.
         # are classified as "Crossover" in registry but must pass an "SUV" query.
-        if body_style:
+        if body_style and not is_direct_target:
             allowed_styles = {body_style}
             if body_style == "SUV":
                 allowed_styles.add("Crossover")
@@ -2928,7 +2935,7 @@ def get_eligible_cars(
             continue
 
         # 3b. Powertrain gate (Hybrid/EV)
-        if powertrain_req:
+        if powertrain_req and not is_direct_target:
             car_tags = info.get("tags", set())
             if powertrain_req == "hybrid" and "hybrid" not in car_tags:
                 continue
@@ -2985,7 +2992,7 @@ def get_eligible_cars(
         #       (unknown = allow, LLM decides).
         #
         #    Both checks run per feature; the first failure short-circuits.
-        if active_feature_gates:
+        if active_feature_gates and not is_direct_target:
             skip = False
             for feat_key in active_feature_gates:
                 # A. Check Exclusive Allowlist first (strict inclusion)
@@ -3052,7 +3059,7 @@ def get_eligible_cars(
                 continue
 
         # 7b. Excluded Feature Gate
-        if excluded_features:
+        if excluded_features and not is_direct_target:
             skip_due_to_exclusion = False
             for excl_feat in excluded_features:
                 excl_feat_lower = excl_feat.lower().strip()
@@ -3247,6 +3254,7 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
     origin_pref       = constraints.get("origin_pref")
     excluded_models   = {m.lower() for m in (constraints.get("excluded_models") or [])}
     required_features = constraints.get("required_features") or []
+    direct_model_req  = constraints.get("direct_model")
 
     valid:           list     = []
     dropped_reasons: list[str] = []
@@ -3257,6 +3265,12 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
         key           = f"{make_lower}:{model_lower}"
         info          = CAR_REGISTRY.get(key)
         display_lower = f"{make_lower} {model_lower}"
+
+        is_direct_target = False
+        if direct_model_req:
+            dm_lower = direct_model_req.lower()
+            if dm_lower == model_lower or dm_lower == display_lower:
+                is_direct_target = True
 
         # 1. Strict veto / exclusion gate
         # Checks make, model, and "make model" form independently against
@@ -3293,7 +3307,7 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
             continue
 
         # 3. Body style gate — SUV/Crossover treated as interchangeable (mirror of gate in get_eligible_cars)
-        if info and body_style:
+        if info and body_style and not is_direct_target:
             allowed_styles = {body_style}
             if body_style == "SUV":
                 allowed_styles.add("Crossover")
@@ -3360,7 +3374,7 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
         # skipped via `continue` below, rather than falling through to
         # `valid.append(t)` after merely logging a "Dropped" reason.
         feature_violation = False
-        if required_features and info:
+        if required_features and info and not is_direct_target:
             for feat in required_features:
                 feat_lower = feat.lower().strip()
                 normalised = _FEAT_NORMALISE.get(feat_lower, feat_lower)
@@ -3386,7 +3400,7 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
 
         # 7b. Excluded Feature Gate
         excluded_features = constraints.get("excluded_features", [])
-        if excluded_features and info:
+        if excluded_features and info and not is_direct_target:
             skip_due_to_exclusion = False
             for excl_feat in excluded_features:
                 excl_feat_lower = excl_feat.lower().strip()
@@ -3882,11 +3896,13 @@ def resolve_constraints(intent: UserIntent) -> dict:
             )
 
     # Detect direct model request and override strategy summary
+    constraints["direct_model"] = None
     if intent.direct_model:
         model_lower = intent.direct_model.lower().strip()
         # Direct lookup first, or fallback to the provided string if not in the alias map
         mapped_model = _CANONICAL_MODEL_MAP.get(model_lower, intent.direct_model)
         if mapped_model:
+            constraints["direct_model"] = mapped_model
             constraints["strategy_summary"] = f"You specifically asked for a {mapped_model.title()}. We've included budget-eligible variants of the {mapped_model.title()} alongside its closest market competitors to give you a complete picture."
 
     # Preserve the raw user prompt so the final AI sanitizer (Phase 3) can
@@ -3947,6 +3963,7 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         excluded_models=constraints.get("excluded_models"),
         required_features=required_features,
         excluded_features=constraints.get("excluded_features"),
+        direct_model_req=constraints.get("direct_model"),
         is_youth_query=is_youth_query,
         drive_req=drive,
         powertrain_req=constraints.get("powertrain"),
@@ -4207,6 +4224,7 @@ async def run_final_ai_sanitizer(formatted_targets: list[dict], user_prompt: str
         f"is not genuinely that engine size is NON-COMPLIANT.\n"
         f"- If the user explicitly forbids an engine size (e.g., 'no 660cc', 'not 1000cc'), any car featuring that engine size or trim is NON-COMPLIANT.\n"
         f"- If the user explicitly forbids imported JDM cars, any car with origin_type 'Imported JDM' or having 'JDM'/'660cc' in its trim/rationale is NON-COMPLIANT.\n"
+        f"- DIRECT MODEL EXCEPTION: If the user explicitly asks for a specific car by name (e.g., 'Suzuki Alto', 'Civic') in their prompt, DO NOT flag that specific car for body style, engine size, or feature violations. The explicit model request overrides those constraints.\n"
         f"For each car, return model_name as exactly '{{make}} {{model}}' using the "
         f"make/model fields given above, plus is_compliant, and — only when "
         f"is_compliant is false — a brief rejection_reason. Evaluate every car in the "
@@ -4299,6 +4317,7 @@ async def get_validated_car_targets(constraints: dict) -> list[dict]:
                 excluded_models  = constraints.get("excluded_models"),
                 required_features= constraints.get("required_features", []),
                 excluded_features= constraints.get("excluded_features"),
+                direct_model_req = constraints.get("direct_model"),
                 powertrain_req   = constraints.get("powertrain"),
                 min_year         = constraints.get("min_year", 0),
                 is_luxury_request= constraints.get("is_luxury_request", False),
@@ -4401,6 +4420,7 @@ async def get_fallback_recommendations(
         excluded_models=excluded_models,
         required_features=required_features,
         excluded_features=constraints.get("excluded_features"),
+        direct_model_req=constraints.get("direct_model"),
         drive_req=drive,
         powertrain_req=constraints.get("powertrain"),
         min_year=constraints.get("min_year", 0),
@@ -4481,6 +4501,7 @@ async def get_extended_recommendations(
         excluded_models=excluded_models,
         required_features=required_features,
         excluded_features=original_constraints.get("excluded_features"),
+        direct_model_req=original_constraints.get("direct_model"),
         drive_req=drive,
         powertrain_req=original_constraints.get("powertrain"),
         min_year=original_constraints.get("min_year", 0),
