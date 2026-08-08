@@ -2779,6 +2779,7 @@ def get_eligible_cars(
     is_luxury_request: bool = False,
     is_highway_ev: bool = False,
     origin_pref: str | None = None,
+    is_diesel_hybrid_query: bool = False,
 ) -> str:
     """
     Returns a priority-weighted, fit-score-sorted eligible car list as a prompt string.
@@ -2799,6 +2800,13 @@ def get_eligible_cars(
     avoid disturbing the existing reference list):
       • origin_pref=="European" — hard-drops every non-European make (Test 63).
         See _EUROPEAN_MAKES.
+      • origin_pref=="Local" — hard-drops every "jdm"-tagged model, forcing
+        locally-assembled variants (e.g. suzuki:alto over suzuki:alto 660cc)
+        (Test 71/72).
+      • is_diesel_hybrid_query — unconditional zero-out: no diesel-electric
+        hybrid exists in this registry at any price, so every model is
+        dropped outright rather than silently substituting a petrol hybrid
+        (Test 74).
       • Legacy luxury feature price-floor — Prado/Land Cruiser dropped for
         memory-seats/360-camera/HUD queries under PKR 1.5 Crore (Test 54).
         See _LEGACY_LUXURY_FEATURE_FLOOR.
@@ -2847,6 +2855,17 @@ def get_eligible_cars(
         lo    = info["lo"]
         hi    = info["hi"]
         make, model = key.split(":", 1)
+
+        # 0a. Diesel-Electric Hybrid Paradox — unconditional zero-out (Test 74)
+        # No diesel-electric hybrid exists in this registry at any price point
+        # or budget — every "hybrid"-tagged model here is petrol-electric.
+        # Rather than surgically dropping only hybrid-tagged cars (which would
+        # still let plain non-hybrid petrol cars slip through and silently
+        # answer a request the user didn't make), this drops EVERYTHING
+        # unconditionally so the pipeline reaches a clean, honest zero-hit —
+        # matching the disclaimer already injected in resolve_constraints.
+        if is_diesel_hybrid_query:
+            continue
 
         # 0b. JDM Hybrid Age-Price Floor Adjustment (Test 48/55 patch, extended)
         # A 2016+ (<=10yr old) recent-year JDM import — Aqua/Prius/Insight/Grace/
@@ -2901,16 +2920,20 @@ def get_eligible_cars(
         if info["chinese"] and not allow_chinese:
             continue
 
-        # 2b. Origin Preference Hard Gate (Test 63 patch)
+        # 2b. Origin Preference Hard Gate (Test 63 European + Test 71/72 Local)
         # origin_pref was already being threaded into the target-selection LLM
         # prompt as a soft "prefer JDM" signal (see select_car_targets), but
         # had ZERO deterministic enforcement here — a "European only" request
         # could still see Corolla/Civic pass every other gate and get
         # surfaced to the LLM as eligible. This is a hard filter: non-European
-        # makes are removed outright when origin_pref == "European". JDM /
-        # Chinese / Local origin_pref remain soft, prompt-level signals only —
-        # unchanged by this patch.
+        # makes are removed outright when origin_pref == "European", and
+        # every "jdm"-tagged model is removed outright when origin_pref ==
+        # "Local" (e.g. suzuki:alto 660cc is dropped, forcing the locally-
+        # assembled suzuki:alto to be the one offered). Chinese origin_pref
+        # remains a soft, prompt-level signal only — unchanged by this patch.
         if origin_pref == "European" and make not in _EUROPEAN_MAKES:
+            continue
+        if origin_pref == "Local" and "jdm" in info.get("tags", set()):
             continue
 
         # 3. Transmission gate
@@ -3251,10 +3274,15 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
             dropped_reasons.append(reason)
             continue
 
-        # 2b. Origin Preference Hard Gate (Test 63 patch, mirrors get_eligible_cars)
+        # 2b. Origin Preference Hard Gate (Test 63 European + Test 71/72 Local, mirrors get_eligible_cars)
         if info and origin_pref == "European" and make_lower not in _EUROPEAN_MAKES:
             reason = f"Dropped {t.make} {t.model}: Not a European make; user requested European origin only."
             print(f"[Validator] Dropping {t.make} {t.model} — non-European make for European-only query")
+            dropped_reasons.append(reason)
+            continue
+        if info and origin_pref == "Local" and "jdm" in info.get("tags", set()):
+            reason = f"Dropped {t.make} {t.model}: Imported JDM model; user explicitly requested local PKDM assembly."
+            print(f"[Validator] Dropping {t.make} {t.model} — JDM model for Local-only query")
             dropped_reasons.append(reason)
             continue
 
@@ -3752,6 +3780,22 @@ def resolve_constraints(intent: UserIntent) -> dict:
             "PKR in Pakistan."
         )
 
+    # ── Local PKDM Assembly Keyword Fallback (Test 71/72) ────────────────────
+    # origin_pref is primarily LLM-extracted, but "local"/"pkdm"/"locally
+    # assembled"/"pakistani assembled" phrasing is common and important
+    # enough (it now flips a hard registry gate in get_eligible_cars) to also
+    # get a deterministic Python-side detector as a backup — same
+    # defense-in-depth pattern as the excluded_brands/excluded_models regex
+    # safety nets elsewhere in this function. No-op if the LLM already set
+    # origin_pref == "Local". NOTE: the bare term "local" is intentionally
+    # broad-matched, consistent with this file's existing keyword-detection
+    # style elsewhere (e.g. the contraband/NCP terms below) — flag to revisit
+    # if it ever proves too eager on real traffic.
+    _LOCAL_ASSEMBLY_TERMS = ("local", "pkdm", "locally assembled", "pakistani assembled", "pak assembled")
+    if raw_prompt and constraints.get("origin_pref") != "Local":
+        if any(term in raw_prompt.lower() for term in _LOCAL_ASSEMBLY_TERMS):
+            constraints["origin_pref"] = "Local"
+
     # ── Contraband / NCP Legal Compliance Intercept (Test 47) ────────────────
     # NCP ("Non-Custom Paid") vehicles are illegal to operate outside
     # Pakistan's designated border/tribal regions. If the raw prompt requests
@@ -3773,6 +3817,27 @@ def resolve_constraints(intent: UserIntent) -> dict:
             "outside border regions in Pakistan. The engine has automatically filtered for "
             "legally registered, tax-paid alternatives in your target city."
         )
+
+    # ── Diesel-Electric Hybrid Paradox Intercept (Test 74) ────────────────────
+    # No diesel-electric hybrid crossover exists in the Pakistani market under
+    # PKR 90 Lakhs — every local/JDM hybrid crossover in this registry
+    # (Corolla Cross, Haval HEV, Honda Vezel, Fronx, etc.) is petrol-electric.
+    # Detected directly from raw_prompt so get_eligible_cars() can cleanly
+    # zero out rather than silently substituting a petrol hybrid the user
+    # never asked for.
+    _DIESEL_TERMS = ("diesel",)
+    _HYBRID_TERMS = ("hybrid", "hev", "phev")
+    if raw_prompt:
+        _prompt_lower_dh = raw_prompt.lower()
+        if (any(t in _prompt_lower_dh for t in _DIESEL_TERMS)
+                and any(t in _prompt_lower_dh for t in _HYBRID_TERMS)):
+            constraints["is_diesel_hybrid_query"] = True
+            constraints["disclaimers"].append(
+                "⚠️ Fuel Disclaimer: Diesel-Electric Hybrids are extremely rare and "
+                "unavailable in crossover body styles under PKR 90 Lakhs in Pakistan. "
+                "Mainstream hybrid crossovers (Corolla Cross, Haval HEV, Honda Vezel) "
+                "use petrol-electric powertrains."
+            )
 
     # Detect direct model request and override strategy summary
     if intent.direct_model:
@@ -3846,6 +3911,7 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         is_luxury_request=is_luxury,
         is_highway_ev=constraints.get("is_highway_ev", False),
         origin_pref=origin_pref,
+        is_diesel_hybrid_query=constraints.get("is_diesel_hybrid_query", False),
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
@@ -4004,68 +4070,103 @@ def _deduplicate_and_format(
 _deduplicate_and_format_targets = _deduplicate_and_format
 
 
-class SanitizerVerdict(BaseModel):
-    violating_indices: list[int] = Field(
-        default_factory=list,
+class AuditItem(BaseModel):
+    model_name: str = Field(description="Exactly 'Make Model' as given in the candidate list, e.g. 'Toyota Corolla Cross'.")
+    is_compliant: bool = Field(
         description=(
-            "0-based indices into the proposed car list that violate a hard user "
-            "constraint and must be removed. Empty list means all cars are compliant."
-        ),
+            "False if this car violates ANY user hard constraint (e.g. JDM car when "
+            "local PKDM requested, petrol hybrid when diesel hybrid requested, wrong "
+            "seating capacity, vetoed brand/model)."
+        )
     )
-    violation_reasons: list[str] = Field(
-        default_factory=list,
-        description="Brief reason for each violation, in the same order as violating_indices.",
-    )
+    rejection_reason: str = Field(default="", description="Brief reason if is_compliant is false.")
+
+
+class AuditReport(BaseModel):
+    evaluations: list[AuditItem] = Field(default_factory=list)
 
 
 async def run_final_ai_sanitizer(formatted_targets: list[dict], user_prompt: str) -> list[dict]:
     """
-    Phase 3 — Final AI QA Sanitizer (last line of defense).
+    Phase 3 — Final AI QA Sanitizer (last line of defense), rebuilt as an
+    iron-clad gatekeeper with full registry-metadata context (Test 71/72/74).
 
-    Re-checks the fully-formatted, already-Python-validated output against the
-    buyer's raw words one more time, using LLM judgment for constraints that
-    are hard to express as a deterministic Python gate (e.g. "does this model
-    physically seat 7" when a novel phrasing slipped past every upstream gate).
+    Each candidate is enriched with its CAR_REGISTRY origin_type (Imported
+    JDM / Chinese / Local-Mainstream) and tags before the audit LLM sees it,
+    so it can correctly judge origin/assembly and powertrain constraints that
+    aren't visible from make/model/trim/rationale text alone — e.g. flagging
+    a JDM-tagged car against a "local assembly only" request, or a petrol
+    hybrid against a "diesel hybrid" request.
 
-    Design note — index-flagging, not regeneration: the LLM is asked to return
-    WHICH indices violate a hard constraint, not to reproduce the car objects
-    itself. Python then filters using those indices. This guarantees a
-    surviving car's fields are byte-identical to what the deterministic
-    pipeline already produced — the LLM's only power here is to flag a car for
-    removal, never to rewrite make/model/trim/budget/rationale text. Asking an
-    LLM to "echo back the compliant objects" risks subtle drift (reworded
-    rationale, altered budget numbers) even when it's only supposed to filter.
+    Design note — name-matched, not regenerated: the LLM returns a
+    model_name + is_compliant verdict per car, not the car objects
+    themselves. Python matches each verdict back to its candidate by
+    normalised "make model" and filters using that — the LLM's only power
+    is to flag a car for removal, never to rewrite make/model/trim/budget/
+    rationale text. Matching by name (rather than index) is safe here
+    specifically because _deduplicate_and_format() upstream already
+    guarantees no two candidates in formatted_targets share the same
+    (make, model) pair.
 
-    Fail-open, not fail-empty: if the call errors for any reason, the original
-    list is returned unchanged. A sanitizer hiccup must never zero out an
-    already-valid result — every car here already passed budget, style,
-    transmission, veto, and feature gates before reaching this point, so the
-    prior of "these are fine" is already high.
+    Two distinct "empty" behaviours, deliberately different:
+      • Fail-OPEN on error: if the API call itself errors (network, timeout,
+        malformed response), the original list is returned UNCHANGED. A
+        sanitizer hiccup must never zero out an already-valid, already-
+        Python-vetted result.
+      • Fail-CLOSED (zero-hit) on confirmed non-compliance: if the call
+        succeeds and every candidate is genuinely flagged non-compliant,
+        an empty list IS returned — the system must show a clean zero-hit
+        brief rather than silently falling back to cars the audit itself
+        just rejected. This is the "iron-clad" half of the rebuild.
+    A candidate with no returned evaluation at all (LLM skipped it) is
+    treated as compliant rather than penalised for an incomplete response —
+    same fail-open bias as the error case above, just applied per-item.
     """
     if not formatted_targets:
         return []
 
-    car_list_str = "\n".join(
-        f"  [{i}] {c['make']} {c['model']} (trim: {c['trim'] or 'unspecified'}) — {c['rationale']}"
-        for i, c in enumerate(formatted_targets)
-    )
+    enriched_candidates = []
+    for car in formatted_targets:
+        key = f"{car['make'].lower()}:{car['model'].lower()}"
+        info = CAR_REGISTRY.get(key, {})
+        enriched_candidates.append({
+            "make": car["make"],
+            "model": car["model"],
+            "trim": car.get("trim", ""),
+            "origin_type": (
+                "Imported JDM" if "jdm" in info.get("tags", set())
+                else ("Chinese" if info.get("chinese") else "Local/Mainstream")
+            ),
+            "tags": list(info.get("tags", set())),
+            "rationale": car.get("rationale", ""),
+        })
 
     prompt = (
-        f"You are a strict QA Auditor for an automotive recommendation engine.\n"
+        f"You are a strict QA Auditor for an automotive recommendation engine — the "
+        f"final gatekeeper before these cars reach a real buyer.\n"
         f"User's raw query: '{user_prompt}'\n\n"
-        f"The system is proposing these cars:\n{car_list_str}\n\n"
-        f"TASK: Check EACH proposed car against the user's HARD constraints only — "
-        f"seating capacity, engine displacement, body style, and explicit brand/model "
-        f"vetoes. Soft preferences, style opinions, or subjective fit are NOT hard "
-        f"constraints and must not cause a flag.\n"
-        f"- If the user asked for a 7-seater, flag any car that does not physically seat 7.\n"
-        f"- If the user asked for a specific engine size (e.g. 660cc), flag any car that "
-        f"is not genuinely that engine size.\n"
-        f"- If the user explicitly vetoed a brand or model, flag it if present in the list.\n"
-        f"Return the 0-based indices of any VIOLATING cars in violating_indices, with a "
-        f"short reason for each in violation_reasons (same order, same length). "
-        f"If every car is compliant, return empty lists for both — do not flag a car just "
-        f"because you would have picked something else."
+        f"The system is proposing these cars, enriched with registry metadata:\n"
+        f"{json.dumps(enriched_candidates, indent=2)}\n\n"
+        f"TASK: Evaluate EACH car against the user's HARD constraints only — seating "
+        f"capacity, engine displacement, body style, origin/assembly (Local vs "
+        f"Imported JDM, from origin_type), fuel/powertrain type, and explicit "
+        f"brand/model vetoes. Soft preferences, style opinions, or subjective fit are "
+        f"NOT hard constraints and must not cause a rejection.\n"
+        f"- If the user requested Local PKDM / Pakistani-assembled cars, ANY car with "
+        f"origin_type 'Imported JDM' is NON-COMPLIANT.\n"
+        f"- If the user requested a Diesel Hybrid, any petrol hybrid is NON-COMPLIANT "
+        f"(every hybrid in this registry is petrol-electric).\n"
+        f"- If the user explicitly vetoed a brand or model, any matching car is "
+        f"NON-COMPLIANT.\n"
+        f"- If the user requested 7 seats, any 5-seater hatchback/sedan is "
+        f"NON-COMPLIANT.\n"
+        f"- If the user asked for a specific engine size (e.g. 660cc), any car that "
+        f"is not genuinely that engine size is NON-COMPLIANT.\n"
+        f"For each car, return model_name as exactly '{{make}} {{model}}' using the "
+        f"make/model fields given above, plus is_compliant, and — only when "
+        f"is_compliant is false — a brief rejection_reason. Evaluate every car in the "
+        f"list; do not skip any, and do not flag a car just because you would have "
+        f"picked something else."
     )
 
     try:
@@ -4073,22 +4174,40 @@ async def run_final_ai_sanitizer(formatted_targets: list[dict], user_prompt: str
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                response_schema=SanitizerVerdict,
+                response_schema=AuditReport,
                 temperature=0.0,
             ),
         )
-        verdict = SanitizerVerdict.model_validate_json(response_text)
+        report = AuditReport.model_validate_json(response_text)
 
-        if verdict.violating_indices:
-            reasons = verdict.violation_reasons or []
-            for pos, idx in enumerate(verdict.violating_indices):
-                if 0 <= idx < len(formatted_targets):
-                    car = formatted_targets[idx]
-                    reason = reasons[pos] if pos < len(reasons) else "flagged by sanitizer"
-                    print(f"[Sanitizer] Flagging {car['make']} {car['model']}: {reason}")
+        verdict_by_name: dict[str, AuditItem] = {
+            item.model_name.strip().lower(): item for item in report.evaluations
+        }
 
-        violating_set = {i for i in verdict.violating_indices if 0 <= i < len(formatted_targets)}
-        return [c for i, c in enumerate(formatted_targets) if i not in violating_set]
+        compliant: list[dict] = []
+        for car in formatted_targets:
+            norm = f"{car['make']} {car['model']}".strip().lower()
+            item = verdict_by_name.get(norm)
+            if item is None:
+                # No evaluation returned for this specific candidate — fail
+                # open for this one item rather than dropping it over an
+                # incomplete LLM response.
+                compliant.append(car)
+                continue
+            if item.is_compliant:
+                compliant.append(car)
+            else:
+                print(
+                    f"[Sanitizer] Flagging {car['make']} {car['model']}: "
+                    f"{item.rejection_reason or 'flagged by sanitizer'}"
+                )
+
+        if not compliant:
+            print(
+                "[Sanitizer] Iron-clad gate: zero compliant cars remain — "
+                "returning empty result rather than falling back to flagged cars."
+            )
+        return compliant
 
     except Exception as e:
         print(f"[Sanitizer] Failed: {e} — returning original list unfiltered (fail-open)")
@@ -4139,6 +4258,7 @@ async def get_validated_car_targets(constraints: dict) -> list[dict]:
                 is_luxury_request= constraints.get("is_luxury_request", False),
                 is_highway_ev    = constraints.get("is_highway_ev", False),
                 origin_pref      = constraints.get("origin_pref"),
+                is_diesel_hybrid_query = constraints.get("is_diesel_hybrid_query", False),
             )
 
             # ── Empty Eligible List Short-Circuit ─────────────────────────────
@@ -4240,6 +4360,7 @@ async def get_fallback_recommendations(
         is_luxury_request=is_luxury,
         is_highway_ev=constraints.get("is_highway_ev", False),
         origin_pref=constraints.get("origin_pref"),
+        is_diesel_hybrid_query=constraints.get("is_diesel_hybrid_query", False),
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
@@ -4318,6 +4439,7 @@ async def get_extended_recommendations(
         is_luxury_request=is_luxury,
         is_highway_ev=original_constraints.get("is_highway_ev", False),
         origin_pref=original_constraints.get("origin_pref"),
+        is_diesel_hybrid_query=original_constraints.get("is_diesel_hybrid_query", False),
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
