@@ -3066,6 +3066,28 @@ def get_eligible_cars(
             if skip:
                 continue
 
+        # 7b. Excluded Feature Gate
+        excluded_features = constraints.get("excluded_features", [])
+        if excluded_features:
+            skip_due_to_exclusion = False
+            for excl_feat in excluded_features:
+                excl_feat_lower = excl_feat.lower().strip()
+                normalised_excl = _FEAT_NORMALISE.get(excl_feat_lower, excl_feat_lower)
+
+                # If they forbid "660cc" or "jdm", we can check tags or the exclusive allowlist
+                if normalised_excl == "660cc" and key in _FEATURE_EXCLUSIVE_ALLOWLIST.get("660cc", set()):
+                    skip_due_to_exclusion = True
+                    break
+                if normalised_excl == "jdm" and "jdm" in info.get("tags", set()):
+                    skip_due_to_exclusion = True
+                    break
+                # If they forbid a rare feature, and the car is in the exclusive allowlist for it
+                if normalised_excl in _FEATURE_EXCLUSIVE_ALLOWLIST and key in _FEATURE_EXCLUSIVE_ALLOWLIST[normalised_excl]:
+                    skip_due_to_exclusion = True
+                    break
+            if skip_due_to_exclusion:
+                continue
+
         # 8. Exclusion gate
         display_lower = f"{make} {model}".lower()
         if any(ex in display_lower for ex in excluded_lower):
@@ -3378,14 +3400,45 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
         if feature_violation:
             continue
 
-        # 8. Micro-Engine Trim Hallucination Gate (Test 62)
-        # The LLM would sometimes append a fake micro-engine trim (e.g. "1.0"
-        # or "660cc") onto a large sedan/SUV/crossover specifically to force
-        # budget or "under 1300cc" tax-bracket compliance — a trim that does
-        # not exist for that body style in the PK market. Legitimate small-
-        # displacement non-hatchback/van vehicles (kei-adjacent mini-SUVs)
-        # are explicitly exempted below.
+        # 7b. Excluded Feature Gate
+        excluded_features = constraints.get("excluded_features", [])
+        if excluded_features and info:
+            skip_due_to_exclusion = False
+            for excl_feat in excluded_features:
+                excl_feat_lower = excl_feat.lower().strip()
+                normalised_excl = _FEAT_NORMALISE.get(excl_feat_lower, excl_feat_lower)
+
+                if normalised_excl == "660cc" and key in _FEATURE_EXCLUSIVE_ALLOWLIST.get("660cc", set()):
+                    reason = f"Dropped {t.make} {t.model}: Contains forbidden feature '{normalised_excl}'."
+                    print(f"[Validator] Dropping {t.make} {t.model} — forbidden feature {normalised_excl}")
+                    dropped_reasons.append(reason)
+                    skip_due_to_exclusion = True
+                    break
+                if normalised_excl == "jdm" and "jdm" in info.get("tags", set()):
+                    reason = f"Dropped {t.make} {t.model}: Contains forbidden feature '{normalised_excl}'."
+                    print(f"[Validator] Dropping {t.make} {t.model} — forbidden feature {normalised_excl}")
+                    dropped_reasons.append(reason)
+                    skip_due_to_exclusion = True
+                    break
+                if normalised_excl in _FEATURE_EXCLUSIVE_ALLOWLIST and key in _FEATURE_EXCLUSIVE_ALLOWLIST[normalised_excl]:
+                    reason = f"Dropped {t.make} {t.model}: Contains forbidden feature '{normalised_excl}'."
+                    print(f"[Validator] Dropping {t.make} {t.model} — forbidden feature {normalised_excl}")
+                    dropped_reasons.append(reason)
+                    skip_due_to_exclusion = True
+                    break
+            if skip_due_to_exclusion:
+                continue
+
+        # 8. Micro-Engine Trim Hallucination Gate (Test 62 / 71 / 72)
         trim_lower = t.trim.lower()
+
+        # Prevent LLM from simulating JDM imports on Local PKDM queries
+        if constraints.get("origin_pref") == "Local" and ("660cc" in trim_lower or "jdm" in trim_lower):
+            reason = f"Dropped {t.make} {t.model}: Appended '{t.trim}' to a local car, simulating a banned JDM import."
+            print(f"[Validator] Dropping {t.make} {t.model} — {reason}")
+            dropped_reasons.append(reason)
+            continue
+
         if "1.0" in trim_lower or "660cc" in trim_lower or "800cc" in trim_lower:
             if info and "Hatchback" not in info["styles"] and "Van" not in info["styles"]:
                 # Allow exceptions for legitimate non-hatchback micro engines
@@ -3420,6 +3473,7 @@ class UserIntent(BaseModel):
     direct_model:      Optional[str]                                                                 = Field(default=None, description="Explicitly mentioned car model (e.g. 'Civic', 'Vitz', 'Prado')")
     is_luxury_request: bool                                                                          = False
     required_features: list[str]                                                                     = Field(default_factory=list)
+    excluded_features: list[str]                                                                     = Field(default_factory=list, description="Features explicitly forbidden by the user (e.g., ['660cc', 'sunroof', 'leather seats'])")
     excluded_brands:   list[str]                                                                     = Field(default_factory=list, description="Brands/makes explicitly forbidden or vetoed by the user, e.g. ['Haval', 'Changan', 'Chery']")
     excluded_models:   list[str]                                                                     = Field(default_factory=list, description="Specific models explicitly forbidden or vetoed by the user, e.g. ['Yaris', 'City', 'Corolla']")
     strategy_summary:  str                                                                           = Field(default="", description="A friendly 2-sentence summary explaining the search interpretation and car strategy.")
@@ -3477,6 +3531,7 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "name here (e.g. 'Bolan', 'Mehran').\n"
         "- direct_model: If the user explicitly mentions a specific car model (e.g. 'Civic', "
         "'Vitz', 'Prado'), capture it here.\n"
+        "- excluded_features: Extract any feature, engine size, or specification the user EXPLICITLY forbids. Examples: 'no 660cc' -> ['660cc'], 'without a sunroof' -> ['sunroof'], 'no JDM imports' -> ['jdm']. Leave empty if no features are forbidden.\n"
         "- excluded_models: Extract any car model the user explicitly forbids or vetoes. "
         "Examples: 'no Corolla' -> ['Corolla'], 'strictly NO Fortuner or Sportage' -> "
         "['Fortuner', 'Sportage'], 'without Civic' -> ['Civic']. This is for SIMPLE, DIRECT "
@@ -3645,9 +3700,6 @@ def resolve_constraints(intent: UserIntent) -> dict:
     # thousand PKR), where the comma is a regex word-boundary and would
     # wrongly trigger a bare-number pattern. Requiring the literal "cc" suffix
     # eliminates that false-positive class entirely.
-    if raw_prompt and re.search(r'\b660\s*cc\b', raw_prompt.lower()):
-        if "660cc" not in constraints.get("required_features", []):
-            constraints.setdefault("required_features", []).append("660cc")
 
     # ── Explicit Negative Model Exclusion Scanner ─────────────────────────────
     if raw_prompt:
@@ -3964,8 +4016,8 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         "clearly makes a lower-ranked car more suitable.\n"
         "4. ORIGIN: If origin_pref is JDM, prefer JDM cars and specify exact trim "
         "(e.g. trim='G Grade', trim='RS Advance'). If European, prefer BMW/Audi/Mercedes.\n"
-        "5. JDM ALTO PROTECTION: If recommending 'Suzuki Alto 660cc', ALWAYS set "
-        "trim='660cc' — this prevents flooding with local Suzuki Alto listings.\n"
+        "5. JDM ALTO PROTECTION: If recommending the imported 'Suzuki Alto 660cc', ALWAYS set "
+        "trim='660cc'. HOWEVER, if the buyer strictly requests LOCAL PKDM assembly, NEVER append '660cc' or 'JDM' to the local Suzuki Alto. Use local trims (VXR, VXL, AGS) only.\n"
         "6. DIVERSITY: Pick from 2–3 different makes when the list allows. "
         "Avoid all-Toyota or all-Honda picks unless the list genuinely forces it.\n"
         "7. QUANTITY: CRITICAL INSTRUCTION — You MUST return EXACTLY 3 distinct targets if 3 or more eligible options exist in the list. Do NOT return 2. Only return fewer than 3 if the eligible list physically contains 1 or 2 cars.\n"
@@ -4162,6 +4214,8 @@ async def run_final_ai_sanitizer(formatted_targets: list[dict], user_prompt: str
         f"NON-COMPLIANT.\n"
         f"- If the user asked for a specific engine size (e.g. 660cc), any car that "
         f"is not genuinely that engine size is NON-COMPLIANT.\n"
+        f"- If the user explicitly forbids an engine size (e.g., 'no 660cc', 'not 1000cc'), any car featuring that engine size or trim is NON-COMPLIANT.\n"
+        f"- If the user explicitly forbids imported JDM cars, any car with origin_type 'Imported JDM' or having 'JDM'/'660cc' in its trim/rationale is NON-COMPLIANT.\n"
         f"For each car, return model_name as exactly '{{make}} {{model}}' using the "
         f"make/model fields given above, plus is_compliant, and — only when "
         f"is_compliant is false — a brief rejection_reason. Evaluate every car in the "
