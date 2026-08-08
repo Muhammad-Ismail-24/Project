@@ -2484,6 +2484,25 @@ _JDM_HYBRID_RECENT_FLOOR_2018 = 3_800_000  # ~38 Lakhs PKR — stricter floor fo
 # to Lahore is 380km). Hard-blocked when a highway/long-range EV is requested.
 _CITY_MICRO_EVS = {"honri:ve", "rinco:aria", "metro:enfon"}
 
+# ── Origin Preference Hard Gate (Test 63) ───────────────────────────────────
+# origin_pref="European" is enforced as a HARD registry filter in both
+# get_eligible_cars() and _validate_targets() — everything else (JDM, Chinese,
+# Local) remains a soft preference surfaced only inside the target-selection
+# LLM prompt (see select_car_targets), unchanged by this gate. Peugeot is
+# included per spec even though the registry currently has zero Peugeot
+# entries — correct but inert for that make unless one is ever registered.
+_EUROPEAN_MAKES = {"bmw", "mercedes-benz", "audi", "porsche", "land rover", "volkswagen", "peugeot"}
+
+# ── Legacy Luxury Feature Price-Floor (Test 54) ─────────────────────────────
+# toyota:prado / toyota:land cruiser sit in the "memory seats" and "360
+# camera" _FEATURE_EXCLUSIVE_ALLOWLIST sets below because modern (2020+)
+# trims genuinely carry them — but both models' registry price range starts
+# as low as PKR 2.5M, spanning 1990s/2000s generations that do NOT. Consumed
+# as a budget sub-condition alongside the existing Kia Sorento memory-seat
+# override inside get_eligible_cars()'s allowlist check (see "STRICT PKDM
+# BUDGET OVERRIDE" below) — not a new standalone gate.
+_LEGACY_LUXURY_FEATURE_FLOOR = 15_000_000  # 1.5 Crore PKR
+
 
 # Normalise required_features strings → canonical _FEATURE_IMPOSSIBLE keys
 _FEAT_NORMALISE: dict[str, str] = {
@@ -2706,6 +2725,7 @@ def get_eligible_cars(
     min_year: int = 0,
     is_luxury_request: bool = False,
     is_highway_ev: bool = False,
+    origin_pref: str | None = None,
 ) -> str:
     """
     Returns a priority-weighted, fit-score-sorted eligible car list as a prompt string.
@@ -2720,6 +2740,15 @@ def get_eligible_cars(
                             (e.g. Rush has no factory sunroof → excluded for sunroof query)
       7. Exclusion gate   — drop already-tried/shown models
       8. Drive gate       — strictly matches requested drive layout (AWD/4x4/FWD/RWD)
+
+    NEWER GATES (added after the numbered list above was originally written —
+    see inline comments at each site for full detail; not renumbered here to
+    avoid disturbing the existing reference list):
+      • origin_pref=="European" — hard-drops every non-European make (Test 63).
+        See _EUROPEAN_MAKES.
+      • Legacy luxury feature price-floor — Prado/Land Cruiser dropped for
+        memory-seats/360-camera/HUD queries under PKR 1.5 Crore (Test 54).
+        See _LEGACY_LUXURY_FEATURE_FLOOR.
 
     Scoring (composite — higher = shown first to LLM):
       fit_score    = 0.6 × budget_coverage + 0.4 × budget_centrality
@@ -2819,6 +2848,18 @@ def get_eligible_cars(
         if info["chinese"] and not allow_chinese:
             continue
 
+        # 2b. Origin Preference Hard Gate (Test 63 patch)
+        # origin_pref was already being threaded into the target-selection LLM
+        # prompt as a soft "prefer JDM" signal (see select_car_targets), but
+        # had ZERO deterministic enforcement here — a "European only" request
+        # could still see Corolla/Civic pass every other gate and get
+        # surfaced to the LLM as eligible. This is a hard filter: non-European
+        # makes are removed outright when origin_pref == "European". JDM /
+        # Chinese / Local origin_pref remain soft, prompt-level signals only —
+        # unchanged by this patch.
+        if origin_pref == "European" and make not in _EUROPEAN_MAKES:
+            continue
+
         # 3. Transmission gate
         if transmission_req == "Automatic" and info["transmission"] == "manual":
             continue
@@ -2900,6 +2941,29 @@ def get_eligible_cars(
                             and key == "kia:sorento"
                             and max_budget > 0
                             and max_budget < 10_000_000):
+                        skip = True
+                        break
+
+                    # LEGACY LUXURY FEATURE PRICE-FLOOR (Test 54 patch):
+                    # toyota:prado / toyota:land cruiser are members of the
+                    # "memory seats" and "360 camera" allowlists above because
+                    # modern (2020+) trims genuinely carry them — but both
+                    # models' registry price range starts as low as PKR 2.5M,
+                    # spanning 1990s/2000s generations that do not. Below the
+                    # PKR 1.5 Crore floor, a query is realistically hitting
+                    # those older generations, so allowlist membership alone
+                    # isn't enough — apply the same budget-override pattern
+                    # used for Sorento above. mitsubishi:pajero is named here
+                    # too for completeness with the original spec, but is
+                    # currently a no-op: it is not a member of any of these
+                    # three allowlists at all, so it is already unconditionally
+                    # excluded from these features at every budget — a
+                    # stricter, equally-correct outcome this check doesn't
+                    # need to loosen.
+                    if (feat_key in {"memory seats", "360 camera", "head up display"}
+                            and key in {"toyota:prado", "toyota:land cruiser", "mitsubishi:pajero"}
+                            and max_budget > 0
+                            and max_budget < _LEGACY_LUXURY_FEATURE_FLOOR):
                         skip = True
                         break
                 # B. Check Impossible Blocklist (strict exclusion)
@@ -3083,6 +3147,7 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
     body_style        = constraints.get("body_style")
     is_apex           = constraints.get("is_apex_luxury", False)
     is_luxury_request = constraints.get("is_luxury_request", False)
+    origin_pref       = constraints.get("origin_pref")
     excluded_models   = {m.lower() for m in (constraints.get("excluded_models") or [])}
     required_features = constraints.get("required_features") or []
 
@@ -3115,6 +3180,13 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
         if info and info["chinese"] and not allow_chinese:
             reason = f"Dropped {t.make} {t.model}: Chinese brand not requested by user."
             print(f"[Validator] Dropping {t.make} {t.model} — Chinese brand not requested")
+            dropped_reasons.append(reason)
+            continue
+
+        # 2b. Origin Preference Hard Gate (Test 63 patch, mirrors get_eligible_cars)
+        if info and origin_pref == "European" and make_lower not in _EUROPEAN_MAKES:
+            reason = f"Dropped {t.make} {t.model}: Not a European make; user requested European origin only."
+            print(f"[Validator] Dropping {t.make} {t.model} — non-European make for European-only query")
             dropped_reasons.append(reason)
             continue
 
@@ -3235,6 +3307,8 @@ class UserIntent(BaseModel):
     direct_model:      Optional[str]                                                                 = Field(default=None, description="Explicitly mentioned car model (e.g. 'Civic', 'Vitz', 'Prado')")
     is_luxury_request: bool                                                                          = False
     required_features: list[str]                                                                     = Field(default_factory=list)
+    excluded_brands:   list[str]                                                                     = Field(default_factory=list, description="Brands/makes explicitly forbidden or vetoed by the user, e.g. ['Haval', 'Changan', 'Chery']")
+    excluded_models:   list[str]                                                                     = Field(default_factory=list, description="Specific models explicitly forbidden or vetoed by the user, e.g. ['Yaris', 'City', 'Corolla']")
     strategy_summary:  str                                                                           = Field(default="", description="A friendly 2-sentence summary explaining the search interpretation and car strategy.")
     disclaimers:       list[str]                                                                     = Field(default_factory=list)
     current_car:       Optional[str]                                                                 = None
@@ -3292,8 +3366,22 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "'Vitz', 'Prado'), capture it here.\n"
         "- excluded_models: Extract any car model the user explicitly forbids or vetoes. "
         "Examples: 'no Corolla' -> ['Corolla'], 'strictly NO Fortuner or Sportage' -> "
-        "['Fortuner', 'Sportage'], 'without Civic' -> ['Civic']. "
-        "Leave as empty list [] if no explicit exclusion is stated.\n"
+        "['Fortuner', 'Sportage'], 'without Civic' -> ['Civic']. This is for SIMPLE, DIRECT "
+        "vetoes only. Leave as empty list [] if no explicit exclusion is stated.\n"
+        "- excluded_brands: Extract any BRAND/MAKE the user explicitly forbids or vetoes at "
+        "the whole-brand level. Examples: 'strictly NO Haval, Changan, or Chery' -> "
+        "['Haval', 'Changan', 'Chery'], 'no Kia' -> ['Kia'], 'don't want any MG' -> ['MG']. "
+        "Only extract an explicitly named brand — never a vague category like 'Chinese "
+        "cars' (that broader intent belongs to origin_pref, not here). Leave empty if not "
+        "clearly stated.\n"
+        "- Conditional / Nested Negations: For compound phrasing like 'no Suzuki unless "
+        "it's not a hatchback' or 'don't give me any sedan that isn't a Honda', you do NOT "
+        "need to enumerate every affected model — a deterministic backup system already "
+        "handles these exact two phrasing patterns reliably against the live vehicle "
+        "registry, so guessing a full model list yourself risks naming a model that isn't "
+        "actually in the registry. For genuinely conditional/nested exclusions like these, "
+        "leave excluded_models and excluded_brands empty for that clause rather than "
+        "guessing — only populate them for plain, unconditional vetoes.\n"
         "- powertrain: Extract 'hybrid' if user mentions hybrid/HEV/e-power/aqua/prius. "
         "Extract 'ev' if user mentions electric/EV/100% electric/battery car/BEV/zero emission. "
         "Leave null otherwise.\n"
@@ -3377,6 +3465,44 @@ def resolve_constraints(intent: UserIntent) -> dict:
         "intent_id":          None,
         "excluded_models":    excluded_models,
     }
+
+    # ── Deterministic Expansion from LLM-Structured Exclusion Arrays ─────────
+    # NEW PRIMARY exclusion path. extract_intent() now asks the LLM for clean
+    # excluded_brands / excluded_models arrays directly — this catches natural
+    # phrasing variation ("I'd rather avoid Haval", "Toyota just isn't for me")
+    # that the fixed-vocabulary regex scanners below don't trigger on.
+    #
+    # SAFETY-NET GUARANTEE: this block is strictly ADDITIVE. It writes into the
+    # exact same constraints["excluded_models"] list, using the exact same
+    # lowercase-dedup pattern the regex scanners below already use. Nothing
+    # below this block was removed, weakened, or reordered — every existing
+    # regex safety net (the flat veto scanner, and the Test-45 nested-negation
+    # scanner) still runs after this, completely unchanged, and will
+    # independently re-derive anything this block happens to miss. If the LLM
+    # under-extracts on a given turn, coverage silently falls back to exactly
+    # today's behaviour; this block only ever adds coverage, never removes it.
+    already_excluded_struct = {m.lower() for m in constraints["excluded_models"]}
+
+    for raw_brand in (intent.excluded_brands or []):
+        brand_norm = raw_brand.strip().lower()
+        if not brand_norm:
+            continue
+        for reg_key, reg_info in CAR_REGISTRY.items():
+            make, model = reg_key.split(":", 1)
+            if make == brand_norm:
+                for form in (model, f"{make} {model}", make):
+                    if form not in already_excluded_struct:
+                        constraints["excluded_models"].append(form)
+                        already_excluded_struct.add(form)
+
+    for raw_model in (intent.excluded_models or []):
+        model_norm = raw_model.strip().lower()
+        if not model_norm:
+            continue
+        canonical = _CANONICAL_MODEL_MAP.get(model_norm, raw_model.strip())
+        if canonical and canonical.lower() not in already_excluded_struct:
+            constraints["excluded_models"].append(canonical)
+            already_excluded_struct.add(canonical.lower())
 
     # Apply keyword intent overrides — must receive raw user_prompt.
     # Called here so body_style/use_case/transmission overrides propagate
@@ -3605,6 +3731,7 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         min_year=constraints.get("min_year", 0),
         is_luxury_request=is_luxury,
         is_highway_ev=constraints.get("is_highway_ev", False),
+        origin_pref=origin_pref,
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
@@ -3806,6 +3933,7 @@ async def get_validated_car_targets(constraints: dict) -> list[dict]:
                 min_year         = constraints.get("min_year", 0),
                 is_luxury_request= constraints.get("is_luxury_request", False),
                 is_highway_ev    = constraints.get("is_highway_ev", False),
+                origin_pref      = constraints.get("origin_pref"),
             )
 
             # ── Empty Eligible List Short-Circuit ─────────────────────────────
@@ -3904,6 +4032,7 @@ async def get_fallback_recommendations(
         min_year=constraints.get("min_year", 0),
         is_luxury_request=is_luxury,
         is_highway_ev=constraints.get("is_highway_ev", False),
+        origin_pref=constraints.get("origin_pref"),
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
@@ -3981,6 +4110,7 @@ async def get_extended_recommendations(
         min_year=original_constraints.get("min_year", 0),
         is_luxury_request=is_luxury,
         is_highway_ev=original_constraints.get("is_highway_ev", False),
+        origin_pref=original_constraints.get("origin_pref"),
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
