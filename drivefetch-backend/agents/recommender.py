@@ -3600,6 +3600,27 @@ def resolve_constraints(intent: UserIntent) -> dict:
     if raw_prompt:
         constraints = apply_keyword_intent(raw_prompt, constraints)
 
+    # ── Independent 660cc Engine Gate ──────────────────────────────────────────
+    # apply_keyword_intent() returns on the FIRST matching KEYWORD_INTENT_MAP
+    # entry ("first match wins" — see its own docstring/code comment). Since
+    # "micro_engine_660cc" is one entry among many, an earlier-matching intent
+    # (e.g. a student/budget/body-style intent that happens to match first)
+    # would short-circuit the loop and silently skip the 660cc append_features
+    # injection entirely, even though the prompt clearly says "660cc" or
+    # "660 cc". This check runs independently of that loop so it can never be
+    # shadowed by an unrelated intent winning the race.
+    #
+    # Deliberately narrower than a bare `\b660\b` match: engine displacement is
+    # essentially never stated as a bare "660" without a "cc"/"CC" unit in
+    # natural language, whereas a bare "660" appears constantly in unrelated
+    # numbers — most commonly a budget figure like "660,000" (six lakh sixty
+    # thousand PKR), where the comma is a regex word-boundary and would
+    # wrongly trigger a bare-number pattern. Requiring the literal "cc" suffix
+    # eliminates that false-positive class entirely.
+    if raw_prompt and re.search(r'\b660\s*cc\b', raw_prompt.lower()):
+        if "660cc" not in constraints.get("required_features", []):
+            constraints.setdefault("required_features", []).append("660cc")
+
     # ── Explicit Negative Model Exclusion Scanner ─────────────────────────────
     if raw_prompt:
         prompt_lower_ex = raw_prompt.lower()
