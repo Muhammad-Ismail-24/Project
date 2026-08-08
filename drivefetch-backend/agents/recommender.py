@@ -3869,14 +3869,43 @@ def resolve_constraints(intent: UserIntent) -> dict:
     # above so this disclaimer is appended, not overwritten.
     _CONTRABAND_TERMS = ("ncp", "non-custom", "non custom paid", "non custom")
     if raw_prompt and any(term in raw_prompt.lower() for term in _CONTRABAND_TERMS):
+        prompt_lower_cb = raw_prompt.lower()
+        
+        # Strip contraband terms from required features
         constraints["required_features"] = [
             f for f in constraints.get("required_features", [])
             if not any(term in f.lower() for term in _CONTRABAND_TERMS)
         ]
-        # UNCONDITIONALLY wipe direct model and scrub the strategy summary
+        
+        # Blacklist models mentioned in the contraband query
+        already_excl = {m.lower() for m in constraints["excluded_models"]}
+        
+        if intent.direct_model:
+            dm_norm = intent.direct_model.strip()
+            if dm_norm.lower() not in already_excl:
+                constraints["excluded_models"].append(dm_norm)
+                already_excl.add(dm_norm.lower())
+                
+        # Scan for high-risk contraband models in prompt
+        _CONTRABAND_MODELS = ("land cruiser", "prado", "v8", "surf", "range rover", "defender")
+        for cb_model in _CONTRABAND_MODELS:
+            if cb_model in prompt_lower_cb:
+                for reg_key in CAR_REGISTRY:
+                    make, model = reg_key.split(":", 1)
+                    if cb_model in model or cb_model in reg_key:
+                        full_name = f"{make} {model}"
+                        if full_name not in already_excl:
+                            constraints["excluded_models"].append(full_name)
+                            already_excl.add(full_name.lower())
+                        if model not in already_excl:
+                            constraints["excluded_models"].append(model)
+                            already_excl.add(model.lower())
+
+        # Unconditionally wipe direct model & sanitize summary
         intent.direct_model = None
         constraints["direct_model"] = None
         constraints["strategy_summary"] = "We have filtered your request for legally registered, tax-paid vehicles matching your budget."
+        
         constraints["disclaimers"].append(
             "⚠️ Legal Compliance Notice: Non-Custom Paid (NCP) vehicles are strictly illegal "
             "outside border regions in Pakistan. The engine has automatically filtered for "
