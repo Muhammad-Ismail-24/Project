@@ -1856,7 +1856,7 @@ _FEATURE_EXCLUSIVE_ALLOWLIST: dict[str, set[str]] = {
         "changan:deepal s07", "changan:deepal l07",
         "chery:tiggo 8 pro",
         "kia:sorento", "kia:carnival",
-        "hyundai:santa fe", "hyundai:sonata", "hyundai:palisade",
+        "hyundai:santa fe", "hyundai:palisade",   # hyundai:sonata removed — PKDM 2.5L has reverse camera + parking sensors only, NOT 360 surround view
         "toyota:raize",             # JDM Z grade import only
         "toyota:land cruiser", "toyota:prado",
         "lexus:lx600",
@@ -2485,6 +2485,212 @@ _JDM_HYBRID_RECENT_FLOOR_2018 = 3_800_000  # ~38 Lakhs PKR — stricter floor fo
 _CITY_MICRO_EVS = {"honri:ve", "rinco:aria", "metro:enfon"}
 
 
+# Normalise required_features strings → canonical _FEATURE_IMPOSSIBLE keys
+_FEAT_NORMALISE: dict[str, str] = {
+    "sunroof":                 "sunroof",
+    "moonroof":                "sunroof",
+    "panoramic":               "panoramic sunroof",
+    "panoramic sunroof":       "panoramic sunroof",
+    "push start":              "push start",
+    "push-start":              "push start",
+    "button start":            "push start",
+    "keyless":                 "keyless entry",
+    "keyless entry":           "keyless entry",
+    "keyless start":           "push start",
+    "smart key":               "push start",
+    "lane assist":             "lane assist",
+    "lane departure":          "lane assist",
+    "lane keep":               "lane assist",
+    "lkas":                    "lane assist",
+    "adaptive cruise":         "adaptive cruise control",
+    "adaptive cruise control": "adaptive cruise control",
+    "acc":                     "adaptive cruise control",
+    "auto parking":            "auto parking",
+    "self parking":            "auto parking",
+    "automatic parking":       "auto parking",
+    "parking sensors":         "parking sensors",
+    "parking sensor":          "parking sensors",
+    "pdc":                     "parking sensors",
+    "back camera":             "back camera",
+    "rear camera":             "back camera",
+    "reverse camera":          "back camera",
+    "parking camera":          "back camera",
+    "backup camera":           "back camera",
+    # ── Heated Seats ─────────────────────────────────────────────────────
+    "heated seats":            "heated seats",
+    "seat warmer":             "heated seats",
+    "seat heating":            "heated seats",
+    "warm seats":              "heated seats",
+    # ── Ventilated / Cooled Seats (separate gate from heated) ────────────
+    "ventilated seats":        "ventilated seats",
+    "ventilated seat":         "ventilated seats",
+    "ventilated":              "ventilated seats",
+    "seat cooling":            "ventilated seats",
+    "cooled seats":            "ventilated seats",
+    "cooled seat":             "ventilated seats",
+    "cooling seats":           "ventilated seats",
+    "seat ventilation":        "ventilated seats",
+    # ── Massaging Seats ──────────────────────────────────────────────────
+    "massaging seats":         "massaging seats",
+    "massage seats":           "massaging seats",
+    "massage seat":            "massaging seats",
+    "seat massage":            "massaging seats",
+    # ── Leather Seats ────────────────────────────────────────────────────
+    "leather seats":           "leather seats",
+    "leather":                 "leather seats",
+    # ── 4WD / AWD ────────────────────────────────────────────────────────
+    "4wd":                     "4wd",
+    "4x4":                     "4wd",
+    "awd":                     "4wd",
+    "four wheel drive":        "4wd",
+    "all wheel drive":         "4wd",
+    # ── Hybrid / Powertrain ──────────────────────────────────────────────
+    "hybrid":                  "hybrid",
+    "hev":                     "hybrid",
+    "phev":                    "hybrid",
+    # ── Blind Spot Monitor ───────────────────────────────────────────────
+    "blind spot":              "blind spot monitor",
+    "bsm":                     "blind spot monitor",
+    "blind spot monitor":      "blind spot monitor",
+    # ── Memory Seats ─────────────────────────────────────────────────────
+    "memory seats":            "memory seats",
+    "memory seat":             "memory seats",
+    "seat memory":             "memory seats",
+    "driver memory":           "memory seats",
+    "driver seat memory":      "memory seats",
+    "memory function":         "memory seats",
+    "memory":                  "memory seats",
+    # ── Power Tailgate ───────────────────────────────────────────────────
+    "power tailgate":          "power tailgate",
+    "auto trunk":              "power tailgate",
+    "electric tailgate":       "power tailgate",
+    "hands free trunk":        "power tailgate",
+    "hands-free trunk":        "power tailgate",
+    "electric trunk":          "power tailgate",
+    # ── Electric Parking Brake ───────────────────────────────────────────
+    "epb":                     "electric parking brake",
+    "electric parking brake":  "electric parking brake",
+    "electronic parking brake":"electric parking brake",
+    "auto hold":               "electric parking brake",
+    "brake hold":              "electric parking brake",
+    "e-brake":                 "electric parking brake",
+    # ── Dual Zone Climate ────────────────────────────────────────────────
+    "dual zone":               "dual zone climate",
+    "dual-zone":               "dual zone climate",
+    "dual zone ac":            "dual zone climate",
+    "dual zone climate":       "dual zone climate",
+    "dual zone air":           "dual zone climate",
+    "2 zone climate":          "dual zone climate",
+    "two zone climate":        "dual zone climate",
+    "dual zone temperature":   "dual zone climate",
+    # ── Rear AC Vents ────────────────────────────────────────────────────
+    "rear ac":                 "rear ac vents",
+    "rear vents":              "rear ac vents",
+    "rear ac vents":           "rear ac vents",
+    "rear air conditioning":   "rear ac vents",
+    "back ac":                 "rear ac vents",
+    "back vents":              "rear ac vents",
+    # ── 360 Camera ───────────────────────────────────────────────────────
+    "360 camera":              "360 camera",
+    "360 view":                "360 camera",
+    "360 degree camera":       "360 camera",
+    "surround camera":         "360 camera",
+    "surround view":           "360 camera",
+    "bird eye":                "360 camera",
+    "birds eye view":          "360 camera",
+    # ── Head-Up Display ──────────────────────────────────────────────────
+    "hud":                     "head up display",
+    "head up display":         "head up display",
+    "head-up display":         "head up display",
+    "heads up display":        "head up display",
+    "windshield display":      "head up display",
+    # ── Digital Instrument Cluster ───────────────────────────────────────
+    "digital cluster":         "digital instrument cluster",
+    "digital meter":           "digital instrument cluster",
+    "digital gauge":           "digital instrument cluster",
+    "virtual cockpit":         "digital instrument cluster",
+    "digital dashboard":       "digital instrument cluster",
+    "fully digital cluster":   "digital instrument cluster",
+    # ── Wireless Charging ────────────────────────────────────────────────
+    "wireless charging":       "wireless charging",
+    "wireless charger":        "wireless charging",
+    "qi charging":             "wireless charging",
+    "qi charger":              "wireless charging",
+    "wireless phone charging": "wireless charging",
+    # ── Premium Audio ─────────────────────────────────────────────────────
+    "premium audio":           "premium audio",
+    "premium sound":           "premium audio",
+    "bose":                    "premium audio",
+    "harman kardon":           "premium audio",
+    "harman":                  "premium audio",
+    "jbl":                     "premium audio",
+    "premium speakers":        "premium audio",
+    # ── ADAS alias catches ───────────────────────────────────────────────
+    "radar":                   "adaptive cruise control",
+    "radar cruise":            "adaptive cruise control",
+    "honda sensing":           "adaptive cruise control",
+    "toyota safety sense":     "adaptive cruise control",
+    "distance keeping":        "adaptive cruise control",
+    # ── 7-Seater / Third Row ─────────────────────────────────────────────
+    # Hard allowlist gate — prevents 4-seaters / kei cars from passing
+    # a 7-seater query. Jimny, Terios, Alto, Swift etc. are physically blocked.
+    "7 seater":                "7 seater",
+    "7-seater":                "7 seater",
+    "7 seat":                  "7 seater",
+    "7 seats":                 "7 seater",
+    "seven seater":            "7 seater",
+    "seven seat":              "7 seater",
+    "third row":               "7 seater",
+    "3rd row":                 "7 seater",
+    "third row seat":          "7 seater",
+    "8 seater":                "7 seater",   # 8-seaters are a superset, same gate
+    "8-seater":                "7 seater",
+    "family van":              "7 seater",
+    # ── Series Hybrid / e-Power ──────────────────────────────────────────
+    # Series hybrid = petrol engine acts ONLY as generator; wheels driven
+    # purely by electric motor. In Pakistan: Nissan Note/Serena e-Power,
+    # Forthing Friday. NOT to be confused with parallel HEV (Aqua, Prius).
+    "series hybrid":           "series hybrid",
+    "e-power":                 "series hybrid",
+    "epower":                  "series hybrid",
+    "e power":                 "series hybrid",
+    "range extender":          "series hybrid",
+    "reev":                    "series hybrid",
+    "range extended":          "series hybrid",
+    # ── Engine CC / Token Tax Brackets ──────────────────────────────────
+    # Maps user intent around Pakistan annual token tax brackets.
+    # Vehicles up to 1000cc pay lowest rate. 1001-1300cc next tier.
+    # 1301-1600cc higher. Users say "low tax"/"1500cc" to avoid 1601-1800cc bracket.
+    "under 1500cc":            "under 1500cc",
+    "1500cc":                  "under 1500cc",
+    "under 1300cc":            "under 1300cc",
+    "1300cc":                  "under 1300cc",
+    "1.5l":                    "under 1500cc",
+    "1.5 l":                   "under 1500cc",
+    "1.5 litre":               "under 1500cc",
+    "1.5 liter":               "under 1500cc",
+    "1.3l":                    "under 1300cc",
+    "1.3 l":                   "under 1300cc",
+    "1.3 litre":               "under 1300cc",
+    "low tax":                 "under 1500cc",
+    "token tax":               "under 1500cc",
+    "save tax":                "under 1500cc",
+    "tax bracket":             "under 1500cc",
+    "low token":               "under 1500cc",
+    "cheap token":             "under 1500cc",
+    # ── High-Altitude Fuel Sensitivity / HOBC-GDI Knocking Gate ──────────
+    # Users at altitude (northern areas) or without reliable HOBC/95 RON
+    # access flag GDI/TGDI turbo engines as knock-prone on regular pump
+    # fuel. Normalise all phrasings to the "regular fuel" gate so only
+    # NA/MPI engines (Sportage Alpha MPI, Tucson FWD MPI, Corolla 1.8 NA)
+    # pass through.
+    "no hobc":                 "regular fuel",
+    "regular fuel":            "regular fuel",
+    "92 ron":                  "regular fuel",
+    "no knocking":             "regular fuel",
+    "engine knocking":         "regular fuel",
+}
+
 def get_eligible_cars(
     max_budget: int,
     min_budget: int,
@@ -2527,212 +2733,6 @@ def get_eligible_cars(
       picking it as plain "Alto" which would flood local Alto listings.
     """
     excluded_lower = {m.lower() for m in (excluded_models or [])}
-
-    # Normalise required_features strings → canonical _FEATURE_IMPOSSIBLE keys
-    _FEAT_NORMALISE: dict[str, str] = {
-        "sunroof":                 "sunroof",
-        "moonroof":                "sunroof",
-        "panoramic":               "panoramic sunroof",
-        "panoramic sunroof":       "panoramic sunroof",
-        "push start":              "push start",
-        "push-start":              "push start",
-        "button start":            "push start",
-        "keyless":                 "keyless entry",
-        "keyless entry":           "keyless entry",
-        "keyless start":           "push start",
-        "smart key":               "push start",
-        "lane assist":             "lane assist",
-        "lane departure":          "lane assist",
-        "lane keep":               "lane assist",
-        "lkas":                    "lane assist",
-        "adaptive cruise":         "adaptive cruise control",
-        "adaptive cruise control": "adaptive cruise control",
-        "acc":                     "adaptive cruise control",
-        "auto parking":            "auto parking",
-        "self parking":            "auto parking",
-        "automatic parking":       "auto parking",
-        "parking sensors":         "parking sensors",
-        "parking sensor":          "parking sensors",
-        "pdc":                     "parking sensors",
-        "back camera":             "back camera",
-        "rear camera":             "back camera",
-        "reverse camera":          "back camera",
-        "parking camera":          "back camera",
-        "backup camera":           "back camera",
-        # ── Heated Seats ─────────────────────────────────────────────────────
-        "heated seats":            "heated seats",
-        "seat warmer":             "heated seats",
-        "seat heating":            "heated seats",
-        "warm seats":              "heated seats",
-        # ── Ventilated / Cooled Seats (separate gate from heated) ────────────
-        "ventilated seats":        "ventilated seats",
-        "ventilated seat":         "ventilated seats",
-        "ventilated":              "ventilated seats",
-        "seat cooling":            "ventilated seats",
-        "cooled seats":            "ventilated seats",
-        "cooled seat":             "ventilated seats",
-        "cooling seats":           "ventilated seats",
-        "seat ventilation":        "ventilated seats",
-        # ── Massaging Seats ──────────────────────────────────────────────────
-        "massaging seats":         "massaging seats",
-        "massage seats":           "massaging seats",
-        "massage seat":            "massaging seats",
-        "seat massage":            "massaging seats",
-        # ── Leather Seats ────────────────────────────────────────────────────
-        "leather seats":           "leather seats",
-        "leather":                 "leather seats",
-        # ── 4WD / AWD ────────────────────────────────────────────────────────
-        "4wd":                     "4wd",
-        "4x4":                     "4wd",
-        "awd":                     "4wd",
-        "four wheel drive":        "4wd",
-        "all wheel drive":         "4wd",
-        # ── Hybrid / Powertrain ──────────────────────────────────────────────
-        "hybrid":                  "hybrid",
-        "hev":                     "hybrid",
-        "phev":                    "hybrid",
-        # ── Blind Spot Monitor ───────────────────────────────────────────────
-        "blind spot":              "blind spot monitor",
-        "bsm":                     "blind spot monitor",
-        "blind spot monitor":      "blind spot monitor",
-        # ── Memory Seats ─────────────────────────────────────────────────────
-        "memory seats":            "memory seats",
-        "memory seat":             "memory seats",
-        "seat memory":             "memory seats",
-        "driver memory":           "memory seats",
-        "driver seat memory":      "memory seats",
-        "memory function":         "memory seats",
-        "memory":                  "memory seats",
-        # ── Power Tailgate ───────────────────────────────────────────────────
-        "power tailgate":          "power tailgate",
-        "auto trunk":              "power tailgate",
-        "electric tailgate":       "power tailgate",
-        "hands free trunk":        "power tailgate",
-        "hands-free trunk":        "power tailgate",
-        "electric trunk":          "power tailgate",
-        # ── Electric Parking Brake ───────────────────────────────────────────
-        "epb":                     "electric parking brake",
-        "electric parking brake":  "electric parking brake",
-        "electronic parking brake":"electric parking brake",
-        "auto hold":               "electric parking brake",
-        "brake hold":              "electric parking brake",
-        "e-brake":                 "electric parking brake",
-        # ── Dual Zone Climate ────────────────────────────────────────────────
-        "dual zone":               "dual zone climate",
-        "dual-zone":               "dual zone climate",
-        "dual zone ac":            "dual zone climate",
-        "dual zone climate":       "dual zone climate",
-        "dual zone air":           "dual zone climate",
-        "2 zone climate":          "dual zone climate",
-        "two zone climate":        "dual zone climate",
-        "dual zone temperature":   "dual zone climate",
-        # ── Rear AC Vents ────────────────────────────────────────────────────
-        "rear ac":                 "rear ac vents",
-        "rear vents":              "rear ac vents",
-        "rear ac vents":           "rear ac vents",
-        "rear air conditioning":   "rear ac vents",
-        "back ac":                 "rear ac vents",
-        "back vents":              "rear ac vents",
-        # ── 360 Camera ───────────────────────────────────────────────────────
-        "360 camera":              "360 camera",
-        "360 view":                "360 camera",
-        "360 degree camera":       "360 camera",
-        "surround camera":         "360 camera",
-        "surround view":           "360 camera",
-        "bird eye":                "360 camera",
-        "birds eye view":          "360 camera",
-        # ── Head-Up Display ──────────────────────────────────────────────────
-        "hud":                     "head up display",
-        "head up display":         "head up display",
-        "head-up display":         "head up display",
-        "heads up display":        "head up display",
-        "windshield display":      "head up display",
-        # ── Digital Instrument Cluster ───────────────────────────────────────
-        "digital cluster":         "digital instrument cluster",
-        "digital meter":           "digital instrument cluster",
-        "digital gauge":           "digital instrument cluster",
-        "virtual cockpit":         "digital instrument cluster",
-        "digital dashboard":       "digital instrument cluster",
-        "fully digital cluster":   "digital instrument cluster",
-        # ── Wireless Charging ────────────────────────────────────────────────
-        "wireless charging":       "wireless charging",
-        "wireless charger":        "wireless charging",
-        "qi charging":             "wireless charging",
-        "qi charger":              "wireless charging",
-        "wireless phone charging": "wireless charging",
-        # ── Premium Audio ─────────────────────────────────────────────────────
-        "premium audio":           "premium audio",
-        "premium sound":           "premium audio",
-        "bose":                    "premium audio",
-        "harman kardon":           "premium audio",
-        "harman":                  "premium audio",
-        "jbl":                     "premium audio",
-        "premium speakers":        "premium audio",
-        # ── ADAS alias catches ───────────────────────────────────────────────
-        "radar":                   "adaptive cruise control",
-        "radar cruise":            "adaptive cruise control",
-        "honda sensing":           "adaptive cruise control",
-        "toyota safety sense":     "adaptive cruise control",
-        "distance keeping":        "adaptive cruise control",
-        # ── 7-Seater / Third Row ─────────────────────────────────────────────
-        # Hard allowlist gate — prevents 4-seaters / kei cars from passing
-        # a 7-seater query. Jimny, Terios, Alto, Swift etc. are physically blocked.
-        "7 seater":                "7 seater",
-        "7-seater":                "7 seater",
-        "7 seat":                  "7 seater",
-        "7 seats":                 "7 seater",
-        "seven seater":            "7 seater",
-        "seven seat":              "7 seater",
-        "third row":               "7 seater",
-        "3rd row":                 "7 seater",
-        "third row seat":          "7 seater",
-        "8 seater":                "7 seater",   # 8-seaters are a superset, same gate
-        "8-seater":                "7 seater",
-        "family van":              "7 seater",
-        # ── Series Hybrid / e-Power ──────────────────────────────────────────
-        # Series hybrid = petrol engine acts ONLY as generator; wheels driven
-        # purely by electric motor. In Pakistan: Nissan Note/Serena e-Power,
-        # Forthing Friday. NOT to be confused with parallel HEV (Aqua, Prius).
-        "series hybrid":           "series hybrid",
-        "e-power":                 "series hybrid",
-        "epower":                  "series hybrid",
-        "e power":                 "series hybrid",
-        "range extender":          "series hybrid",
-        "reev":                    "series hybrid",
-        "range extended":          "series hybrid",
-        # ── Engine CC / Token Tax Brackets ──────────────────────────────────
-        # Maps user intent around Pakistan annual token tax brackets.
-        # Vehicles up to 1000cc pay lowest rate. 1001-1300cc next tier.
-        # 1301-1600cc higher. Users say "low tax"/"1500cc" to avoid 1601-1800cc bracket.
-        "under 1500cc":            "under 1500cc",
-        "1500cc":                  "under 1500cc",
-        "under 1300cc":            "under 1300cc",
-        "1300cc":                  "under 1300cc",
-        "1.5l":                    "under 1500cc",
-        "1.5 l":                   "under 1500cc",
-        "1.5 litre":               "under 1500cc",
-        "1.5 liter":               "under 1500cc",
-        "1.3l":                    "under 1300cc",
-        "1.3 l":                   "under 1300cc",
-        "1.3 litre":               "under 1300cc",
-        "low tax":                 "under 1500cc",
-        "token tax":               "under 1500cc",
-        "save tax":                "under 1500cc",
-        "tax bracket":             "under 1500cc",
-        "low token":               "under 1500cc",
-        "cheap token":             "under 1500cc",
-        # ── High-Altitude Fuel Sensitivity / HOBC-GDI Knocking Gate ──────────
-        # Users at altitude (northern areas) or without reliable HOBC/95 RON
-        # access flag GDI/TGDI turbo engines as knock-prone on regular pump
-        # fuel. Normalise all phrasings to the "regular fuel" gate so only
-        # NA/MPI engines (Sportage Alpha MPI, Tucson FWD MPI, Corolla 1.8 NA)
-        # pass through.
-        "no hobc":                 "regular fuel",
-        "regular fuel":            "regular fuel",
-        "92 ron":                  "regular fuel",
-        "no knocking":             "regular fuel",
-        "engine knocking":         "regular fuel",
-    }
 
     active_feature_gates: set[str] = set()
     if required_features:
@@ -3084,6 +3084,7 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
     is_apex           = constraints.get("is_apex_luxury", False)
     is_luxury_request = constraints.get("is_luxury_request", False)
     excluded_models   = {m.lower() for m in (constraints.get("excluded_models") or [])}
+    required_features = constraints.get("required_features") or []
 
     valid:           list     = []
     dropped_reasons: list[str] = []
@@ -3172,6 +3173,42 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
                 print(f"[Validator] Dropping {t.make} {t.model} — too cheap for apex luxury query")
                 dropped_reasons.append(reason)
                 continue
+
+        # 7. Required Feature Verification
+        # Re-checks required_features against the same allowlist/blocklist gates
+        # get_eligible_cars() uses. This is a second line of defense: if the LLM
+        # hallucinates a feature claim (e.g. claiming a Hyundai Sonata has 360
+        # camera) that somehow wasn't caught upstream, it is dropped here too.
+        #
+        # NOTE: the inner loop's `break` only exits the `for feat in
+        # required_features` loop, not the outer `for t in targets` loop — a
+        # `feature_violation` flag is used so the offending car is actually
+        # skipped via `continue` below, rather than falling through to
+        # `valid.append(t)` after merely logging a "Dropped" reason.
+        feature_violation = False
+        if required_features and info:
+            for feat in required_features:
+                feat_lower = feat.lower().strip()
+                normalised = _FEAT_NORMALISE.get(feat_lower, feat_lower)
+
+                # Allowlist check — car MUST be in the set to pass
+                if normalised in _FEATURE_EXCLUSIVE_ALLOWLIST:
+                    if key not in _FEATURE_EXCLUSIVE_ALLOWLIST[normalised]:
+                        reason = f"Dropped {t.make} {t.model}: Does not natively possess required feature '{normalised}'."
+                        print(f"[Validator] Dropping {t.make} {t.model} — missing {normalised}")
+                        dropped_reasons.append(reason)
+                        feature_violation = True
+                        break
+                # Impossible blocklist check — car must NOT be in the set
+                elif normalised in _FEATURE_IMPOSSIBLE:
+                    if key in _FEATURE_IMPOSSIBLE[normalised]:
+                        reason = f"Dropped {t.make} {t.model}: Cannot feature '{normalised}' in PKDM spec."
+                        print(f"[Validator] Dropping {t.make} {t.model} — blocked for {normalised}")
+                        dropped_reasons.append(reason)
+                        feature_violation = True
+                        break
+        if feature_violation:
+            continue
 
         valid.append(t)
 
@@ -3792,15 +3829,13 @@ async def get_validated_car_targets(constraints: dict) -> list[dict]:
             ]
 
             correction_prompt = (
-                f"Your previous vehicle recommendations failed strict system validation "
-                f"for the following reasons:\n"
+                f"STRICT AUDIT SANITIZER: Your previous vehicle recommendations contained invalid or non-compliant models:\n"
                 + "\n".join(f"  - {r}" for r in dropped_reasons)
-                + f"\n\nELIGIBLE CARS (pre-verified by Python — pick ONLY from this list):\n"
-                + eligible_list
-                + f"\n\nAlready picked (do NOT repeat): {json.dumps(already_picked)}"
-                + f"\n\nTASK: Return EXACTLY {needed} NEW replacement car(s) from the eligible "
-                f"list above that do NOT violate any of the validation rules listed. "
-                "Return ONLY the JSON array for the replacements — no commentary."
+                + f"\n\nELIGIBLE CARS (PICK ONLY FROM THIS PRE-VERIFIED LIST):\n{eligible_list}\n\n"
+                + f"ALREADY PICKED (DO NOT REPEAT): {json.dumps(already_picked)}\n\n"
+                + f"TASK: Return EXACTLY {needed} valid replacement car(s) from the ELIGIBLE CARS list above. "
+                + f"Ensure strictly zero vetoed brands, exact feature matches, and zero hallucinations. "
+                + f"If ELIGIBLE CARS is empty or no valid cars remain, return an empty JSON array []."
             )
 
             try:
