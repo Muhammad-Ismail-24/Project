@@ -2038,6 +2038,27 @@ _FEATURE_EXCLUSIVE_ALLOWLIST: dict[str, set[str]] = {
         "nissan:serena e-power",
         "forthing:friday",
     },
+
+    # 660cc Kei-car exclusive allowlist (Test 66). When a user explicitly
+    # requests a 660cc engine, non-660cc crossovers/SUVs (1.5L BR-V, 1.5L
+    # Juke, 1.3L Terios, etc.) must be hard-blocked — this list is the only
+    # way in. Every key below is a genuine Kei-class (or Kei-adjacent JDM
+    # mini) model in the Pakistani market. NOTE: "suzuki:alto" (bare key,
+    # no "jdm" tag) is the locally-assembled model line, which spans both
+    # the current 660cc generation (2019+) and older used 800cc-era units
+    # at the low end of its registry price band — it is included here
+    # because genuine 660cc trims of it exist, but a "660cc only" query
+    # could in principle still surface an older 800cc-era listing until/
+    # unless that model line is split into separate registry keys by era.
+    "660cc": {
+        "suzuki:mehran", "suzuki:alto", "suzuki:alto 660cc", "suzuki:every",
+        "suzuki:bolan", "suzuki:hustler", "suzuki:spacia", "suzuki:jimny",
+        "daihatsu:mira", "daihatsu:move", "daihatsu:tanto", "daihatsu:cast",
+        "daihatsu:hijet", "daihatsu:cuore",
+        "nissan:dayz", "nissan:roox", "nissan:clipper",
+        "honda:n-box", "honda:n-wgn", "honda:n-one", "honda:life",
+        "mazda:scrum", "mitsubishi:mini pajero",
+    },
 }
 
 
@@ -2373,8 +2394,8 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
         "mazda:mazda3", "mazda:cx-5", "mazda:cx-3",
         "subaru:impreza", "subaru:xv", "subaru:forester",
         "mitsubishi:asx",
-        # Other
-        "proton:x70",
+        # Other — Proton Saga is 1332cc, exceeds the 1300cc tax bracket (Test 62)
+        "proton:saga", "proton:x70",
         # Chinese crossovers / SUVs — all 1.5T or above in PK
         "haval:jolion", "haval:jolion hev", "haval:h6", "haval:h6 hev", "haval:h6 phev",
         "mg:hs", "mg:zs",
@@ -2690,6 +2711,14 @@ _FEAT_NORMALISE: dict[str, str] = {
     "1500cc":                  "under 1500cc",
     "under 1300cc":            "under 1300cc",
     "1300cc":                  "under 1300cc",
+    # 660cc Kei-car bracket — strictly narrower than "under 1300cc" (Test 66).
+    # A user asking for this specifically wants a true Japanese kei-class
+    # vehicle, not just any sub-1300cc car — see _FEATURE_EXCLUSIVE_ALLOWLIST.
+    "660cc":                   "660cc",
+    "660 cc":                  "660cc",
+    "sub 660cc":               "660cc",
+    "kei":                     "660cc",
+    "kei car":                 "660cc",
     "1.5l":                    "under 1500cc",
     "1.5 l":                   "under 1500cc",
     "1.5 litre":               "under 1500cc",
