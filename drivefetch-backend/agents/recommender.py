@@ -2363,6 +2363,12 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
         "toyota:crown", "toyota:camry", "toyota:prius",
         "toyota:c-hr", "toyota:fortuner", "toyota:hilux",
         "toyota:land cruiser", "toyota:prado", "toyota:raize",
+        # Hybrid / wagon JDM imports (Test 62) — the LLM hallucinated
+        # <1300cc compliance for these because "hybrid" and "wagon" body
+        # styles read as small/economical, but every PK-market unit of
+        # these specific models is 1.5L+.
+        "honda:insight", "honda:grace", "honda:shuttle", "honda:freed",
+        "toyota:fielder", "toyota:probox",
         # JDM imports — no sub-1300cc variant in PK market
         "mazda:mazda3", "mazda:cx-5", "mazda:cx-3",
         "subaru:impreza", "subaru:xv", "subaru:forester",
@@ -2972,6 +2978,21 @@ def get_eligible_cars(
                     if key in impossible_set:
                         skip = True
                         break
+
+                    # COMBINATION PARADOX (Test 62): the PK-market Corolla
+                    # 1.3L (XLi/GLi) genuinely exists, so toyota:corolla
+                    # correctly passes the "under 1300cc" blocklist above on
+                    # engine size alone — but that specific 1.3L trim is
+                    # MANUAL ONLY in Pakistan; Automatic Corolla starts at
+                    # 1.6L. The LLM hallucinated an "Automatic Corolla 1.0"
+                    # because engine size and transmission were being
+                    # checked as independent facts instead of as a joint
+                    # combination. Hard-block that exact combination here.
+                    if (feat_key == "under 1300cc"
+                            and key == "toyota:corolla"
+                            and transmission_req == "Automatic"):
+                        skip = True
+                        break
             if skip:
                 continue
 
@@ -3281,6 +3302,23 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
                         break
         if feature_violation:
             continue
+
+        # 8. Micro-Engine Trim Hallucination Gate (Test 62)
+        # The LLM would sometimes append a fake micro-engine trim (e.g. "1.0"
+        # or "660cc") onto a large sedan/SUV/crossover specifically to force
+        # budget or "under 1300cc" tax-bracket compliance — a trim that does
+        # not exist for that body style in the PK market. Legitimate small-
+        # displacement non-hatchback/van vehicles (kei-adjacent mini-SUVs)
+        # are explicitly exempted below.
+        trim_lower = t.trim.lower()
+        if "1.0" in trim_lower or "660cc" in trim_lower or "800cc" in trim_lower:
+            if info and "Hatchback" not in info["styles"] and "Van" not in info["styles"]:
+                # Allow exceptions for legitimate non-hatchback micro engines
+                if key not in {"mitsubishi:mini pajero", "suzuki:jimny", "daihatsu:terios"}:
+                    reason = f"Dropped {t.make} {t.model}: Hallucinated micro-engine trim '{t.trim}' on a large vehicle."
+                    print(f"[Validator] Dropping {t.make} {t.model} — Hallucinated micro-engine")
+                    dropped_reasons.append(reason)
+                    continue
 
         valid.append(t)
 
