@@ -2766,6 +2766,8 @@ def get_eligible_cars(
     is_highway_ev: bool = False,
     origin_pref: str | None = None,
     is_diesel_hybrid_query: bool = False,
+    excluded_origins: list[str] | None = None,
+    is_llm_vetoed: bool = False,
 ) -> str:
     """
     Returns a priority-weighted, fit-score-sorted eligible car list as a prompt string.
@@ -2809,6 +2811,16 @@ def get_eligible_cars(
       picking it as plain "Alto" which would flood local Alto listings.
     """
     excluded_lower = {m.lower() for m in (excluded_models or [])}
+
+    # ── Front-Door Veto Short-Circuit ────────────────────────────────────────
+    # If resolve_constraints() set is_llm_vetoed, the query is paradoxical,
+    # illegal, or physically impossible. Python must not even attempt a registry
+    # scan — return immediately so the pipeline reaches an honest zero-hit.
+    if is_llm_vetoed:
+        return (
+            "No eligible cars found. The user's query contains contradictory, "
+            "illegal, or impossible constraints. Return an empty array []."
+        )
 
     active_feature_gates: set[str] = set()
     if required_features:
@@ -2928,6 +2940,31 @@ def get_eligible_cars(
         if origin_pref == "Local" and "jdm" in info.get("tags", set()):
             continue
 
+        # 2c. Excluded Origins Hard Gate (Defense-in-Depth)
+        # If the LLM misses an origin wipeout (or the user stated it only
+        # in natural language), Python enforces it here as a second layer.
+        # Mirrors the same gate in _validate_targets().
+        _excl_origins = excluded_origins or []
+        if _excl_origins:
+            skip_origin = False
+            car_tags    = info.get("tags", set())
+            car_is_jdm      = "jdm" in car_tags
+            car_is_chinese  = info.get("chinese", False)
+            car_is_european = make in _EUROPEAN_MAKES
+            car_is_local    = not car_is_jdm and not car_is_chinese and not car_is_european
+
+            for excl_orig in _excl_origins:
+                if excl_orig in {"local", "pkdm", "locally assembled"} and car_is_local:
+                    skip_origin = True; break
+                if excl_orig in {"jdm", "imported", "japanese"} and car_is_jdm:
+                    skip_origin = True; break
+                if excl_orig in {"chinese", "china"} and car_is_chinese:
+                    skip_origin = True; break
+                if excl_orig in {"european", "europe", "germany", "german"} and car_is_european:
+                    skip_origin = True; break
+            if skip_origin:
+                continue
+
         # 3. Transmission gate
         if transmission_req == "Automatic" and info["transmission"] == "manual":
             continue
@@ -2995,8 +3032,13 @@ def get_eligible_cars(
         if active_feature_gates:
             skip = False
             for feat_key in active_feature_gates:
-                # Direct Model Immunity applies to luxury/comfort features, but NEVER physical reality
-                if is_direct_target and feat_key not in {"7 seater", "series hybrid"}:
+                # Direct Model Immunity does NOT apply to physical laws
+                # (seating capacity, series hybrid powertrain, or engine
+                # displacement / token-tax bracket constraints).
+                if is_direct_target and feat_key not in {
+                    "7 seater", "series hybrid",
+                    "under 1300cc", "under 1500cc", "660cc",
+                }:
                     continue
                 # A. Check Exclusive Allowlist first (strict inclusion)
                 if feat_key in _FEATURE_EXCLUSIVE_ALLOWLIST:
@@ -3309,6 +3351,33 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
             dropped_reasons.append(reason)
             continue
 
+        # 2c. Excluded Origins Hard Gate (Defense-in-Depth — mirrors get_eligible_cars gate)
+        if info:
+            _v_excl_origins = constraints.get("excluded_origins", [])
+            if _v_excl_origins:
+                v_car_tags      = info.get("tags", set())
+                v_car_is_jdm      = "jdm" in v_car_tags
+                v_car_is_chinese  = info.get("chinese", False)
+                v_car_is_european = make_lower in _EUROPEAN_MAKES
+                v_car_is_local    = not v_car_is_jdm and not v_car_is_chinese and not v_car_is_european
+                v_skip_origin     = False
+
+                for excl_orig in _v_excl_origins:
+                    if excl_orig in {"local", "pkdm", "locally assembled"} and v_car_is_local:
+                        v_skip_origin = True; break
+                    if excl_orig in {"jdm", "imported", "japanese"} and v_car_is_jdm:
+                        v_skip_origin = True; break
+                    if excl_orig in {"chinese", "china"} and v_car_is_chinese:
+                        v_skip_origin = True; break
+                    if excl_orig in {"european", "europe", "germany", "german"} and v_car_is_european:
+                        v_skip_origin = True; break
+
+                if v_skip_origin:
+                    reason = f"Dropped {t.make} {t.model}: Origin is forbidden by user's explicit exclusion."
+                    print(f"[Validator] Dropping {t.make} {t.model} — excluded origin")
+                    dropped_reasons.append(reason)
+                    continue
+
         # 3. Body style gate — SUV/Crossover treated as interchangeable (mirror of gate in get_eligible_cars)
         if info and body_style and not is_direct_target:
             allowed_styles = {body_style}
@@ -3382,8 +3451,13 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
                 feat_lower = feat.lower().strip()
                 normalised = _FEAT_NORMALISE.get(feat_lower, feat_lower)
 
-                # Direct Model Immunity applies to luxury/comfort features, but NEVER physical reality
-                if is_direct_target and normalised not in {"7 seater", "series hybrid"}:
+                # Direct Model Immunity does NOT apply to physical laws
+                # (seating capacity, series hybrid powertrain, or engine
+                # displacement / token-tax bracket constraints).
+                if is_direct_target and normalised not in {
+                    "7 seater", "series hybrid",
+                    "under 1300cc", "under 1500cc", "660cc",
+                }:
                     continue
 
                 # Allowlist check — car MUST be in the set to pass
@@ -3481,6 +3555,8 @@ class UserIntent(BaseModel):
     excluded_features: list[str]                                                                     = Field(default_factory=list, description="Features explicitly forbidden by the user (e.g., ['660cc', 'sunroof', 'leather seats'])")
     excluded_brands:   list[str]                                                                     = Field(default_factory=list, description="Brands/makes explicitly forbidden or vetoed by the user, e.g. ['Haval', 'Changan', 'Chery']")
     excluded_models:   list[str]                                                                     = Field(default_factory=list, description="Specific models explicitly forbidden or vetoed by the user, e.g. ['Yaris', 'City', 'Corolla']")
+    excluded_origins:  list[str]                                                                     = Field(default_factory=list, description="Origins explicitly forbidden, e.g. ['local', 'jdm', 'chinese', 'european']")
+    immediate_veto_message: Optional[str]                                                            = Field(default=None, description="If the query contains a severe paradox (e.g. '1.8L engine under 1000cc tax', '7-seater coupe', banned ALL origins, or illegal 'NCP' cars), provide a 1-sentence explanation of why it's impossible. Otherwise null.")
     strategy_summary:  str                                                                           = Field(default="", description="A friendly 2-sentence summary explaining the search interpretation and car strategy.")
     disclaimers:       list[str]                                                                     = Field(default_factory=list)
     current_car:       Optional[str]                                                                 = None
@@ -3547,6 +3623,19 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "Only extract an explicitly named brand — never a vague category like 'Chinese "
         "cars' (that broader intent belongs to origin_pref, not here). Leave empty if not "
         "clearly stated.\n"
+        "- excluded_origins: Extract any origin the user explicitly forbids. Examples: "
+        "'NO local cars' -> ['local'], 'absolutely no Chinese or European' -> ['chinese', 'european'], "
+        "'no JDM' -> ['jdm'], 'no Japanese imports' -> ['jdm'].\n"
+        "- immediate_veto_message: YOU ARE THE FRONT-DOOR BOUNCER. If the user's request contains "
+        "a physical impossibility, a legal violation, or an impossible filter combination, you MUST "
+        "populate this field with a 1-sentence rejection explanation.\n"
+        "  * EXAMPLES OF VETOES:\n"
+        "    1. Illegal/Smuggled: 'I want an NCP Land Cruiser' -> 'Non-Custom Paid (NCP) vehicles are illegal outside border regions.'\n"
+        "    2. Physics Paradox: 'Honda Civic 1.8L under 1000cc tax' -> 'A 1.8L engine physically cannot qualify for a sub-1000cc tax bracket.'\n"
+        "    3. Geometry Paradox: '7-seater Mazda RX-8' -> 'A 2-door sports coupe physically cannot seat 7 passengers.'\n"
+        "    4. Total Wipeout: 'No local, no JDM, no Chinese, no European' -> 'You have excluded all available vehicle origins in the Pakistani market.'\n"
+        "  * If you populate this, the system will instantly abort the search and show your message to the user. "
+        "Leave null if the query is physically and legally possible.\n"
         "- Conditional / Nested Negations: For compound phrasing like 'no Suzuki unless "
         "it's not a hatchback' or 'don't give me any sedan that isn't a Honda', you do NOT "
         "need to enumerate every affected model — a deterministic backup system already "
@@ -3948,6 +4037,25 @@ def resolve_constraints(intent: UserIntent) -> dict:
     # words one last time, independent of any structured field extraction.
     constraints["user_prompt"] = raw_prompt
 
+    # ── excluded_origins + Front-Door Veto Lock-Down ─────────────────────────
+    # excluded_origins feeds both get_eligible_cars() (origin hard-gate) and
+    # the veto total-wipeout check in immediate_veto_message.
+    constraints["excluded_origins"] = [o.lower().strip() for o in (intent.excluded_origins or [])]
+    constraints["is_llm_vetoed"] = False
+
+    if intent.immediate_veto_message:
+        constraints["is_llm_vetoed"] = True
+        constraints["strategy_summary"] = (
+            f"Query Rejected: {intent.immediate_veto_message} "
+            "Please adjust your search criteria."
+        )
+        constraints["disclaimers"].append(
+            f"⚠️ Paradox Detected: {intent.immediate_veto_message}"
+        )
+        # Strip VIP immunity so nothing gets forced through on a vetoed query
+        intent.direct_model = None
+        constraints["direct_model"] = None
+
     return constraints
 
 
@@ -4010,6 +4118,8 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         is_highway_ev=constraints.get("is_highway_ev", False),
         origin_pref=origin_pref,
         is_diesel_hybrid_query=constraints.get("is_diesel_hybrid_query", False),
+        excluded_origins=constraints.get("excluded_origins", []),
+        is_llm_vetoed=constraints.get("is_llm_vetoed", False),
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
@@ -4362,6 +4472,8 @@ async def get_validated_car_targets(constraints: dict) -> list[dict]:
                 is_highway_ev    = constraints.get("is_highway_ev", False),
                 origin_pref      = constraints.get("origin_pref"),
                 is_diesel_hybrid_query = constraints.get("is_diesel_hybrid_query", False),
+                excluded_origins = constraints.get("excluded_origins", []),
+                is_llm_vetoed    = constraints.get("is_llm_vetoed", False),
             )
 
             # ── Empty Eligible List Short-Circuit ─────────────────────────────
@@ -4466,6 +4578,8 @@ async def get_fallback_recommendations(
         is_highway_ev=constraints.get("is_highway_ev", False),
         origin_pref=constraints.get("origin_pref"),
         is_diesel_hybrid_query=constraints.get("is_diesel_hybrid_query", False),
+        excluded_origins=constraints.get("excluded_origins", []),
+        is_llm_vetoed=constraints.get("is_llm_vetoed", False),
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
@@ -4547,6 +4661,8 @@ async def get_extended_recommendations(
         is_highway_ev=original_constraints.get("is_highway_ev", False),
         origin_pref=original_constraints.get("origin_pref"),
         is_diesel_hybrid_query=original_constraints.get("is_diesel_hybrid_query", False),
+        excluded_origins=original_constraints.get("excluded_origins", []),
+        is_llm_vetoed=original_constraints.get("is_llm_vetoed", False),
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
