@@ -2074,6 +2074,7 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
         "suzuki:every", "suzuki:bolan", "suzuki:apv", "suzuki:hustler", "suzuki:spacia",
         "toyota:vitz", "toyota:passo", "toyota:probox", "toyota:hiace",
         "toyota:yaris", "toyota:aqua", "toyota:rush", "toyota:hilux",
+        "toyota:fortuner",  # No factory sunroof — roof-mounted rear AC ducts occupy the space
         "honda:n-box", "honda:n-wgn", "honda:fit", "honda:freed", "honda:br-v",
         "hyundai:santro",
         "daihatsu:cuore", "daihatsu:mira", "daihatsu:move", "daihatsu:tanto",
@@ -2432,8 +2433,9 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
 
 _SUNROOF_TRIM_KNOWLEDGE: dict[str, list[str]] = {
     # ["any"] = all trims, [] / missing = unknown
+    # NOTE: toyota:fortuner deliberately OMITTED — no factory sunroof in PK
+    # market (roof-mounted rear AC ducts occupy the space). See _FEATURE_IMPOSSIBLE.
     "toyota:corolla":          ["Grande", "Altis Grande", "X Corolla"],
-    "toyota:fortuner":         ["VRZ", "Sigma3", "Legender"],
     "toyota:prado":            ["any"],
     "toyota:land cruiser":     ["any"],
     "toyota:camry":            ["any"],
@@ -3032,14 +3034,10 @@ def get_eligible_cars(
         if active_feature_gates:
             skip = False
             for feat_key in active_feature_gates:
-                # Direct Model Immunity does NOT apply to physical laws
-                # (seating capacity, series hybrid powertrain, or engine
-                # displacement / token-tax bracket constraints).
-                if is_direct_target and feat_key not in {
-                    "7 seater", "series hybrid",
-                    "under 1300cc", "under 1500cc", "660cc",
-                }:
-                    continue
+                # Direct Model Immunity is COMPLETELY REVOKED for feature gates.
+                # Naming a car (e.g. "Suzuki Cultus") does not magically spawn
+                # hardware it physically cannot have (e.g. Power Tailgate).
+                # Every car — named or not — must pass all hardware blocklists.
                 # A. Check Exclusive Allowlist first (strict inclusion)
                 if feat_key in _FEATURE_EXCLUSIVE_ALLOWLIST:
                     if key not in _FEATURE_EXCLUSIVE_ALLOWLIST[feat_key]:
@@ -3451,14 +3449,9 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
                 feat_lower = feat.lower().strip()
                 normalised = _FEAT_NORMALISE.get(feat_lower, feat_lower)
 
-                # Direct Model Immunity does NOT apply to physical laws
-                # (seating capacity, series hybrid powertrain, or engine
-                # displacement / token-tax bracket constraints).
-                if is_direct_target and normalised not in {
-                    "7 seater", "series hybrid",
-                    "under 1300cc", "under 1500cc", "660cc",
-                }:
-                    continue
+                # Direct Model Immunity is COMPLETELY REVOKED for feature gates.
+                # Naming a car does not exempt it from physical hardware checks.
+                # Every car — named or not — must pass the allowlist/blocklist.
 
                 # Allowlist check — car MUST be in the set to pass
                 if normalised in _FEATURE_EXCLUSIVE_ALLOWLIST:
@@ -3634,6 +3627,8 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "    2. Physics Paradox: 'Honda Civic 1.8L under 1000cc tax' -> 'A 1.8L engine physically cannot qualify for a sub-1000cc tax bracket.'\n"
         "    3. Geometry Paradox: '7-seater Mazda RX-8' -> 'A 2-door sports coupe physically cannot seat 7 passengers.'\n"
         "    4. Total Wipeout: 'No local, no JDM, no Chinese, no European' -> 'You have excluded all available vehicle origins in the Pakistani market.'\n"
+        "    5. Mechanical Paradox: 'Manual transmission with Adaptive Cruise Control' -> 'Adaptive Cruise Control requires an automatic transmission to govern speed; it is mechanically incompatible with a manual gearbox in this market.'\n"
+        "    6. Economy ADAS Paradox: 'Suzuki Cultus with Lane Assist and Power Tailgate' -> 'Entry-level budget hatchbacks do not feature Level 2 ADAS or luxury power tailgates.'\n"
         "  * If you populate this, the system will instantly abort the search and show your message to the user. "
         "Leave null if the query is physically and legally possible.\n"
         "- Conditional / Nested Negations: For compound phrasing like 'no Suzuki unless "
@@ -4372,7 +4367,7 @@ async def run_final_ai_sanitizer(formatted_targets: list[dict], user_prompt: str
         f"is not genuinely that engine size is NON-COMPLIANT.\n"
         f"- If the user explicitly forbids an engine size (e.g., 'no 660cc', 'not 1000cc'), any car featuring that engine size or trim is NON-COMPLIANT.\n"
         f"- If the user explicitly forbids imported JDM cars, any car with origin_type 'Imported JDM' or having 'JDM'/'660cc' in its trim/rationale is NON-COMPLIANT.\n"
-        f"- DIRECT MODEL EXCEPTION: If the user explicitly asks for a specific car by name (e.g., 'Suzuki Alto'), you may ignore Body Style or Engine Size mismatches for that specific car. HOWEVER, Seating Capacity (e.g., '7-seater') and Powertrain/Fuel (e.g., 'EV', 'Diesel') are absolute laws of physics. If a user asks for a '7-seater Alto', you MUST flag the Alto as NON-COMPLIANT because it physically cannot seat 7 people. Do not violate physical reality.\n"
+        f"- NO DIRECT MODEL EXCEPTION: Even if the user named a specific car, it is still NON-COMPLIANT if it physically cannot satisfy a hard constraint. Naming a car does not create hardware it does not have. Judge every car equally.\n"
         f"For each car, return model_name as exactly '{{make}} {{model}}' using the "
         f"make/model fields given above, plus is_compliant, and — only when "
         f"is_compliant is false — a brief rejection_reason. Evaluate every car in the "
