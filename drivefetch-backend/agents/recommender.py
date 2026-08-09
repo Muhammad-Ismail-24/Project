@@ -3629,6 +3629,7 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "    4. Total Wipeout: 'No local, no JDM, no Chinese, no European' -> 'You have excluded all available vehicle origins in the Pakistani market.'\n"
         "    5. Mechanical Paradox: 'Manual transmission with Adaptive Cruise Control' -> 'Adaptive Cruise Control requires an automatic transmission to govern speed; it is mechanically incompatible with a manual gearbox in this market.'\n"
         "    6. Economy ADAS Paradox: 'Suzuki Cultus with Lane Assist and Power Tailgate' -> 'Entry-level budget hatchbacks do not feature Level 2 ADAS or luxury power tailgates.'\n"
+        "    7. Towing/Chassis Paradox: 'Crossover/Sedan to tow 3 tons' -> 'Unibody crossovers and sedans lack the structural chassis strength to safely tow 3-ton heavy commercial loads; this requires a body-on-frame SUV or Pickup truck.'\n"
         "  * If you populate this, the system will instantly abort the search and show your message to the user. "
         "Leave null if the query is physically and legally possible.\n"
         "- Conditional / Nested Negations: For compound phrasing like 'no Suzuki unless "
