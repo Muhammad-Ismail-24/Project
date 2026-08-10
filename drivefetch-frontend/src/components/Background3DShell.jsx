@@ -18,21 +18,21 @@ const REVEAL_Y_REST      = -1;
 const REVEAL_Y_OVERSHOOT = REVEAL_Y_REST + 0.22;
 
 // ─── Scalings ──────────────────────────────────────────────────────────────────
-const BASE_SCALE = 1.15; 
+const BASE_SCALE = 1.15;
 
 // ─── Top-of-page idle state ────────────────────────────────────────────────────
-const IDLE_ROT_SPEED     = 0.55;    
-const IDLE_ROT_AMP       = 0.055;   
-const IDLE_LEVITATE_FREQ = 1.5;     
-const IDLE_LEVITATE_AMP  = 0.08;    
+const IDLE_ROT_SPEED     = 0.55;
+const IDLE_ROT_AMP       = 0.055;
+const IDLE_LEVITATE_FREQ = 1.5;
+const IDLE_LEVITATE_AMP  = 0.08;
 const POINTER_ROT_AMP    = 0.20;
 
 // ─── Angles ───────────────────────────────────────────────────────────────────
-const START_ANGLE       = (Math.PI / 5) + Math.PI; 
-const TARGET_LEFT_ANGLE = Math.PI + 0.12;          
+const START_ANGLE       = (Math.PI / 5) + Math.PI;
+const TARGET_LEFT_ANGLE = Math.PI + 0.12;
 
 // ─── isAtTopFactor transition band ────────────────────────────────────────────
-const BLEND_BAND = 150;   
+const BLEND_BAND = 150;
 
 // ─── Camera parallax ──────────────────────────────────────────────────────────
 const PARALLAX_X = 0.28;
@@ -40,14 +40,14 @@ const PARALLAX_Y = 0.14;
 
 
 function BmwModel() {
-  const { scene }  = useGLTF(bmwModelUrl);
-  const carRef     = useRef();
+  const { scene }    = useGLTF(bmwModelUrl);
+  const carRef       = useRef();
   const materialsRef = useRef([]);
 
   const smoothedProgress = useRef(0);
-  const revealProgress = useRef(0);
-  const revealDone     = useRef(false);
-  const topFactor = useRef(1);
+  const revealProgress   = useRef(0);
+  const revealDone       = useRef(false);
+  const topFactor        = useRef(1);
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
@@ -57,7 +57,7 @@ function BmwModel() {
   }, []);
 
   const globalMouse  = useRef({ x: 0, y: 0 });
-  const dragOffset   = useRef(0); 
+  const dragOffset   = useRef(0);
   const isDragging   = useRef(false);
   const lastMousePos = useRef({ x: 0, y: 0 });
 
@@ -95,8 +95,8 @@ function BmwModel() {
         }
 
         const deltaX = currentX - lastMousePos.current.x;
-        dragOffset.current += deltaX * 0.012; 
-        
+        dragOffset.current += deltaX * 0.012;
+
         lastMousePos.current = { x: currentX, y: currentY };
       }
     };
@@ -124,11 +124,11 @@ function BmwModel() {
 
   const scaleFactor = isMobile ? 0.6 : 1;
   const carScale    = BASE_SCALE * scaleFactor;
-  
-  const startX      =  3.5 * scaleFactor;
-  const startZ      =  0.5 * scaleFactor; 
-  const endX        = -20  * scaleFactor; 
-  const endZ        =  0.5 * scaleFactor; 
+
+  const startX = 3.5 * scaleFactor;
+  const startZ = 0.5 * scaleFactor;
+  const endX   = -20  * scaleFactor;
+  const endZ   = 0.5  * scaleFactor;
 
   useLayoutEffect(() => {
     const mats = [];
@@ -136,16 +136,16 @@ function BmwModel() {
     scene.traverse((child) => {
       if (child.isMesh) {
         const mat = new THREE.MeshPhysicalMaterial({
-          color:              '#080808',  
-          roughness:          0.42,       
-          metalness:          0.88,       
-          envMapIntensity:    0.85,       
-          clearcoat:          0.95,       
-          clearcoatRoughness: 0.12,       
+          color:              '#080808',
+          roughness:          0.42,
+          metalness:          0.88,
+          envMapIntensity:    0.85,
+          clearcoat:          0.95,
+          clearcoatRoughness: 0.12,
           transparent:        true,
           opacity:            0,
         });
-        child.material = mat;
+        child.material    = mat;
         child.castShadow    = true;
         child.receiveShadow = true;
         mats.push(mat);
@@ -177,49 +177,53 @@ function BmwModel() {
       carRef.current.rotation.y = START_ANGLE;
       carRef.current.rotation.x = 0;
       if (revealProgress.current >= 1) {
-        materialsRef.current.forEach(mat => { mat.opacity = 1; mat.transparent = false; mat.needsUpdate = true; });
+        materialsRef.current.forEach(mat => {
+          mat.opacity     = 1;
+          mat.transparent = false;
+          mat.needsUpdate = true;
+        });
         revealDone.current = true;
       }
       return;
     }
 
     const rawTopFactor = Math.max(0, 1 - scrollY / BLEND_BAND);
-    topFactor.current = THREE.MathUtils.damp(topFactor.current, rawTopFactor, 4.0, delta);
-    const tf = topFactor.current; 
+    topFactor.current  = THREE.MathUtils.damp(topFactor.current, rawTopFactor, 4.0, delta);
+    const tf           = topFactor.current;
 
     smoothedProgress.current = THREE.MathUtils.damp(smoothedProgress.current, rawProgress, 2.5, delta);
-    const delayedProgress = Math.pow(smoothedProgress.current, 1.5); 
+    const delayedProgress    = Math.pow(smoothedProgress.current, 1.5);
 
-    const targetX = THREE.MathUtils.lerp(startX, endX, delayedProgress);
-    const targetZ = THREE.MathUtils.lerp(startZ, endZ, delayedProgress);
+    const targetX        = THREE.MathUtils.lerp(startX, endX, delayedProgress);
+    const targetZ        = THREE.MathUtils.lerp(startZ, endZ, delayedProgress);
     const baseScrollAngle = THREE.MathUtils.lerp(START_ANGLE, TARGET_LEFT_ANGLE, delayedProgress);
 
     const elapsed    = state.clock.getElapsedTime();
     const levitation = Math.sin(elapsed * IDLE_LEVITATE_FREQ) * IDLE_LEVITATE_AMP;
-    const finalY = REVEAL_Y_REST + (levitation * tf);
+    const finalY     = REVEAL_Y_REST + (levitation * tf);
 
     carRef.current.position.set(targetX, finalY, targetZ);
 
-    const PI2 = Math.PI * 2;
-    const cycles = Math.round(dragOffset.current / PI2);
-    const baseOffset = cycles * PI2;
-    const idleSway    = Math.sin(elapsed * IDLE_ROT_SPEED) * IDLE_ROT_AMP;
-    const pointerSway = globalMouse.current.x * POINTER_ROT_AMP;
+    const PI2           = Math.PI * 2;
+    const cycles        = Math.round(dragOffset.current / PI2);
+    const baseOffset    = cycles * PI2;
+    const idleSway      = Math.sin(elapsed * IDLE_ROT_SPEED) * IDLE_ROT_AMP;
+    const pointerSway   = globalMouse.current.x * POINTER_ROT_AMP;
     const dragRemainder = dragOffset.current - baseOffset;
     const interactiveOffset = (idleSway + pointerSway + dragRemainder) * tf;
 
     carRef.current.rotation.y = THREE.MathUtils.damp(
-      carRef.current.rotation.y, 
-      baseOffset + baseScrollAngle + interactiveOffset, 
-      5.0, 
+      carRef.current.rotation.y,
+      baseOffset + baseScrollAngle + interactiveOffset,
+      5.0,
       delta
     );
     carRef.current.rotation.x = 0;
 
-    // 4. PARALLAX
-    const parallaxStrength = tf * PARALLAX_X;  
-    const targetCamX = globalMouse.current.x * parallaxStrength;
-    const targetCamY = 2 + globalMouse.current.y * (parallaxStrength * 0.5);
+    // Parallax
+    const parallaxStrength = tf * PARALLAX_X;
+    const targetCamX       = globalMouse.current.x * parallaxStrength;
+    const targetCamY       = 2 + globalMouse.current.y * (parallaxStrength * 0.5);
 
     state.camera.position.x = THREE.MathUtils.damp(state.camera.position.x, targetCamX, 3.5, delta);
     state.camera.position.y = THREE.MathUtils.damp(state.camera.position.y, targetCamY, 3.5, delta);
@@ -239,7 +243,15 @@ export default function Background3DShell() {
         <Environment preset="studio" />
         <ambientLight intensity={0.4} />
         <directionalLight position={[10, 10, 5]} intensity={0.5} />
-        <ContactShadows resolution={1024} scale={20} blur={4.5} opacity={0.32} far={10} color="#000000" position={[0, -1, 0]} />
+        <ContactShadows
+          resolution={1024}
+          scale={20}
+          blur={4.5}
+          opacity={0.32}
+          far={10}
+          color="#000000"
+          position={[0, -1, 0]}
+        />
         <React.Suspense fallback={null}>
           <BmwModel />
         </React.Suspense>
