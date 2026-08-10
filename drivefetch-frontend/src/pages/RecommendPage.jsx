@@ -262,18 +262,14 @@ export default function RecommendPage() {
         <title>AI Car Matchmaker — Search PakWheels & OLX at Once | DriveFetch</title>
         <meta name="description" content="Let DriveFetch AI Matchmaker find the right used car for you. Give our AI your budget and requirements to search across all of Pakistan's top platforms." />
         <link rel="canonical" href="https://carfinderproject.vercel.app/recommend" />
-        <script type="application/ld+json">
-          {`
-            {
-              "@context": "https://schema.org",
-              "@type": "WebApplication",
-              "name": "DriveFetch AI Car Matchmaker",
-              "applicationCategory": "UtilitiesApplication",
-              "operatingSystem": "All",
-              "description": "An AI agent that finds the perfect used car in Pakistan based on your budget and natural language requirements."
-            }
-          `}
-        </script>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          "name": "DriveFetch AI Car Matchmaker",
+          "applicationCategory": "UtilitiesApplication",
+          "operatingSystem": "All",
+          "description": "An AI agent that finds the perfect used car in Pakistan based on your budget and natural language requirements."
+        }) }} />
       </Helmet>
 
       {/* ── Background: metallic grey studio, white key light, subtle grid ── */}
