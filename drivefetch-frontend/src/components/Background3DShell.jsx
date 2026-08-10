@@ -4,101 +4,12 @@
   Provides premium clearcoat reflections, bi-directional scroll blending,
   placeholder-locked horizontal turntable drag, pure horizontal trajectory,
   and safe, non-destructive wheel rotation.
-
-  CSP-SAFE: Self-hosted Draco decoder & Procedural GPU Automotive Environment.
 */
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { ContactShadows, Environment, Lightformer } from '@react-three/drei';
+import { Environment, ContactShadows, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 import bmwModelUrl from '../assets/bmwm5.glb?url';
-
-// ─── GLTF loader with self-hosted Draco decoder (CSP-Safe) ────────────────────
-function useGLTFNoDraco(url) {
-  const [scene, setScene] = useState(null);
-  useEffect(() => {
-    const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath('/draco/'); // Serves from 'self' to pass CSP
-
-    const loader = new GLTFLoader();
-    loader.setDRACOLoader(dracoLoader);
-
-    loader.load(
-      url,
-      (gltf) => {
-        dracoLoader.dispose();
-        setScene(gltf.scene);
-      },
-      undefined,
-      (err) => console.error('[Background3DShell] GLTF load error:', err),
-    );
-
-    return () => { dracoLoader.dispose(); };
-  }, [url]);
-  return scene;
-}
-
-// ─── Premium Procedural Automotive Studio (CSP-Safe) ──────────────────────────
-// Replaces external HDRIs with long sweeping strip lights tailored for car reflections.
-function CSPStudioEnvironment() {
-  return (
-    <>
-      <ambientLight intensity={0.2} />
-      <directionalLight position={[10, 10, 5]} intensity={0.4} />
-
-      <Environment resolution={512}>
-        {/* Main overhead softbox: creates the long highlight on the roof and hood */}
-        <Lightformer
-          form="rect"
-          intensity={3}
-          color="#ffffff"
-          position={[0, 6, -2]}
-          scale={[15, 10, 1]}
-          target={[0, 0, 0]}
-        />
-        {/* Left sweeping strip light: highlights the side body lines */}
-        <Lightformer
-          form="rect"
-          intensity={1.5}
-          color="#e6f0ff"
-          position={[-8, 2, 0]}
-          scale={[20, 1.5, 1]}
-          target={[0, 0, 0]}
-        />
-        {/* Right sweeping strip light */}
-        <Lightformer
-          form="rect"
-          intensity={1.5}
-          color="#e6f0ff"
-          position={[8, 2, 0]}
-          scale={[20, 1.5, 1]}
-          target={[0, 0, 0]}
-        />
-        {/* Rear rim light: outlines the back of the car */}
-        <Lightformer
-          form="rect"
-          intensity={2}
-          color="#ffffff"
-          position={[0, 2, 8]}
-          scale={[10, 2, 1]}
-          target={[0, 0, 0]}
-        />
-        {/* Floor bounce: softly illuminates the undercarriage */}
-        <Lightformer
-          form="circle"
-          intensity={0.5}
-          color="#ffffff"
-          position={[0, -5, 0]}
-          scale={[20, 20, 1]}
-          target={[0, 0, 0]}
-          rotation={[-Math.PI / 2, 0, 0]}
-        />
-      </Environment>
-    </>
-  );
-}
 
 // ─── Reveal ────────────────────────────────────────────────────────────────────
 const REVEAL_DURATION    = 1.6;
@@ -129,7 +40,7 @@ const PARALLAX_Y = 0.14;
 
 
 function BmwModel() {
-  const scene      = useGLTFNoDraco(bmwModelUrl);
+  const { scene }  = useGLTF(bmwModelUrl);
   const carRef     = useRef();
   const materialsRef = useRef([]);
 
@@ -220,7 +131,6 @@ function BmwModel() {
   const endZ        =  0.5 * scaleFactor; 
 
   useLayoutEffect(() => {
-    if (!scene) return;
     const mats = [];
 
     scene.traverse((child) => {
@@ -229,7 +139,7 @@ function BmwModel() {
           color:              '#080808',  
           roughness:          0.42,       
           metalness:          0.88,       
-          envMapIntensity:    1.4,   // Boosted slightly to make procedural lights pop
+          envMapIntensity:    0.85,       
           clearcoat:          0.95,       
           clearcoatRoughness: 0.12,       
           transparent:        true,
@@ -316,7 +226,6 @@ function BmwModel() {
     state.camera.lookAt(0, 0.3, 0);
   });
 
-  if (!scene) return null;
   return <primitive ref={carRef} object={scene} scale={carScale} />;
 }
 
@@ -327,7 +236,9 @@ export default function Background3DShell() {
         camera={{ position: [0, 2, 8], fov: 45 }}
         gl={{ antialias: true, toneMappingExposure: 0.72 }}
       >
-        <CSPStudioEnvironment />
+        <Environment preset="studio" />
+        <ambientLight intensity={0.4} />
+        <directionalLight position={[10, 10, 5]} intensity={0.5} />
         <ContactShadows resolution={1024} scale={20} blur={4.5} opacity={0.32} far={10} color="#000000" position={[0, -1, 0]} />
         <React.Suspense fallback={null}>
           <BmwModel />
@@ -336,3 +247,5 @@ export default function Background3DShell() {
     </div>
   );
 }
+
+useGLTF.preload(bmwModelUrl);
