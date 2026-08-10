@@ -2,10 +2,11 @@ import { searchCars } from '../utils/api';
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-const Background3DShell = lazy(() => import('../components/Background3DShell'));
 import SearchBar from '../components/SearchBar';
 import CarResultCard from '../components/CarResultCard';
 import { ShieldCheck, Database, Sparkles, AlertCircle, Loader2, Car } from 'lucide-react';
+
+const Background3DShell = lazy(() => import('../components/Background3DShell'));
 
 const heroContainerVariants = {
   hidden: {},
