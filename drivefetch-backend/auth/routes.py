@@ -71,7 +71,7 @@ async def auth_callback(request: Request, db: Session = Depends(get_session)):
     # Redirect to the frontend dashboard
     frontend_url = os.getenv("FRONTEND_URL", "https://carfinderproject.vercel.app").rstrip("/")
     response = RedirectResponse(url=f"{frontend_url}/")
-    response.set_cookie(key="has_auth", value="1", httponly=False, max_age=14 * 24 * 60 * 60, samesite="none", secure=True, path="/")
+    response.set_cookie(key="has_auth", value="1", httponly=True, max_age=14 * 24 * 60 * 60, samesite="lax", secure=True, path="/")
     return response
 
 @router.get("/me")

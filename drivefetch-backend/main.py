@@ -16,9 +16,14 @@ from auth.routes import router as auth_router
 from starlette.middleware.sessions import SessionMiddleware
 from auth.config import SECRET_KEY
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from api.rate_limiter import limiter
 
 # Initialize FastAPI App
 app = FastAPI(title="CarFinder API")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Render HTTPS Trust Headers
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
@@ -40,7 +45,7 @@ app.add_middleware(
 app.add_middleware(
     SessionMiddleware,
     secret_key=SECRET_KEY,
-    same_site="none",
+    same_site="lax",
     https_only=True,
     max_age=14 * 24 * 60 * 60
 )
