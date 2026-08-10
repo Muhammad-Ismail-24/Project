@@ -6,9 +6,10 @@
   and safe, non-destructive wheel rotation.
 */
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { useEnvironment, ContactShadows, useGLTF } from '@react-three/drei';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { ContactShadows, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
+import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import bmwModelUrl from '../assets/bmwm5.glb?url';
 
 // ─── Reveal ────────────────────────────────────────────────────────────────────
@@ -38,13 +39,40 @@ const BLEND_BAND = 150;
 const PARALLAX_X = 0.28;
 const PARALLAX_Y = 0.14;
 
+// HDR URL via raw.githubusercontent.com — already in your CSP connect-src
+const HDR_URL =
+  'https://raw.githubusercontent.com/pmndrs/drei-assets/456060a26bbeb8fdf79326f224b6d99b8bcce736/hdri/studio_small_03_1k.hdr';
 
-// Loads HDR from your own /public folder — no external fetch, no CSP issues
-function EnvironmentFromPublic() {
-  const envMap = useEnvironment({ files: '/hdri/studio_small_03_1k.hdr' });
-  useFrame(({ scene }) => {
-    scene.environment = envMap;
-  });
+// Loads the HDRI directly via Three.js RGBELoader using a URL already allowed by CSP
+function SceneEnvironment() {
+  const { scene, gl } = useThree();
+
+  useEffect(() => {
+    const loader = new RGBELoader();
+    const pmremGenerator = new THREE.PMREMGenerator(gl);
+    pmremGenerator.compileEquirectangularShader();
+
+    loader.load(
+      HDR_URL,
+      (texture) => {
+        const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+        scene.environment = envMap;
+        texture.dispose();
+        pmremGenerator.dispose();
+      },
+      undefined,
+      (err) => {
+        console.warn('HDR failed to load, falling back to plain lighting:', err);
+        pmremGenerator.dispose();
+      }
+    );
+
+    return () => {
+      // cleanup on unmount
+      scene.environment = null;
+    };
+  }, [scene, gl]);
+
   return null;
 }
 
@@ -250,9 +278,8 @@ export default function Background3DShell() {
         camera={{ position: [0, 2, 8], fov: 45 }}
         gl={{ antialias: true, toneMappingExposure: 0.72 }}
       >
-        <React.Suspense fallback={null}>
-          <EnvironmentFromPublic />
-        </React.Suspense>
+        {/* Loads HDR from raw.githubusercontent.com — already whitelisted in your CSP */}
+        <SceneEnvironment />
         <ambientLight intensity={0.4} />
         <directionalLight position={[10, 10, 5]} intensity={0.5} />
         <ContactShadows
