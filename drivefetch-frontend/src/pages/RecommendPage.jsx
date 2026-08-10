@@ -430,7 +430,7 @@ export default function RecommendPage() {
                                  text-xs font-medium rounded-full shadow-sm"
                     >
                       <Car className="w-3.5 h-3.5 text-white/70" />
-                      {typeof t === "string" ? t : `${t.make} ${t.model}`}
+                      {typeof t === "string" ? t : t.label ? t.label : `${t.make ?? ''} ${t.model ?? ''}`.trim()}
                     </span>
                   ))}
                 </div>
@@ -467,7 +467,7 @@ export default function RecommendPage() {
                       </span>
                       <div>
                         <span className="text-sm font-bold text-black">
-                          {t.make} {t.model} {t.trim || ""}
+                          {t.label ? t.label : `${t.make ?? ''} ${t.model ?? ''} ${t.trim ?? ''}`.trim()}
                         </span>
                         {t.rationale && (
                           <p className="text-xs font-medium text-black/60 mt-0.5 leading-relaxed">{t.rationale}</p>
@@ -523,7 +523,7 @@ export default function RecommendPage() {
                         </span>
                         <div>
                           <span className="text-sm font-bold text-black">
-                            {t.make} {t.model} {t.trim || ""}
+                            {t.label ? t.label : `${t.make ?? ''} ${t.model ?? ''} ${t.trim ?? ''}`.trim()}
                           </span>
                           {t.rationale && (
                             <p className="text-xs font-medium text-black/60 mt-0.5 leading-relaxed">{t.rationale}</p>
