@@ -16,22 +16,39 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 import bmwModelUrl from '../assets/bmwm5.glb?url';
 
-// ─── CSP-safe GLTF loader (Draco disabled — no gstatic.com, no wasm) ──────────
+// ─── CSP-safe GLTF loader — Draco decoder self-hosted at /draco/ ───────────────
+// The CDN decoder (gstatic.com) is blocked by our connect-src CSP.
+// Solution: copy the decoder files from node_modules into public/draco/ so they
+// load from 'self'. Run once:
+//   cp node_modules/three/examples/jsm/libs/draco/draco_wasm_wrapper.js public/draco/
+//   cp node_modules/three/examples/jsm/libs/draco/draco_decoder.wasm    public/draco/
+// vercel.json also needs: script-src 'wasm-unsafe-eval', connect-src blob:, worker-src blob:
 function useGLTFNoDraco(url) {
   const [scene, setScene] = useState(null);
   useEffect(() => {
+    const dracoLoader = new DRACOLoader();
+    // Point at your own /draco/ folder — served from 'self', CSP-safe
+    dracoLoader.setDecoderPath('/draco/');
+    // Use WASM decoder (faster than JS fallback)
+    dracoLoader.setDecoderConfig({ type: 'wasm' });
+
     const loader = new GLTFLoader();
-    // Explicitly do NOT attach a DRACOLoader — if the model was built without
-    // Draco compression this is fine; if it was Draco-compressed you must
-    // re-export it without compression (see README note below).
+    loader.setDRACOLoader(dracoLoader);
+
     loader.load(
       url,
-      (gltf) => setScene(gltf.scene),
+      (gltf) => {
+        dracoLoader.dispose();
+        setScene(gltf.scene);
+      },
       undefined,
       (err) => console.error('[Background3DShell] GLTF load error:', err),
     );
+
+    return () => { dracoLoader.dispose(); };
   }, [url]);
   return scene;
 }
