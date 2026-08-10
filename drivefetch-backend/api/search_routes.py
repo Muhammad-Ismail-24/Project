@@ -11,6 +11,8 @@ from agents.orchestrator import parse_user_query
 from scrapers.runner import execute_search_pipeline
 from agents.evaluator import evaluate_scraped_listings
 from scrapers.normalizer import normalize_make_model, normalize_city
+from fastapi import Request
+from api.rate_limiter import limiter
 
 router = APIRouter(prefix="/api/search", tags=["Search"])
 
@@ -18,12 +20,13 @@ class SearchRequest(BaseModel):
     query: str = Field(..., description="Natural language search query", json_schema_extra={"example": "Cheap civic in Lahore"})
 
 @router.post("")
-async def search_cars(request: SearchRequest, session: Session = Depends(get_session)):
+@limiter.limit("5/minute")
+async def search_cars(request: Request, search_req: SearchRequest, session: Session = Depends(get_session)):
     # ----------------------------------------------------
     # STEP 1: Orchestration FIRST (Takes ~0.5 seconds)
     # ----------------------------------------------------
-    print(f"[Live Pipeline] Orchestrating query parsing: '{request.query}'")
-    params = await parse_user_query(request.query)
+    print(f"[Live Pipeline] Orchestrating query parsing: '{search_req.query}'")
+    params = await parse_user_query(search_req.query)
 
     make = (params.get("make") or "").strip()
     model = (params.get("model") or "").strip()
@@ -174,12 +177,13 @@ async def search_cars(request: SearchRequest, session: Session = Depends(get_ses
 from fastapi.responses import StreamingResponse
 
 @router.post("/stream")
-async def search_cars_stream(request: SearchRequest, session: Session = Depends(get_session)):
+@limiter.limit("5/minute")
+async def search_cars_stream(request: Request, search_req: SearchRequest, session: Session = Depends(get_session)):
     async def event_generator():
         yield f"data: {json.dumps({'status': 'AI analyzing your request...'})}\n\n"
         
-        print(f"[Live Pipeline] Orchestrating query parsing: '{request.query}'")
-        params = await parse_user_query(request.query)
+        print(f"[Live Pipeline] Orchestrating query parsing: '{search_req.query}'")
+        params = await parse_user_query(search_req.query)
 
         make = (params.get("make") or "").strip()
         model = (params.get("model") or "").strip()

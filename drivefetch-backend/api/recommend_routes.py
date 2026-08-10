@@ -54,6 +54,7 @@ from agents.recommender import (
 )
 from scrapers.runner import execute_search_pipeline
 from scrapers.recommend_normalizer import normalize_recommendation_target
+from api.rate_limiter import limiter
 
 router = APIRouter()
 
@@ -510,6 +511,7 @@ async def run_recommend_pipeline(
 # ---------------------------------------------------------------------------
 
 @router.post("/api/recommend")
+@limiter.limit("5/minute")
 async def recommend_cars(request: Request):
     try:
         body = await request.json()
@@ -546,6 +548,7 @@ async def recommend_cars(request: Request):
 # ---------------------------------------------------------------------------
 
 @router.post("/api/recommend/extend")
+@limiter.limit("5/minute")
 async def recommend_extend(request: Request):
     """
     Generates 1–3 alternative recommendations for the 'Show More Options'
