@@ -1,12 +1,13 @@
 import os
 from authlib.integrations.starlette_client import OAuth
 from starlette.config import Config
+from agents.config import settings
 
 # Fallback secret key for local development. In production, this should be set in the environment.
-SECRET_KEY = os.getenv("SECRET_KEY", "super-secret-key-for-local-dev")
+SECRET_KEY = settings.secret_key
 
 # Define the frontend URL for redirects, falling back to localhost for local development
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL = settings.frontend_url
 
 # Initialize Authlib config utilizing environment variables
 config = Config(environ=os.environ)
