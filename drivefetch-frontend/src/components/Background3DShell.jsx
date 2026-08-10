@@ -7,7 +7,7 @@
 */
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Environment, ContactShadows, useGLTF } from '@react-three/drei';
+import { useEnvironment, ContactShadows, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import bmwModelUrl from '../assets/bmwm5.glb?url';
 
@@ -37,6 +37,16 @@ const BLEND_BAND = 150;
 // ─── Camera parallax ──────────────────────────────────────────────────────────
 const PARALLAX_X = 0.28;
 const PARALLAX_Y = 0.14;
+
+
+// Loads HDR from your own /public folder — no external fetch, no CSP issues
+function EnvironmentFromPublic() {
+  const envMap = useEnvironment({ files: '/hdri/studio_small_03_1k.hdr' });
+  useFrame(({ scene }) => {
+    scene.environment = envMap;
+  });
+  return null;
+}
 
 
 function BmwModel() {
@@ -145,7 +155,7 @@ function BmwModel() {
           transparent:        true,
           opacity:            0,
         });
-        child.material    = mat;
+        child.material      = mat;
         child.castShadow    = true;
         child.receiveShadow = true;
         mats.push(mat);
@@ -194,8 +204,8 @@ function BmwModel() {
     smoothedProgress.current = THREE.MathUtils.damp(smoothedProgress.current, rawProgress, 2.5, delta);
     const delayedProgress    = Math.pow(smoothedProgress.current, 1.5);
 
-    const targetX        = THREE.MathUtils.lerp(startX, endX, delayedProgress);
-    const targetZ        = THREE.MathUtils.lerp(startZ, endZ, delayedProgress);
+    const targetX         = THREE.MathUtils.lerp(startX, endX, delayedProgress);
+    const targetZ         = THREE.MathUtils.lerp(startZ, endZ, delayedProgress);
     const baseScrollAngle = THREE.MathUtils.lerp(START_ANGLE, TARGET_LEFT_ANGLE, delayedProgress);
 
     const elapsed    = state.clock.getElapsedTime();
@@ -204,12 +214,12 @@ function BmwModel() {
 
     carRef.current.position.set(targetX, finalY, targetZ);
 
-    const PI2           = Math.PI * 2;
-    const cycles        = Math.round(dragOffset.current / PI2);
-    const baseOffset    = cycles * PI2;
-    const idleSway      = Math.sin(elapsed * IDLE_ROT_SPEED) * IDLE_ROT_AMP;
-    const pointerSway   = globalMouse.current.x * POINTER_ROT_AMP;
-    const dragRemainder = dragOffset.current - baseOffset;
+    const PI2            = Math.PI * 2;
+    const cycles         = Math.round(dragOffset.current / PI2);
+    const baseOffset     = cycles * PI2;
+    const idleSway       = Math.sin(elapsed * IDLE_ROT_SPEED) * IDLE_ROT_AMP;
+    const pointerSway    = globalMouse.current.x * POINTER_ROT_AMP;
+    const dragRemainder  = dragOffset.current - baseOffset;
     const interactiveOffset = (idleSway + pointerSway + dragRemainder) * tf;
 
     carRef.current.rotation.y = THREE.MathUtils.damp(
@@ -240,7 +250,9 @@ export default function Background3DShell() {
         camera={{ position: [0, 2, 8], fov: 45 }}
         gl={{ antialias: true, toneMappingExposure: 0.72 }}
       >
-        <Environment preset="studio" />
+        <React.Suspense fallback={null}>
+          <EnvironmentFromPublic />
+        </React.Suspense>
         <ambientLight intensity={0.4} />
         <directionalLight position={[10, 10, 5]} intensity={0.5} />
         <ContactShadows
