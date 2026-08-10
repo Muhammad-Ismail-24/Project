@@ -8,6 +8,12 @@ import { ShieldCheck, Database, Sparkles, AlertCircle, Loader2, Car } from 'luci
 
 const Background3DShell = lazy(() => import('../components/Background3DShell'));
 
+// Defined at module scope so they are stable references and never appear in
+// useEffect dependency arrays (avoids the infinite-re-render trap where
+// in-component string literals look like new values on every render).
+const HERO_LINE_1 = "Find the right car.";
+const HERO_LINE_2 = "Skip the wrong ones.";
+
 const heroContainerVariants = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.12, delayChildren: 0.15 } },
@@ -19,8 +25,6 @@ const heroItemVariants = {
 };
 
 const HeroTypewriter = () => {
-  const line1 = "Find the right car.";
-  const line2 = "Skip the wrong ones.";
   const [displayed1, setDisplayed1] = useState('');
   const [displayed2, setDisplayed2] = useState('');
   const [phase, setPhase] = useState(0);
@@ -28,18 +32,18 @@ const HeroTypewriter = () => {
   useEffect(() => {
     if (phase === 0) { const t = setTimeout(() => setPhase(1), 400); return () => clearTimeout(t); }
     if (phase === 1) {
-      if (displayed1.length < line1.length) {
-        const t = setTimeout(() => setDisplayed1(line1.slice(0, displayed1.length + 1)), 50);
+      if (displayed1.length < HERO_LINE_1.length) {
+        const t = setTimeout(() => setDisplayed1(HERO_LINE_1.slice(0, displayed1.length + 1)), 50);
         return () => clearTimeout(t);
       } else { const t = setTimeout(() => setPhase(3), 400); return () => clearTimeout(t); }
     }
     if (phase === 3) {
-      if (displayed2.length < line2.length) {
-        const t = setTimeout(() => setDisplayed2(line2.slice(0, displayed2.length + 1)), 50);
+      if (displayed2.length < HERO_LINE_2.length) {
+        const t = setTimeout(() => setDisplayed2(HERO_LINE_2.slice(0, displayed2.length + 1)), 50);
         return () => clearTimeout(t);
       } else { setPhase(4); }
     }
-  }, [phase, displayed1, displayed2, line1, line2]);
+  }, [phase, displayed1, displayed2]); // stable: module-scope constants excluded
 
   return (
     <h1 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tighter text-black mb-6 leading-[0.95] md:leading-[0.9] min-h-[100px] sm:min-h-[120px] md:min-h-[145px]">
