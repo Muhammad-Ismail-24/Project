@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://carfinderproject.vercel.app/sitemap.xml

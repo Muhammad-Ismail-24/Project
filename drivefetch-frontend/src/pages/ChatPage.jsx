@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { Send, Sparkles, User, Loader2, Trash2, Plus, MessageSquare } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 
@@ -169,9 +170,14 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-[calc(100dvh-80px)] w-full overflow-hidden font-sans text-black relative"
+    <main className="flex h-[calc(100dvh-80px)] w-full overflow-hidden font-sans text-black relative"
       style={{ background: 'linear-gradient(160deg, #c0c0c0 0%, #a8a8a8 50%, #b8b8b8 100%)' }}
     >
+      <Helmet>
+        <title>AI Car Inspection Assistant | DriveFetch</title>
+        <meta name="description" content="Chat with our AI Car Inspection Assistant to ask questions about specific car conditions and make an informed buying decision." />
+        <link rel="canonical" href="https://carfinderproject.vercel.app/chat" />
+      </Helmet>
 
       {/* Mobile sidebar backdrop */}
       {isMobileSidebarOpen && !isGuest && (
@@ -344,6 +350,6 @@ export default function ChatPage() {
         </div>
 
       </div>
-    </div>
+    </main>
   );
 }

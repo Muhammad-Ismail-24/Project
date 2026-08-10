@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useRef, useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 import { Sparkles, Search, X, ChevronRight, Car, Loader2, AlertCircle, Plus, CheckCircle2 } from "lucide-react";
 import CarResultCard from "../components/CarResultCard";
 
@@ -256,7 +257,24 @@ export default function RecommendPage() {
   }[stage] || "";
 
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden font-sans text-black">
+    <main className="relative min-h-screen w-full overflow-x-hidden font-sans text-black">
+      <Helmet>
+        <title>AI Car Matchmaker — Search PakWheels & OLX at Once | DriveFetch</title>
+        <meta name="description" content="Let DriveFetch AI Matchmaker find the right used car for you. Give our AI your budget and requirements to search across all of Pakistan's top platforms." />
+        <link rel="canonical" href="https://carfinderproject.vercel.app/recommend" />
+        <script type="application/ld+json">
+          {`
+            {
+              "@context": "https://schema.org",
+              "@type": "WebApplication",
+              "name": "DriveFetch AI Car Matchmaker",
+              "applicationCategory": "UtilitiesApplication",
+              "operatingSystem": "All",
+              "description": "An AI agent that finds the perfect used car in Pakistan based on your budget and natural language requirements."
+            }
+          `}
+        </script>
+      </Helmet>
 
       {/* ── Background: metallic grey studio, white key light, subtle grid ── */}
       <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden bg-[#b0b0b0]">
@@ -615,6 +633,6 @@ export default function RecommendPage() {
         )}
 
       </div>
-    </div>
+    </main>
   );
 }

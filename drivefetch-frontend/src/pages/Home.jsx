@@ -1,5 +1,6 @@
 import { searchCars } from '../utils/api';
 import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 const Background3DShell = lazy(() => import('../components/Background3DShell'));
 import SearchBar from '../components/SearchBar';
@@ -90,7 +91,12 @@ export default function Home() {
   const otherResults = results.filter(car => !bestPick || car.id !== bestPick.id);
 
   return (
-    <div className="relative w-full overflow-x-hidden font-sans text-black">
+    <main className="relative w-full overflow-x-hidden font-sans text-black">
+      <Helmet>
+        <title>DriveFetch — Find the Right Used Car in Pakistan, Powered by AI</title>
+        <meta name="description" content="Find the perfect used car in Pakistan with DriveFetch. Our AI-powered search scours multiple sources to find your ideal match." />
+        <link rel="canonical" href="https://carfinderproject.vercel.app/" />
+      </Helmet>
 
       {/* ── Background: metallic grey studio, white key light, subtle grid ── */}
       <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden bg-[#b0b0b0]">
@@ -293,6 +299,6 @@ export default function Home() {
         </div>
 
       </div>
-    </div>
+    </main>
   );
 }
