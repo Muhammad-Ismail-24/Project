@@ -257,22 +257,28 @@ async def execute_search_pipeline(
         f"Year={min_year}-{max_year}, Budget={safe_min_budget}-{safe_budget}"
     )
 
+    sem = asyncio.Semaphore(10)
+
+    async def bounded_task(coro):
+        async with sem:
+            return await coro
+
     futures = []
     async with AsyncSession(impersonate="chrome120") as session:
         for url in pw_urls:
-            futures.append(scrape_pakwheels(url, session))
+            futures.append(bounded_task(scrape_pakwheels(url, session)))
         for url, filters in olx_tasks:
-            futures.append(scrape_olx(url, session, filters))
+            futures.append(bounded_task(scrape_olx(url, session, filters)))
         for url, filters in drive_tasks:
-            futures.append(scrape_drive_pk(url, session, filters))
+            futures.append(bounded_task(scrape_drive_pk(url, session, filters)))
         for url, filters in gari_tasks:
-            futures.append(scrape_gari_pk(url, session, filters))
+            futures.append(bounded_task(scrape_gari_pk(url, session, filters)))
         for url, filters in wisewheels_tasks:
-            futures.append(scrape_wise_wheels(url, session, filters))
+            futures.append(bounded_task(scrape_wise_wheels(url, session, filters)))
         for url, filters in auto_deals_tasks:
-            futures.append(scrape_auto_deals(url, session, filters))
+            futures.append(bounded_task(scrape_auto_deals(url, session, filters)))
         for url in famewheels_urls:
-            futures.append(scrape_famewheels(url, session))
+            futures.append(bounded_task(scrape_famewheels(url, session)))
 
         all_results = await asyncio.gather(*futures, return_exceptions=True)
 

@@ -4,7 +4,19 @@ from google import genai
 from google.genai import types
 from models.car_schema import CarListing
 from typing import List
+from pydantic import BaseModel, Field
 from agents.config import settings, async_retry, generate_content_resilient
+
+class SingleCarAnalysis(BaseModel):
+    red_flags: List[str]
+    liquidity_score: str = Field(pattern="^(High|Medium|Low)$")
+    justification: str
+
+class CarAnalysis(BaseModel):
+    id: str
+    red_flags: List[str]
+    liquidity_score: str = Field(pattern="^(High|Medium|Low)$")
+    justification: str
 
 # Setup default fallback analysis dictionary if API fails
 DEFAULT_AI_ANALYSIS = {
@@ -14,60 +26,18 @@ DEFAULT_AI_ANALYSIS = {
 }
 
 
-def _sanitize_json_response(raw_text: str) -> str:
-    """
-    Bug 3 Fix: Indestructible JSON sanitization layer.
-    Strips markdown wrappers, clips between structural brackets,
-    removes dangling trailing commas, and attempts truncation recovery.
-    """
-    text = raw_text.strip()
-
-    # Step 1: Strip markdown code fences (```json ... ``` or ``` ... ```)
-    text = re.sub(r'^```(?:json)?\s*', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'\s*```$', '', text)
-    text = text.strip()
-
-    # Step 2: Bracket-slice — crop precisely between first [ or { and last ] or }
-    first_bracket = min(
-        (text.find('[') if text.find('[') != -1 else len(text)),
-        (text.find('{') if text.find('{') != -1 else len(text))
-    )
-    last_bracket = max(text.rfind(']'), text.rfind('}'))
-
-    if first_bracket < last_bracket:
-        text = text[first_bracket:last_bracket + 1]
-
-    # Step 3: Remove dangling trailing commas before closing brackets
-    text = re.sub(r',\s*([\]\}])', r'\1', text)
-
-    # Step 4: Truncation recovery — if Gemini cut off mid-array, attempt to close it.
-    # Count unmatched brackets and append closers if needed.
-    try:
-        json.loads(text)
-    except json.JSONDecodeError:
-        # Attempt to recover a truncated array by trimming to last complete object
-        # Find the last complete closing brace
-        last_obj_end = text.rfind('}')
-        if last_obj_end != -1:
-            text = text[:last_obj_end + 1]
-            # Ensure the array is properly closed
-            if text.lstrip().startswith('['):
-                text = text + ']'
-            # Strip any trailing comma before the new closing bracket
-            text = re.sub(r',\s*\]$', ']', text)
-
-    return text.strip()
-
-
-async def _execute_gemini_call(client: genai.Client, system_instruction: str, prompt: str):
+async def _execute_gemini_call(client: genai.Client, system_instruction: str, prompt: str, response_schema=None):
     """Executes the async Gemini call wrapped inside the global retry handler."""
+    config = types.GenerateContentConfig(
+        system_instruction=system_instruction,
+        response_mime_type="application/json",
+        max_output_tokens=8000
+    )
+    if response_schema:
+        config.response_schema = response_schema
     return await generate_content_resilient(
         contents=prompt,
-        config=types.GenerateContentConfig(
-            system_instruction=system_instruction,
-            response_mime_type="application/json",
-            max_output_tokens=8000
-        ),
+        config=config,
         client=client
     )
 
@@ -143,13 +113,12 @@ async def evaluate_scraped_listings(listings: List[CarListing], original_user_qu
         )
 
         # Execute API call with retries
-        response_text = await _execute_gemini_call(client, system_instruction, prompt)
+        response_text = await _execute_gemini_call(client, system_instruction, prompt, response_schema=list[CarAnalysis])
         response_text = response_text.strip()
         
-        # Parse the JSON response with sanitization
+        # Parse the JSON response directly
         try:
-            sanitized = _sanitize_json_response(response_text)
-            analyses = json.loads(sanitized)
+            analyses = json.loads(response_text)
             # Create a lookup mapping from id -> analysis block
             analysis_map = {}
             if isinstance(analyses, list):
@@ -240,14 +209,14 @@ async def evaluate_single_listing(listing: dict, original_user_query: str) -> di
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 response_mime_type="application/json",
-                max_output_tokens=2000
+                max_output_tokens=2000,
+                response_schema=SingleCarAnalysis
             ),
             client=client
         )
 
         response_text = response_text.strip()
-        sanitized = _sanitize_json_response(response_text)
-        parsed = json.loads(sanitized)
+        parsed = json.loads(response_text)
 
         # Validate and normalize the parsed result
         if not isinstance(parsed, dict):

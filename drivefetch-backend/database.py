@@ -17,11 +17,21 @@ else:
 
 # 3. Connect arguments check for SQLite threading configurations
 connect_args = {}
+engine_kwargs = {"echo": False}
+
 if DATABASE_URL.startswith("sqlite"):
     connect_args["check_same_thread"] = False
+else:
+    engine_kwargs.update({
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_timeout": 30
+    })
+
+engine_kwargs["connect_args"] = connect_args
 
 # Instantiate the SQLAlchemy/SQLModel database engine
-engine = create_engine(DATABASE_URL, echo=False, connect_args=connect_args)
+engine = create_engine(DATABASE_URL, **engine_kwargs)
 
 def create_db_and_tables():
     """Initializes the database schema by generating all declared SQLModel tables."""
