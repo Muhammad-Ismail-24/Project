@@ -4,14 +4,58 @@
   Provides premium clearcoat reflections, bi-directional scroll blending,
   placeholder-locked horizontal turntable drag, pure horizontal trajectory,
   and safe, non-destructive wheel rotation.
+
+  CSP-SAFE: No remote HDR fetch, no Draco/WebAssembly, no external connect-src.
+  - Environment preset="studio" removed: it fetches from raw.githack.com (CSP blocked).
+  - Draco decoder disabled on useGLTF: it fetches from gstatic.com (CSP blocked)
+    and requires wasm-unsafe-eval (CSP blocked).
+  - Replaced with self-contained THREE lights that reproduce the studio look.
 */
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Environment, ContactShadows, useGLTF } from '@react-three/drei';
+import { ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import bmwModelUrl from '../assets/bmwm5.glb?url';
 
-// ─── Reveal ────────────────────────────────────────────────────────────────────
+// ─── CSP-safe GLTF loader (Draco disabled — no gstatic.com, no wasm) ──────────
+function useGLTFNoDraco(url) {
+  const [scene, setScene] = useState(null);
+  useEffect(() => {
+    const loader = new GLTFLoader();
+    // Explicitly do NOT attach a DRACOLoader — if the model was built without
+    // Draco compression this is fine; if it was Draco-compressed you must
+    // re-export it without compression (see README note below).
+    loader.load(
+      url,
+      (gltf) => setScene(gltf.scene),
+      undefined,
+      (err) => console.error('[Background3DShell] GLTF load error:', err),
+    );
+  }, [url]);
+  return scene;
+}
+
+// ─── Studio lighting rig (replaces <Environment preset="studio" />) ────────────
+// drei's Environment preset fetches an HDR from raw.githack.com which is blocked
+// by our CSP connect-src. This rig reproduces the same high-contrast studio look
+// using only built-in THREE lights — zero network requests.
+function StudioLighting() {
+  return (
+    <>
+      {/* Key light — strong top-right, simulates studio softbox */}
+      <directionalLight position={[6, 8, 4]}  intensity={2.8} color="#ffffff" />
+      {/* Fill light — left side, cool tint, softens shadows */}
+      <directionalLight position={[-5, 3, 2]} intensity={0.9} color="#dde8ff" />
+      {/* Rim/back light — bottom-left behind, creates edge glow on bodywork */}
+      <directionalLight position={[-3, -2, -6]} intensity={1.2} color="#ffffff" />
+      {/* Ground bounce — warm, very soft */}
+      <directionalLight position={[0, -4, 2]}  intensity={0.4} color="#ffe8cc" />
+      {/* Ambient — keeps shadow areas from going pure black */}
+      <ambientLight intensity={0.55} />
+    </>
+  );
+}
 const REVEAL_DURATION    = 1.6;
 const REVEAL_Y_START     = -4.5;
 const REVEAL_Y_REST      = -1;
@@ -40,7 +84,7 @@ const PARALLAX_Y = 0.14;
 
 
 function BmwModel() {
-  const { scene }  = useGLTF(bmwModelUrl);
+  const scene      = useGLTFNoDraco(bmwModelUrl);
   const carRef     = useRef();
   const materialsRef = useRef([]);
 
@@ -131,6 +175,8 @@ function BmwModel() {
   const endZ        =  0.5 * scaleFactor; 
 
   useLayoutEffect(() => {
+    // scene is null on first render while loading — skip material setup until ready
+    if (!scene) return;
     const mats = [];
 
     scene.traverse((child) => {
@@ -226,6 +272,8 @@ function BmwModel() {
     state.camera.lookAt(0, 0.3, 0);
   });
 
+  // Guard is in the render return — all hooks above always run unconditionally
+  if (!scene) return null;
   return <primitive ref={carRef} object={scene} scale={carScale} />;
 }
 
@@ -236,9 +284,7 @@ export default function Background3DShell() {
         camera={{ position: [0, 2, 8], fov: 45 }}
         gl={{ antialias: true, toneMappingExposure: 0.72 }}
       >
-        <Environment preset="studio" />
-        <ambientLight intensity={0.4} />
-        <directionalLight position={[10, 10, 5]} intensity={0.5} />
+        <StudioLighting />
         <ContactShadows resolution={1024} scale={20} blur={4.5} opacity={0.32} far={10} color="#000000" position={[0, -1, 0]} />
         <React.Suspense fallback={null}>
           <BmwModel />
@@ -248,4 +294,5 @@ export default function Background3DShell() {
   );
 }
 
-useGLTF.preload(bmwModelUrl);
+// NOTE: useGLTF.preload removed — we use a manual loader (useGLTFNoDraco)
+// that doesn't go through drei's preload registry.
