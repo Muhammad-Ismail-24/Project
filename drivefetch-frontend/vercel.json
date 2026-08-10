@@ -6,7 +6,7 @@
         { "key": "X-Frame-Options", "value": "DENY" },
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' blob: https://carfinder-project-backend.onrender.com https://accounts.google.com; frame-src https://accounts.google.com; frame-ancestors 'none'; worker-src blob:;" }
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://carfinder-project-backend.onrender.com https://accounts.google.com; frame-src https://accounts.google.com; frame-ancestors 'none';" }
       ]
     },
     {
@@ -28,6 +28,10 @@
     {
       "source": "/user/:path*",
       "destination": "https://carfinder-project-backend.onrender.com/user/:path*"
+    },
+    {
+      "source": "/draco/:file*",
+      "destination": "/draco/:file*"
     },
     {
       "source": "/(.*)",

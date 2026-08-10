@@ -5,11 +5,15 @@
   placeholder-locked horizontal turntable drag, pure horizontal trajectory,
   and safe, non-destructive wheel rotation.
 
-  CSP-SAFE: No remote HDR fetch, no Draco/WebAssembly, no external connect-src.
-  - Environment preset="studio" removed: it fetches from raw.githack.com (CSP blocked).
-  - Draco decoder disabled on useGLTF: it fetches from gstatic.com (CSP blocked)
-    and requires wasm-unsafe-eval (CSP blocked).
-  - Replaced with self-contained THREE lights that reproduce the studio look.
+  CSP-SAFE: Self-hosted Draco decoder at /draco/ (no gstatic.com, no remote HDR).
+  - Environment preset="studio" removed: fetches from raw.githack.com (CSP blocked).
+  - DRACOLoader pointed at /public/draco/ so it loads from 'self'.
+  - vercel.json: script-src 'wasm-unsafe-eval', connect-src blob:, worker-src blob:
+  - vercel.json: /draco/:file* pass-through rewrite must come before the SPA catch-all.
+  Setup (run once): 
+    mkdir -p public/draco
+    cp node_modules/three/examples/jsm/libs/draco/draco_wasm_wrapper.js public/draco/
+    cp node_modules/three/examples/jsm/libs/draco/draco_decoder.wasm    public/draco/
 */
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
@@ -19,21 +23,14 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 import bmwModelUrl from '../assets/bmwm5.glb?url';
 
-// ─── CSP-safe GLTF loader — Draco decoder self-hosted at /draco/ ───────────────
-// The CDN decoder (gstatic.com) is blocked by our connect-src CSP.
-// Solution: copy the decoder files from node_modules into public/draco/ so they
-// load from 'self'. Run once:
-//   cp node_modules/three/examples/jsm/libs/draco/draco_wasm_wrapper.js public/draco/
-//   cp node_modules/three/examples/jsm/libs/draco/draco_decoder.wasm    public/draco/
-// vercel.json also needs: script-src 'wasm-unsafe-eval', connect-src blob:, worker-src blob:
+// ─── GLTF loader with self-hosted Draco decoder ────────────────────────────────
+// DRACOLoader points at /draco/ (your public folder) — served from 'self',
+// so no gstatic.com connect-src violation. setDecoderConfig removed (deprecated r193+).
 function useGLTFNoDraco(url) {
   const [scene, setScene] = useState(null);
   useEffect(() => {
     const dracoLoader = new DRACOLoader();
-    // Point at your own /draco/ folder — served from 'self', CSP-safe
-    dracoLoader.setDecoderPath('/draco/');
-    // Use WASM decoder (faster than JS fallback)
-    dracoLoader.setDecoderConfig({ type: 'wasm' });
+    dracoLoader.setDecoderPath('/draco/');   // serves from 'self' — CSP-safe
 
     const loader = new GLTFLoader();
     loader.setDRACOLoader(dracoLoader);
