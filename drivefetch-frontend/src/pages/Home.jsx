@@ -67,11 +67,14 @@ export default function Home() {
 
   useEffect(() => {
     const fetchSavedListings = async () => {
+      if (!document.cookie.includes('has_auth=1')) return;
       try {
         const response = await fetch('/user/saved-listings', { method: 'GET', credentials: 'include' });
         if (response.ok) {
           const data = await response.json();
           setSavedListingIds(new Set(data.map(item => item.listing_id)));
+        } else if (response.status === 401) {
+          document.cookie = "has_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         }
       } catch (error) { console.error('Failed to fetch saved listings:', error); }
     };

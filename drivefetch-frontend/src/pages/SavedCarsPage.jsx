@@ -11,6 +11,12 @@ export default function SavedCarsPage() {
 
   useEffect(() => {
     const fetchSavedCars = async () => {
+      if (!document.cookie.includes('has_auth=1')) {
+        setSavedCars([]);
+        setSavedListingIds(new Set());
+        setIsLoading(false);
+        return;
+      }
       try {
         const response = await fetch('/user/saved-listings', {
           method: 'GET',
@@ -21,6 +27,9 @@ export default function SavedCarsPage() {
           setSavedCars(data);
           setSavedListingIds(new Set(data.map(car => car.id || car.listing_id)));
         } else {
+          if (response.status === 401) {
+            document.cookie = "has_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          }
           setSavedCars([]);
           setSavedListingIds(new Set());
         }
