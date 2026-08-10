@@ -4,104 +4,14 @@
   Provides premium clearcoat reflections, bi-directional scroll blending,
   placeholder-locked horizontal turntable drag, pure horizontal trajectory,
   and safe, non-destructive wheel rotation.
-
-  CSP-SAFE: Self-hosted Draco decoder at /draco/ (no gstatic.com, no remote HDR).
-  - Environment preset="studio" removed: fetches from raw.githack.com (CSP blocked).
-  - DRACOLoader pointed at /public/draco/ so it loads from 'self'.
-  - vercel.json: script-src 'wasm-unsafe-eval', connect-src blob:, worker-src blob:
-  - vercel.json: /draco/:file* pass-through rewrite must come before the SPA catch-all.
-  Setup (run once): 
-    mkdir -p public/draco
-    cp node_modules/three/examples/jsm/libs/draco/draco_wasm_wrapper.js public/draco/
-    cp node_modules/three/examples/jsm/libs/draco/draco_decoder.wasm    public/draco/
 */
-import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
+import React, { useRef, useLayoutEffect, useState, useEffect, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { ContactShadows, Environment, Lightformer } from '@react-three/drei';
+import { Environment, ContactShadows, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 import bmwModelUrl from '../assets/bmwm5.glb?url';
 
-// ─── GLTF loader with self-hosted Draco decoder ────────────────────────────────
-// DRACOLoader points at /draco/ (your public folder) — served from 'self',
-// so no gstatic.com connect-src violation. setDecoderConfig removed (deprecated r193+).
-function useGLTFNoDraco(url) {
-  const [scene, setScene] = useState(null);
-  useEffect(() => {
-    const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath('/draco/');   // serves from 'self' — CSP-safe
-
-    const loader = new GLTFLoader();
-    loader.setDRACOLoader(dracoLoader);
-
-    loader.load(
-      url,
-      (gltf) => {
-        dracoLoader.dispose();
-        setScene(gltf.scene);
-      },
-      undefined,
-      (err) => console.error('[Background3DShell] GLTF load error:', err),
-    );
-
-    return () => { dracoLoader.dispose(); };
-  }, [url]);
-  return scene;
-}
-
-// ─── CSP-safe procedural environment (replaces <Environment preset="studio" />) ─
-// drei's Environment preset fetches an HDR from raw.githack.com — CSP blocked.
-// Environment with children uses Lightformers to generate an internal envMap
-// entirely in-GPU with zero network requests, restoring the metalness/clearcoat
-// reflections that MeshPhysicalMaterial requires to look correct.
-// resolution={256} keeps GPU memory low while giving sharp enough reflections
-// on a smooth automotive body.
-function CSPStudioEnvironment() {
-  return (
-    <>
-      {/* Fallback scene lights — render even if WebGL envMap fails */}
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[10, 10, 5]} intensity={0.5} />
-
-      {/* Procedural envMap — no HDR fetch, no external URLs */}
-      <Environment resolution={256}>
-        {/* Main overhead softbox — creates the long highlight streak on the hood */}
-        <Lightformer
-          form="rect"
-          intensity={4}
-          position={[0, 10, -3]}
-          scale={[10, 5, 1]}
-          target={[0, 0, 0]}
-        />
-        {/* Left fill — cool side light, softens shadow side of body */}
-        <Lightformer
-          form="rect"
-          intensity={2}
-          position={[-5, 2, 0]}
-          scale={[5, 10, 1]}
-          target={[0, 0, 0]}
-        />
-        {/* Right rim — hot edge highlight on the roofline and rear quarter */}
-        <Lightformer
-          form="rect"
-          intensity={3}
-          position={[5, 5, 5]}
-          scale={[5, 10, 1]}
-          target={[0, 0, 0]}
-        />
-        {/* Ground bounce — warm undercar glow reflected in sills */}
-        <Lightformer
-          form="circle"
-          intensity={1}
-          position={[0, -5, 0]}
-          scale={[10, 10, 1]}
-          target={[0, 0, 0]}
-        />
-      </Environment>
-    </>
-  );
-}
+// ─── Reveal ────────────────────────────────────────────────────────────────────
 const REVEAL_DURATION    = 1.6;
 const REVEAL_Y_START     = -4.5;
 const REVEAL_Y_REST      = -1;
@@ -130,7 +40,7 @@ const PARALLAX_Y = 0.14;
 
 
 function BmwModel() {
-  const scene      = useGLTFNoDraco(bmwModelUrl);
+  const { scene }  = useGLTF(bmwModelUrl);
   const carRef     = useRef();
   const materialsRef = useRef([]);
 
@@ -140,6 +50,7 @@ function BmwModel() {
   const topFactor = useRef(1);
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', onResize);
@@ -221,8 +132,6 @@ function BmwModel() {
   const endZ        =  0.5 * scaleFactor; 
 
   useLayoutEffect(() => {
-    // scene is null on first render while loading — skip material setup until ready
-    if (!scene) return;
     const mats = [];
 
     scene.traverse((child) => {
@@ -318,8 +227,6 @@ function BmwModel() {
     state.camera.lookAt(0, 0.3, 0);
   });
 
-  // Guard is in the render return — all hooks above always run unconditionally
-  if (!scene) return null;
   return <primitive ref={carRef} object={scene} scale={carScale} />;
 }
 
@@ -330,15 +237,16 @@ export default function Background3DShell() {
         camera={{ position: [0, 2, 8], fov: 45 }}
         gl={{ antialias: true, toneMappingExposure: 0.72 }}
       >
-        <CSPStudioEnvironment />
+        <Environment preset="studio" />
+        <ambientLight intensity={0.4} />
+        <directionalLight position={[10, 10, 5]} intensity={0.5} />
         <ContactShadows resolution={1024} scale={20} blur={4.5} opacity={0.32} far={10} color="#000000" position={[0, -1, 0]} />
-        <React.Suspense fallback={null}>
+        <Suspense fallback={null}>
           <BmwModel />
-        </React.Suspense>
+        </Suspense>
       </Canvas>
     </div>
   );
 }
 
-// NOTE: useGLTF.preload removed — we use a manual loader (useGLTFNoDraco)
-// that doesn't go through drei's preload registry.
+useGLTF.preload(bmwModelUrl);
