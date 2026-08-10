@@ -17,7 +17,7 @@
 */
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { ContactShadows } from '@react-three/drei';
+import { ContactShadows, Environment, Lightformer } from '@react-three/drei';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
@@ -50,23 +50,55 @@ function useGLTFNoDraco(url) {
   return scene;
 }
 
-// ─── Studio lighting rig (replaces <Environment preset="studio" />) ────────────
-// drei's Environment preset fetches an HDR from raw.githack.com which is blocked
-// by our CSP connect-src. This rig reproduces the same high-contrast studio look
-// using only built-in THREE lights — zero network requests.
-function StudioLighting() {
+// ─── CSP-safe procedural environment (replaces <Environment preset="studio" />) ─
+// drei's Environment preset fetches an HDR from raw.githack.com — CSP blocked.
+// Environment with children uses Lightformers to generate an internal envMap
+// entirely in-GPU with zero network requests, restoring the metalness/clearcoat
+// reflections that MeshPhysicalMaterial requires to look correct.
+// resolution={256} keeps GPU memory low while giving sharp enough reflections
+// on a smooth automotive body.
+function CSPStudioEnvironment() {
   return (
     <>
-      {/* Key light — strong top-right, simulates studio softbox */}
-      <directionalLight position={[6, 8, 4]}  intensity={2.8} color="#ffffff" />
-      {/* Fill light — left side, cool tint, softens shadows */}
-      <directionalLight position={[-5, 3, 2]} intensity={0.9} color="#dde8ff" />
-      {/* Rim/back light — bottom-left behind, creates edge glow on bodywork */}
-      <directionalLight position={[-3, -2, -6]} intensity={1.2} color="#ffffff" />
-      {/* Ground bounce — warm, very soft */}
-      <directionalLight position={[0, -4, 2]}  intensity={0.4} color="#ffe8cc" />
-      {/* Ambient — keeps shadow areas from going pure black */}
-      <ambientLight intensity={0.55} />
+      {/* Fallback scene lights — render even if WebGL envMap fails */}
+      <ambientLight intensity={0.4} />
+      <directionalLight position={[10, 10, 5]} intensity={0.5} />
+
+      {/* Procedural envMap — no HDR fetch, no external URLs */}
+      <Environment resolution={256}>
+        {/* Main overhead softbox — creates the long highlight streak on the hood */}
+        <Lightformer
+          form="rect"
+          intensity={4}
+          position={[0, 10, -3]}
+          scale={[10, 5, 1]}
+          target={[0, 0, 0]}
+        />
+        {/* Left fill — cool side light, softens shadow side of body */}
+        <Lightformer
+          form="rect"
+          intensity={2}
+          position={[-5, 2, 0]}
+          scale={[5, 10, 1]}
+          target={[0, 0, 0]}
+        />
+        {/* Right rim — hot edge highlight on the roofline and rear quarter */}
+        <Lightformer
+          form="rect"
+          intensity={3}
+          position={[5, 5, 5]}
+          scale={[5, 10, 1]}
+          target={[0, 0, 0]}
+        />
+        {/* Ground bounce — warm undercar glow reflected in sills */}
+        <Lightformer
+          form="circle"
+          intensity={1}
+          position={[0, -5, 0]}
+          scale={[10, 10, 1]}
+          target={[0, 0, 0]}
+        />
+      </Environment>
     </>
   );
 }
@@ -298,7 +330,7 @@ export default function Background3DShell() {
         camera={{ position: [0, 2, 8], fov: 45 }}
         gl={{ antialias: true, toneMappingExposure: 0.72 }}
       >
-        <StudioLighting />
+        <CSPStudioEnvironment />
         <ContactShadows resolution={1024} scale={20} blur={4.5} opacity={0.32} far={10} color="#000000" position={[0, -1, 0]} />
         <React.Suspense fallback={null}>
           <BmwModel />
