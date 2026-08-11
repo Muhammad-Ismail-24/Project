@@ -99,10 +99,14 @@ export default function MainLayout() {
     <ScrollDriveProvider>
     <div className="relative min-h-screen font-sans selection:bg-accent selection:text-white">
 
-      {/* ── Persistent 3D canvas — mounted once, survives route changes ── */}
-      <Suspense fallback={<div className="fixed inset-0 z-0 w-full h-full bg-void" />}>
-        <Background3DShell />
-      </Suspense>
+      {/* ── Persistent 3D canvas — mounted once, survives route changes.
+           Dimmed off the Home journey so it never fights dense page
+           content (Calculators, Chat, etc.) for attention (Sec 15). ── */}
+      <div className={`fixed inset-0 z-0 transition-[opacity,filter] duration-500 ${location.pathname === '/' ? 'opacity-100' : 'opacity-50 blur-[1px]'}`}>
+        <Suspense fallback={<div className="fixed inset-0 z-0 w-full h-full bg-void" />}>
+          <Background3DShell />
+        </Suspense>
+      </div>
 
       {/* ── Floating Navbar ── */}
       <nav ref={navRef} className="glass-thin fixed top-4 left-4 right-4 sm:top-5 sm:left-6 sm:right-6 z-50 transition-[background,backdrop-filter] duration-300">

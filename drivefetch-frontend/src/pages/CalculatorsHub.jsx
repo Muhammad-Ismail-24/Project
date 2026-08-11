@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Fuel, FileText, Landmark } from 'lucide-react';
 import { calculateFuel, calculateTransfer, calculateToken } from '../utils/api';
+import useReveal from '../utils/useReveal';
 
 const CC_OPTIONS = [
   { value: 800, label: "800cc (Alto, WagonR)" },
@@ -13,6 +14,7 @@ const CC_OPTIONS = [
 ];
 
 export default function CalculatorsHub() {
+  const headingRef = useReveal();
   const [fuelCc, setFuelCc] = useState(1300);
   const [fuelKm, setFuelKm] = useState(40);
   const [fuelCost, setFuelCost] = useState(null);
@@ -82,7 +84,7 @@ export default function CalculatorsHub() {
       </Helmet>
 
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-10 md:mb-16">
+        <div ref={headingRef} className="reveal text-center mb-10 md:mb-16">
           <h1 className="font-display text-4xl md:text-5xl font-black tracking-tighter mb-3 md:mb-4 text-text">
             Financial Tools
           </h1>

@@ -2,13 +2,14 @@
  * src/pages/RecommendPage.jsx
  *
  * The AI Matchmaker page — feature-based car search.
- * Theme matched with DriveFetch studio design (#b0b0b0 metallic glassmorphism).
+ * Theme matched with the DriveFetch cinematic dark-glass design.
  */
 
 import React, { useState, useRef, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { Sparkles, Search, X, ChevronRight, Car, Loader2, AlertCircle, Plus, CheckCircle2 } from "lucide-react";
 import CarResultCard from "../components/CarResultCard";
+import useReveal from "../utils/useReveal";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
@@ -36,6 +37,7 @@ export default function RecommendPage() {
   const [extDone, setExtDone]           = useState(false);
   const [strategyBrief, setStrategyBrief] = useState(null);
   const eventSourceRef = useRef(null);
+  const headingRef = useReveal();
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -275,7 +277,7 @@ export default function RecommendPage() {
       <div className="relative z-10 max-w-4xl mx-auto px-6 pt-32 md:pt-40 pb-28">
 
         {/* ── Header ───────────────────────────────────────────────────── */}
-        <div className="text-center mb-10">
+        <div ref={headingRef} className="reveal text-center mb-10">
           <div className="glass-thin inline-flex items-center gap-2 px-3.5 py-1.5 text-text text-[10px] font-semibold tracking-[0.15em] uppercase mb-5">
             <Sparkles className="w-3.5 h-3.5 text-accent" />
             DriveFetch AI Matchmaker

@@ -145,6 +145,10 @@ function Floor() {
 
 export default function CarScene3D() {
   const orbitRef = useRef();
+  const reduceMotion = useMemo(
+    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    []
+  );
 
   return (
     <>
@@ -175,7 +179,7 @@ export default function CarScene3D() {
         enableZoom={false}
         enableDamping
         dampingFactor={0.08}
-        autoRotate
+        autoRotate={!reduceMotion}
         autoRotateSpeed={0.5}
         target={[0, 0.4, 0]}
         onStart={() => {
