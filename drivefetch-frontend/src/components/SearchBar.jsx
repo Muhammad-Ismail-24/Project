@@ -19,12 +19,11 @@ export default function SearchBar({ onSearch, isLoading }) {
   return (
     <div className="w-full max-w-4xl mx-auto relative z-20">
 
-      {/* ── Frosted Whitish Search form ── */}
       <form
         onSubmit={handleSubmit}
-        className="flex items-center w-full bg-white/60 backdrop-blur-md border border-black/20 px-5 py-1 transition-all duration-300 ease-out rounded-full shadow-xl hover:shadow-2xl"
+        className="glass !rounded-full flex items-center w-full px-5 py-1"
       >
-        <Search className="shrink-0 w-5 h-5 mr-3 text-black/70" />
+        <Search className="shrink-0 w-5 h-5 mr-3 text-text-dim" />
 
         <input
           ref={inputRef}
@@ -33,14 +32,14 @@ export default function SearchBar({ onSearch, isLoading }) {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="E.g., Honda Civic in Lahore under 50 Lakhs"
           disabled={isLoading}
-          className="flex-1 bg-transparent border-none outline-none text-black py-4 text-base md:text-lg font-bold placeholder-black/50 disabled:opacity-60"
+          className="flex-1 bg-transparent border-none outline-none text-text py-4 text-base md:text-lg font-medium placeholder-text-faint disabled:opacity-60"
         />
 
         {isLoading && (
-          <span className="ml-3 shrink-0 inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase text-black/70 animate-pulse">
-            <span className="w-1.5 h-1.5 rounded-full bg-black/70 animate-bounce [animation-delay:0ms]"   />
-            <span className="w-1.5 h-1.5 rounded-full bg-black/70 animate-bounce [animation-delay:150ms]" />
-            <span className="w-1.5 h-1.5 rounded-full bg-black/70 animate-bounce [animation-delay:300ms]" />
+          <span className="ml-3 shrink-0 inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase text-text-dim animate-pulse">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce [animation-delay:0ms]"   />
+            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce [animation-delay:150ms]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce [animation-delay:300ms]" />
             Analysing
           </span>
         )}
