@@ -25,10 +25,10 @@ export default function Background3DShell() {
         }}
       >
         <color attach="background" args={['#050506']} />
-        {/* Fog in --df-void so the road fades into darkness at the horizon and
-            the far mesh edge is never visible (Blueprint §7.5). Tuned to the
-            240-unit road: near road clear, distance swallowed by ~z -140. */}
-        <fog attach="fog" args={['#050506', 25, 150]} />
+        {/* Subtle atmospheric haze only — the volumetric cloud wall (DrivingRig)
+            does the actual vanishing, so fog stays gentle and doesn't kill the
+            car early (Blueprint §7.5). */}
+        <fog attach="fog" args={['#050506', 40, 260]} />
         <PerformanceMonitor onIncline={() => setDpr(2)} onDecline={() => setDpr(1)} />
         <Suspense fallback={null}>
           <CarScene3D />
