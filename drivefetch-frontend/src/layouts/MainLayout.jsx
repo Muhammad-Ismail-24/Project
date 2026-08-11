@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { Outlet, Link, NavLink, useLocation } from 'react-router-dom';
 import { Menu, X, User, ChevronDown } from 'lucide-react';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Leva } from 'leva'; // LEVA (dev-only panel) — removed at Step 14
 
 const Background3DShell = lazy(() => import('../components/Background3DShell'));
 
@@ -96,6 +97,11 @@ export default function MainLayout() {
 
   return (
     <div className="relative min-h-screen font-sans selection:bg-accent selection:text-white">
+
+      {/* LEVA dev-only tuning panel — mounted here (outside the z-0 canvas
+          wrapper) so its stacking context isn't trapped below page content.
+          Removed at Step 14. */}
+      {import.meta.env.DEV && <Leva collapsed />}
 
       {/* ── Persistent 3D canvas — mounted once, survives route changes.
            Dimmed off the Home journey so it never fights dense page
