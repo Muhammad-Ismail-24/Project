@@ -2,12 +2,8 @@ import os
 from sqlmodel import SQLModel, create_engine, Session
 from agents.config import settings
 
-# 1. Retrieve URL from settings, fallback to os.getenv, then default to local SQLite
-raw_url = getattr(
-    settings, 
-    "database_url", 
-    getattr(settings, "DATABASE_URL", os.getenv("DATABASE_URL", "sqlite:///./drivefetch.db"))
-)
+# 1. Retrieve URL from settings
+raw_url = settings.database_url
 
 # 2. Crucial fix for SQLAlchemy: enforce 'postgresql://' over legacy 'postgres://'
 if raw_url and raw_url.startswith("postgres://"):

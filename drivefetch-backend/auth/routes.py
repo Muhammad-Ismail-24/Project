@@ -4,7 +4,7 @@ from sqlmodel import Session, select
 from auth.config import oauth, SECRET_KEY
 from database import get_session
 from models.db_models import User
-import os
+from agents.config import settings
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -15,7 +15,7 @@ async def login(request: Request):
     # We MUST explicitly send the Vercel URL to Google to match Cloud Console.
     
     # Defaults to Vercel, but allows local testing if FRONTEND_URL is set to localhost
-    frontend_url = os.getenv("FRONTEND_URL", "https://carfinderproject.vercel.app").rstrip("/")
+    frontend_url = settings.frontend_url.rstrip("/")
     redirect_uri = f"{frontend_url}/auth/google/callback"
 
     return await oauth.google.authorize_redirect(request, redirect_uri)
@@ -69,7 +69,7 @@ async def auth_callback(request: Request, db: Session = Depends(get_session)):
     request.session["user_id"] = user.id
 
     # Redirect to the frontend dashboard
-    frontend_url = os.getenv("FRONTEND_URL", "https://carfinderproject.vercel.app").rstrip("/")
+    frontend_url = settings.frontend_url.rstrip("/")
     response = RedirectResponse(url=f"{frontend_url}/")
     response.set_cookie(key="has_auth", value="1", httponly=True, max_age=14 * 24 * 60 * 60, samesite="lax", secure=True, path="/")
     return response

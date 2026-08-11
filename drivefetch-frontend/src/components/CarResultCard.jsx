@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Sparkles, MapPin, Calendar, Gauge, ExternalLink, Loader2, ShieldAlert, TrendingUp } from 'lucide-react';
 import SaveCarButton from './SaveCarButton';
 import { evaluateSingleCar } from '../utils/api';
@@ -59,6 +59,15 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [aiData, setAiData] = useState(null);
   const [evalError, setEvalError] = useState(null);
+  const abortControllerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   // Red flags: prefer on-demand data, then existing analysis, then raw JSON field
   let redFlags = [];
@@ -99,12 +108,18 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
   const handleEvaluate = async () => {
     setIsEvaluating(true);
     setEvalError(null);
+    abortControllerRef.current = new AbortController();
     try {
-      const result = await evaluateSingleCar(car, userQuery);
+      const result = await evaluateSingleCar(car, userQuery, {
+        signal: abortControllerRef.current.signal
+      });
       setAiData(result);
+      setIsEvaluating(false);
     } catch (err) {
+      if (err.name === 'CanceledError') {
+        return;
+      }
       setEvalError('Appraisal failed. Please try again.');
-    } finally {
       setIsEvaluating(false);
     }
   };

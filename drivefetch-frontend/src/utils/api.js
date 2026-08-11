@@ -70,7 +70,7 @@ export const chatWithBot = async (messages) => {
   return response.data.reply;
 };
 
-export const evaluateSingleCar = async (listingData, userQuery) => {
+export const evaluateSingleCar = async (listingData, userQuery, options = {}) => {
   try {
     const response = await api.post('/evaluate-single', {
       title: listingData.title,
@@ -80,9 +80,12 @@ export const evaluateSingleCar = async (listingData, userQuery) => {
       city: listingData.city || '',
       platform: listingData.platform || '',
       user_query: userQuery,
-    });
+    }, options);
     return response.data;
   } catch (err) {
+    if (axios.isCancel(err) || err.name === 'CanceledError') {
+      throw err;
+    }
     console.error('[evaluateSingleCar] API error:', err);
     return {
       red_flags: [],

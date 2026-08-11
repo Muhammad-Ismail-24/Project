@@ -11,7 +11,12 @@ class Settings(BaseSettings):
     """
     openrouter_api_key: str = ""
     gemini_api_key: str = ""
+    google_api_key: str = ""
     database_url: str = "sqlite:///./drivefetch.db"
+    port: int = 8000
+    host: str = "0.0.0.0"
+    frontend_url: str = "http://localhost:5173"
+    secret_key: str = "super-secret-key-for-local-dev"
     
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -61,7 +66,7 @@ def async_retry(retries: int = 2, delay: float = 1.0):
 
 
 # Centralized Model Config
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+GEMINI_API_KEY = settings.gemini_api_key or settings.google_api_key
 ai_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 PRIMARY_MODEL = "gemini-3.5-flash-lite"

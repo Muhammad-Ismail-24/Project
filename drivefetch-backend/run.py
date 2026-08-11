@@ -8,10 +8,11 @@ if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 # 2. Start the Uvicorn server manually, after the policy is already set
+from agents.config import settings
 if __name__ == "__main__":
     print("🚀 [Startup] Starting Drive Fetch with Windows Subprocess Support...")
-    port = int(os.getenv("PORT", 8000))
-    host = os.getenv("HOST", "0.0.0.0")
+    port = settings.port
+    host = settings.host
     
     # Added proxy_headers=True and forwarded_allow_ips
     uvicorn.run(

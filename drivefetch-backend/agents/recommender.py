@@ -58,10 +58,10 @@ from pydantic import BaseModel, Field
 
 load_dotenv()
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-client = genai.Client(api_key=GEMINI_API_KEY)
+from agents.config import generate_content_resilient, settings
 
-from agents.config import generate_content_resilient
+GEMINI_API_KEY = settings.gemini_api_key or settings.google_api_key
+client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 
 # ---------------------------------------------------------------------------
