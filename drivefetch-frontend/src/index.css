@@ -94,6 +94,14 @@ body {
     border-radius: var(--df-radius-sm);
   }
 
+  /* Navbar blur intensifies on scroll — class is toggled by ScrollTrigger,
+     never by React state (Sec 8.1). */
+  nav.glass-thin.nav-scrolled {
+    background: rgba(10, 10, 14, 0.72);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+  }
+
   /* Interactive hover lift for cards */
   .glass-hover {
     transition:
