@@ -1,10 +1,11 @@
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { useGLTF, Environment, OrbitControls, AdaptiveDpr } from '@react-three/drei';
+import { useGLTF, OrbitControls, AdaptiveDpr } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { progressRef } from '../three/useScrollProgress';
 import Road from '../three/Road';
+import LightRig from '../three/LightRig';
 
 const MODEL_URL = '/bmwm5-optimized.glb';
 const DRACO_PATH = '/draco/';
@@ -116,21 +117,8 @@ export default function CarScene3D() {
 
   return (
     <>
-      <ambientLight intensity={0.15} />
-
-      {/* Key rim — behind-left, cool white: carves the top edge out of the dark */}
-      <directionalLight position={[-6, 5, -4]} intensity={2.5} color="#cfe0ff" castShadow />
-
-      {/* Secondary rim — behind-right, warmer */}
-      <directionalLight position={[6, 4, -3]} intensity={1.8} color="#fff0e0" />
-
-      {/* Soft front fill so the fascia isn't pure void */}
-      <directionalLight position={[0, 2, 6]} intensity={0.35} color="#e8e8f0" />
-
-      {/* Under-glow / floor bounce — brand red kiss on the lower body */}
-      <pointLight position={[0, 0.3, 2.5]} intensity={0.8} color="#E5202E" distance={7} decay={2} />
-
-      <Environment preset="warehouse" environmentIntensity={0.35} />
+      {/* Cinematic light rig (Blueprint §8.4) — extracted to src/three/LightRig. */}
+      <LightRig />
 
       {/* Real road (Blueprint §7) — replaces the v1 helper grid. */}
       <Road mode="textured" />
