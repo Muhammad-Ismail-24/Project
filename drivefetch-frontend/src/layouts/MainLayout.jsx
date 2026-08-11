@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Outlet, Link, NavLink, useLocation } from 'react-router-dom';
 import { Menu, X, User, ChevronDown } from 'lucide-react';
+import { ScrollDriveProvider } from '../utils/ScrollDriveContext';
+
+const Background3DShell = lazy(() => import('../components/Background3DShell'));
 
 export default function MainLayout() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -71,8 +74,14 @@ export default function MainLayout() {
   }, []);
 
   return (
+    <ScrollDriveProvider>
     <div className="relative min-h-screen font-sans text-black selection:bg-black selection:text-white">
-      
+
+      {/* ── Persistent 3D canvas — mounted once, survives route changes ── */}
+      <Suspense fallback={<div className="fixed inset-0 z-0 w-full h-full bg-void" />}>
+        <Background3DShell />
+      </Suspense>
+
       {/* ── Fixed Navbar ── */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#b0b0b0]/70 backdrop-blur-xl border-b border-white/25">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
@@ -224,5 +233,6 @@ export default function MainLayout() {
         </div>
       </div>
     </div>
+    </ScrollDriveProvider>
   );
 }

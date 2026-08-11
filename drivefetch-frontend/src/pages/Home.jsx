@@ -1,12 +1,10 @@
 import { searchCars } from '../utils/api';
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import SearchBar from '../components/SearchBar';
 import CarResultCard from '../components/CarResultCard';
 import { ShieldCheck, Database, Sparkles, AlertCircle, Loader2, Car } from 'lucide-react';
-
-const Background3DShell = lazy(() => import('../components/Background3DShell'));
 
 // Defined at module scope so they are stable references and never appear in
 // useEffect dependency arrays (avoids the infinite-re-render trap where
@@ -128,10 +126,6 @@ export default function Home() {
           style={{ background: 'radial-gradient(ellipse at 60% 40%, transparent 40%, rgba(0,0,0,0.18) 100%)' }}
         />
       </div>
-
-      <Suspense fallback={<div className="fixed inset-0 z-0 w-full h-full pointer-events-none bg-transparent"></div>}>
-        <Background3DShell />
-      </Suspense>
 
       <div className="relative z-10 w-full">
 

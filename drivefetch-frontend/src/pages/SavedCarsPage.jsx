@@ -1,7 +1,6 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import CarResultCard from '../components/CarResultCard';
-const Background3DShell = lazy(() => import('../components/Background3DShell'));
 import { Loader2, BookmarkX } from 'lucide-react';
 
 export default function SavedCarsPage() {
@@ -61,10 +60,6 @@ export default function SavedCarsPage() {
         <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 60% 40%, transparent 40%, rgba(0,0,0,0.18) 100%)' }} />
       </div>
 
-      <Suspense fallback={<div className="fixed inset-0 z-0 w-full h-full pointer-events-none bg-transparent"></div>}>
-        <Background3DShell />
-      </Suspense>
-      
       <div className="relative z-10 w-full pt-24 md:pt-32 px-4 md:px-6 max-w-7xl mx-auto pb-16 md:pb-32">
         <div className="mb-10 md:mb-12 text-center md:text-left">
           <h1 className="text-4xl md:text-5xl font-black tracking-tight text-black mb-3 md:mb-4">
