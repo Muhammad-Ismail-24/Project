@@ -1,9 +1,10 @@
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { useGLTF, Environment, Grid, MeshReflectorMaterial, OrbitControls, AdaptiveDpr } from '@react-three/drei';
+import { useGLTF, Environment, OrbitControls, AdaptiveDpr } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { progressRef } from '../three/useScrollProgress';
+import Road from '../three/Road';
 
 const MODEL_URL = '/bmwm5-optimized.glb';
 const DRACO_PATH = '/draco/';
@@ -106,41 +107,6 @@ function CameraRig() {
   return null;
 }
 
-function Floor() {
-  return (
-    <group position={[0, -0.01, 0]}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[60, 60]} />
-        <MeshReflectorMaterial
-          blur={[300, 80]}
-          resolution={1024}
-          mixBlur={1}
-          mixStrength={35}
-          roughness={1}
-          depthScale={1.1}
-          minDepthThreshold={0.85}
-          color="#050506"
-          metalness={0.6}
-          mirror={0}
-        />
-      </mesh>
-      <Grid
-        position={[0, 0.001, 0]}
-        args={[60, 60]}
-        cellSize={0.6}
-        cellThickness={0.5}
-        cellColor="#2a2a33"
-        sectionSize={3}
-        sectionThickness={1}
-        sectionColor="#E5202E"
-        fadeDistance={26}
-        fadeStrength={1.5}
-        infiniteGrid
-      />
-    </group>
-  );
-}
-
 export default function CarScene3D() {
   const orbitRef = useRef();
   const reduceMotion = useMemo(
@@ -166,7 +132,8 @@ export default function CarScene3D() {
 
       <Environment preset="warehouse" environmentIntensity={0.35} />
 
-      <Floor />
+      {/* Real road (Blueprint §7) — replaces the v1 helper grid. */}
+      <Road mode="textured" />
 
       <CarModel orbitRef={orbitRef} />
       <CameraRig />
