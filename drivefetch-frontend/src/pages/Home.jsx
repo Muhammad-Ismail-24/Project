@@ -1,10 +1,12 @@
 import { searchCars } from '../utils/api';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import SearchBar from '../components/SearchBar';
 import CarResultCard from '../components/CarResultCard';
 import { ShieldCheck, Database, Sparkles, AlertCircle, Loader2, Car } from 'lucide-react';
+import { useScrollDrive } from '../utils/ScrollDriveContext';
 
 // Defined at module scope so they are stable references and never appear in
 // useEffect dependency arrays (avoids the infinite-re-render trap where
@@ -62,6 +64,36 @@ export default function Home() {
   const [savedListingIds, setSavedListingIds] = useState(new Set());
   const [hasSearched, setHasSearched] = useState(false);
   const [lastQuery, setLastQuery] = useState('');
+
+  const journeyRef = useRef(null);
+  const drive = useScrollDrive();
+
+  // GSAP ScrollTrigger drives the persistent 3D car via a shared ref (Sec 6.4)
+  // — it never touches React state, so this never re-renders the canvas tree.
+  useEffect(() => {
+    if (!journeyRef.current) return;
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      drive.progress = 0;
+      return;
+    }
+
+    const trigger = ScrollTrigger.create({
+      trigger: journeyRef.current,
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: 1,
+      onUpdate: (self) => {
+        drive.progress = self.progress;
+      },
+    });
+
+    return () => {
+      trigger.kill();
+      drive.progress = 0;
+    };
+  }, [drive]);
 
   useEffect(() => {
     const fetchSavedListings = async () => {
@@ -129,6 +161,14 @@ export default function Home() {
 
       <div className="relative z-10 w-full">
 
+        {/* ── Scroll-drive journey: hero → coverage → AI panel. GSAP ScrollTrigger
+             tracks scroll progress across this wrapper's height and drives the
+             persistent 3D car (Sec 6.4); it exits the frame by the end of it. ── */}
+        {/* pointer-events-none so mouse drags pass through to the canvas
+             behind it, letting OrbitControls receive them during the
+             free-orbit landing state — this section has no clickable content. */}
+        <div ref={journeyRef} className="pointer-events-none">
+
         {/* ── SECTION 1: Hero ── */}
         <div className="min-h-[80vh] lg:min-h-screen flex flex-col justify-center px-6 max-w-7xl mx-auto pt-32 lg:pt-40 pb-16 lg:pb-0">
           <motion.div className="max-w-lg" variants={heroContainerVariants} initial="hidden" animate="visible">
@@ -194,6 +234,8 @@ export default function Home() {
               "duplicate file" before you make a costly mistake.
             </p>
           </div>
+        </div>
+
         </div>
 
         {/* ── SECTION 4: Search ── */}
