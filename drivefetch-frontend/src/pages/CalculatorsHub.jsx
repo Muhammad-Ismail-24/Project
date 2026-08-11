@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Fuel, FileText, Landmark } from 'lucide-react';
 import { calculateFuel, calculateTransfer, calculateToken } from '../utils/api';
-import useReveal from '../utils/useReveal';
+import useReveal from '../hooks/useReveal';
 
 const CC_OPTIONS = [
   { value: 800, label: "800cc (Alto, WagonR)" },

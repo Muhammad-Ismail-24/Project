@@ -1,6 +1,6 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
-import useReveal from '../utils/useReveal';
+import useReveal from '../hooks/useReveal';
 
 export default function About() {
   const headingRef = useReveal();

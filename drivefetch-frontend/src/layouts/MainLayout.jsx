@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { Outlet, Link, NavLink, useLocation } from 'react-router-dom';
 import { Menu, X, User, ChevronDown } from 'lucide-react';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { ScrollDriveProvider } from '../utils/ScrollDriveContext';
 
 const Background3DShell = lazy(() => import('../components/Background3DShell'));
 
@@ -96,7 +95,6 @@ export default function MainLayout() {
   }, []);
 
   return (
-    <ScrollDriveProvider>
     <div className="relative min-h-screen font-sans selection:bg-accent selection:text-white">
 
       {/* ── Persistent 3D canvas — mounted once, survives route changes.
@@ -259,6 +257,5 @@ export default function MainLayout() {
         </div>
       </div>
     </div>
-    </ScrollDriveProvider>
   );
 }

@@ -9,7 +9,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { Sparkles, Search, X, ChevronRight, Car, Loader2, AlertCircle, Plus, CheckCircle2 } from "lucide-react";
 import CarResultCard from "../components/CarResultCard";
-import useReveal from "../utils/useReveal";
+import useReveal from "../hooks/useReveal";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 

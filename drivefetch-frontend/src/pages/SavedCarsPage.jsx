@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import CarResultCard from '../components/CarResultCard';
 import { Loader2, BookmarkX } from 'lucide-react';
-import useReveal from '../utils/useReveal';
+import useReveal from '../hooks/useReveal';
 
 export default function SavedCarsPage() {
   const [savedCars, setSavedCars] = useState([]);

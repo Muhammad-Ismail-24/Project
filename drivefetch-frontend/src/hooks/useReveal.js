@@ -1,14 +1,18 @@
 import { useEffect, useRef } from 'react';
 
-// Observes the returned ref and toggles the `.is-visible` class directly on
-// the DOM node when it crosses ~15% into view. Never touches React state, so
-// it never triggers a re-render of the observed subtree.
+// Blueprint §5/§14 reveal hook.
+//
+// Observes the returned ref with an IntersectionObserver and toggles the
+// `.is-visible` class directly on the DOM node when it crosses ~15% into view.
+// One-shot by default (unobserves after first reveal). It NEVER stores
+// visibility in React state, so revealing an element never re-renders its
+// parent — no per-element state, per §14.
 export default function useReveal({ once = true, threshold = 0.15 } = {}) {
   const ref = useRef(null);
 
   useEffect(() => {
     const node = ref.current;
-    if (!node) return;
+    if (!node) return undefined;
 
     const observer = new IntersectionObserver(
       (entries) => {

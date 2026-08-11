@@ -1,12 +1,11 @@
 import { searchCars } from '../utils/api';
 import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import SearchBar from '../components/SearchBar';
 import CarResultCard from '../components/CarResultCard';
 import { ShieldCheck, Database, Sparkles, AlertCircle, Loader2, Car } from 'lucide-react';
-import { useScrollDrive } from '../utils/ScrollDriveContext';
-import useReveal from '../utils/useReveal';
+import { useScrollProgress } from '../three/useScrollProgress';
+import useReveal from '../hooks/useReveal';
 
 // Defined at module scope so they are stable references and never appear in
 // useEffect dependency arrays (avoids the infinite-re-render trap where
@@ -56,39 +55,19 @@ export default function Home() {
   const [lastQuery, setLastQuery] = useState('');
 
   const journeyRef = useRef(null);
-  const drive = useScrollDrive();
 
   const heroRevealRef = useReveal();
   const coverageRevealRef = useReveal();
   const aiPanelRevealRef = useReveal();
   const searchRevealRef = useReveal();
 
-  // GSAP ScrollTrigger drives the persistent 3D car via a shared ref (Sec 6.4)
-  // — it never touches React state, so this never re-renders the canvas tree.
-  useEffect(() => {
-    if (!journeyRef.current) return;
-
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduceMotion) {
-      drive.progress = 0;
-      return;
-    }
-
-    const trigger = ScrollTrigger.create({
-      trigger: journeyRef.current,
-      start: 'top top',
-      end: 'bottom bottom',
-      scrub: 1,
-      onUpdate: (self) => {
-        drive.progress = self.progress;
-      },
-    });
-
-    return () => {
-      trigger.kill();
-      drive.progress = 0;
-    };
-  }, [drive]);
+  // Scroll → progressRef bridge (Blueprint §6). No React state: the hook writes
+  // scroll progress into a module ref that the canvas reads in useFrame.
+  // Disabled under reduced motion, which pins progress at 0 (landing pose held).
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  useScrollProgress(journeyRef, { enabled: !prefersReducedMotion });
 
   useEffect(() => {
     const fetchSavedListings = async () => {

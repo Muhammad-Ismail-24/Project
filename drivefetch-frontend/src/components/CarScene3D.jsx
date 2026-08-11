@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF, Environment, Grid, MeshReflectorMaterial, OrbitControls, AdaptiveDpr } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
-import { useScrollDrive } from '../utils/ScrollDriveContext';
+import { progressRef } from '../three/useScrollProgress';
 
 const MODEL_URL = '/bmwm5-optimized.glb';
 const DRACO_PATH = '/draco/';
@@ -39,7 +39,6 @@ const CHASE_OFFSET = new THREE.Vector3(3.2, 1.9, 4.6);
 function CarModel({ orbitRef }) {
   const { scene } = useGLTF(MODEL_URL, DRACO_PATH);
   const carRef = useRef();
-  const drive = useScrollDrive();
   const smoothedProgress = useRef(0);
   const tmpPoint = useMemo(() => new THREE.Vector3(), []);
 
@@ -61,16 +60,16 @@ function CarModel({ orbitRef }) {
   useFrame((state, delta) => {
     if (!carRef.current) return;
 
-    smoothedProgress.current = THREE.MathUtils.damp(smoothedProgress.current, drive.progress, 5, delta);
+    smoothedProgress.current = THREE.MathUtils.damp(smoothedProgress.current, progressRef.current, 5, delta);
     const t = smoothedProgress.current;
 
-    drive.orbitActive = t < SCROLL_TAKEOVER_EPSILON;
+    const orbitActive = t < SCROLL_TAKEOVER_EPSILON;
     if (orbitRef.current) {
-      orbitRef.current.enabled = drive.orbitActive;
-      if (!drive.orbitActive) orbitRef.current.autoRotate = false;
+      orbitRef.current.enabled = orbitActive;
+      if (!orbitActive) orbitRef.current.autoRotate = false;
     }
 
-    if (drive.orbitActive) {
+    if (orbitActive) {
       carRef.current.position.set(0, 0, 0);
       carRef.current.rotation.y = START_ANGLE;
       return;
@@ -87,15 +86,14 @@ function CarModel({ orbitRef }) {
 // Subtle dolly/pan once the scroll takeover starts — OrbitControls owns the
 // camera entirely during the landing state, so this only acts afterwards.
 function CameraRig() {
-  const drive = useScrollDrive();
   const smoothedProgress = useRef(0);
   const tmpCarPos = useMemo(() => new THREE.Vector3(), []);
   const tmpCamTarget = useMemo(() => new THREE.Vector3(), []);
 
   useFrame((state, delta) => {
-    if (drive.orbitActive) return;
+    if (progressRef.current < SCROLL_TAKEOVER_EPSILON) return;
 
-    smoothedProgress.current = THREE.MathUtils.damp(smoothedProgress.current, drive.progress, 5, delta);
+    smoothedProgress.current = THREE.MathUtils.damp(smoothedProgress.current, progressRef.current, 5, delta);
     const t = Math.min(smoothedProgress.current, 1);
 
     ROAD_CURVE.getPointAt(t, tmpCarPos);
