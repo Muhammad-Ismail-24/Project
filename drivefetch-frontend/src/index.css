@@ -3,47 +3,20 @@
 @tailwind utilities;
 
 :root {
-  /* --- SURFACES --- */
-  --df-void:        #050506;   /* deepest background */
-  --df-bg:          #0A0A0C;   /* base page background */
-  --df-surface:     #101014;   /* raised surface */
-  --df-surface-2:   #16161C;   /* higher surface */
-
-  /* --- GLASS --- */
-  --df-glass-bg:     rgba(20, 20, 26, 0.55);
-  --df-glass-border: rgba(255, 255, 255, 0.08);
-  --df-glass-hi:     rgba(255, 255, 255, 0.14);
-
-  /* --- TEXT --- */
-  --df-text:        #F4F4F6;
-  --df-text-dim:    #A0A0AC;
-  --df-text-faint:  #5A5A66;
-
-  /* --- ACCENT (DriveFetch signal red — used sparingly) --- */
-  --df-accent:      #E5202E;
-  --df-accent-glow: rgba(229, 32, 46, 0.45);
-
-  /* --- STATUS --- */
-  --df-good:        #2FBF71;   /* high liquidity / clean */
-  --df-warn:        #E5A82E;   /* caution */
-  --df-danger:      #E5202E;   /* red flag */
-
-  /* --- FX --- */
-  --df-radius:      20px;
-  --df-radius-sm:   12px;
-  --df-blur:        22px;
-  --df-shadow:      0 24px 60px -20px rgba(0,0,0,0.85);
+  --df-void:#050506; --df-bg:#0A0A0C; --df-surface:#101014; --df-surface-2:#16161C;
+  --df-glass-bg:rgba(20,20,26,0.55);
+  --df-glass-border:rgba(255,255,255,0.08);
+  --df-glass-hi:rgba(255,255,255,0.14);
+  --df-text:#F4F4F6; --df-text-dim:#A0A0AC; --df-text-faint:#5A5A66;
+  --df-accent:#E5202E; --df-accent-glow:rgba(229,32,46,0.45);
+  --df-good:#2FBF71; --df-warn:#E5A82E; --df-danger:#E5202E;
+  --df-radius:20px; --df-radius-sm:12px; --df-blur:22px;
+  --df-shadow:0 24px 60px -20px rgba(0,0,0,0.85);
 }
+html,body,#root{background:var(--df-bg);color:var(--df-text);min-height:100%;}
 
-html, body, #root {
-  background: var(--df-bg);
-  color: var(--df-text);
-  min-height: 100%;
-}
-
-body {
-  margin: 0;
-}
+/* Base reset — additive, not part of §4; prevents the default 8px body margin gap */
+body { margin: 0; }
 
 /* Strategy Brief card entrance animation */
 @keyframes fadeSlideUp {
