@@ -6,9 +6,9 @@ import { useOutletContext } from 'react-router-dom';
 function TypingDots() {
   return (
     <span className="flex items-center gap-[5px]" aria-label="Typing">
-      <span className="w-1.5 h-1.5 rounded-full bg-text-faint animate-bounce [animation-delay:0ms]" />
-      <span className="w-1.5 h-1.5 rounded-full bg-text-faint animate-bounce [animation-delay:160ms]" />
-      <span className="w-1.5 h-1.5 rounded-full bg-text-faint animate-bounce [animation-delay:320ms]" />
+      <span className="w-1.5 h-1.5 rounded-full bg-black/30 animate-bounce [animation-delay:0ms]" />
+      <span className="w-1.5 h-1.5 rounded-full bg-black/30 animate-bounce [animation-delay:160ms]" />
+      <span className="w-1.5 h-1.5 rounded-full bg-black/30 animate-bounce [animation-delay:320ms]" />
     </span>
   );
 }
@@ -170,7 +170,9 @@ export default function ChatPage() {
   };
 
   return (
-    <main className="flex mt-24 h-[calc(100dvh-6rem)] w-full overflow-hidden font-sans relative">
+    <main className="flex h-[calc(100dvh-80px)] w-full overflow-hidden font-sans text-black relative"
+      style={{ background: 'linear-gradient(160deg, #c0c0c0 0%, #a8a8a8 50%, #b8b8b8 100%)' }}
+    >
       <Helmet>
         <title>AI Car Inspection Assistant | DriveFetch</title>
         <meta name="description" content="Chat with our AI Car Inspection Assistant to ask questions about specific car conditions and make an informed buying decision." />
@@ -181,22 +183,23 @@ export default function ChatPage() {
       {isMobileSidebarOpen && !isGuest && (
         <div
           onClick={() => setIsMobileSidebarOpen(false)}
-          className="fixed inset-0 top-24 z-30 bg-black/40 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 top-20 z-30 bg-black/10 backdrop-blur-sm md:hidden"
         />
       )}
 
       {/* ── Sidebar ── */}
       {!isGuest && (
         <div className={`
-          glass-thin !rounded-none fixed top-24 bottom-0 left-0 z-40 w-60 flex flex-col shrink-0
-          transition-transform duration-300 ease-in-out
+          fixed top-20 bottom-0 left-0 z-40 w-60 flex flex-col shrink-0
+          border-r border-white/30 transition-transform duration-300 ease-in-out
           md:static md:translate-x-0 h-full
+          bg-white/20 backdrop-blur-xl
           ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}>
-          <div className="p-3" style={{ borderBottom: '1px solid var(--df-glass-border)' }}>
+          <div className="p-3 border-b border-white/25">
             <button
               onClick={startNewChat}
-              className="btn-primary w-full justify-center text-sm"
+              className="w-full flex items-center justify-center gap-2 bg-black text-white text-sm font-medium py-2.5 rounded-xl hover:bg-neutral-800 transition-colors"
             >
               <Plus className="w-4 h-4" strokeWidth={2} />
               New Chat
@@ -204,7 +207,7 @@ export default function ChatPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
-            <p className="text-[10px] font-semibold text-text-faint uppercase tracking-[0.14em] px-2 pt-3 pb-2">
+            <p className="text-[10px] font-semibold text-black/40 uppercase tracking-[0.14em] px-2 pt-3 pb-2">
               Recent Chats
             </p>
             {sessionsList.map(session => (
@@ -213,22 +216,22 @@ export default function ChatPage() {
                 onClick={() => loadSession(session.session_id)}
                 className={`group flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-all
                   ${activeSessionId === session.session_id
-                    ? 'bg-white/10'
-                    : 'hover:bg-white/5'
+                    ? 'bg-white/50 shadow-sm'
+                    : 'hover:bg-white/25'
                   }`}
               >
                 <div className="flex items-center gap-2 overflow-hidden">
                   <MessageSquare
-                    className={`w-3.5 h-3.5 shrink-0 ${activeSessionId === session.session_id ? 'text-text' : 'text-text-faint'}`}
+                    className={`w-3.5 h-3.5 shrink-0 ${activeSessionId === session.session_id ? 'text-black' : 'text-black/40'}`}
                     strokeWidth={1.5}
                   />
-                  <span className={`text-sm truncate ${activeSessionId === session.session_id ? 'font-semibold text-text' : 'font-normal text-text-dim'}`}>
+                  <span className={`text-sm truncate ${activeSessionId === session.session_id ? 'font-semibold text-black' : 'font-normal text-black/70'}`}>
                     {session.latest_message}
                   </span>
                 </div>
                 <button
                   onClick={(e) => handleDeleteSession(e, session.session_id)}
-                  className="opacity-0 group-hover:opacity-100 p-1 text-text-faint hover:text-text rounded-lg transition-all shrink-0"
+                  className="opacity-0 group-hover:opacity-100 p-1 text-black/30 hover:text-black/70 rounded-lg transition-all shrink-0"
                 >
                   <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
                 </button>
@@ -242,31 +245,31 @@ export default function ChatPage() {
       <div className="flex-1 flex flex-col h-full relative min-w-0">
 
         {/* Header — thin, minimal */}
-        <div className="glass-thin !rounded-none flex items-center justify-between px-5 py-3.5 sticky top-0 z-10">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/25 bg-white/20 backdrop-blur-xl sticky top-0 z-10">
           <div className="flex items-center gap-3 min-w-0">
             {!isGuest && (
               <button
                 onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-                className="md:hidden p-1.5 text-text-dim hover:text-text hover:bg-white/5 rounded-lg transition-all shrink-0"
+                className="md:hidden p-1.5 text-black/50 hover:text-black hover:bg-white/30 rounded-lg transition-all shrink-0"
               >
                 <MessageSquare className="w-5 h-5" strokeWidth={1.5} />
               </button>
             )}
             <div className="min-w-0">
-              <h1 className="text-base font-semibold text-text tracking-tight truncate">{agentName}</h1>
+              <h1 className="text-base font-semibold text-black tracking-tight truncate">{agentName}</h1>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="w-1.5 h-1.5 rounded-full bg-good" />
-            <span className="text-xs font-medium text-text-dim">Online</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span className="text-xs font-medium text-black/50">Online</span>
           </div>
         </div>
 
         {/* Chat Feed */}
         <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-5 overscroll-y-contain">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center h-full gap-3 text-text-faint">
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-black/40">
               <Loader2 className="w-5 h-5 animate-spin" strokeWidth={1.5} />
               <p className="text-sm font-medium">Loading…</p>
             </div>
@@ -279,7 +282,7 @@ export default function ChatPage() {
               >
                 {/* AI avatar — smaller, cleaner */}
                 {msg.role === 'assistant' && (
-                  <div className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center bg-accent">
+                  <div className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center bg-black">
                     <Sparkles className="w-3 h-3 text-white" strokeWidth={1.5} />
                   </div>
                 )}
@@ -288,8 +291,8 @@ export default function ChatPage() {
                 <div className={`
                   max-w-[85%] md:max-w-[68%] px-4 py-3 text-[14px] sm:text-[15px] leading-relaxed whitespace-pre-wrap break-words
                   ${msg.role === 'user'
-                    ? 'bg-surface-2 text-text rounded-2xl rounded-br-sm font-medium'
-                    : 'glass !rounded-2xl rounded-bl-sm text-text font-normal'
+                    ? 'bg-black text-white rounded-2xl rounded-br-sm font-medium'
+                    : 'bg-white/65 backdrop-blur-sm text-black rounded-2xl rounded-bl-sm font-normal border border-white/60 shadow-sm'
                   }
                 `}>
                   {msg.content}
@@ -297,8 +300,8 @@ export default function ChatPage() {
 
                 {/* User avatar */}
                 {msg.role === 'user' && (
-                  <div className="glass-thin w-7 h-7 rounded-full shrink-0 flex items-center justify-center">
-                    <User className="w-3.5 h-3.5 text-text-dim" strokeWidth={1.5} />
+                  <div className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center bg-white/60 border border-white/40">
+                    <User className="w-3.5 h-3.5 text-black/60" strokeWidth={1.5} />
                   </div>
                 )}
               </div>
@@ -307,10 +310,10 @@ export default function ChatPage() {
 
           {isTyping && (
             <div className="flex items-end gap-2.5 justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center bg-accent">
+              <div className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center bg-black">
                 <Sparkles className="w-3 h-3 text-white" strokeWidth={1.5} />
               </div>
-              <div className="glass !rounded-2xl rounded-bl-sm px-4 py-3">
+              <div className="px-4 py-3 rounded-2xl rounded-bl-sm bg-white/65 backdrop-blur-sm border border-white/60 shadow-sm">
                 <TypingDots />
               </div>
             </div>
@@ -319,10 +322,10 @@ export default function ChatPage() {
         </div>
 
         {/* Input Area */}
-        <div className="glass-thin !rounded-none px-4 py-3">
+        <div className="px-4 py-3 bg-white/15 backdrop-blur-xl border-t border-white/25">
           <div className="max-w-3xl mx-auto">
             {isGuest && !isLoading && (
-              <p className="text-center text-xs text-text-faint font-medium mb-2">
+              <p className="text-center text-xs text-black/40 font-medium mb-2">
                 Sign in to save conversations and customise your assistant.
               </p>
             )}
@@ -333,12 +336,12 @@ export default function ChatPage() {
                 onChange={e => setInput(e.target.value)}
                 placeholder="Ask about fuel averages, ground clearance…"
                 disabled={isTyping || isLoading}
-                className="field !rounded-2xl pl-5 pr-14 py-3.5 text-base"
+                className="w-full bg-white/55 backdrop-blur-md border border-white/50 rounded-2xl pl-5 pr-14 py-3.5 outline-none focus:border-black/30 focus:ring-1 focus:ring-black/20 transition-all font-normal text-base placeholder-black/35 text-black shadow-sm disabled:opacity-50"
               />
               <button
                 type="submit"
                 disabled={isTyping || isLoading || !input.trim()}
-                className="absolute right-1.5 w-9 h-9 bg-accent text-white rounded-xl flex items-center justify-center hover:brightness-110 transition-all disabled:opacity-40 active:scale-95"
+                className="absolute right-1.5 w-9 h-9 bg-black text-white rounded-xl flex items-center justify-center hover:bg-neutral-800 transition-colors disabled:opacity-40 active:scale-95"
               >
                 <Send className="w-3.5 h-3.5 ml-0.5" strokeWidth={1.5} />
               </button>
