@@ -53,6 +53,23 @@ export default function MainLayout() {
           setIsAuthenticated(true);
           if (userData.bot_name) {
             setAssistantName(userData.bot_name);
+          } else {
+            try {
+              const prefRes = await fetch('/api/user/preferences', {
+                method: 'GET',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+              });
+              if (prefRes.ok) {
+                const prefData = await prefRes.json();
+                if (prefData.bot_name) {
+                  setAssistantName(prefData.bot_name);
+                  setUser(prev => ({ ...prev, bot_name: prefData.bot_name }));
+                }
+              }
+            } catch (prefError) {
+              console.error("Preferences check failed:", prefError);
+            }
           }
         } else {
           setIsAuthenticated(false);

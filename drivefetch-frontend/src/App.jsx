@@ -47,6 +47,7 @@ export default function App() {
             <Route path="recommend" element={<ProtectedRoute><RecommendPage /></ProtectedRoute>} />
             
             {/* Public Routes */}
+            <Route path="about" element={<About />} />
             <Route path="calculators" element={<CalculatorsHub />} />
             
             {/* Catch-all 404 Route */}
