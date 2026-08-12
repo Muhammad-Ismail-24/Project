@@ -5,6 +5,7 @@ import { Menu, X } from 'lucide-react';
 const NAV_LINKS = [
   { to: '/', label: 'DISCOVER' },
   { to: '/recommend', label: 'MATCHMAKER' },
+  { to: '/chat', label: 'CHAT' },
   { to: '/calculators', label: 'CALCULATORS' },
   { to: '/about', label: 'ABOUT' },
 ];
@@ -57,7 +58,7 @@ export default function MainLayout() {
   }, []);
 
   return (
-    <div className="relative min-h-screen bg-df-white text-df-black font-body selection:bg-df-black selection:text-df-white">
+    <div className="relative min-h-screen flex flex-col bg-df-white text-df-black font-body selection:bg-df-black selection:text-df-white">
 
       {/* ═══ HEADER ═══ */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-df-white border-b-[3px] border-df-black">
@@ -165,9 +166,51 @@ export default function MainLayout() {
       </header>
 
       {/* ═══ MAIN CONTENT ═══ */}
-      <main className="relative z-10 pt-16 sm:pt-[72px]">
+      <main className="relative z-10 pt-16 sm:pt-[72px] flex-grow flex flex-col">
         <Outlet />
       </main>
+
+      {/* ═══ FOOTER ═══ */}
+      <BrutalistFooter />
     </div>
+  );
+}
+
+function BrutalistFooter() {
+  return (
+    <footer className="relative z-[50] border-t-2 border-df-black bg-df-white mt-auto">
+      <div className="w-full max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-12 py-6 sm:py-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 md:gap-4">
+          <div className="font-mono text-[10px] sm:text-xs font-bold tracking-[0.06em] text-df-black/50">
+            [ DRIVEFETCH // ALL RIGHTS RESERVED ]
+          </div>
+          <nav className="flex flex-wrap items-center gap-x-1 gap-y-2">
+            {[
+              { label: 'PRIVACY POLICY', href: '#' },
+              { label: 'TERMS', href: '#' },
+              { label: 'GITHUB', href: 'https://github.com' },
+              { label: 'CONTACT', href: '#' },
+            ].map((link, i, arr) => (
+              <span key={link.label} className="flex items-center">
+                <a
+                  href={link.href}
+                  target={link.href.startsWith('http') ? '_blank' : undefined}
+                  rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                  className="font-mono text-[10px] sm:text-xs font-bold tracking-[0.06em] text-df-black bg-transparent hover:bg-df-black hover:text-df-white px-2 py-1 transition-none"
+                >
+                  {link.label}
+                </a>
+                {i < arr.length - 1 && (
+                  <span className="text-df-black/15 font-light mx-0.5 select-none">|</span>
+                )}
+              </span>
+            ))}
+          </nav>
+          <div className="font-mono text-[10px] sm:text-xs tracking-[0.06em] text-df-black/25">
+            BUILD_VER: 2.0.4_BRUTALIST
+          </div>
+        </div>
+      </div>
+    </footer>
   );
 }

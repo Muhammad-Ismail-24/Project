@@ -1,64 +1,125 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
+import { motion, useScroll, useTransform } from 'framer-motion';
+
+/* ═══════════════════════════════════════════════════════
+   ANIMATION VARIANTS — Horizontal Snap
+   ═══════════════════════════════════════════════════════ */
+
+const slideFromLeft = {
+  initial: { opacity: 0, x: -80 },
+  whileInView: { opacity: 1, x: 0 },
+  transition: { duration: 0.4, ease: 'easeOut' },
+  viewport: { once: false, amount: 0.2 },
+};
+
+const slideFromRight = {
+  initial: { opacity: 0, x: 80 },
+  whileInView: { opacity: 1, x: 0 },
+  transition: { duration: 0.4, ease: 'easeOut' },
+  viewport: { once: false, amount: 0.2 },
+};
+
+/* ═══════════════════════════════════════════════════════
+   ABOUT PAGE — The Manifesto
+   ═══════════════════════════════════════════════════════ */
 
 export default function About() {
+  const { scrollYProgress } = useScroll();
+  const scannerY = useTransform(scrollYProgress, [0, 1], ['0vh', '100vh']);
+
   return (
-    <main className="relative z-10 pt-24 md:pt-32 px-4 md:px-6 pb-16 md:pb-24 min-h-screen flex flex-col items-center font-sans text-black">
+    <>
+    {/* ── System Scanner — scroll-linked red laser ── */}
+    <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+      <motion.div
+        style={{ y: scannerY }}
+        className="absolute top-0 left-0 w-full h-[2px] bg-[#E5202E] shadow-[0_0_15px_#E5202E] opacity-70"
+      />
+    </div>
+
+    <main className="relative z-10 pt-28 md:pt-40 px-5 sm:px-8 lg:px-12 pb-20 md:pb-32 min-h-screen flex flex-col items-center">
       <Helmet>
         <title>About DriveFetch — How Our AI Car Search Works</title>
         <meta name="description" content="Learn how DriveFetch uses AI to aggregate listings from PakWheels, OLX, and more to give you the best used car options in Pakistan." />
         <link rel="canonical" href="https://carfinderproject.vercel.app/about" />
       </Helmet>
-      
-      {/* ── 1-Tone Solid Grey Background ── */}
-      <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden bg-[#b0b0b0]">
-        <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(to right,rgba(0,0,0,0.06) 1px,transparent 1px),linear-gradient(to bottom,rgba(0,0,0,0.06) 1px,transparent 1px)', backgroundSize: '72px 72px' }} />
-        <div className="absolute w-[75vw] h-[75vw] max-w-[1100px] max-h-[1100px] bg-white rounded-full blur-[160px] opacity-35 top-[-10%] right-[-12%]" />
-        <div className="absolute w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-white rounded-full blur-[120px] opacity-15 bottom-[5%] left-[-5%]" />
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 60% 40%, transparent 40%, rgba(0,0,0,0.18) 100%)' }} />
-      </div>
 
-      <div className="max-w-3xl w-full">
-        <h1 className="text-4xl md:text-5xl font-black tracking-tighter mb-6 md:mb-8 text-black text-center">
-          About DriveFetch
-        </h1>
-        
-        {/* Frosted Glass Panel */}
-        <div className="bg-white/55 backdrop-blur-xl border border-white/60 rounded-2xl p-6 sm:p-8 md:p-10 shadow-lg space-y-6 md:space-y-8">
-          
-          <section>
-            <h2 className="text-lg md:text-xl font-semibold tracking-tight mb-2 md:mb-3">The Problem</h2>
-            <p className="text-black leading-relaxed text-base md:text-lg font-bold">
-              The Pakistani used car market is fragmented. Buyers spend hours cross-referencing listings between platforms like PakWheels and OLX, only to encounter duplicate ads, fake pricing, and hidden mechanical faults. Making an informed decision requires deep market knowledge that most buyers simply do not have.
-            </p>
-          </section>
+      <div className="w-full max-w-4xl space-y-12 md:space-y-20">
 
-          <section>
-            <h2 className="text-lg md:text-xl font-semibold tracking-tight mb-2 md:mb-3">Our Solution</h2>
-            <p className="text-black leading-relaxed text-base md:text-lg font-bold">
-              DriveFetch is an AI-powered aggregator. Our autonomous web scrapers ingest data from the top platforms in real-time. We then pass this data through highly tuned Large Language Models to normalize prices, flag suspicious listing details (like "showered for fresh look"), and grade the vehicle's market liquidity.
-            </p>
-          </section>
+        {/* ═══ 1. PAGE HEADER — The Manifesto ═══ */}
+        <motion.div {...slideFromLeft}>
+          <h1 className="text-display-lg leading-[0.95] tracking-tight text-df-black">
+            THE SYSTEM<br />ARCHITECTURE.
+          </h1>
+        </motion.div>
 
-          <hr className="border-black/15" />
+        {/* ═══ 2. PROBLEM & SOLUTION — Stacked Cards ═══ */}
+        <div className="space-y-8 md:space-y-12">
 
-          <section>
-            <h2 className="text-xl md:text-2xl font-black tracking-tight mb-4 md:mb-6">Founder</h2>
-            <div className="max-w-sm">
-              <div className="p-4 bg-white/50 rounded-xl border border-white/60 flex items-center gap-4">
-                <div className="w-14 h-14 shrink-0 bg-black rounded-full flex items-center justify-center text-white text-xl font-black shadow-inner">
-                  MI
-                </div>
-                <div>
-                  <p className="font-semibold text-base md:text-lg">Muhammad Ismail</p>
-                  <p className="text-xs text-black/50 font-medium mt-0.5">Founder & Lead Architect</p>
-                </div>
-              </div>
+          {/* Card 1: The Problem */}
+          <motion.div {...slideFromLeft}>
+            <div className="bg-white border-brutal shadow-[8px_8px_0px_#000000] p-6 sm:p-8 md:p-10">
+              <span className="font-mono text-xs font-bold tracking-[0.1em] text-df-black/40 uppercase block mb-4">
+                [ STATUS: FRAGMENTED ]
+              </span>
+              <h2 className="text-display-md text-df-black mb-4">
+                THE MARKET IS BROKEN.
+              </h2>
+              <p className="font-body text-base md:text-lg leading-relaxed text-df-black/80 max-w-2xl">
+                Buyers spend hours cross-referencing listings, only to encounter duplicate ads, fake pricing, and hidden faults. Making an informed decision requires deep market knowledge most simply do not have.
+              </p>
             </div>
-          </section>
+          </motion.div>
+
+          {/* Card 2: The Engine */}
+          <motion.div {...slideFromRight}>
+            <div className="bg-white border-brutal shadow-[8px_8px_0px_#000000] p-6 sm:p-8 md:p-10">
+              <span className="font-mono text-xs font-bold tracking-[0.1em] text-df-red uppercase block mb-4">
+                [ STATUS: AUTOMATED ]
+              </span>
+              <h2 className="text-display-md text-df-black mb-4">
+                AI-DRIVEN ORCHESTRATION.
+              </h2>
+              <p className="font-body text-base md:text-lg leading-relaxed text-df-black/80 max-w-2xl">
+                DriveFetch is an autonomous aggregator. Our scrapers ingest real-time data, passing it through highly-tuned LLMs to normalize prices, flag suspicious details, and grade market liquidity instantly.
+              </p>
+            </div>
+          </motion.div>
 
         </div>
+
+        {/* ═══ 3. FOUNDER — The ID Badge ═══ */}
+        <motion.div {...slideFromLeft}>
+          <div className="bg-black border-2 border-black shadow-[8px_8px_0px_#E5202E] p-6 sm:p-8 md:p-10">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-8">
+
+              {/* Avatar Box */}
+              <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 bg-white border-brutal flex items-center justify-center whitespace-nowrap">
+                <span className="font-mono text-xl sm:text-2xl font-bold text-df-black tracking-tight select-none">
+                  [ MI <span className="animate-pulse">_</span> ]
+                </span>
+              </div>
+
+              {/* Info */}
+              <div>
+                <h3 className="text-white text-2xl sm:text-3xl font-bold tracking-tight leading-tight">
+                  Muhammad Ismail
+                </h3>
+                <p className="text-df-red font-mono text-xs sm:text-sm font-bold uppercase tracking-widest mt-1">
+                  LEAD ARCHITECT // AI ORCHESTRATOR
+                </p>
+                <p className="text-gray-300 font-mono text-xs sm:text-sm leading-relaxed mt-4 max-w-lg">
+                  Engineering full-stack agentic systems and multi-agent architectures. Currently pushing the boundaries of data orchestration at FAST NUCES, Islamabad.
+                </p>
+              </div>
+
+            </div>
+          </div>
+        </motion.div>
+
       </div>
     </main>
+    </>
   );
 }
