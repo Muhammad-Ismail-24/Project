@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, NavLink, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Bookmark, Settings, LogOut } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const NAV_LINKS = [
   { to: '/', label: 'DISCOVER' },
@@ -12,14 +13,16 @@ const NAV_LINKS = [
 
 export default function MainLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
 
-  // Close mobile menu on route change
+  // Close menus on route change
   useEffect(() => {
     setIsMobileMenuOpen(false);
+    setIsPreferencesOpen(false);
   }, [location]);
 
   // Auth check
@@ -56,6 +59,11 @@ export default function MainLayout() {
     };
     checkAuth();
   }, []);
+
+  const handleLogout = () => {
+    document.cookie = "has_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    window.location.href = '/auth/logout';
+  };
 
   return (
     <div className="relative min-h-screen flex flex-col bg-df-white text-df-black font-body selection:bg-df-black selection:text-df-white">
@@ -109,8 +117,8 @@ export default function MainLayout() {
               </button>
             ) : (
               <button
-                onClick={() => window.location.href = '/saved'}
-                className="flex items-center gap-2 px-3 py-1.5 border-brutal bg-df-black text-df-white font-mono text-xs font-bold tracking-wide"
+                onClick={() => setIsPreferencesOpen(true)}
+                className="flex items-center gap-2 px-3 py-1.5 border-brutal bg-df-black text-df-white font-mono text-xs font-bold tracking-wide hover:shadow-[3px_3px_0px_#E5202E] transition-none"
               >
                 {user.picture ? (
                   <img src={user.picture} alt={user.name} className="w-6 h-6 object-cover border border-df-white/30" />
@@ -164,6 +172,79 @@ export default function MainLayout() {
           </div>
         )}
       </header>
+
+      {/* ═══ PREFERENCES SLIDE-OVER ═══ */}
+      <AnimatePresence>
+        {isPreferencesOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsPreferencesOpen(false)}
+              className="fixed inset-0 z-[60] bg-df-black/20 backdrop-blur-sm"
+            />
+            {/* Slide-over Panel */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed top-0 right-0 bottom-0 z-[70] w-full max-w-sm bg-df-white border-l-4 border-df-black shadow-[-10px_0_0_rgba(0,0,0,0.1)] flex flex-col"
+            >
+              <div className="flex items-center justify-between p-6 border-b-4 border-df-black">
+                <h2 className="text-display-md text-df-black mt-2">ACCOUNT</h2>
+                <button
+                  onClick={() => setIsPreferencesOpen(false)}
+                  className="p-2 border-2 border-df-black hover:bg-df-black hover:text-df-white transition-none"
+                >
+                  <X className="w-6 h-6" strokeWidth={2.5} />
+                </button>
+              </div>
+
+              <div className="p-6 flex-1 flex flex-col gap-4">
+                {user && (
+                  <div className="mb-6 border-b-2 border-df-black/10 pb-6">
+                    <p className="font-mono text-[10px] font-bold text-df-black/40 tracking-[0.14em] uppercase mb-1">
+                      ACTIVE USER
+                    </p>
+                    <p className="font-body text-lg font-bold text-df-black">{user.name}</p>
+                    <p className="font-mono text-xs text-df-black/60">{user.email}</p>
+                  </div>
+                )}
+
+                <Link
+                  to="/saved"
+                  onClick={() => setIsPreferencesOpen(false)}
+                  className="flex items-center gap-3 p-4 bg-df-black text-df-white border-2 border-df-black shadow-[4px_4px_0px_#E5202E] hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[8px_8px_0px_#E5202E] transition-all font-mono font-bold tracking-wide uppercase"
+                >
+                  <Bookmark className="w-5 h-5" strokeWidth={2} />
+                  Saved Vehicles
+                </Link>
+                
+                <button
+                  onClick={() => {}} // Placeholder for settings
+                  className="flex items-center gap-3 p-4 bg-df-white text-df-black border-2 border-df-black hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-all font-mono font-bold tracking-wide uppercase text-left"
+                >
+                  <Settings className="w-5 h-5" strokeWidth={2} />
+                  Preferences
+                </button>
+              </div>
+
+              <div className="p-6 border-t-2 border-df-black mt-auto bg-df-grey">
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center justify-center gap-2 p-4 bg-df-white text-df-black border-2 border-df-black hover:bg-df-red hover:text-df-white transition-none font-mono font-bold tracking-wide uppercase"
+                >
+                  <LogOut className="w-4 h-4" strokeWidth={2} />
+                  Terminate Session
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ═══ MAIN CONTENT ═══ */}
       <main className="relative z-10 pt-16 sm:pt-[72px] flex-grow flex flex-col">

@@ -1,8 +1,8 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import CarResultCard from '../components/CarResultCard';
-const Background3DShell = lazy(() => import('../components/Background3DShell'));
+import { Helmet } from 'react-helmet-async';
 import { Loader2, BookmarkX } from 'lucide-react';
+import CarResultCard from '../components/CarResultCard';
 
 export default function SavedCarsPage() {
   const [savedCars, setSavedCars] = useState([]);
@@ -52,47 +52,44 @@ export default function SavedCarsPage() {
   };
 
   return (
-    <div className="relative w-full min-h-[calc(100vh-80px)] overflow-x-hidden font-sans text-black">
-      {/* ── Background ── */}
-      <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden bg-[#b0b0b0]">
-        <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(to right,rgba(0,0,0,0.06) 1px,transparent 1px),linear-gradient(to bottom,rgba(0,0,0,0.06) 1px,transparent 1px)', backgroundSize: '72px 72px' }} />
-        <div className="absolute w-[75vw] h-[75vw] max-w-[1100px] max-h-[1100px] bg-white rounded-full blur-[160px] opacity-35 top-[-10%] right-[-12%]" />
-        <div className="absolute w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-white rounded-full blur-[120px] opacity-15 bottom-[5%] left-[-5%]" />
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 60% 40%, transparent 40%, rgba(0,0,0,0.18) 100%)' }} />
-      </div>
+    <>
+      <Helmet>
+        <title>Saved Vehicles | DriveFetch</title>
+      </Helmet>
 
-      <Suspense fallback={<div className="fixed inset-0 z-0 w-full h-full pointer-events-none bg-transparent"></div>}>
-        <Background3DShell />
-      </Suspense>
-      
-      <div className="relative z-10 w-full pt-24 md:pt-32 px-4 md:px-6 max-w-7xl mx-auto pb-16 md:pb-32">
-        <div className="mb-10 md:mb-12 text-center md:text-left">
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-black mb-3 md:mb-4">
-            Saved Cars
-          </h1>
-          <p className="text-base font-medium text-black/55">
-            Review your bookmarked vehicles and top picks.
+      {/* ── Background Pattern ── */}
+      <div className="fixed inset-0 pointer-events-none -z-10 bg-df-white bg-[linear-gradient(to_right,#e5e7eb_1px,transparent_1px),linear-gradient(to_bottom,#e5e7eb_1px,transparent_1px)] bg-[size:40px_40px]" />
+
+      <div className="relative z-10 w-full pt-12 md:pt-20 px-4 md:px-6 max-w-5xl mx-auto pb-16 md:pb-32 min-h-[calc(100vh-140px)]">
+        <div className="mb-10 md:mb-12">
+          <p className="font-mono text-[10px] md:text-xs font-bold tracking-[0.14em] text-df-black/35 mb-2 uppercase">
+            [ USER DATA // BOOKMARKS ]
           </p>
+          <h1 className="text-display-lg text-df-black mb-4">
+            Saved Vehicles
+          </h1>
         </div>
 
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 md:py-20 space-y-4">
-            <Loader2 className="w-7 h-7 text-black/40 animate-spin" />
-            <p className="text-black font-medium text-black/50 text-sm animate-pulse">
-              Loading your saved cars...
+          <div className="flex flex-col items-center justify-center py-20 border-2 border-df-black bg-df-white shadow-brutal">
+            <Loader2 className="w-8 h-8 text-df-black animate-spin mb-4" />
+            <p className="font-mono text-xs font-bold tracking-[0.1em] text-df-black uppercase">
+              [ LOADING DATA_STREAM ]
             </p>
           </div>
         ) : savedCars.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 md:py-32 px-4 bg-white/55 backdrop-blur-md border border-white/60 rounded-2xl shadow-lg">
-            <BookmarkX className="w-10 h-10 text-black/40 mb-4 md:mb-6" />
-            <h3 className="text-xl md:text-2xl font-black tracking-tight text-black mb-3 md:mb-4">
-              No saved cars yet
+          <div className="flex flex-col items-center justify-center py-20 md:py-32 px-6 bg-df-white border-2 border-df-black shadow-brutal-lg">
+            <div className="w-16 h-16 bg-df-black flex items-center justify-center border-brutal shadow-brutal-sm mb-8">
+              <BookmarkX className="w-8 h-8 text-df-white" strokeWidth={2} />
+            </div>
+            <h3 className="font-display text-4xl md:text-5xl text-df-black tracking-wide mb-6 uppercase text-center">
+              [ NO SAVED VEHICLES ]
             </h3>
-            <p className="text-black font-bold text-sm md:text-lg mb-6 md:mb-8 text-center max-w-md">
-              You haven't saved any cars yet! Go browse our listings and hit the heart icon to save your favorites here.
-            </p>
-            <Link to="/" className="px-6 py-2.5 bg-black text-white text-sm font-medium rounded-xl hover:bg-neutral-800 transition-colors">
-              Explore Cars
+            <Link 
+              to="/recommend" 
+              className="px-6 py-4 bg-[#E5202E] text-df-white border-2 border-df-black font-mono text-xs md:text-sm font-bold tracking-[0.1em] uppercase shadow-[4px_4px_0px_0px_#000000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_0px_#000000] transition-all"
+            >
+              RETURN TO MATCHMAKER
             </Link>
           </div>
         ) : (
@@ -108,6 +105,6 @@ export default function SavedCarsPage() {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
