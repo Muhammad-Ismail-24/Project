@@ -161,7 +161,7 @@ export default function DynamicBackground() {
   const { scrollYProgress } = useScroll();
 
   // Opacity crossfades
-  const opacity1 = useTransform(scrollYProgress, [0, 0.15, 0.33], [1, 1, 0]);
+  const opacity1 = useTransform(scrollYProgress, [0, 0.2, 0.3], [1, 1, 0]);
   const opacity2 = useTransform(scrollYProgress, [0.15, 0.33, 0.50, 0.55], [0, 1, 1, 0]);
   const opacity3 = useTransform(scrollYProgress, [0.40, 0.55, 0.66, 0.75], [0, 1, 1, 0]);
   const opacity4 = useTransform(scrollYProgress, [0.60, 0.7, 1.0], [0, 1, 1]);
@@ -202,7 +202,7 @@ export default function DynamicBackground() {
 
   return (
     <div
-      className="fixed inset-0 -z-10 bg-white pointer-events-none overflow-hidden"
+      className="fixed inset-0 w-full h-full -z-10 bg-white pointer-events-none overflow-hidden"
       style={{ perspective: '1000px' }}
       aria-hidden="true"
     >
