@@ -40,6 +40,12 @@ export default function MainLayout() {
 
   // Auth check
   useEffect(() => {
+    if (user?.bot_name) {
+      setAssistantName(user.bot_name);
+    }
+  }, [user?.bot_name]);
+
+  useEffect(() => {
     const checkAuth = async () => {
       try {
         const response = await fetch('/auth/me', {
@@ -54,21 +60,30 @@ export default function MainLayout() {
           if (userData.bot_name) {
             setAssistantName(userData.bot_name);
           } else {
+            // Fetch from chat sessions history (working logic from ChatPage)
             try {
-              const prefRes = await fetch('/api/user/preferences', {
+              const sessRes = await fetch('/api/chat/sessions', {
                 method: 'GET',
                 credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
               });
-              if (prefRes.ok) {
-                const prefData = await prefRes.json();
-                if (prefData.bot_name) {
-                  setAssistantName(prefData.bot_name);
-                  setUser(prev => ({ ...prev, bot_name: prefData.bot_name }));
+              if (sessRes.ok) {
+                const sessData = await sessRes.json();
+                if (!sessData.is_guest && sessData.sessions && sessData.sessions.length > 0) {
+                  const histRes = await fetch(`/api/chat/history/${sessData.sessions[0].session_id}`, {
+                    method: 'GET',
+                    credentials: 'include',
+                  });
+                  if (histRes.ok) {
+                    const histData = await histRes.json();
+                    if (histData.agent_name) {
+                      setAssistantName(histData.agent_name);
+                      setUser(prev => ({ ...prev, bot_name: histData.agent_name }));
+                    }
+                  }
                 }
               }
-            } catch (prefError) {
-              console.error("Preferences check failed:", prefError);
+            } catch (chatErr) {
+              console.error("Chat preferences fetch failed:", chatErr);
             }
           }
         } else {

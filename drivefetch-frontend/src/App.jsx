@@ -41,12 +41,10 @@ export default function App() {
             <Route index element={<Home />} />
             
             {/* Page Routes */}
-            {/* Protected Routes */}
-            <Route path="saved" element={<ProtectedRoute><SavedCarsPage /></ProtectedRoute>} />
-            <Route path="chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
-            <Route path="recommend" element={<ProtectedRoute><RecommendPage /></ProtectedRoute>} />
-            
             {/* Public Routes */}
+            <Route path="saved" element={<SavedCarsPage />} />
+            <Route path="chat" element={<ChatPage />} />
+            <Route path="recommend" element={<RecommendPage />} />
             <Route path="about" element={<About />} />
             <Route path="calculators" element={<CalculatorsHub />} />
             
