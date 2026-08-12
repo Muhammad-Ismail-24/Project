@@ -16,8 +16,8 @@ import { motion, useScroll, useTransform, useMotionValue, useSpring } from 'fram
  * Overlapping ranges ensure smooth crossfades with no dead zones.
  */
 
-const PATTERN_COLOR = '#E5E5E5';
-const STROKE = 1.2;
+const PATTERN_COLOR = '#D4D4D4';
+const STROKE = 1.5;
 const LABEL_COLOR = '#D8D8D8';
 
 /* ═══════════════════════════════════════════════════════
@@ -166,9 +166,7 @@ export default function DynamicBackground() {
   const opacity3 = useTransform(scrollYProgress, [0.40, 0.55, 0.66, 0.75], [0, 1, 1, 0]);
   const opacity4 = useTransform(scrollYProgress, [0.60, 0.7, 1.0], [0, 1, 1]);
 
-  // 2.5D Perspective Warp & Parallax
-  const scale = useTransform(scrollYProgress, [0, 1], [1.0, 1.15]);
-  const rotateX = useTransform(scrollYProgress, [0, 1], [12, 0]);
+
 
   // Mouse-Move Parallax Physics
   const mouseX = useMotionValue(0);
@@ -203,14 +201,13 @@ export default function DynamicBackground() {
   return (
     <div
       className="fixed inset-0 w-full h-full -z-10 bg-white pointer-events-none overflow-hidden"
-      style={{ perspective: '1000px' }}
       aria-hidden="true"
     >
       {layers.map(({ Component, opacity }, i) => (
         <motion.div
           key={i}
           className="absolute inset-0 will-change-transform"
-          style={{ opacity, scale, rotateX, x: smoothMouseX, y: smoothMouseY }}
+          style={{ opacity, x: smoothMouseX, y: smoothMouseY }}
         >
           <Component />
         </motion.div>
