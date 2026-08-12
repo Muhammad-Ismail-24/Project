@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import DynamicBackground from '../components/DynamicBackground';
 import { searchCars } from '../utils/api';
 
@@ -51,7 +51,7 @@ const GATEWAY_CARDS = [
     tag: 'MANUAL',
     headline: '[ DIRECT SEARCH ]',
     body: 'Query the full market yourself. Filter by make, model, price, year — raw access to every listing we track.',
-    action: 'scroll',       // smooth-scroll to #console
+    action: 'scroll',
     target: '#console',
   },
   {
@@ -72,7 +72,6 @@ const GATEWAY_CARDS = [
   },
 ];
 
-
 /**
  * Financial tools teaser cards — route to /calculators.
  */
@@ -84,7 +83,6 @@ const FINANCIAL_TOOLS = [
 
 /**
  * GatewayCard — Neo-Brutalist CTA card.
- * 2px black border, 4px hard offset shadow, instant-invert hover on button.
  */
 function GatewayCard({ card }) {
   const navigate = useNavigate();
@@ -100,14 +98,11 @@ function GatewayCard({ card }) {
 
   return (
     <div className="group bg-df-grey border-brutal flex flex-col shadow-[4px_4px_0px_#000000] transition-all duration-200 hover:-translate-y-2 hover:shadow-[8px_8px_0px_#000000]">
-      {/* Top bar — step index */}
       <div className="px-5 sm:px-6 pt-5 sm:pt-6 pb-3">
         <span className="font-mono text-xs sm:text-sm font-bold tracking-[0.1em] text-df-red">
           {card.index} / {card.tag}
         </span>
       </div>
-
-      {/* Content */}
       <div className="px-5 sm:px-6 flex-1 flex flex-col">
         <h3 className="text-xl md:text-2xl font-bold text-df-black mb-3 sm:mb-4">
           {card.headline}
@@ -116,8 +111,6 @@ function GatewayCard({ card }) {
           {card.body}
         </p>
       </div>
-
-      {/* Action button — pinned to bottom */}
       <div className="px-5 sm:px-6 pb-5 sm:pb-6 mt-auto">
         <button
           onClick={handleClick}
@@ -131,8 +124,17 @@ function GatewayCard({ card }) {
 }
 
 export default function Home() {
+  const heroRef = useRef(null);
+  const { scrollYProgress: heroScroll } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"]
+  });
+
+  const heroScale = useTransform(heroScroll, [0, 1], [1, 4]);
+  const heroOpacity = useTransform(heroScroll, [0, 0.5, 1], [1, 0, 0]);
+
   return (
-    <main className="relative w-full overflow-x-hidden">
+    <main className="relative w-full overflow-x-hidden" style={{ perspective: '1000px' }}>
       <Helmet>
         <title>DriveFetch — Find the Right Used Car in Pakistan, Powered by AI</title>
         <meta name="description" content="Find the perfect used car in Pakistan with DriveFetch. AI-powered search across PakWheels, OLX, Drive.pk, and Gari.pk." />
@@ -144,23 +146,17 @@ export default function Home() {
 
       {/* ═══════════════════════════════════════════════
           SECTION 1 — HERO
-          Pure landing. Massive fluid typography.
-          No search bar. No CTAs. Just the statement.
           ═══════════════════════════════════════════════ */}
       <section
         id="hero"
+        ref={heroRef}
         className="relative z-10 flex items-center justify-center py-16 md:py-24 px-5 sm:px-8 lg:px-12"
       >
-        {/* System diagnostic tags */}
         <SystemTags />
 
-        {/* Hero Content */}
         <motion.div
-          initial={{ opacity: 0, y: 50, scale: 0.96 }}
-          whileInView={{ opacity: 1, y: 0, scale: 1 }}
-          viewport={{ once: false, amount: 0.15 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full max-w-[1400px] mx-auto"
+          style={{ scale: heroScale, opacity: heroOpacity }}
+          className="w-full max-w-[1400px] mx-auto origin-center"
         >
           <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[5.5rem] leading-[0.95] tracking-tight font-black text-df-black">
             <span className="block">FIND THE RIGHT CAR.</span>
@@ -174,25 +170,21 @@ export default function Home() {
 
       {/* ═══════════════════════════════════════════════
           SECTION 2 — GATEWAY CTAs
-          3 mission cards: Direct Search, AI Matchmaker, Assistant Chat
           ═══════════════════════════════════════════════ */}
       <section id="gateway" className="relative z-10 py-16 md:py-24 px-5 sm:px-8 lg:px-12">
         <motion.div
-          initial={{ opacity: 0, y: 50, scale: 0.96 }}
-          whileInView={{ opacity: 1, y: 0, scale: 1 }}
-          viewport={{ once: false, amount: 0.15 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          initial={{ opacity: 0, scale: 0.9, rotateX: 15, y: 80 }}
+          whileInView={{ opacity: 1, scale: 1, rotateX: 0, y: 0 }}
+          viewport={{ once: false, margin: "-10%" }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="w-full max-w-[1400px] mx-auto"
         >
-
-          {/* Section Header */}
           <div className="border-t-2 border-df-black pt-6 mb-16 sm:mb-20">
             <span className="font-mono text-xs sm:text-sm font-bold tracking-[0.08em] text-df-black/50">
               // SECTION 02: CHOOSE YOUR MISSION
             </span>
           </div>
 
-          {/* Gateway Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
             {GATEWAY_CARDS.map((card) => (
               <GatewayCard key={card.index} card={card} />
@@ -203,102 +195,58 @@ export default function Home() {
 
       {/* ═══════════════════════════════════════════════
           SECTION 3 — INTELLIGENCE ENGINE & MARKET COVERAGE
-          Left: AI Risk Terminal. Right: Platform coverage pills.
           ═══════════════════════════════════════════════ */}
       <section id="engine" className="relative z-10 py-16 md:py-24 px-5 sm:px-8 lg:px-12">
         <motion.div
-          initial={{ opacity: 0, y: 50, scale: 0.96 }}
-          whileInView={{ opacity: 1, y: 0, scale: 1 }}
-          viewport={{ once: false, amount: 0.15 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          initial={{ opacity: 0, scale: 0.9, rotateX: 15, y: 80 }}
+          whileInView={{ opacity: 1, scale: 1, rotateX: 0, y: 0 }}
+          viewport={{ once: false, margin: "-10%" }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="w-full max-w-[1400px] mx-auto"
         >
-
-          {/* Section Header */}
           <div className="border-t-2 border-df-black pt-6 mb-16 sm:mb-20">
             <span className="font-mono text-xs sm:text-sm font-bold tracking-[0.08em] text-df-black/50">
               // SECTION 03: INTELLIGENCE ENGINE & COVERAGE
             </span>
           </div>
 
-          {/* Asymmetric Two-Column Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
 
-            {/* ── LEFT COLUMN: Risk Detection Terminal ── */}
-            <div className="lg:col-span-7">
-              <div className="bg-df-white border-brutal shadow-[6px_6px_0px_0px_#000000]">
-
-                {/* Terminal Top Bar */}
-                <div className="bg-df-grey px-4 sm:px-5 py-3 border-b border-df-black flex items-center justify-between">
-                  <span className="font-mono text-[10px] sm:text-xs font-bold tracking-[0.08em] text-df-black/60">
-                    [ SYS_LOG // RISK_DETECTOR_V2 ]
-                  </span>
-                  <div className="flex gap-1.5">
-                    <span className="w-2.5 h-2.5 bg-df-black/15 border border-df-black/20" />
-                    <span className="w-2.5 h-2.5 bg-df-black/15 border border-df-black/20" />
-                    <span className="w-2.5 h-2.5 bg-df-black/15 border border-df-black/20" />
+            {/* ── LEFT COLUMN: Intelligence Engine Punch Cards ── */}
+            <div className="lg:col-span-7 flex flex-col gap-6">
+              {[
+                {
+                  id: '01',
+                  title: 'AI CONDITION SCANNER',
+                  text: 'We read between the lines. If a seller says "genuine" but mentions a "shower", we flag it immediately.',
+                },
+                {
+                  id: '02',
+                  title: 'TRUE FAIR MARKET VALUE',
+                  text: 'No more guessing. We cross-reference thousands of live listings to calculate the exact price a car should sell for.',
+                },
+                {
+                  id: '03',
+                  title: 'HIDDEN RISK DETECTION',
+                  text: 'Duplicate files, suspicious mileage, and sketchy descriptions are instantly caught and graded before you buy.',
+                },
+              ].map((card) => (
+                <div key={card.id} className="bg-df-white border-2 border-df-black p-6 shadow-[4px_4px_0px_#000000] rounded-none transition-transform duration-200 hover:-translate-y-1">
+                  <div className="font-mono text-[10px] sm:text-xs font-bold tracking-[0.08em] text-df-red mb-3">
+                    [ ENGINE // {card.id} ]
                   </div>
+                  <h3 className="text-xl sm:text-2xl font-black text-df-black mb-2 leading-tight">
+                    {card.title}
+                  </h3>
+                  <p className="font-body text-sm sm:text-base text-df-black/70 leading-relaxed">
+                    {card.text}
+                  </p>
                 </div>
-
-                {/* Terminal Body */}
-                <div className="px-4 sm:px-5 py-5 sm:py-6 space-y-4 font-mono text-xs sm:text-sm leading-relaxed">
-                  <div>
-                    <span className="text-df-black/40 select-none">{'>'} </span>
-                    <span className="text-df-black/70">INIT: </span>
-                    <span className="text-df-black">SCRAPE_REQUEST // PLATFORM: PAKWHEELS</span>
-                  </div>
-                  <div>
-                    <span className="text-df-black/40 select-none">{'>'} </span>
-                    <span className="text-df-black/70">EXTRACT: </span>
-                    <span className="text-df-black">2017 Honda Civic Oriel | 85,000 km | Rs. 5,200,000</span>
-                  </div>
-                  <div className="border-t border-dashed border-df-black/10" />
-                  <div>
-                    <span className="text-df-black/40 select-none">{'>'} </span>
-                    <span className="text-df-black/70">LLM_EVAL: </span>
-                    <span className="text-df-black">Parsing unstructured seller description...</span>
-                  </div>
-                  <div>
-                    <span className="text-df-black/40 select-none">{'>'} </span>
-                    <span className="text-df-black/70">TARGET_TEXT: </span>
-                    <span className="text-df-black">"Bumper to bumper genuine, just minor shower on left side for fresh look."</span>
-                  </div>
-                  <div>
-                    <span className="text-df-black/40 select-none">{'>'} </span>
-                    <span className="text-df-black/70">CONTRADICTION_DETECTED: </span>
-                    <span className="text-df-black">"Genuine" vs "Minor Shower"</span>
-                  </div>
-                  <div className="border-t border-dashed border-df-black/10" />
-                  <div>
-                    <span className="text-df-black/40 select-none">{'>'} </span>
-                    <span className="text-df-black/70">ALERT: </span>
-                    <span className="inline-block bg-[#E5202E] text-white px-1.5 py-0.5 font-bold tracking-[0.06em] mr-1">
-                      [RISK_FLAG: REPAINT_DETECTED]
-                    </span>
-                    <span className="text-df-black/50">(Confidence: 98%)</span>
-                  </div>
-                  <div>
-                    <span className="text-df-black/40 select-none">{'>'} </span>
-                    <span className="text-df-black/70">VERDICT: </span>
-                    <span className="text-df-black">Seller language contradicts vehicle condition. Proceed with caution.</span>
-                  </div>
-                  <div className="pt-2">
-                    <span className="text-df-black/40 select-none">{'>'} </span>
-                    <span className="inline-block w-2 h-4 bg-df-black/70 animate-pulse" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Terminal footnote */}
-              <div className="mt-4 font-mono text-[10px] sm:text-xs text-df-black/25 tracking-[0.06em]">
-                [LOG_STREAM: LIVE] — 30+ heuristic signals per listing
-              </div>
+              ))}
             </div>
 
             {/* ── RIGHT COLUMN: Market Coverage & Trust ── */}
             <div className="lg:col-span-5 flex flex-col gap-8 sm:gap-10">
-
-              {/* Headline */}
               <h2 className="text-display-lg text-df-black leading-[0.95]">
                 SCANNING EVERY MAJOR PLATFORM IN PAKISTAN.
               </h2>
@@ -315,28 +263,20 @@ export default function Home() {
                 ))}
               </div>
 
-              {/* Live Stats Readout */}
-              <div className="border-t border-df-black/15 pt-5">
-                <div className="font-mono text-[10px] sm:text-xs text-df-black/40 tracking-[0.05em] space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 bg-df-red inline-block" />
-                    <span>30+ Risk Signals Detected Per Listing</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 bg-df-red inline-block" />
-                    <span>~0.8s Average Query Speed</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 bg-df-black/20 inline-block" />
-                    <span>Cross-Platform Deduplication Active</span>
+              {/* LIVE MARKET PULSE */}
+              <div className="border-t border-df-black/15 pt-6">
+                <div className="bg-[#F5F5F5] border border-df-black p-4 sm:p-5 w-full">
+                  <div className="font-mono text-xs sm:text-sm text-df-black/80 tracking-[0.05em] space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span>STATUS: MULTI-AGENT SCRAPER [ONLINE]</span>
+                      <span className="bg-green-500 animate-pulse rounded-full w-2 h-2 inline-block"></span>
+                    </div>
+                    <div>LAST SWEEP: 14 SECONDS AGO</div>
+                    <div>TOTAL LISTINGS TRACKED: 42,891+</div>
                   </div>
                 </div>
               </div>
 
-              {/* Subtext tag */}
-              <div className="font-mono text-[10px] text-df-black/15 tracking-[0.08em]">
-                [REGION: PK] — [LLM_PARSER: ACTIVE]
-              </div>
             </div>
 
           </div>
@@ -345,21 +285,17 @@ export default function Home() {
 
       {/* ═══════════════════════════════════════════════
           SECTION 4 — COMMAND CONSOLE
-          The final action. Massive search bar + filters.
           ═══════════════════════════════════════════════ */}
       <CommandConsoleSection />
 
       {/* ═══════════════════════════════════════════════
-          FOOTER — Neo-Brutalist
+          FOOTER
           ═══════════════════════════════════════════════ */}
       <BrutalistFooter />
     </main>
   );
 }
 
-/* ═══════════════════════════════════════════════════════
-   SECTION 4 — COMMAND CONSOLE (extracted component)
-   ═══════════════════════════════════════════════════════ */
 function CommandConsoleSection() {
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -390,29 +326,21 @@ function CommandConsoleSection() {
   return (
     <section id="console" className="relative z-10 py-16 md:py-24 px-5 sm:px-8 lg:px-12">
       <motion.div
-        initial={{ opacity: 0, y: 50, scale: 0.96 }}
-        whileInView={{ opacity: 1, y: 0, scale: 1 }}
-        viewport={{ once: false, amount: 0.15 }}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        initial={{ opacity: 0, scale: 0.9, rotateX: 15, y: 80 }}
+        whileInView={{ opacity: 1, scale: 1, rotateX: 0, y: 0 }}
+        viewport={{ once: false, margin: "-10%" }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         className="w-full max-w-[1400px] mx-auto"
       >
-
-        {/* Section Header */}
         <div className="border-t-2 border-df-black pt-6 mb-16 sm:mb-20">
           <span className="font-mono text-xs sm:text-sm font-bold tracking-[0.08em] text-df-black/50">
             // SECTION 04: EXECUTE SEARCH
           </span>
         </div>
 
-        {/* ── THE COMMAND CONSOLE ── */}
         <div className="mb-10 sm:mb-14">
-
-          {/* Search Bar Container */}
           <div className="bg-df-white border-brutal shadow-[8px_8px_0px_#000000] flex flex-col sm:flex-row focus-within:ring-2 focus-within:ring-[#E5202E] focus-within:border-[#E5202E]">
-
-            {/* Input Area */}
             <div className="flex items-center flex-1 px-4 sm:px-6 py-4 sm:py-5 gap-3 sm:gap-4">
-              {/* Search Icon */}
               <svg
                 className="w-5 h-5 sm:w-6 sm:h-6 text-df-black/30 shrink-0"
                 fill="none"
@@ -423,7 +351,6 @@ function CommandConsoleSection() {
                 <circle cx="11" cy="11" r="8" />
                 <path d="m21 21-4.3-4.3" />
               </svg>
-
               <input
                 id="console-search-input"
                 type="text"
@@ -434,8 +361,6 @@ function CommandConsoleSection() {
                 className="flex-1 bg-transparent font-mono text-sm sm:text-base text-df-black placeholder:text-df-black/25 outline-none border-none min-w-0"
               />
             </div>
-
-            {/* Execute Button */}
             <button
               id="console-execute-btn"
               onClick={() => handleSearch()}
@@ -445,14 +370,11 @@ function CommandConsoleSection() {
               {isLoading ? '[ SEARCHING... ]' : '[ EXECUTE SEARCH ]'}
             </button>
           </div>
-
-          {/* Console footnote */}
           <div className="mt-3 font-mono text-[10px] text-df-black/20 tracking-[0.06em]">
             [INPUT_MODE: NATURAL_LANGUAGE] — [BACKEND: AI_PARSE + MULTI_SCRAPE]
           </div>
         </div>
 
-        {/* ── SEARCH RESULTS AREA ── */}
         {(isLoading || error || results) && (
           <div className="mb-16 sm:mb-20">
             {isLoading && (
@@ -545,21 +467,14 @@ function CommandConsoleSection() {
   );
 }
 
-/* ═══════════════════════════════════════════════════════
-   FOOTER — Neo-Brutalist
-   ═══════════════════════════════════════════════════════ */
 function BrutalistFooter() {
   return (
-    <footer className="relative z-10 border-t-2 border-df-black bg-df-white">
+    <footer className="relative z-[50] border-t-2 border-df-black bg-df-white">
       <div className="w-full max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-12 py-6 sm:py-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 md:gap-4">
-
-          {/* Left — Copyright */}
           <div className="font-mono text-[10px] sm:text-xs font-bold tracking-[0.06em] text-df-black/50">
             [ DRIVEFETCH // ALL RIGHTS RESERVED ]
           </div>
-
-          {/* Center — Links */}
           <nav className="flex flex-wrap items-center gap-x-1 gap-y-2">
             {[
               { label: 'PRIVACY POLICY', href: '#' },
@@ -582,12 +497,9 @@ function BrutalistFooter() {
               </span>
             ))}
           </nav>
-
-          {/* Right — Build version */}
           <div className="font-mono text-[10px] sm:text-xs tracking-[0.06em] text-df-black/25">
             BUILD_VER: 2.0.4_BRUTALIST
           </div>
-
         </div>
       </div>
     </footer>

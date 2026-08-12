@@ -168,7 +168,7 @@ export default function DynamicBackground() {
   // 2.5D Perspective Warp & Parallax
   const scale = useTransform(scrollYProgress, [0, 1], [1.0, 1.15]);
   const rotateX = useTransform(scrollYProgress, [0, 1], [12, 0]);
-  const y = useTransform(scrollY, (val) => val * 0.3);
+  const backgroundY = useTransform(scrollY, [0, 2000], [0, -300]);
 
   const layers = [
     { Component: TopoPattern, opacity: opacity1 },
@@ -187,7 +187,7 @@ export default function DynamicBackground() {
         <motion.div
           key={i}
           className="absolute inset-0 will-change-transform"
-          style={{ opacity, scale, rotateX, y }}
+          style={{ opacity, scale, rotateX, y: backgroundY }}
         >
           <Component />
         </motion.div>
