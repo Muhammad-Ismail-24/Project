@@ -35,8 +35,8 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
   
   if (!hasCoreFields) {
     return (
-      <div className={`border-2 border-black bg-white p-4 sm:p-6 flex flex-col md:flex-row gap-6 transition-all duration-200 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] animate-pulse`}>
-        <div className="w-full md:w-1/3 aspect-[4/3] bg-black/10 border-2 border-black flex-shrink-0"></div>
+      <div className={`border-2 border-black bg-white p-4 sm:p-6 flex flex-col md:flex-row gap-6 transition-transform duration-200 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] animate-pulse`}>
+        <div className="w-full md:w-1/3 aspect-[4/3] bg-black/10 flex-shrink-0 border-b-2 md:border-b-0 md:border-r-2 border-black/10"></div>
         <div className="w-full md:w-2/3 flex flex-col gap-4">
           <div className="w-2/3 h-8 bg-black/10"></div>
           <div className="w-1/4 h-8 bg-black/10"></div>
@@ -130,12 +130,12 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
   };
 
   return (
-    <div className={`border-2 border-black bg-white p-4 sm:p-6 flex flex-col md:flex-row gap-6 transition-all duration-200 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] ${
-      isHighlighted ? 'ring-4 ring-df-red shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]' : ''
+    <div className={`border-2 border-black bg-white p-4 sm:p-6 flex flex-col md:flex-row gap-6 transition-transform duration-200 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] ${
+      isHighlighted ? 'ring-4 ring-df-red shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]' : ''
     }`}>
       
       {/* ── Left: Image Container ── */}
-      <div className="w-full md:w-1/3 aspect-video md:aspect-[4/3] relative overflow-hidden flex-shrink-0 border-2 border-black bg-gray-100 flex items-center justify-center">
+      <div className="w-full md:w-1/3 aspect-video md:aspect-[4/3] relative overflow-hidden flex-shrink-0 border-b-2 md:border-b-0 md:border-r-2 border-black bg-gray-100 flex items-center justify-center">
         {(car?.image_url || car?.images?.[0]) ? (
           <img 
             src={car.image_url || car.images[0]} 
@@ -174,16 +174,16 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
       {/* ── Right: Data Content ── */}
       <div className="w-full md:w-2/3 flex flex-col">
         <div className="flex flex-col sm:flex-row justify-between items-start mb-4 gap-4">
-          <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-black leading-none line-clamp-2">
+          <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight text-black leading-none line-clamp-2">
             {car?.title || 'UNKNOWN VEHICLE'}
           </h2>
           <div className="text-left sm:text-right shrink-0">
-            <p className="text-xl font-bold bg-gray-100 px-3 py-1 border-2 border-black inline-block whitespace-nowrap">
+            <p className="text-xl font-bold bg-gray-100 px-3 py-1 inline-block whitespace-nowrap">
               {priceDisplay}
             </p>
             {liquidityScore && (
               <div className="mt-2">
-                <span className={`inline-block px-2 py-1 border-2 font-mono text-[10px] font-bold uppercase tracking-wider ${
+                <span className={`inline-block px-2 py-1 border font-mono text-[10px] font-bold uppercase tracking-wider ${
                   liquidityScore === 'High' ? 'bg-black text-white border-black' :
                   liquidityScore === 'Medium' ? 'bg-gray-200 text-black border-black' :
                   'bg-white text-gray-500 border-gray-300'
@@ -207,7 +207,7 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
         {(redFlags.length > 0 || heuristicTags.length > 0) && (
           <div className="flex flex-wrap gap-2 mb-4">
             {heuristicTags.map((tag, idx) => (
-              <span key={`heuristic-${idx}`} className={`text-[10px] sm:text-xs font-mono font-bold px-2 py-1 border-2 flex items-center gap-1.5 uppercase tracking-wide ${
+              <span key={`heuristic-${idx}`} className={`text-[10px] sm:text-xs font-mono font-bold px-2 py-1 border flex items-center gap-1.5 uppercase tracking-wide ${
                 tag.type === 'danger' ? 'bg-red-100 border-red-600 text-red-700 shadow-[2px_2px_0px_#dc2626]' :
                 tag.type === 'warning' ? 'bg-orange-100 border-orange-600 text-orange-700 shadow-[2px_2px_0px_#ea580c]' :
                 'bg-green-100 border-green-600 text-green-700 shadow-[2px_2px_0px_#16a34a]'
@@ -217,7 +217,7 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
               </span>
             ))}
             {redFlags.map((flag, idx) => (
-              <span key={`ai-${idx}`} className="text-[10px] sm:text-xs font-mono font-bold px-2 py-1 border-2 border-black bg-black text-white shadow-[2px_2px_0px_#dc2626] flex items-center gap-1.5 uppercase tracking-wide">
+              <span key={`ai-${idx}`} className="text-[10px] sm:text-xs font-mono font-bold px-2 py-1 border border-black bg-black text-white shadow-[2px_2px_0px_#dc2626] flex items-center gap-1.5 uppercase tracking-wide">
                 <ShieldAlert className="w-3 h-3 text-red-500" strokeWidth={2.5} />
                 {flag}
               </span>
@@ -227,8 +227,8 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
 
         {/* ── AI Appraisal Results ── */}
         {aiData && justification && (
-          <div className="mb-6 bg-white border-2 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-            <div className="flex items-center gap-2 mb-3 pb-3 border-b-2 border-black">
+          <div className="mb-6 bg-gray-50 border border-black p-4">
+            <div className="flex items-center gap-2 mb-3 pb-3 border-b border-black">
               <span className="bg-black text-white px-2 py-0.5 font-mono text-[10px] font-bold tracking-widest uppercase flex items-center gap-1">
                 <TrendingUp className="w-3 h-3" />
                 AI APPRAISAL

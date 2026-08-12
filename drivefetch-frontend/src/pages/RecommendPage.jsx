@@ -535,15 +535,7 @@ export default function RecommendPage() {
             <div className="space-y-8 sm:space-y-10">
               {listings.map((listing, idx) => (
                 <div key={listing.listing_url || idx} className="space-y-3">
-                  {listing.ai_rationale && (
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-df-white border-2 border-df-black shadow-[3px_3px_0px_#000000] font-mono text-[10px] sm:text-xs font-bold uppercase">
-                      <Sparkles className="w-3.5 h-3.5 text-df-red" />
-                      {listing.ai_rationale}
-                    </div>
-                  )}
-                  <div className="bg-df-white border-2 border-df-black shadow-[8px_8px_0px_#000000]">
-                    <CarResultCard car={listing} listing={listing} userQuery={prompt} />
-                  </div>
+                  <CarResultCard car={listing} listing={listing} userQuery={prompt} />
                 </div>
               ))}
             </div>
@@ -560,15 +552,7 @@ export default function RecommendPage() {
                 </div>
                 {extListings.map((listing, idx) => (
                   <div key={`ext-list-${listing.listing_url || idx}`} className="space-y-3">
-                    {listing.ai_rationale && (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-df-white border-2 border-df-black border-dashed font-mono text-[10px] sm:text-xs font-bold uppercase">
-                        <Plus className="w-3.5 h-3.5 text-df-red" />
-                        {listing.ai_rationale}
-                      </div>
-                    )}
-                    <div className="bg-df-white border-2 border-df-black border-dashed shadow-[6px_6px_0px_#000000]">
-                      <CarResultCard car={listing} listing={listing} userQuery={prompt} />
-                    </div>
+                    <CarResultCard car={listing} listing={listing} userQuery={prompt} />
                   </div>
                 ))}
               </div>

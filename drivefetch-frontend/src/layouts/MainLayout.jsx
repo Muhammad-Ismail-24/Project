@@ -268,7 +268,7 @@ export default function MainLayout() {
                 <Link
                   to="/saved"
                   onClick={() => setIsPreferencesOpen(false)}
-                  className="flex items-center gap-3 p-4 bg-df-black text-df-white border-2 border-df-black shadow-[4px_4px_0px_#E5202E] hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] transition-all font-mono font-bold tracking-wide uppercase"
+                  className="bg-white text-black border-2 border-black font-bold uppercase py-3 px-4 w-full flex items-center justify-center gap-2 transition-all hover:bg-red-600 hover:text-white hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
                 >
                   <Bookmark className="w-5 h-5" strokeWidth={2} />
                   Saved Vehicles
