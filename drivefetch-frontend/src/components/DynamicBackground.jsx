@@ -1,4 +1,5 @@
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { useEffect } from 'react';
+import { motion, useScroll, useTransform, useMotionValue, useSpring } from 'framer-motion';
 
 /**
  * DynamicBackground
@@ -157,7 +158,7 @@ function GaugePattern() {
    ═══════════════════════════════════════════════════════ */
 
 export default function DynamicBackground() {
-  const { scrollYProgress, scrollY } = useScroll();
+  const { scrollYProgress } = useScroll();
 
   // Opacity crossfades
   const opacity1 = useTransform(scrollYProgress, [0, 0.15, 0.33], [1, 1, 0]);
@@ -168,7 +169,29 @@ export default function DynamicBackground() {
   // 2.5D Perspective Warp & Parallax
   const scale = useTransform(scrollYProgress, [0, 1], [1.0, 1.15]);
   const rotateX = useTransform(scrollYProgress, [0, 1], [12, 0]);
-  const backgroundY = useTransform(scrollY, [0, 2000], [0, -300]);
+
+  // Mouse-Move Parallax Physics
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  const springConfig = { stiffness: 50, damping: 30 };
+  const smoothMouseX = useSpring(mouseX, springConfig);
+  const smoothMouseY = useSpring(mouseY, springConfig);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      // Calculate mouse position relative to center of screen (-1 to 1)
+      const x = (e.clientX / window.innerWidth - 0.5) * 2;
+      const y = (e.clientY / window.innerHeight - 0.5) * 2;
+      
+      // Shift by a subtle amount (20px max)
+      mouseX.set(x * 20);
+      mouseY.set(y * 20);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [mouseX, mouseY]);
 
   const layers = [
     { Component: TopoPattern, opacity: opacity1 },
@@ -187,7 +210,7 @@ export default function DynamicBackground() {
         <motion.div
           key={i}
           className="absolute inset-0 will-change-transform"
-          style={{ opacity, scale, rotateX, y: backgroundY }}
+          style={{ opacity, scale, rotateX, x: smoothMouseX, y: smoothMouseY }}
         >
           <Component />
         </motion.div>
