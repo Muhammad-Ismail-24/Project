@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { motion } from 'framer-motion';
 import DynamicBackground from '../components/DynamicBackground';
 import { searchCars } from '../utils/api';
 
@@ -148,13 +149,19 @@ export default function Home() {
           ═══════════════════════════════════════════════ */}
       <section
         id="hero"
-        className="relative z-10 min-h-screen flex items-center justify-center px-5 sm:px-8 lg:px-12"
+        className="relative z-10 flex items-center justify-center py-12 md:py-20 px-5 sm:px-8 lg:px-12"
       >
         {/* System diagnostic tags */}
         <SystemTags />
 
         {/* Hero Content */}
-        <div className="w-full max-w-[1400px] mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 30, scale: 0.98 }}
+          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          viewport={{ once: false, amount: 0.15 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full max-w-[1400px] mx-auto"
+        >
           <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[5.5rem] leading-[0.95] tracking-tight font-black text-df-black">
             <span className="block">FIND THE RIGHT CAR.</span>
             <span className="block">
@@ -162,15 +169,21 @@ export default function Home() {
               {' '}THE WRONG ONES.
             </span>
           </h1>
-        </div>
+        </motion.div>
       </section>
 
       {/* ═══════════════════════════════════════════════
           SECTION 2 — GATEWAY CTAs
           3 mission cards: Direct Search, AI Matchmaker, Assistant Chat
           ═══════════════════════════════════════════════ */}
-      <section id="gateway" className="relative z-10 min-h-screen py-24 sm:py-32 px-5 sm:px-8 lg:px-12">
-        <div className="w-full max-w-[1400px] mx-auto">
+      <section id="gateway" className="relative z-10 py-12 md:py-20 px-5 sm:px-8 lg:px-12">
+        <motion.div
+          initial={{ opacity: 0, y: 30, scale: 0.98 }}
+          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          viewport={{ once: false, amount: 0.15 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full max-w-[1400px] mx-auto"
+        >
 
           {/* Section Header */}
           <div className="border-t-2 border-df-black pt-6 mb-16 sm:mb-20">
@@ -185,15 +198,21 @@ export default function Home() {
               <GatewayCard key={card.index} card={card} />
             ))}
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* ═══════════════════════════════════════════════
           SECTION 3 — INTELLIGENCE ENGINE & MARKET COVERAGE
           Left: AI Risk Terminal. Right: Platform coverage pills.
           ═══════════════════════════════════════════════ */}
-      <section id="engine" className="relative z-10 min-h-screen py-24 sm:py-32 px-5 sm:px-8 lg:px-12">
-        <div className="w-full max-w-[1400px] mx-auto">
+      <section id="engine" className="relative z-10 py-12 md:py-20 px-5 sm:px-8 lg:px-12">
+        <motion.div
+          initial={{ opacity: 0, y: 30, scale: 0.98 }}
+          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          viewport={{ once: false, amount: 0.15 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full max-w-[1400px] mx-auto"
+        >
 
           {/* Section Header */}
           <div className="border-t-2 border-df-black pt-6 mb-16 sm:mb-20">
@@ -316,12 +335,12 @@ export default function Home() {
 
               {/* Subtext tag */}
               <div className="font-mono text-[10px] text-df-black/15 tracking-[0.08em]">
-                [ENGINE_STATUS: OPERATIONAL] — [UPTIME: 99.7%]
+                [REGION: PK] — [LLM_PARSER: ACTIVE]
               </div>
             </div>
 
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* ═══════════════════════════════════════════════
@@ -369,8 +388,14 @@ function CommandConsoleSection() {
   };
 
   return (
-    <section id="console" className="relative z-10 py-24 sm:py-32 px-5 sm:px-8 lg:px-12">
-      <div className="w-full max-w-[1400px] mx-auto">
+    <section id="console" className="relative z-10 py-12 md:py-20 px-5 sm:px-8 lg:px-12">
+      <motion.div
+        initial={{ opacity: 0, y: 30, scale: 0.98 }}
+        whileInView={{ opacity: 1, y: 0, scale: 1 }}
+        viewport={{ once: false, amount: 0.15 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full max-w-[1400px] mx-auto"
+      >
 
         {/* Section Header */}
         <div className="border-t-2 border-df-black pt-6 mb-16 sm:mb-20">
@@ -515,7 +540,7 @@ function CommandConsoleSection() {
           </div>
         </div>
 
-      </div>
+      </motion.div>
     </section>
   );
 }

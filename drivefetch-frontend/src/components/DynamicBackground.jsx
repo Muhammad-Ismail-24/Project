@@ -157,45 +157,37 @@ function GaugePattern() {
    ═══════════════════════════════════════════════════════ */
 
 export default function DynamicBackground() {
-  const { scrollYProgress } = useScroll();
+  const { scrollYProgress, scrollY } = useScroll();
 
-  // Layer 1 (Topo): fully visible at 0, fades out by 0.33
+  // Opacity crossfades
   const opacity1 = useTransform(scrollYProgress, [0, 0.15, 0.33], [1, 1, 0]);
-  // Layer 2 (Waves): fades in from 0.15, peak at 0.33, fades out by 0.55
   const opacity2 = useTransform(scrollYProgress, [0.15, 0.33, 0.50, 0.55], [0, 1, 1, 0]);
-  // Layer 3 (Grid): fades in from 0.40, peak at 0.58, fades out by 0.75
   const opacity3 = useTransform(scrollYProgress, [0.40, 0.55, 0.66, 0.75], [0, 1, 1, 0]);
-  // Layer 4 (Gauges): fades in from 0.60, fully visible by 0.80, stays
   const opacity4 = useTransform(scrollYProgress, [0.60, 0.75, 1.0], [0, 1, 1]);
 
-  // Subtle scroll-linked transforms for parallax feel
-  const y1 = useTransform(scrollYProgress, [0, 1], [0, -40]);
-  const y2 = useTransform(scrollYProgress, [0, 1], [30, -30]);
-  const y3 = useTransform(scrollYProgress, [0, 1], [20, -50]);
-  const y4 = useTransform(scrollYProgress, [0, 1], [40, -20]);
-
-  const scale1 = useTransform(scrollYProgress, [0, 1], [1, 1.03]);
-  const scale2 = useTransform(scrollYProgress, [0, 1], [0.98, 1.02]);
-  const scale3 = useTransform(scrollYProgress, [0, 1], [1.01, 0.99]);
-  const scale4 = useTransform(scrollYProgress, [0, 1], [0.97, 1.04]);
+  // 2.5D Perspective Warp & Parallax
+  const scale = useTransform(scrollYProgress, [0, 1], [1.0, 1.15]);
+  const rotateX = useTransform(scrollYProgress, [0, 1], [12, 0]);
+  const y = useTransform(scrollY, (val) => val * 0.3);
 
   const layers = [
-    { Component: TopoPattern, opacity: opacity1, y: y1, scale: scale1 },
-    { Component: WavePattern, opacity: opacity2, y: y2, scale: scale2 },
-    { Component: GridPattern, opacity: opacity3, y: y3, scale: scale3 },
-    { Component: GaugePattern, opacity: opacity4, y: y4, scale: scale4 },
+    { Component: TopoPattern, opacity: opacity1 },
+    { Component: WavePattern, opacity: opacity2 },
+    { Component: GridPattern, opacity: opacity3 },
+    { Component: GaugePattern, opacity: opacity4 },
   ];
 
   return (
     <div
       className="fixed inset-0 -z-10 bg-white pointer-events-none overflow-hidden"
+      style={{ perspective: '1000px' }}
       aria-hidden="true"
     >
-      {layers.map(({ Component, opacity, y, scale }, i) => (
+      {layers.map(({ Component, opacity }, i) => (
         <motion.div
           key={i}
           className="absolute inset-0 will-change-transform"
-          style={{ opacity, y, scale }}
+          style={{ opacity, scale, rotateX, y }}
         >
           <Component />
         </motion.div>
