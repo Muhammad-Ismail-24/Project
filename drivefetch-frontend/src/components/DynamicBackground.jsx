@@ -27,7 +27,7 @@ const LABEL_COLOR = '#D8D8D8';
 function TopoPattern() {
   return (
     <svg width="100%" height="100%" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
-      <g fill="none" stroke={PATTERN_COLOR} strokeWidth={STROKE}>
+      <g fill="none" stroke={PATTERN_COLOR} strokeWidth={STROKE} transform="scale(1.3) translate(-80, -100)">
         <path d="M400,300 Q480,220 520,280 Q560,340 500,380 Q440,420 380,370 Q320,320 400,300Z" />
         <path d="M400,300 Q500,190 560,270 Q620,350 530,410 Q440,470 350,390 Q260,310 400,300Z" />
         <path d="M400,300 Q530,160 600,260 Q670,360 560,440 Q450,520 320,410 Q190,300 400,300Z" />
@@ -51,7 +51,7 @@ function TopoPattern() {
 function WavePattern() {
   return (
     <svg width="100%" height="100%" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
-      <g fill="none" stroke={PATTERN_COLOR} strokeWidth={STROKE}>
+      <g fill="none" stroke={PATTERN_COLOR} strokeWidth={STROKE} transform="translate(0, -100)">
         <polyline points="0,300 50,300 50,260 100,260 100,290 150,290 150,240 200,240 200,270 250,270 250,220 300,220 300,260 350,260 350,200 400,200 400,250 450,250 450,190 500,190 500,230 550,230 550,180 600,180 600,220 650,220 650,170 700,170 700,210 750,210 750,160 800,160" />
         <polyline points="0,380 50,380 50,350 100,350 100,370 150,370 150,330 200,330 200,360 250,360 250,310 300,310 300,350 350,350 350,290 400,290 400,340 450,340 450,280 500,280 500,320 550,320 550,270 600,270 600,310 650,310 650,260 700,260 700,300 750,300 750,250 800,250" />
         <polyline points="0,460 50,460 50,440 100,440 100,450 150,450 150,420 200,420 200,440 250,440 250,400 300,400 300,430 350,430 350,380 400,380 400,420 450,420 450,370 500,370 500,400 550,400 550,360 600,360 600,390 650,390 650,350 700,350 700,380 750,380 750,340 800,340" />
