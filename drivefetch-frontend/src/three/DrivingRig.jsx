@@ -141,10 +141,10 @@ export default function DrivingRig() {
 
   const { rotX, rotY, rotZ, posY, scale, dragSpeed, speedFactor } = useControls('Car (dev)', {
     rotX: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01 },
-    rotY: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01 },
+    rotY: { value: -1.5, min: -Math.PI, max: Math.PI, step: 0.01 },
     rotZ: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01 },
     posY: { value: 0, min: -3, max: 3, step: 0.01 },
-    scale: { value: 1.0, min: 0.2, max: 3, step: 0.01 },
+    scale: { value: 1.52, min: 0.2, max: 3, step: 0.01 },
     dragSpeed: { value: 0.005, min: 0, max: 0.03, step: 0.001 },
     speedFactor: { value: 100, min: 0, max: 300, step: 1 },
   });
@@ -245,7 +245,7 @@ export default function DrivingRig() {
       phase = 1;
       // Auto-rotate plays only until the user's first touch, then never resumes.
       if (!hasUserDragged.current && !isDragging.current) autoRotate.current += 0.003;
-      const yaw = Math.PI / 2 + dragOffset.current + autoRotate.current;
+      const yaw = -Math.PI / 2 + dragOffset.current + autoRotate.current;
       carRef.current.position.set(3, 0, 0);
       carRef.current.quaternion.setFromEuler(tmpEuler.set(0, yaw, 0));
     } else if (p <= PULLOUT_END) {
