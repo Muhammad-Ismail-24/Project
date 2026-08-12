@@ -25,6 +25,18 @@ export default function MainLayout() {
     setIsPreferencesOpen(false);
   }, [location]);
 
+  // Lock body scroll when preferences is open
+  useEffect(() => {
+    if (isPreferencesOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isPreferencesOpen]);
+
   // Auth check
   useEffect(() => {
     const checkAuth = async () => {
@@ -60,9 +72,18 @@ export default function MainLayout() {
     checkAuth();
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    setUser(null);
+    setIsAuthenticated(false);
     document.cookie = "has_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    window.location.href = '/auth/logout';
+    try {
+      await fetch('/auth/logout');
+    } catch (e) {
+      console.error(e);
+    }
+    window.location.replace('/');
   };
 
   return (
@@ -110,7 +131,7 @@ export default function MainLayout() {
               <div className="w-7 h-7 border-2 border-df-black/30 border-t-df-black animate-spin" />
             ) : !isAuthenticated || !user ? (
               <button
-                onClick={() => window.location.href = '/auth/login'}
+                onClick={() => window.location.href = 'https://carfinder-project-backend.onrender.com/auth/google'}
                 className="hidden sm:flex items-center px-4 py-2 border-brutal text-df-black bg-df-white font-mono text-xs font-bold tracking-wide shadow-brutal-sm hover:bg-df-black hover:text-df-white hover:shadow-none transition-none whitespace-nowrap"
               >
                 Google Sign-In
@@ -163,7 +184,7 @@ export default function MainLayout() {
             {/* Mobile Sign-In */}
             {!isAuthenticated && (
               <button
-                onClick={() => window.location.href = '/auth/login'}
+                onClick={() => window.location.href = 'https://carfinder-project-backend.onrender.com/auth/google'}
                 className="w-full px-6 py-4 text-left font-mono text-sm font-bold tracking-wide text-df-black border-b border-df-black/10 hover:bg-df-black hover:text-df-white transition-none"
               >
                 GOOGLE SIGN-IN →
@@ -193,8 +214,8 @@ export default function MainLayout() {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed top-0 right-0 bottom-0 z-[70] w-full max-w-sm bg-df-white border-l-4 border-df-black shadow-[-10px_0_0_rgba(0,0,0,0.1)] flex flex-col"
             >
-              <div className="flex items-center justify-between p-6 border-b-4 border-df-black">
-                <h2 className="text-display-md text-df-black mt-2">ACCOUNT</h2>
+              <div className="flex items-center justify-between p-6 border-b-4 border-df-black flex-shrink-0">
+                <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-df-black mt-1">ACCOUNT</h2>
                 <button
                   onClick={() => setIsPreferencesOpen(false)}
                   className="p-2 border-2 border-df-black hover:bg-df-black hover:text-df-white transition-none"
@@ -203,9 +224,9 @@ export default function MainLayout() {
                 </button>
               </div>
 
-              <div className="p-6 flex-1 flex flex-col gap-4">
+              <div className="p-6 flex-1 flex flex-col gap-6 overflow-y-auto">
                 {user && (
-                  <div className="mb-6 border-b-2 border-df-black/10 pb-6">
+                  <div className="border-b-2 border-df-black/10 pb-6">
                     <p className="font-mono text-[10px] font-bold text-df-black/40 tracking-[0.14em] uppercase mb-1">
                       ACTIVE USER
                     </p>
@@ -223,16 +244,42 @@ export default function MainLayout() {
                   Saved Vehicles
                 </Link>
                 
-                <button
-                  onClick={() => {}} // Placeholder for settings
-                  className="flex items-center gap-3 p-4 bg-df-white text-df-black border-2 border-df-black hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-all font-mono font-bold tracking-wide uppercase text-left"
-                >
-                  <Settings className="w-5 h-5" strokeWidth={2} />
-                  Preferences
-                </button>
+                {/* ── Chatbot Name Setting ── */}
+                <div className="flex flex-col gap-2 mt-2">
+                  <label className="font-mono text-[10px] font-bold text-df-black/40 tracking-[0.14em] uppercase">
+                    [ AI ASSISTANT NAME ]
+                  </label>
+                  <div className="flex">
+                    <input 
+                      type="text" 
+                      placeholder="e.g. JARVIS"
+                      defaultValue="DriveFetch AI"
+                      className="flex-1 bg-df-white border-2 border-df-black px-3 py-2 font-mono text-xs font-bold text-df-black focus:outline-none focus:ring-2 focus:ring-df-red"
+                    />
+                    <button className="bg-df-red text-df-white border-2 border-l-0 border-df-black px-4 font-mono text-xs font-bold hover:bg-df-black transition-colors">
+                      [ SAVE ]
+                    </button>
+                  </div>
+                </div>
+
+                {/* ── Theme Toggler ── */}
+                <div className="flex flex-col gap-2 mt-2">
+                  <label className="font-mono text-[10px] font-bold text-df-black/40 tracking-[0.14em] uppercase">
+                    [ INTERFACE THEME ]
+                  </label>
+                  <div className="flex border-2 border-df-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                    <button className="flex-1 bg-df-black text-df-white py-2 font-mono text-xs font-bold transition-none">
+                      [ LIGHT ]
+                    </button>
+                    <button className="flex-1 bg-df-white text-df-black py-2 font-mono text-xs font-bold border-l-2 border-df-black hover:bg-df-grey transition-none">
+                      [ DARK ]
+                    </button>
+                  </div>
+                </div>
+
               </div>
 
-              <div className="p-6 border-t-2 border-df-black mt-auto bg-df-grey">
+              <div className="p-6 border-t-2 border-df-black mt-auto bg-df-grey flex-shrink-0">
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center justify-center gap-2 p-4 bg-df-white text-df-black border-2 border-df-black hover:bg-df-red hover:text-df-white transition-none font-mono font-bold tracking-wide uppercase"

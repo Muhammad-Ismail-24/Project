@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 // Import Layout
 import MainLayout from './layouts/MainLayout';
@@ -13,6 +13,14 @@ const About = lazy(() => import('./pages/About'));
 const RecommendPage = lazy(() => import('./pages/RecommendPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
+// Protected Route Wrapper
+function ProtectedRoute({ children }) {
+  if (!document.cookie.includes('has_auth=1')) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -23,11 +31,13 @@ export default function App() {
             <Route index element={<Home />} />
             
             {/* Page Routes */}
-            <Route path="saved" element={<SavedCarsPage />} />
+            {/* Protected Routes */}
+            <Route path="saved" element={<ProtectedRoute><SavedCarsPage /></ProtectedRoute>} />
+            <Route path="chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+            <Route path="recommend" element={<ProtectedRoute><RecommendPage /></ProtectedRoute>} />
+            
+            {/* Public Routes */}
             <Route path="calculators" element={<CalculatorsHub />} />
-            <Route path="chat" element={<ChatPage />} />
-            <Route path="about" element={<About />} />
-            <Route path="recommend" element={<RecommendPage />} /> {/* <--- NEW ROUTE */}
             
             {/* Catch-all 404 Route */}
             <Route path="*" element={<NotFoundPage />} />

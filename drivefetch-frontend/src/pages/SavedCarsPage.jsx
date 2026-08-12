@@ -86,10 +86,10 @@ export default function SavedCarsPage() {
               [ NO SAVED VEHICLES ]
             </h3>
             <Link 
-              to="/recommend" 
+              to="/" 
               className="px-6 py-4 bg-[#E5202E] text-df-white border-2 border-df-black font-mono text-xs md:text-sm font-bold tracking-[0.1em] uppercase shadow-[4px_4px_0px_0px_#000000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_0px_#000000] transition-all"
             >
-              RETURN TO MATCHMAKER
+              RETURN TO HOME PAGE
             </Link>
           </div>
         ) : (

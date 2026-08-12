@@ -154,7 +154,7 @@ export default function Home() {
           <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[5.5rem] leading-[0.95] tracking-tight font-black text-df-black">
             <span className="block">FIND THE RIGHT CAR.</span>
             <span className="block">
-              <span className="bg-[#E5202E] text-white px-2 py-1 mx-1 inline-block">SKIP</span>
+              <span className="text-[#E5202E] font-bold">SKIP</span>
               {' '}THE WRONG ONES.
             </span>
           </h1>
