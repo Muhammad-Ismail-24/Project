@@ -228,13 +228,13 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
         {/* ── AI Appraisal Results ── */}
         {aiData && justification && (
           <div className="mb-6 bg-gray-50 border border-black p-4">
-            <div className="flex items-center gap-2 mb-3 pb-3 border-b border-black">
-              <span className="bg-black text-white px-2 py-0.5 font-mono text-[10px] font-bold tracking-widest uppercase flex items-center gap-1">
-                <TrendingUp className="w-3 h-3" />
-                AI APPRAISAL
+            <div className="mb-4">
+              <span className="bg-red-600 text-white font-bold uppercase px-2 py-1 inline-block border-2 border-black font-mono text-[10px] sm:text-xs tracking-widest shadow-[2px_2px_0px_#000000] flex items-center gap-1.5 w-max">
+                <TrendingUp className="w-3.5 h-3.5" />
+                [ AI APPRAISAL ]
               </span>
             </div>
-            <p className="text-sm font-body font-semibold text-black leading-relaxed">
+            <p className="text-sm font-body font-semibold text-black leading-relaxed border-l-4 border-red-600 pl-4 ml-1">
               {justification}
             </p>
           </div>

@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import DynamicBackground from '../components/DynamicBackground';
 import { searchCars } from '../utils/api';
+import CarResultCard from '../components/CarResultCard';
 
 /**
  * Floating monospace system tags scattered in the background.
@@ -393,35 +394,7 @@ function CommandConsoleSection() {
                   [{results.length} RESULT{results.length !== 1 ? 'S' : ''} FOUND]:
                 </div>
                 {results.map((car, i) => (
-                  <div key={car.id || i} className="border-brutal-thin bg-df-white px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-df-grey transition-colors duration-[50ms]">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-mono text-xs sm:text-sm font-bold text-df-black truncate">
-                        {car.title}
-                      </div>
-                      <div className="font-mono text-[10px] sm:text-xs text-df-black/40 mt-1">
-                        {car.platform && <span className="mr-3">[{car.platform.toUpperCase()}]</span>}
-                        {car.city && <span className="mr-3">{car.city}</span>}
-                        {car.year && <span>{car.year}</span>}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 shrink-0">
-                      <span className="font-mono text-sm sm:text-base font-bold text-df-black">
-                        {typeof car.price === 'number'
-                          ? `PKR ${(car.price / 100000).toFixed(1)} Lacs`
-                          : car.price}
-                      </span>
-                      {car.url && (
-                        <a
-                          href={car.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-1.5 border-brutal-thin font-mono text-[10px] font-bold tracking-[0.06em] text-df-black hover:bg-df-black hover:text-df-white transition-all duration-[50ms]"
-                        >
-                          [ VIEW → ]
-                        </a>
-                      )}
-                    </div>
-                  </div>
+                  <CarResultCard key={car.id || i} car={car} userQuery={query} />
                 ))}
               </div>
             )}
