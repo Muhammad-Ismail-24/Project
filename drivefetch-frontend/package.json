@@ -21,6 +21,7 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-helmet-async": "^3.0.0",
+    "react-responsive": "^10.0.1",
     "react-router-dom": "^7.18.0",
     "three": "^0.185.0"
   },
@@ -29,6 +30,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
     "autoprefixer": "^10.5.2",
+    "leva": "^0.10.1",
     "oxlint": "^1.69.0",
     "postcss": "^8.5.16",
     "tailwindcss": "^3.4.19",
