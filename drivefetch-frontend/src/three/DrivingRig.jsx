@@ -106,6 +106,7 @@ export default function DrivingRig() {
 
   // Interactive rest-state rotation (refs, never state).
   const isDragging = useRef(false);
+  const hasUserDragged = useRef(false); // latches true on first drag; only resets on page reload
   const dragOffset = useRef(0);
   const autoRotate = useRef(0);
   const lastX = useRef(0);
@@ -209,6 +210,7 @@ export default function DrivingRig() {
     if (progressRef.current > REST_END) return; // drag only during REST
     e.stopPropagation();
     isDragging.current = true;
+    hasUserDragged.current = true; // first touch stops auto-rotate for good (until reload)
     lastX.current = e.clientX;
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
@@ -241,7 +243,8 @@ export default function DrivingRig() {
     if (p <= REST_END) {
       // ── Phase 1: REST — parked side-profile, drag + auto-rotate. ──
       phase = 1;
-      if (!isDragging.current) autoRotate.current += 0.003;
+      // Auto-rotate plays only until the user's first touch, then never resumes.
+      if (!hasUserDragged.current && !isDragging.current) autoRotate.current += 0.003;
       const yaw = Math.PI / 2 + dragOffset.current + autoRotate.current;
       carRef.current.position.set(3, 0, 0);
       carRef.current.quaternion.setFromEuler(tmpEuler.set(0, yaw, 0));
