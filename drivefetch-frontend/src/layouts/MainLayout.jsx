@@ -171,7 +171,7 @@ export default function MainLayout() {
       </main>
 
       {/* ═══ FOOTER ═══ */}
-      <BrutalistFooter />
+      {location.pathname !== '/chat' && <BrutalistFooter />}
     </div>
   );
 }
