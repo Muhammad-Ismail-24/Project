@@ -26,16 +26,86 @@ const slideFromRight = {
 
 export default function About() {
   const { scrollYProgress } = useScroll();
-  const scannerY = useTransform(scrollYProgress, [0, 1], ['0vh', '100vh']);
+
+  /* ── The Data Blueprint: 3-layer scroll crossfade over white ── */
+  const chaosOpacity    = useTransform(scrollYProgress, [0, 0.3, 0.5], [1, 1, 0]);
+  const orderOpacity    = useTransform(scrollYProgress, [0.3, 0.5, 0.7, 0.9], [0, 1, 1, 0]);
+  const architectOpacity = useTransform(scrollYProgress, [0.6, 0.8, 1], [0, 1, 1]);
 
   return (
     <>
-    {/* ── System Scanner — scroll-linked red laser ── */}
-    <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+    {/* ── The Data Blueprint — scroll-linked background ── */}
+    <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden bg-white" aria-hidden="true">
+
+      {/* Stage 1: The Chaos — widely spaced diagonal sketch lines */}
       <motion.div
-        style={{ y: scannerY }}
-        className="absolute top-0 left-0 w-full h-[2px] bg-[#E5202E] shadow-[0_0_15px_#E5202E] opacity-70"
-      />
+        style={{ opacity: chaosOpacity }}
+        className="absolute inset-0"
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundColor: '#FFFFFF',
+            backgroundImage: `
+              repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 58px,
+                #B3B3B3 58px,
+                #B3B3B3 59px
+              ),
+              repeating-linear-gradient(
+                -45deg,
+                transparent,
+                transparent 78px,
+                #C4C4C4 78px,
+                #C4C4C4 79px
+              ),
+              repeating-linear-gradient(
+                30deg,
+                transparent,
+                transparent 68px,
+                #BEBEBE 68px,
+                #BEBEBE 69px
+              )
+            `,
+          }}
+        />
+      </motion.div>
+
+      {/* Stage 2: The Order — deliberate dot-matrix targeting grid */}
+      <motion.div
+        style={{ opacity: orderOpacity }}
+        className="absolute inset-0"
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundColor: '#FFFFFF',
+            backgroundImage: `radial-gradient(circle, #A3A3A3 1.5px, transparent 1.5px)`,
+            backgroundSize: '40px 40px',
+          }}
+        />
+      </motion.div>
+
+      {/* Stage 3: The Architect — precision crosshair (+) grid */}
+      <motion.div
+        style={{ opacity: architectOpacity }}
+        className="absolute inset-0"
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundColor: '#FFFFFF',
+            backgroundImage: `
+              linear-gradient(to right,  transparent 39px, #C0C0C0 39px, #C0C0C0 41px, transparent 41px),
+              linear-gradient(to bottom, transparent 39px, #C0C0C0 39px, #C0C0C0 41px, transparent 41px)
+            `,
+            backgroundSize: '80px 80px',
+          }}
+        />
+      </motion.div>
+
     </div>
 
     <main className="relative z-10 pt-28 md:pt-40 px-5 sm:px-8 lg:px-12 pb-20 md:pb-32 min-h-screen flex flex-col items-center">
@@ -49,7 +119,7 @@ export default function About() {
 
         {/* ═══ 1. PAGE HEADER — The Manifesto ═══ */}
         <motion.div {...slideFromLeft}>
-          <h1 className="text-display-lg leading-[0.95] tracking-tight text-df-black">
+          <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter leading-[0.9] text-df-black">
             THE SYSTEM<br />ARCHITECTURE.
           </h1>
         </motion.div>
@@ -94,10 +164,10 @@ export default function About() {
           <div className="bg-black border-2 border-black shadow-[8px_8px_0px_#E5202E] p-6 sm:p-8 md:p-10">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-8">
 
-              {/* Avatar Box */}
-              <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 bg-white border-brutal flex items-center justify-center whitespace-nowrap">
-                <span className="font-mono text-xl sm:text-2xl font-bold text-df-black tracking-tight select-none">
-                  [ MI <span className="animate-pulse">_</span> ]
+              {/* Photo Placeholder */}
+              <div className="w-24 h-24 md:w-32 md:h-32 shrink-0 bg-gray-300 border-brutal flex items-center justify-center grayscale contrast-125 overflow-hidden">
+                <span className="font-mono text-[9px] md:text-[10px] font-bold text-df-black/40 tracking-[0.06em] text-center select-none leading-tight px-1">
+                  [ INSERT<br />B&amp;W PHOTO ]
                 </span>
               </div>
 
