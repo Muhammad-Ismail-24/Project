@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Request, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 from sqlmodel import Session, select
 from auth.config import oauth, SECRET_KEY
 from database import get_session
@@ -95,3 +95,13 @@ async def get_current_user(request: Request, db: Session = Depends(get_session))
         "name": user.name,
         "picture": user.picture
     }
+
+@router.get("/logout")
+async def logout(request: Request):
+    """Terminate the session and clear cookies."""
+    request.session.clear()
+    response = JSONResponse(content={"message": "Session terminated successfully"})
+    response.delete_cookie(key="has_auth", path="/", httponly=True, secure=True, samesite="lax")
+    # SessionMiddleware usually handles the 'session' cookie, but we can explicitly delete it just in case
+    response.delete_cookie(key="session", path="/", httponly=True, secure=True, samesite="lax")
+    return response

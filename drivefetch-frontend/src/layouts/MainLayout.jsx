@@ -70,12 +70,18 @@ export default function MainLayout() {
   }, [location]);
 
   const handleLogout = async () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    setUser(null);
-    setIsAuthenticated(false);
-    document.cookie = "has_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    window.location.replace('/');
+    try {
+      await fetch('/auth/logout', { method: 'GET', credentials: 'include' });
+    } catch (error) {
+      console.error("Logout request failed", error);
+    } finally {
+      localStorage.clear();
+      sessionStorage.clear();
+      setUser(null);
+      setIsAuthenticated(false);
+      document.cookie = "has_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      window.location.replace('/');
+    }
   };
 
   return (
