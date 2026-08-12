@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useOutletContext } from 'react-router-dom';
 
 // Import Layout
 import MainLayout from './layouts/MainLayout';
@@ -15,8 +15,19 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 // Protected Route Wrapper
 function ProtectedRoute({ children }) {
-  // Synchronous client-side checks for HttpOnly cookies are impossible.
-  // The MainLayout component handles auth state via /auth/me on mount.
+  const context = useOutletContext();
+  // If context is undefined, it means we're outside MainLayout, but we shouldn't be.
+  const isLoading = context?.isLoading ?? false;
+  const isAuthenticated = context?.isAuthenticated ?? false;
+
+  if (isLoading) {
+    return <div className="flex h-screen items-center justify-center font-mono text-xs font-bold tracking-[0.1em] text-df-black/40 uppercase">[LOADING_AUTH]</div>;
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
   return children;
 }
 

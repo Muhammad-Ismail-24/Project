@@ -17,6 +17,7 @@ export default function MainLayout() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [assistantName, setAssistantName] = useState('DriveFetch AI');
   const location = useLocation();
 
   // Close menus on route change
@@ -50,6 +51,9 @@ export default function MainLayout() {
           const userData = await response.json();
           setUser(userData);
           setIsAuthenticated(true);
+          if (userData.bot_name) {
+            setAssistantName(userData.bot_name);
+          }
         } else {
           setIsAuthenticated(false);
           setUser(null);
@@ -200,7 +204,7 @@ export default function MainLayout() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 bottom-0 z-[70] w-full max-w-sm bg-df-white border-l-4 border-df-black shadow-[-10px_0_0_rgba(0,0,0,0.1)] flex flex-col"
+              className="fixed top-0 right-0 bottom-0 z-[70] w-full max-w-sm bg-df-white bg-[linear-gradient(to_right,#e5e7eb_1px,transparent_1px),linear-gradient(to_bottom,#e5e7eb_1px,transparent_1px)] bg-[size:20px_20px] border-l-4 border-df-black shadow-[-10px_0_0_rgba(0,0,0,0.1)] flex flex-col"
             >
               <div className="flex items-center justify-between p-6 border-b-4 border-df-black flex-shrink-0">
                 <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-df-black mt-1">ACCOUNT</h2>
@@ -226,7 +230,7 @@ export default function MainLayout() {
                 <Link
                   to="/saved"
                   onClick={() => setIsPreferencesOpen(false)}
-                  className="flex items-center gap-3 p-4 bg-df-black text-df-white border-2 border-df-black shadow-[4px_4px_0px_#E5202E] hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[8px_8px_0px_#E5202E] transition-all font-mono font-bold tracking-wide uppercase"
+                  className="flex items-center gap-3 p-4 bg-df-black text-df-white border-2 border-df-black shadow-[4px_4px_0px_#E5202E] hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] transition-all font-mono font-bold tracking-wide uppercase"
                 >
                   <Bookmark className="w-5 h-5" strokeWidth={2} />
                   Saved Vehicles
@@ -241,10 +245,22 @@ export default function MainLayout() {
                     <input 
                       type="text" 
                       placeholder="e.g. JARVIS"
-                      defaultValue="DriveFetch AI"
+                      value={assistantName}
+                      onChange={(e) => setAssistantName(e.target.value)}
                       className="flex-1 bg-df-white border-2 border-df-black px-3 py-2 font-mono text-xs font-bold text-df-black focus:outline-none focus:ring-2 focus:ring-df-red"
                     />
-                    <button className="bg-df-red text-df-white border-2 border-l-0 border-df-black px-4 font-mono text-xs font-bold hover:bg-df-black transition-colors">
+                    <button 
+                      onClick={async () => {
+                        try {
+                          await fetch('/api/user/preferences', { 
+                            method: 'PATCH', 
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ bot_name: assistantName }) 
+                          });
+                        } catch(e) { console.error("Failed to save bot name"); }
+                      }}
+                      className="bg-df-red text-df-white border-2 border-l-0 border-df-black px-4 font-mono text-xs font-bold hover:bg-df-black transition-colors"
+                    >
                       [ SAVE ]
                     </button>
                   </div>
@@ -283,7 +299,7 @@ export default function MainLayout() {
 
       {/* ═══ MAIN CONTENT ═══ */}
       <main className="relative z-10 pt-16 sm:pt-[72px] flex-grow flex flex-col">
-        <Outlet />
+        <Outlet context={{ user, isAuthenticated, isLoading, assistantName, setAssistantName }} />
       </main>
 
       {/* ═══ FOOTER ═══ */}

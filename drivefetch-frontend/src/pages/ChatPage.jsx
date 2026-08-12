@@ -72,8 +72,10 @@ export default function ChatPage() {
 
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
-  const { assistantName: agentName, setAssistantName: setAgentName } =
-    useOutletContext() || { assistantName: 'DriveFetch Expert', setAssistantName: () => {} };
+  const outletContext = useOutletContext() || {};
+  const user = outletContext.user;
+  const agentName = outletContext.assistantName || 'DriveFetch AI';
+  const setAgentName = outletContext.setAssistantName || (() => {});
   const [isGuest, setIsGuest] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -279,12 +281,9 @@ export default function ChatPage() {
               </button>
             )}
             <div className="min-w-0 flex items-center gap-2.5">
-              <div className="w-8 h-8 bg-df-black border-2 border-df-black shadow-[2px_2px_0px_#000000] flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-3.5 h-3.5 text-df-white" strokeWidth={2} />
-              </div>
               <div className="min-w-0">
                 <h1 className="font-mono text-sm font-bold tracking-[0.04em] text-df-black truncate uppercase">
-                  {agentName}
+                  {user?.bot_name || agentName}
                 </h1>
               </div>
             </div>
