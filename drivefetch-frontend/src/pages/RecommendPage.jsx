@@ -96,7 +96,7 @@ export default function RecommendPage() {
             if (eventType === "status") {
               setStatus(data.message || "");
               if (data.stage) setStage(data.stage);
-              if (data.targets) setTargets(data.targets.map(t => ({ label: t, rationale: "" })));
+              if (data.targets) setTargets(data.targets.map(t => (typeof t === 'string' ? { label: t, rationale: "" } : { ...t, rationale: t.rationale || "" })));
             }
 
             if (eventType === "strategy") {
@@ -384,7 +384,7 @@ export default function RecommendPage() {
                     {targets.map((t, i) => (
                       <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-df-black text-df-white font-mono text-[10px] sm:text-xs font-bold uppercase shadow-[2px_2px_0px_#E5202E]">
                         <Car className="w-3.5 h-3.5 text-df-red" />
-                        {typeof t === "string" ? t : t.label ? t.label : `${t.make ?? ''} ${t.model ?? ''}`.trim()}
+                        {typeof t === "string" ? t : (typeof t?.label === "string" && t.label ? t.label : `${t?.make || t?.label?.make || ''} ${t?.model || t?.label?.model || ''}`.trim())}
                       </span>
                     ))}
                   </div>
@@ -456,7 +456,7 @@ export default function RecommendPage() {
                       </span>
                       <div>
                         <span className="font-mono text-sm sm:text-base font-bold text-df-black uppercase tracking-wide block mb-1.5">
-                          {t.label ? t.label : `${t.make ?? ''} ${t.model ?? ''} ${t.trim ?? ''}`.trim()}
+                          {typeof t === 'string' ? t : (typeof t?.label === 'string' && t.label ? t.label : `${t?.make || t?.label?.make || ''} ${t?.model || t?.label?.model || ''} ${t?.trim || t?.label?.trim || ''}`.trim())}
                         </span>
                         {t.rationale && (
                           <p className="font-body text-xs sm:text-sm font-medium text-df-black/70 leading-relaxed">{t.rationale}</p>
@@ -504,7 +504,7 @@ export default function RecommendPage() {
                            </span>
                            <div>
                              <span className="font-mono text-sm sm:text-base font-bold text-df-black uppercase tracking-wide block mb-1.5">
-                               {t.label ? t.label : `${t.make ?? ''} ${t.model ?? ''} ${t.trim ?? ''}`.trim()}
+                               {typeof t === 'string' ? t : (typeof t?.label === 'string' && t.label ? t.label : `${t?.make || t?.label?.make || ''} ${t?.model || t?.label?.model || ''} ${t?.trim || t?.label?.trim || ''}`.trim())}
                              </span>
                              {t.rationale && (
                                <p className="font-body text-xs sm:text-sm font-medium text-df-black/70 leading-relaxed">{t.rationale}</p>
