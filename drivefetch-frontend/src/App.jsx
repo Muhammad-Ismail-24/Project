@@ -15,9 +15,8 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 // Protected Route Wrapper
 function ProtectedRoute({ children }) {
-  if (!document.cookie.includes('has_auth=1')) {
-    return <Navigate to="/" replace />;
-  }
+  // Synchronous client-side checks for HttpOnly cookies are impossible.
+  // The MainLayout component handles auth state via /auth/me on mount.
   return children;
 }
 

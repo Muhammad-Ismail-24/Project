@@ -40,12 +40,6 @@ export default function MainLayout() {
   // Auth check
   useEffect(() => {
     const checkAuth = async () => {
-      if (!document.cookie.includes('has_auth=1')) {
-        setIsAuthenticated(false);
-        setUser(null);
-        setIsLoading(false);
-        return;
-      }
       try {
         const response = await fetch('/auth/me', {
           method: 'GET',
@@ -57,14 +51,13 @@ export default function MainLayout() {
           setUser(userData);
           setIsAuthenticated(true);
         } else {
-          document.cookie = "has_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
           setIsAuthenticated(false);
           setUser(null);
         }
       } catch (error) {
         console.error("Auth check failed:", error);
-        document.cookie = "has_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         setIsAuthenticated(false);
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
