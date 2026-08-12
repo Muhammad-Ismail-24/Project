@@ -1,21 +1,108 @@
+/* ── Google Fonts ── */
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* You can keep this simple reset to keep things clean */
-body {
-  margin: 0;
-  background-color: #ffffff;
+/* ═══════════════════════════════════════════════════════
+   DRIVEFETCH — Neo-Brutalist / Swiss Utility Design System
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Base Reset ── */
+@layer base {
+  *, *::before, *::after {
+    border-radius: 0px !important;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: #FFFFFF;
+    color: #000000;
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background-color: #000000;
+    color: #FFFFFF;
+  }
 }
 
-/* Strategy Brief card entrance animation */
-@keyframes fadeSlideUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
+/* ── Neo-Brutalist Utility Classes ── */
+@layer components {
+  /* Hard border standard */
+  .border-brutal {
+    border: 2px solid #000000;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .border-brutal-thin {
+    border: 1px solid #000000;
   }
+
+  /* Invert hover — instant, no smoothing */
+  .hover-invert {
+    transition: background-color 0.05s step-end, color 0.05s step-end;
+  }
+  .hover-invert:hover {
+    background-color: #000000;
+    color: #FFFFFF;
+  }
+
+  /* Red accent box (for "SKIP" style elements) */
+  .accent-box {
+    display: inline-block;
+    background-color: #E5202E;
+    color: #FFFFFF;
+    padding: 0.05em 0.15em;
+    line-height: 1;
+    vertical-align: baseline;
+  }
+
+  /* Monospace system tags */
+  .sys-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.12);
+    letter-spacing: 0.04em;
+    user-select: none;
+    pointer-events: none;
+  }
+}
+
+/* ── Fluid Display Typography ── */
+.text-display-hero {
+  font-family: 'Bebas Neue', sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 0.92;
+  /* Fluid: 48px at 320px → 180px at 1440px */
+  font-size: clamp(3rem, 2rem + 10vw, 11.25rem);
+}
+
+.text-display-lg {
+  font-family: 'Bebas Neue', sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 0.95;
+  font-size: clamp(2rem, 1rem + 5vw, 5rem);
+}
+
+.text-display-md {
+  font-family: 'Bebas Neue', sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  font-size: clamp(1.5rem, 1rem + 3vw, 3.5rem);
 }
