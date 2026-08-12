@@ -14,14 +14,6 @@ function TypingDots() {
   );
 }
 
-/* ── Engineering dot-grid background (CSS-in-JS constant) ── */
-const GRID_BG = {
-  backgroundColor: '#FAFAFA',
-  backgroundImage: `
-    radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px)
-  `,
-  backgroundSize: '20px 20px',
-};
 
 /* ── API Layer ── */
 const API_BASE = '';
@@ -217,7 +209,7 @@ export default function ChatPage() {
           <div className="p-3 border-b-2 border-df-black">
             <button
               onClick={startNewChat}
-              className="w-full flex items-center justify-center gap-2 bg-df-black text-df-white font-mono text-xs font-bold tracking-[0.06em] py-2.5 border-2 border-df-black shadow-[3px_3px_0px_#E5202E] hover:bg-df-red hover:shadow-[3px_3px_0px_#000000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-none"
+              className="w-full flex items-center justify-center gap-2 bg-df-black text-df-white font-mono text-xs font-bold tracking-[0.06em] py-2.5 border-2 border-df-black shadow-[3px_3px_0px_#000000] hover:bg-df-white hover:text-df-black active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-none"
             >
               <Plus className="w-4 h-4" strokeWidth={2.5} />
               NEW CHAT
@@ -287,7 +279,7 @@ export default function ChatPage() {
               </button>
             )}
             <div className="min-w-0 flex items-center gap-2.5">
-              <div className="w-8 h-8 bg-df-black border-2 border-df-black shadow-[2px_2px_0px_#E5202E] flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 bg-df-black border-2 border-df-black shadow-[2px_2px_0px_#000000] flex items-center justify-center flex-shrink-0">
                 <Sparkles className="w-3.5 h-3.5 text-df-white" strokeWidth={2} />
               </div>
               <div className="min-w-0">
@@ -309,8 +301,7 @@ export default function ChatPage() {
 
         {/* ── Message Feed (Scrollable) — Engineering dot-grid canvas ── */}
         <div
-          className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 overscroll-y-contain"
-          style={GRID_BG}
+          className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 overscroll-y-contain bg-[radial-gradient(#d1d5db_1px,transparent_1px)] [background-size:20px_20px]"
         >
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-df-black/40">
@@ -326,8 +317,8 @@ export default function ChatPage() {
                 {/* ── AI Message ── */}
                 {msg.role === 'assistant' && (
                   <div className="max-w-[88%] md:max-w-[72%] flex gap-3 items-start">
-                    {/* AI avatar — red shadow accent */}
-                    <div className="w-9 h-9 bg-df-black border-2 border-df-black shadow-[3px_3px_0px_#E5202E] flex items-center justify-center flex-shrink-0 mt-0.5">
+                    {/* AI avatar — black shadow */}
+                    <div className="w-9 h-9 bg-df-black border-2 border-df-black shadow-[3px_3px_0px_#000000] flex items-center justify-center flex-shrink-0 mt-0.5">
                       <Sparkles className="w-4 h-4 text-df-white" strokeWidth={2} />
                     </div>
                     {/* AI bubble — white + hard offset shadow */}
@@ -349,8 +340,8 @@ export default function ChatPage() {
                     <div className="w-9 h-9 bg-df-grey border-2 border-df-black shadow-[3px_3px_0px_#000000] flex items-center justify-center flex-shrink-0 mt-0.5">
                       <User className="w-4 h-4 text-df-black" strokeWidth={2} />
                     </div>
-                    {/* User bubble — solid black, red offset shadow */}
-                    <div className="bg-df-black text-df-white border-2 border-df-black shadow-[5px_5px_0px_#E5202E] px-5 py-4">
+                    {/* User bubble — solid black, black offset shadow */}
+                    <div className="bg-df-black text-df-white border-2 border-df-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] px-5 py-4">
                       <span className="font-mono text-[10px] font-bold text-df-white/40 tracking-[0.08em] block mb-2 select-none">
                         [ YOU ]:
                       </span>
@@ -368,7 +359,7 @@ export default function ChatPage() {
           {isTyping && (
             <div className="flex gap-3 justify-start">
               <div className="flex gap-3 items-start">
-                <div className="w-9 h-9 bg-df-black border-2 border-df-black shadow-[3px_3px_0px_#E5202E] flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div className="w-9 h-9 bg-df-black border-2 border-df-black shadow-[3px_3px_0px_#000000] flex items-center justify-center flex-shrink-0 mt-0.5">
                   <Sparkles className="w-4 h-4 text-df-white" strokeWidth={2} />
                 </div>
                 <div className="bg-df-white border-2 border-df-black shadow-[5px_5px_0px_#000000] px-5 py-4">

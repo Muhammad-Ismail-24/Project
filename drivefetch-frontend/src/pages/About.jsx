@@ -120,7 +120,7 @@ export default function About() {
         {/* ═══ 1. PAGE HEADER — The Manifesto ═══ */}
         <motion.div {...slideFromLeft}>
           <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter leading-[0.9] text-df-black">
-            THE SYSTEM<br />ARCHITECTURE.
+            THE <span className="text-[#E5202E]">SYSTEM</span><br />ARCHITECTURE.
           </h1>
         </motion.div>
 

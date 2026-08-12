@@ -184,7 +184,7 @@ export default function CalculatorsHub() {
               Calculators
             </h1>
             <p className="font-body text-base md:text-lg text-df-black/55 font-medium max-w-xl leading-relaxed">
-              Calculate exact running costs, taxes, and transfer fees before you buy. All figures based on latest FBR & Excise data.
+              Calculate <span className="text-[#E5202E] font-bold">exact</span> running costs, taxes, and transfer fees before you buy. All figures based on latest FBR & Excise data.
             </p>
           </div>
         </header>
