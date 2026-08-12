@@ -124,15 +124,6 @@ function GatewayCard({ card }) {
 }
 
 export default function Home() {
-  const heroRef = useRef(null);
-  const { scrollYProgress: heroScroll } = useScroll({
-    target: heroRef,
-    offset: ["start start", "end start"]
-  });
-
-  const heroScale = useTransform(heroScroll, [0, 1], [1, 4]);
-  const heroOpacity = useTransform(heroScroll, [0, 0.5, 1], [1, 0, 0]);
-
   return (
     <main className="relative w-full overflow-x-hidden" style={{ perspective: '1000px' }}>
       <Helmet>
@@ -149,13 +140,15 @@ export default function Home() {
           ═══════════════════════════════════════════════ */}
       <section
         id="hero"
-        ref={heroRef}
         className="relative z-10 flex items-center justify-center py-16 md:py-24 px-5 sm:px-8 lg:px-12"
       >
         <SystemTags />
 
         <motion.div
-          style={{ scale: heroScale, opacity: heroOpacity }}
+          initial={{ opacity: 0, scale: 0.9, rotateX: 15, y: 80 }}
+          whileInView={{ opacity: 1, scale: 1, rotateX: 0, y: 0 }}
+          viewport={{ once: false, margin: "-10%" }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="w-full max-w-[1400px] mx-auto origin-center"
         >
           <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[5.5rem] leading-[0.95] tracking-tight font-black text-df-black">
