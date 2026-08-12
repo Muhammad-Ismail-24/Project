@@ -149,17 +149,17 @@ export default function Home() {
           ═══════════════════════════════════════════════ */}
       <section
         id="hero"
-        className="relative z-10 flex items-center justify-center py-12 md:py-20 px-5 sm:px-8 lg:px-12"
+        className="relative z-10 flex items-center justify-center py-16 md:py-24 px-5 sm:px-8 lg:px-12"
       >
         {/* System diagnostic tags */}
         <SystemTags />
 
         {/* Hero Content */}
         <motion.div
-          initial={{ opacity: 0, y: 30, scale: 0.98 }}
+          initial={{ opacity: 0, y: 50, scale: 0.96 }}
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
           viewport={{ once: false, amount: 0.15 }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="w-full max-w-[1400px] mx-auto"
         >
           <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[5.5rem] leading-[0.95] tracking-tight font-black text-df-black">
@@ -176,12 +176,12 @@ export default function Home() {
           SECTION 2 — GATEWAY CTAs
           3 mission cards: Direct Search, AI Matchmaker, Assistant Chat
           ═══════════════════════════════════════════════ */}
-      <section id="gateway" className="relative z-10 py-12 md:py-20 px-5 sm:px-8 lg:px-12">
+      <section id="gateway" className="relative z-10 py-16 md:py-24 px-5 sm:px-8 lg:px-12">
         <motion.div
-          initial={{ opacity: 0, y: 30, scale: 0.98 }}
+          initial={{ opacity: 0, y: 50, scale: 0.96 }}
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
           viewport={{ once: false, amount: 0.15 }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="w-full max-w-[1400px] mx-auto"
         >
 
@@ -205,12 +205,12 @@ export default function Home() {
           SECTION 3 — INTELLIGENCE ENGINE & MARKET COVERAGE
           Left: AI Risk Terminal. Right: Platform coverage pills.
           ═══════════════════════════════════════════════ */}
-      <section id="engine" className="relative z-10 py-12 md:py-20 px-5 sm:px-8 lg:px-12">
+      <section id="engine" className="relative z-10 py-16 md:py-24 px-5 sm:px-8 lg:px-12">
         <motion.div
-          initial={{ opacity: 0, y: 30, scale: 0.98 }}
+          initial={{ opacity: 0, y: 50, scale: 0.96 }}
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
           viewport={{ once: false, amount: 0.15 }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="w-full max-w-[1400px] mx-auto"
         >
 
@@ -388,12 +388,12 @@ function CommandConsoleSection() {
   };
 
   return (
-    <section id="console" className="relative z-10 py-12 md:py-20 px-5 sm:px-8 lg:px-12">
+    <section id="console" className="relative z-10 py-16 md:py-24 px-5 sm:px-8 lg:px-12">
       <motion.div
-        initial={{ opacity: 0, y: 30, scale: 0.98 }}
+        initial={{ opacity: 0, y: 50, scale: 0.96 }}
         whileInView={{ opacity: 1, y: 0, scale: 1 }}
         viewport={{ once: false, amount: 0.15 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         className="w-full max-w-[1400px] mx-auto"
       >
 

@@ -163,7 +163,7 @@ export default function DynamicBackground() {
   const opacity1 = useTransform(scrollYProgress, [0, 0.15, 0.33], [1, 1, 0]);
   const opacity2 = useTransform(scrollYProgress, [0.15, 0.33, 0.50, 0.55], [0, 1, 1, 0]);
   const opacity3 = useTransform(scrollYProgress, [0.40, 0.55, 0.66, 0.75], [0, 1, 1, 0]);
-  const opacity4 = useTransform(scrollYProgress, [0.60, 0.75, 1.0], [0, 1, 1]);
+  const opacity4 = useTransform(scrollYProgress, [0.60, 0.7, 1.0], [0, 1, 1]);
 
   // 2.5D Perspective Warp & Parallax
   const scale = useTransform(scrollYProgress, [0, 1], [1.0, 1.15]);
