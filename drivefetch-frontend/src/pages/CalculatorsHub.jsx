@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Fuel, FileText, Landmark } from 'lucide-react';
 import { calculateFuel, calculateTransfer, calculateToken } from '../utils/api';
+import useReveal from '../hooks/useReveal';
 
 const CC_OPTIONS = [
   { value: 800, label: "800cc (Alto, WagonR)" },
@@ -13,6 +14,7 @@ const CC_OPTIONS = [
 ];
 
 export default function CalculatorsHub() {
+  const headingRef = useReveal();
   const [fuelCc, setFuelCc] = useState(1300);
   const [fuelKm, setFuelKm] = useState(40);
   const [fuelCost, setFuelCost] = useState(null);
@@ -74,45 +76,38 @@ export default function CalculatorsHub() {
   };
 
   return (
-    <main className="relative z-10 pt-24 md:pt-32 px-4 md:px-6 pb-16 md:pb-24 min-h-screen font-sans text-black">
+    <main className="relative z-10 pt-32 md:pt-40 px-4 md:px-6 pb-16 md:pb-24 min-h-screen font-sans">
       <Helmet>
         <title>Car Tax & Fuel Cost Calculators Pakistan | DriveFetch</title>
         <meta name="description" content="Calculate your vehicle's fuel cost, transfer fees, and token taxes accurately in Pakistan using our latest financial tools." />
         <link rel="canonical" href="https://carfinderproject.vercel.app/calculators" />
       </Helmet>
-      {/* ── Background ── */}
-      <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden bg-[#b0b0b0]">
-        <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(to right,rgba(0,0,0,0.06) 1px,transparent 1px),linear-gradient(to bottom,rgba(0,0,0,0.06) 1px,transparent 1px)', backgroundSize: '72px 72px' }} />
-        <div className="absolute w-[75vw] h-[75vw] max-w-[1100px] max-h-[1100px] bg-white rounded-full blur-[160px] opacity-35 top-[-10%] right-[-12%]" />
-        <div className="absolute w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-white rounded-full blur-[120px] opacity-15 bottom-[5%] left-[-5%]" />
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 60% 40%, transparent 40%, rgba(0,0,0,0.18) 100%)' }} />
-      </div>
 
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-10 md:mb-16">
-          <h1 className="text-4xl md:text-5xl font-black tracking-tighter mb-3 md:mb-4 text-black">
+        <div ref={headingRef} className="reveal text-center mb-10 md:mb-16">
+          <h1 className="font-display text-4xl md:text-5xl font-black tracking-tighter mb-3 md:mb-4 text-text">
             Financial Tools
           </h1>
-          <p className="text-base md:text-lg text-black/60 font-medium">
+          <p className="text-base md:text-lg text-text-dim font-medium">
             Calculate exact running costs, taxes, and transfer fees before you buy.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-          
+
           {/* Card 1: Fuel Calculator */}
-          <div className="bg-white/60 backdrop-blur-md border border-black/15 rounded-2xl p-6 md:p-8 shadow-md">
+          <div className="glass glass-hover p-6 md:p-8">
             <div className="flex items-center mb-5 md:mb-6">
-              <div className="p-2 md:p-2.5 bg-black rounded-xl text-white mr-3 md:mr-4"><Fuel className="w-5 h-5 md:w-6 md:h-6" /></div>
-              <h2 className="text-xl md:text-2xl font-black tracking-tight">Fuel Cost</h2>
+              <div className="p-2 md:p-2.5 bg-surface-2 rounded-xl text-text mr-3 md:mr-4"><Fuel className="w-5 h-5 md:w-6 md:h-6" /></div>
+              <h2 className="font-display text-xl md:text-2xl font-black tracking-tight text-text">Fuel Cost</h2>
             </div>
             <div className="space-y-5 md:space-y-6">
               <div>
-                <label className="block text-[10px] md:text-xs font-semibold uppercase tracking-[0.14em] text-black/50 mb-2">Engine Capacity</label>
-                <select 
+                <label className="block text-[10px] md:text-xs font-semibold uppercase tracking-[0.14em] text-text-faint mb-2">Engine Capacity</label>
+                <select
                   value={fuelCc}
                   onChange={(e) => setFuelCc(Number(e.target.value))}
-                  className="w-full p-3 md:p-4 bg-white/50 border border-black/15 rounded-xl outline-none focus:border-black font-medium transition-colors cursor-pointer text-sm md:text-base"
+                  className="field text-sm md:text-base cursor-pointer"
                 >
                   {CC_OPTIONS.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -121,21 +116,21 @@ export default function CalculatorsHub() {
               </div>
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <label className="text-xs md:text-sm font-black uppercase tracking-wider">Daily Commute</label>
-                  <span className="text-sm font-bold text-black">{fuelKm} km</span>
+                  <label className="text-xs md:text-sm font-black uppercase tracking-wider text-text">Daily Commute</label>
+                  <span className="text-sm font-bold text-text">{fuelKm} km</span>
                 </div>
-                <input 
-                  type="range" 
-                  min="5" 
-                  max="150" 
+                <input
+                  type="range"
+                  min="5"
+                  max="150"
                   value={fuelKm}
                   onChange={(e) => setFuelKm(Number(e.target.value))}
-                  className="w-full accent-black cursor-pointer" 
+                  className="slider w-full cursor-pointer"
                 />
               </div>
-              <div className="pt-4 mt-4 border-t border-black/15">
-                <p className="text-[10px] md:text-xs text-black font-semibold uppercase tracking-widest mb-1 text-black/50">Est. Monthly Cost</p>
-                <p className="text-3xl md:text-4xl font-black">
+              <div className="pt-4 mt-4" style={{ borderTop: '1px solid var(--df-glass-border)' }}>
+                <p className="text-[10px] md:text-xs font-semibold uppercase tracking-widest mb-1 text-text-faint">Est. Monthly Cost</p>
+                <p className="font-display text-3xl md:text-4xl font-black text-text">
                   {fuelLoading ? "..." : formatPKR(fuelCost)}
                 </p>
               </div>
@@ -143,52 +138,52 @@ export default function CalculatorsHub() {
           </div>
 
           {/* Card 2: Transfer Fee */}
-          <div className="bg-white/60 backdrop-blur-md border border-black/15 rounded-2xl p-6 md:p-8 shadow-md">
+          <div className="glass glass-hover p-6 md:p-8">
             <div className="flex items-center mb-5 md:mb-6">
-              <div className="p-2 md:p-2.5 bg-black rounded-xl text-white mr-3 md:mr-4"><FileText className="w-5 h-5 md:w-6 md:h-6" /></div>
-              <h2 className="text-xl md:text-2xl font-black tracking-tight">Transfer Fee</h2>
+              <div className="p-2 md:p-2.5 bg-surface-2 rounded-xl text-text mr-3 md:mr-4"><FileText className="w-5 h-5 md:w-6 md:h-6" /></div>
+              <h2 className="font-display text-xl md:text-2xl font-black tracking-tight text-text">Transfer Fee</h2>
             </div>
             <div className="space-y-5 md:space-y-6">
               <div>
-                <label className="block text-[10px] md:text-xs font-semibold uppercase tracking-[0.14em] text-black/50 mb-2">Filer Status</label>
+                <label className="block text-[10px] md:text-xs font-semibold uppercase tracking-[0.14em] text-text-faint mb-2">Filer Status</label>
                 <div className="flex space-x-4 md:space-x-6">
                   <label className="flex items-center space-x-2 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="transferFiler" 
-                      checked={transferFiler === true} 
+                    <input
+                      type="radio"
+                      name="transferFiler"
+                      checked={transferFiler === true}
                       onChange={() => setTransferFiler(true)}
-                      className="accent-black w-4 h-4" 
+                      className="accent-accent w-4 h-4"
                     />
-                    <span className="font-medium text-sm">Active Filer</span>
+                    <span className="font-medium text-sm text-text-dim">Active Filer</span>
                   </label>
                   <label className="flex items-center space-x-2 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="transferFiler" 
+                    <input
+                      type="radio"
+                      name="transferFiler"
                       checked={transferFiler === false}
                       onChange={() => setTransferFiler(false)}
-                      className="accent-black w-4 h-4" 
+                      className="accent-accent w-4 h-4"
                     />
-                    <span className="font-medium text-sm">Non-Filer</span>
+                    <span className="font-medium text-sm text-text-dim">Non-Filer</span>
                   </label>
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] md:text-xs font-semibold uppercase tracking-[0.14em] text-black/50 mb-2">Engine Capacity</label>
-                <select 
+                <label className="block text-[10px] md:text-xs font-semibold uppercase tracking-[0.14em] text-text-faint mb-2">Engine Capacity</label>
+                <select
                   value={transferCc}
                   onChange={(e) => setTransferCc(Number(e.target.value))}
-                  className="w-full p-3 md:p-4 bg-white/50 border border-black/15 rounded-xl outline-none focus:border-black font-medium transition-colors cursor-pointer text-sm md:text-base"
+                  className="field text-sm md:text-base cursor-pointer"
                 >
                   {CC_OPTIONS.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
               </div>
-              <div className="pt-4 mt-4 border-t border-black/15">
-                <p className="text-[10px] md:text-xs text-black font-semibold uppercase tracking-widest mb-1 text-black/50">Total Fee</p>
-                <p className="text-3xl md:text-4xl font-black">
+              <div className="pt-4 mt-4" style={{ borderTop: '1px solid var(--df-glass-border)' }}>
+                <p className="text-[10px] md:text-xs font-semibold uppercase tracking-widest mb-1 text-text-faint">Total Fee</p>
+                <p className="font-display text-3xl md:text-4xl font-black text-text">
                   {transferLoading ? "..." : formatPKR(transferCost)}
                 </p>
               </div>
@@ -196,18 +191,18 @@ export default function CalculatorsHub() {
           </div>
 
           {/* Card 3: Token Tax */}
-          <div className="bg-white/60 backdrop-blur-md border border-black/15 rounded-2xl p-6 md:p-8 shadow-md">
+          <div className="glass glass-hover p-6 md:p-8">
             <div className="flex items-center mb-5 md:mb-6">
-              <div className="p-2 md:p-2.5 bg-black rounded-xl text-white mr-3 md:mr-4"><Landmark className="w-5 h-5 md:w-6 md:h-6" /></div>
-              <h2 className="text-xl md:text-2xl font-black tracking-tight">Token Tax</h2>
+              <div className="p-2 md:p-2.5 bg-surface-2 rounded-xl text-text mr-3 md:mr-4"><Landmark className="w-5 h-5 md:w-6 md:h-6" /></div>
+              <h2 className="font-display text-xl md:text-2xl font-black tracking-tight text-text">Token Tax</h2>
             </div>
             <div className="space-y-5 md:space-y-6">
               <div>
-                <label className="block text-[10px] md:text-xs font-semibold uppercase tracking-[0.14em] text-black/50 mb-2">Province</label>
-                <select 
+                <label className="block text-[10px] md:text-xs font-semibold uppercase tracking-[0.14em] text-text-faint mb-2">Province</label>
+                <select
                   value={tokenProvince}
                   onChange={(e) => setTokenProvince(e.target.value)}
-                  className="w-full p-3 md:p-4 bg-white/50 border border-black/15 rounded-xl outline-none focus:border-black font-medium transition-colors cursor-pointer text-sm md:text-base"
+                  className="field text-sm md:text-base cursor-pointer"
                 >
                   <option value="Punjab">Punjab</option>
                   <option value="Sindh">Sindh</option>
@@ -216,11 +211,11 @@ export default function CalculatorsHub() {
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] md:text-xs font-semibold uppercase tracking-[0.14em] text-black/50 mb-2">Engine Capacity</label>
-                <select 
+                <label className="block text-[10px] md:text-xs font-semibold uppercase tracking-[0.14em] text-text-faint mb-2">Engine Capacity</label>
+                <select
                   value={tokenCc}
                   onChange={(e) => setTokenCc(Number(e.target.value))}
-                  className="w-full p-3 md:p-4 bg-white/50 border border-black/15 rounded-xl outline-none focus:border-black font-medium transition-colors cursor-pointer text-sm md:text-base"
+                  className="field text-sm md:text-base cursor-pointer"
                 >
                   {CC_OPTIONS.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -228,33 +223,33 @@ export default function CalculatorsHub() {
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] md:text-xs font-semibold uppercase tracking-[0.14em] text-black/50 mb-2">Filer Status</label>
+                <label className="block text-[10px] md:text-xs font-semibold uppercase tracking-[0.14em] text-text-faint mb-2">Filer Status</label>
                 <div className="flex space-x-4 md:space-x-6">
                   <label className="flex items-center space-x-2 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="tokenFiler" 
-                      checked={tokenFiler === true} 
+                    <input
+                      type="radio"
+                      name="tokenFiler"
+                      checked={tokenFiler === true}
                       onChange={() => setTokenFiler(true)}
-                      className="accent-black w-4 h-4" 
+                      className="accent-accent w-4 h-4"
                     />
-                    <span className="font-medium text-sm">Active Filer</span>
+                    <span className="font-medium text-sm text-text-dim">Active Filer</span>
                   </label>
                   <label className="flex items-center space-x-2 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="tokenFiler" 
+                    <input
+                      type="radio"
+                      name="tokenFiler"
                       checked={tokenFiler === false}
                       onChange={() => setTokenFiler(false)}
-                      className="accent-black w-4 h-4" 
+                      className="accent-accent w-4 h-4"
                     />
-                    <span className="font-medium text-sm">Non-Filer</span>
+                    <span className="font-medium text-sm text-text-dim">Non-Filer</span>
                   </label>
                 </div>
               </div>
-              <div className="pt-4 mt-4 border-t border-black/15">
-                <p className="text-[10px] md:text-xs text-black font-semibold uppercase tracking-widest mb-1 text-black/50">Annual Tax</p>
-                <p className="text-3xl md:text-4xl font-black">
+              <div className="pt-4 mt-4" style={{ borderTop: '1px solid var(--df-glass-border)' }}>
+                <p className="text-[10px] md:text-xs font-semibold uppercase tracking-widest mb-1 text-text-faint">Annual Tax</p>
+                <p className="font-display text-3xl md:text-4xl font-black text-text">
                   {tokenLoading ? "..." : formatPKR(tokenCost)}
                 </p>
               </div>

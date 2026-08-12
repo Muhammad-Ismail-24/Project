@@ -2,20 +2,99 @@
 @tailwind components;
 @tailwind utilities;
 
-/* You can keep this simple reset to keep things clean */
-body {
-  margin: 0;
-  background-color: #ffffff;
+:root {
+  --df-void:#050506; --df-bg:#0A0A0C; --df-surface:#101014; --df-surface-2:#16161C;
+  --df-glass-bg:rgba(20,20,26,0.55);
+  --df-glass-border:rgba(255,255,255,0.08);
+  --df-glass-hi:rgba(255,255,255,0.14);
+  --df-text:#F4F4F6; --df-text-dim:#A0A0AC; --df-text-faint:#5A5A66;
+  --df-accent:#E5202E; --df-accent-glow:rgba(229,32,46,0.45);
+  --df-good:#2FBF71; --df-warn:#E5A82E; --df-danger:#E5202E;
+  --df-radius:20px; --df-radius-sm:12px; --df-blur:22px;
+  --df-shadow:0 24px 60px -20px rgba(0,0,0,0.85);
+}
+html,body,#root{background:var(--df-bg);color:var(--df-text);min-height:100%;}
+
+/* Base reset — additive, not part of §4; prevents the default 8px body margin gap */
+body { margin: 0; }
+
+@layer components {
+  .glass{
+    background:var(--df-glass-bg);
+    backdrop-filter:blur(var(--df-blur)) saturate(140%);
+    -webkit-backdrop-filter:blur(var(--df-blur)) saturate(140%);
+    border:1px solid var(--df-glass-border);
+    border-radius:var(--df-radius);
+    box-shadow:var(--df-shadow);
+    position:relative; overflow:hidden;
+  }
+  .glass::before{
+    content:"";position:absolute;inset:0 0 auto 0;height:1px;
+    background:linear-gradient(90deg,transparent,var(--df-glass-hi),transparent);
+    pointer-events:none;
+  }
+  .glass-thin{
+    background:rgba(16,16,20,0.45);
+    backdrop-filter:blur(14px) saturate(130%);
+    -webkit-backdrop-filter:blur(14px) saturate(130%);
+    border:1px solid var(--df-glass-border);
+    border-radius:var(--df-radius-sm);
+  }
+  .glass-hover{
+    transition:transform .4s cubic-bezier(.22,1,.36,1),border-color .4s ease,box-shadow .4s ease;
+    will-change:transform;
+  }
+  .glass-hover:hover{
+    transform:translateY(-6px);
+    border-color:var(--df-glass-hi);
+    box-shadow:0 34px 80px -24px rgba(0,0,0,.9);
+  }
+  .btn-primary{
+    position:relative;display:inline-flex;align-items:center;gap:.5rem;
+    padding:.85rem 1.6rem;border-radius:999px;font-weight:600;letter-spacing:.01em;color:#fff;
+    background:linear-gradient(180deg,#1b1b22,#0d0d11);
+    border:1px solid var(--df-glass-hi);
+    box-shadow:0 10px 30px -8px rgba(0,0,0,.8);
+    transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease;
+  }
+  .btn-primary:hover{transform:translateY(-2px);border-color:var(--df-accent);box-shadow:0 14px 40px -10px var(--df-accent-glow);}
+  .btn-primary:active{transform:translateY(0);}
+  .btn-ghost{
+    padding:.75rem 1.4rem;border-radius:999px;color:var(--df-text-dim);
+    border:1px solid var(--df-glass-border);background:transparent;
+    transition:color .25s ease,border-color .25s ease,background .25s ease;
+  }
+  .btn-ghost:hover{color:var(--df-text);border-color:var(--df-glass-hi);background:rgba(255,255,255,.03);}
+  .field{
+    width:100%;padding:.85rem 1rem;color:var(--df-text);
+    background:rgba(10,10,14,.6);border:1px solid var(--df-glass-border);
+    border-radius:var(--df-radius-sm);outline:none;
+    transition:border-color .2s ease,box-shadow .2s ease;
+  }
+  .field:focus{border-color:var(--df-glass-hi);box-shadow:0 0 0 3px rgba(255,255,255,.04);}
+  .field::placeholder{color:var(--df-text-faint);}
+  input[type="range"].slider{-webkit-appearance:none;appearance:none;height:4px;border-radius:999px;background:rgba(255,255,255,.12);outline:none;}
+  input[type="range"].slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:var(--df-text);border:2px solid var(--df-accent);box-shadow:0 2px 8px rgba(0,0,0,.6);cursor:pointer;}
+  input[type="range"].slider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--df-text);border:2px solid var(--df-accent);cursor:pointer;}
+}
+@layer utilities {
+  .reveal{opacity:0;transform:translateY(28px);transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1);will-change:opacity,transform;}
+  .reveal.is-visible{opacity:1;transform:translateY(0);}
+  .reveal-delay-1{transition-delay:.08s;} .reveal-delay-2{transition-delay:.16s;} .reveal-delay-3{transition-delay:.24s;}
 }
 
-/* Strategy Brief card entrance animation */
+/* Additive (not §5): Matchmaker strategy-brief entrance — retained until the Step 13 redesign. */
 @keyframes fadeSlideUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Additive (not §5): §16 reduced-motion — freeze reveals + heavy animation. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

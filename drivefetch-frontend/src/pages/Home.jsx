@@ -1,28 +1,17 @@
 import { searchCars } from '../utils/api';
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { motion } from 'framer-motion';
 import SearchBar from '../components/SearchBar';
 import CarResultCard from '../components/CarResultCard';
 import { ShieldCheck, Database, Sparkles, AlertCircle, Loader2, Car } from 'lucide-react';
-
-const Background3DShell = lazy(() => import('../components/Background3DShell'));
+import { useScrollProgress } from '../three/useScrollProgress';
+import useReveal from '../hooks/useReveal';
 
 // Defined at module scope so they are stable references and never appear in
 // useEffect dependency arrays (avoids the infinite-re-render trap where
 // in-component string literals look like new values on every render).
 const HERO_LINE_1 = "Find the right car.";
 const HERO_LINE_2 = "Skip the wrong ones.";
-
-const heroContainerVariants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.12, delayChildren: 0.15 } },
-};
-
-const heroItemVariants = {
-  hidden: { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 70, damping: 20 } },
-};
 
 const HeroTypewriter = () => {
   const [displayed1, setDisplayed1] = useState('');
@@ -46,7 +35,7 @@ const HeroTypewriter = () => {
   }, [phase, displayed1, displayed2]); // stable: module-scope constants excluded
 
   return (
-    <h1 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tighter text-black mb-6 leading-[0.95] md:leading-[0.9] min-h-[100px] sm:min-h-[120px] md:min-h-[145px]">
+    <h1 className="font-display text-5xl sm:text-6xl md:text-7xl font-black tracking-tighter text-text mb-6 leading-[0.95] md:leading-[0.9] min-h-[100px] sm:min-h-[120px] md:min-h-[145px]">
       {displayed1}
       {phase === 1 && <span className="animate-pulse ml-0.5">|</span>}
       <br />
@@ -64,6 +53,21 @@ export default function Home() {
   const [savedListingIds, setSavedListingIds] = useState(new Set());
   const [hasSearched, setHasSearched] = useState(false);
   const [lastQuery, setLastQuery] = useState('');
+
+  const journeyRef = useRef(null);
+
+  const heroRevealRef = useReveal();
+  const coverageRevealRef = useReveal();
+  const aiPanelRevealRef = useReveal();
+  const searchRevealRef = useReveal();
+
+  // Scroll → progressRef bridge (Blueprint §6). No React state: the hook writes
+  // scroll progress into a module ref that the canvas reads in useFrame.
+  // Disabled under reduced motion, which pins progress at 0 (landing pose held).
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  useScrollProgress(journeyRef, { enabled: !prefersReducedMotion });
 
   useEffect(() => {
     const fetchSavedListings = async () => {
@@ -99,85 +103,57 @@ export default function Home() {
   const otherResults = results.filter(car => !bestPick || car.id !== bestPick.id);
 
   return (
-    <main className="relative w-full overflow-x-hidden font-sans text-black">
+    <main className="relative w-full overflow-x-hidden font-sans">
       <Helmet>
         <title>DriveFetch — Find the Right Used Car in Pakistan, Powered by AI</title>
         <meta name="description" content="Find the perfect used car in Pakistan with DriveFetch. Our AI-powered search scours multiple sources to find your ideal match." />
         <link rel="canonical" href="https://carfinderproject.vercel.app/" />
       </Helmet>
 
-      {/* ── Background: metallic grey studio, white key light, subtle grid ── */}
-      <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden bg-[#b0b0b0]">
-        {/* Fine technical grid */}
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage:
-              'linear-gradient(to right,rgba(0,0,0,0.06) 1px,transparent 1px),' +
-              'linear-gradient(to bottom,rgba(0,0,0,0.06) 1px,transparent 1px)',
-            backgroundSize: '72px 72px',
-          }}
-        />
-        {/* Top-right key light — makes the car's black paint reflective */}
-        <div className="absolute w-[75vw] h-[75vw] max-w-[1100px] max-h-[1100px] bg-white rounded-full blur-[160px] opacity-35 top-[-10%] right-[-12%]" />
-        {/* Bottom-left subtle fill */}
-        <div className="absolute w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-white rounded-full blur-[120px] opacity-15 bottom-[5%] left-[-5%]" />
-        {/* Vignette */}
-        <div
-          className="absolute inset-0"
-          style={{ background: 'radial-gradient(ellipse at 60% 40%, transparent 40%, rgba(0,0,0,0.18) 100%)' }}
-        />
-      </div>
-
-      <Suspense fallback={<div className="fixed inset-0 z-0 w-full h-full pointer-events-none bg-transparent"></div>}>
-        <Background3DShell />
-      </Suspense>
-
       <div className="relative z-10 w-full">
 
-        {/* ── SECTION 1: Hero ── */}
+        {/* ── Scroll-drive journey: hero → coverage → AI panel. GSAP ScrollTrigger
+             tracks scroll progress across this wrapper's height and drives the
+             persistent 3D car (Sec 6.4); it exits the frame by the end of it.
+             pointer-events-none so drags pass through to the canvas behind it,
+             letting OrbitControls receive them during the free-orbit landing
+             state — this section has no clickable content of its own. ── */}
+        <div ref={journeyRef} className="pointer-events-none">
+
+        {/* ── SECTION 1: Hero (scroll 0) — car is orbit-controllable here ── */}
         <div className="min-h-[80vh] lg:min-h-screen flex flex-col justify-center px-6 max-w-7xl mx-auto pt-32 lg:pt-40 pb-16 lg:pb-0">
-          <motion.div className="max-w-lg" variants={heroContainerVariants} initial="hidden" animate="visible">
+          <div ref={heroRevealRef} className="reveal max-w-lg">
 
-            {/* Eyebrow — lighter weight, refined */}
-            <motion.div variants={heroItemVariants}>
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/80 text-white text-[10px] font-semibold tracking-[0.15em] uppercase mb-8">
-                <span className="w-1.5 h-1.5 rounded-full bg-white/70 inline-block" />
-                Drive Fetch AI Engine
-              </div>
-            </motion.div>
+            <div className="glass-thin inline-flex items-center gap-2 px-3.5 py-1.5 text-text text-[10px] font-semibold tracking-[0.15em] uppercase mb-8">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />
+              Drive Fetch AI Engine
+            </div>
 
-            {/* Headline — font-black reserved for display only */}
-            <motion.div variants={heroItemVariants}>
-              <HeroTypewriter />
-            </motion.div>
+            <HeroTypewriter />
 
-            {/* Body copy — medium weight, not bold */}
-            <motion.p variants={heroItemVariants} className="text-base md:text-lg font-medium text-black/70 leading-relaxed max-w-sm">
+            <p className="text-base md:text-lg font-medium text-text-dim leading-relaxed max-w-sm">
               We scan thousands of listings across Pakistan, flag risk, and grade
               liquidity — so you only see cars worth buying.
-            </motion.p>
-          </motion.div>
+            </p>
+          </div>
         </div>
 
-        {/* ── SECTION 2: Market Coverage ── */}
+        {/* ── SECTION 2: Total Market Coverage ── */}
         <div className="min-h-[70vh] lg:min-h-screen flex flex-col justify-center px-6 max-w-7xl mx-auto py-16 lg:py-0">
-          <div className="max-w-md">
-            {/* Icon — thinner, more refined */}
-            <Database className="w-7 h-7 text-black/50 mb-5" strokeWidth={1.5} />
-            <h2 className="text-3xl md:text-4xl font-black tracking-tight mb-3 text-black">
+          <div ref={coverageRevealRef} className="reveal max-w-md">
+            <Database className="w-7 h-7 text-text-dim mb-5" strokeWidth={1.5} />
+            <h2 className="font-display text-3xl md:text-4xl font-black tracking-tight mb-3 text-text">
               Total Market Coverage
             </h2>
-            <p className="text-base font-medium text-black/60 leading-relaxed mb-8">
+            <p className="text-base font-medium text-text-dim leading-relaxed mb-8">
               We deploy stealth data harvesters across the top automotive marketplaces
               simultaneously to ensure you never miss a deal.
             </p>
-            {/* Platform tags — minimal, no heavy border, just a quiet surface */}
             <div className="flex flex-wrap gap-2">
-              {['PakWheels', 'OLX Pakistan', 'Drive.pk', 'Gari.pk'].map(platform => (
+              {['PakWheels', 'OLX Pakistan', 'Drive.pk', 'Gari.pk'].map((platform) => (
                 <span
                   key={platform}
-                  className="px-4 py-1.5 bg-black/8 rounded-full text-xs font-medium tracking-wide text-black/80 border border-black/10"
+                  className="glass-thin px-4 py-1.5 text-xs font-medium tracking-wide text-text-dim"
                 >
                   {platform}
                 </span>
@@ -186,15 +162,14 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── SECTION 3: AI Panel ── */}
+        {/* ── SECTION 3: Powered by AI — offset so the driving car stays visible ── */}
         <div className="min-h-[70vh] lg:min-h-screen flex flex-col justify-center px-6 max-w-7xl mx-auto py-16 lg:py-0">
-          {/* Glass card — white surface on grey background creates clean lift */}
-          <div className="max-w-xl ml-auto bg-white/55 backdrop-blur-xl p-8 md:p-10 rounded-2xl border border-white/70 shadow-xl">
-            <ShieldCheck className="w-7 h-7 text-black/40 mb-5" strokeWidth={1.5} />
-            <h2 className="text-3xl md:text-4xl font-black tracking-tight mb-3 text-black">
+          <div ref={aiPanelRevealRef} className="reveal glass max-w-xl ml-auto p-8 md:p-10">
+            <ShieldCheck className="w-7 h-7 text-text-dim mb-5" strokeWidth={1.5} />
+            <h2 className="font-display text-3xl md:text-4xl font-black tracking-tight mb-3 text-text">
               Powered by AI
             </h2>
-            <p className="text-base font-medium text-black/60 leading-relaxed">
+            <p className="text-base font-medium text-text-dim leading-relaxed">
               Our system doesn't just show you prices. It reads descriptions, analyzes
               the market, and flags risky keywords like "showered for fresh look" or
               "duplicate file" before you make a costly mistake.
@@ -202,17 +177,19 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── SECTION 4: Search ── */}
+        </div>
+
+        {/* ── SECTION 4: Start Your Search ── */}
         <div
           id="search-section"
           className="min-h-[80vh] lg:min-h-screen px-6 pt-24 lg:pt-32 pb-[30vh] lg:pb-[40vh] relative z-20"
         >
-          <div className="max-w-4xl mx-auto">
+          <div ref={searchRevealRef} className="reveal max-w-4xl mx-auto">
             <div className="text-center mb-10 md:mb-12">
-              <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-2 text-black">
+              <h2 className="font-display text-4xl md:text-5xl font-black tracking-tight mb-2 text-text">
                 Start Your Search
               </h2>
-              <p className="text-base font-medium text-black/55">
+              <p className="text-base font-medium text-text-dim">
                 Let the engine analyze the market for you.
               </p>
             </div>
@@ -221,20 +198,20 @@ export default function Home() {
 
             {/* ── Category Badges ── */}
             <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <button 
-                onClick={() => handleSearch("7 Seater MPV under 60 lacs")} 
+              <button
+                onClick={() => handleSearch("7 Seater MPV under 60 lacs")}
                 disabled={isLoading}
-                className="flex items-center gap-2 px-4 py-2 bg-white/40 hover:bg-white/70 backdrop-blur-md border border-black/10 rounded-full text-sm font-semibold text-black/80 transition-all shadow-sm hover:shadow-md disabled:opacity-50"
+                className="glass-thin glass-hover flex items-center gap-2 px-4 py-2 text-sm font-semibold text-text-dim transition-all disabled:opacity-50"
               >
-                <Car className="w-4 h-4 text-black/60" />
+                <Car className="w-4 h-4" />
                 MPVs (7-Seater)
               </button>
-              <button 
-                onClick={() => handleSearch("Mini SUV Crossover under 70 lacs")} 
+              <button
+                onClick={() => handleSearch("Mini SUV Crossover under 70 lacs")}
                 disabled={isLoading}
-                className="flex items-center gap-2 px-4 py-2 bg-white/40 hover:bg-white/70 backdrop-blur-md border border-black/10 rounded-full text-sm font-semibold text-black/80 transition-all shadow-sm hover:shadow-md disabled:opacity-50"
+                className="glass-thin glass-hover flex items-center gap-2 px-4 py-2 text-sm font-semibold text-text-dim transition-all disabled:opacity-50"
               >
-                <Car className="w-4 h-4 text-black/60" />
+                <Car className="w-4 h-4" />
                 Mini SUVs
               </button>
             </div>
@@ -243,60 +220,54 @@ export default function Home() {
 
               {isLoading && (
                 <div className="flex flex-col items-center justify-center py-16 space-y-3">
-                  <Loader2 className="w-8 h-8 text-black/50 animate-spin" />
-                  <p className="text-sm font-medium text-black/50 animate-pulse">
+                  <Loader2 className="w-8 h-8 text-text-dim animate-spin" />
+                  <p className="text-sm font-medium text-text-dim animate-pulse">
                     Drive Fetch is fetching &amp; appraising listings…
                   </p>
                 </div>
               )}
 
               {error && (
-                <div className="flex items-center gap-3 bg-white/50 backdrop-blur-md border border-black/10 text-black/70 p-5 rounded-2xl">
-                  <AlertCircle className="w-5 h-5 shrink-0 text-black/40" strokeWidth={1.5} />
+                <div className="glass-thin flex items-center gap-3 text-text-dim p-5">
+                  <AlertCircle className="w-5 h-5 shrink-0 text-danger" strokeWidth={1.5} />
                   <p className="text-sm font-medium">{error}</p>
                 </div>
               )}
 
               {bestPick && !isLoading && (
                 <div className="space-y-4">
-                  {/* Best pick label — refined */}
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black text-white text-[10px] font-semibold tracking-[0.12em] uppercase">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent text-white text-[10px] font-semibold tracking-[0.12em] uppercase">
                     <Sparkles className="w-3 h-3" strokeWidth={1.5} />
                     Best AI Match
                   </div>
-                  {/* Card — clean white surface, no double-border */}
-                  <div className="rounded-2xl overflow-hidden shadow-lg border border-black/10 bg-white/70 backdrop-blur-sm">
-                    <CarResultCard car={bestPick} isHighlighted={true} savedListingIds={savedListingIds} userQuery={lastQuery} />
-                  </div>
+                  <CarResultCard car={bestPick} isHighlighted={true} savedListingIds={savedListingIds} userQuery={lastQuery} />
                 </div>
               )}
 
               {otherResults.length > 0 && !isLoading && (
-                <div className="space-y-5 pt-6 border-t border-black/10">
-                  <h3 className="text-lg font-semibold tracking-tight text-black/70">
+                <div className="space-y-5 pt-6" style={{ borderTop: '1px solid var(--df-glass-border)' }}>
+                  <h3 className="text-lg font-semibold tracking-tight text-text-dim">
                     Alternative Matches
                   </h3>
                   <div className="space-y-4">
                     {otherResults.map(car => (
-                      <div key={car.id} className="rounded-2xl overflow-hidden border border-black/10 shadow-md bg-white/60 backdrop-blur-sm">
-                        <CarResultCard car={car} savedListingIds={savedListingIds} userQuery={lastQuery} />
-                      </div>
+                      <CarResultCard key={car.id} car={car} savedListingIds={savedListingIds} userQuery={lastQuery} />
                     ))}
                   </div>
                 </div>
               )}
 
               {results.length === 0 && !isLoading && !error && hasSearched && (
-                <div className="text-center py-14 bg-white/40 backdrop-blur-md rounded-2xl border border-black/8">
-                  <p className="text-sm font-medium text-black/50 px-4">
+                <div className="glass-thin text-center py-14">
+                  <p className="text-sm font-medium text-text-dim px-4">
                     No cars matched your criteria. Try broadening your search or budget.
                   </p>
                 </div>
               )}
 
               {results.length === 0 && !isLoading && !error && !hasSearched && (
-                <div className="text-center py-14 bg-white/40 backdrop-blur-md rounded-2xl border border-black/8">
-                  <p className="text-sm font-medium text-black/50 px-4">
+                <div className="glass-thin text-center py-14">
+                  <p className="text-sm font-medium text-text-dim px-4">
                     Type a query above to get started.
                   </p>
                 </div>
