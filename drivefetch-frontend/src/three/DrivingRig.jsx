@@ -44,7 +44,9 @@ const CURVE = new THREE.CatmullRomCurve3(
 const SPLINE_LEN = CURVE.getLength();
 
 // Parked pose and drive-start pose as quaternions (Phase 2 slerps between them).
-const PARKED_QUAT = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
+// PARKED_QUAT must equal Phase 1's exact rest rotation (Euler 0,-PI/2,0) so the
+// pullout slerp starts precisely where Phase 1 left off — no snap at p=0.02.
+const PARKED_QUAT = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
 const DRIVE_START_QUAT = (() => {
   const o = new THREE.Object3D();
   const t0 = CURVE.getTangentAt(0);
