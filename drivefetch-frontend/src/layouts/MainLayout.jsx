@@ -70,7 +70,7 @@ export default function MainLayout() {
       }
     };
     checkAuth();
-  }, []);
+  }, [location]);
 
   const handleLogout = async () => {
     localStorage.clear();
@@ -78,11 +78,6 @@ export default function MainLayout() {
     setUser(null);
     setIsAuthenticated(false);
     document.cookie = "has_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    try {
-      await fetch('/auth/logout');
-    } catch (e) {
-      console.error(e);
-    }
     window.location.replace('/');
   };
 
