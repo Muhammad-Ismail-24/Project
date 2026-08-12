@@ -35,19 +35,17 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
   
   if (!hasCoreFields) {
     return (
-      <div className={`backdrop-blur-md rounded-2xl overflow-hidden transition-all duration-300 flex flex-col md:flex-row bg-white/60 border border-black/15 shadow-xl animate-pulse`}>
-        <div className="w-full md:w-1/3 h-64 md:auto bg-black/10 relative overflow-hidden flex-shrink-0 border-r border-black/10"></div>
-        <div className="w-full md:w-2/3 p-6 flex flex-col">
-          <div className="flex justify-between items-start mb-2 gap-4">
-            <div className="w-2/3 h-8 bg-black/10 rounded"></div>
-            <div className="w-1/4 h-8 bg-black/10 rounded"></div>
+      <div className={`border-2 border-black bg-white p-4 sm:p-6 flex flex-col md:flex-row gap-6 transition-all duration-200 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] animate-pulse`}>
+        <div className="w-full md:w-1/3 aspect-[4/3] bg-black/10 border-2 border-black flex-shrink-0"></div>
+        <div className="w-full md:w-2/3 flex flex-col gap-4">
+          <div className="w-2/3 h-8 bg-black/10"></div>
+          <div className="w-1/4 h-8 bg-black/10"></div>
+          <div className="flex gap-2">
+            <div className="w-16 h-6 bg-black/10 border border-black"></div>
+            <div className="w-16 h-6 bg-black/10 border border-black"></div>
+            <div className="w-16 h-6 bg-black/10 border border-black"></div>
           </div>
-          <div className="flex space-x-6 mb-4 mt-2">
-            <div className="w-16 h-4 bg-black/10 rounded"></div>
-            <div className="w-16 h-4 bg-black/10 rounded"></div>
-            <div className="w-16 h-4 bg-black/10 rounded"></div>
-          </div>
-          <div className="w-full h-12 bg-black/10 rounded mt-auto"></div>
+          <div className="w-full h-12 bg-black/10 mt-auto border-2 border-black"></div>
         </div>
       </div>
     );
@@ -132,34 +130,37 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
   };
 
   return (
-    <div className={`backdrop-blur-md rounded-2xl overflow-hidden transition-all duration-300 flex flex-col md:flex-row ${
-      isHighlighted 
-        ? 'bg-white/80 border border-black/30 shadow-2xl scale-[1.01]' 
-        : 'bg-white/60 border border-black/15 shadow-xl hover:shadow-2xl hover:bg-white/70'
+    <div className={`border-2 border-black bg-white p-4 sm:p-6 flex flex-col md:flex-row gap-6 transition-all duration-200 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] ${
+      isHighlighted ? 'ring-4 ring-df-red shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]' : ''
     }`}>
       
       {/* ── Left: Image Container ── */}
-      <div className="w-full md:w-1/3 h-64 md:auto bg-black/5 relative overflow-hidden flex-shrink-0 border-r border-black/10">
-        {car?.image_url ? (
+      <div className="w-full md:w-1/3 aspect-video md:aspect-[4/3] relative overflow-hidden flex-shrink-0 border-2 border-black bg-gray-100 flex items-center justify-center">
+        {(car?.image_url || car?.images?.[0]) ? (
           <img 
-            src={car.image_url} 
-            alt={car?.title ?? ''} 
+            src={car.image_url || car.images[0]} 
+            alt={car?.title ?? 'Vehicle'} 
             className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-            onError={(e) => { e.target.src = 'https://via.placeholder.com/400x300?text=No+Image+Available' }} 
+            onError={(e) => { 
+              e.target.onerror = null; 
+              e.target.style.display = 'none'; 
+              if (e.target.nextElementSibling) e.target.nextElementSibling.style.display = 'flex'; 
+            }} 
           />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-black/40 font-bold">
-            No Image Provided
-          </div>
-        )}
+        ) : null}
+        
+        {/* Fallback (shown if no image or error) */}
+        <div className={`w-full h-full items-center justify-center text-black font-mono text-xs font-bold tracking-widest text-center uppercase p-4 ${(car?.image_url || car?.images?.[0]) ? 'hidden' : 'flex'}`}>
+          [ NO IMAGE PROVIDED ]
+        </div>
 
         {car?.platform && (
-          <div className="absolute top-4 left-4 bg-black text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider shadow-md">
+          <div className="absolute top-3 left-3 bg-black text-white text-[10px] sm:text-xs font-mono font-bold px-3 py-1 border border-black uppercase tracking-wider shadow-sm">
             {car.platform}
           </div>
         )}
         
-        <div className="absolute top-3 right-3 z-10">
+        <div className="absolute top-3 right-3 z-10 bg-white border border-black shadow-[2px_2px_0px_#000000]">
           <SaveCarButton 
             listingId={car?.id} 
             platform={car?.platform ?? ''} 
@@ -171,99 +172,109 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
       </div>
 
       {/* ── Right: Data Content ── */}
-      <div className="w-full md:w-2/3 p-6 flex flex-col">
-        <div className="flex justify-between items-start mb-2 gap-4">
-          <h2 className="text-2xl font-black tracking-tight text-black line-clamp-2">{car?.title ?? ''}</h2>
-          <div className="text-right flex-shrink-0">
-            <p className="text-2xl font-black text-black">{priceDisplay}</p>
+      <div className="w-full md:w-2/3 flex flex-col">
+        <div className="flex flex-col sm:flex-row justify-between items-start mb-4 gap-4">
+          <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-black leading-none line-clamp-2">
+            {car?.title || 'UNKNOWN VEHICLE'}
+          </h2>
+          <div className="text-left sm:text-right shrink-0">
+            <p className="text-xl font-bold bg-gray-100 px-3 py-1 border-2 border-black inline-block whitespace-nowrap">
+              {priceDisplay}
+            </p>
             {liquidityScore && (
-              <span className={`inline-block mt-2 px-3 py-1 border shadow-sm text-xs font-bold uppercase tracking-wider rounded-full ${liquidityBadge[liquidityScore] || liquidityBadge.Medium}`}>
-                {liquidityScore} Liquidity
-              </span>
+              <div className="mt-2">
+                <span className={`inline-block px-2 py-1 border-2 font-mono text-[10px] font-bold uppercase tracking-wider ${
+                  liquidityScore === 'High' ? 'bg-black text-white border-black' :
+                  liquidityScore === 'Medium' ? 'bg-gray-200 text-black border-black' :
+                  'bg-white text-gray-500 border-gray-300'
+                }`}>
+                  {liquidityScore} Liquidity
+                </span>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Specs */}
-        <div className="flex items-center space-x-6 text-black/60 text-sm font-bold mb-4 mt-2">
-          <span className="flex items-center"><Calendar className="w-4 h-4 mr-2 text-black"/> {car?.year ?? ''}</span>
-          <span className="flex items-center"><Gauge className="w-4 h-4 mr-2 text-black"/> {mileageDisplay}</span>
-          <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-black"/> {car?.city ?? ''}</span>
+        {/* Specs Badges */}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          {car?.year && <span className="text-xs font-mono border border-black px-2 py-1 flex items-center bg-white"><Calendar className="w-3 h-3 mr-1.5"/> {car.year}</span>}
+          {mileageDisplay && <span className="text-xs font-mono border border-black px-2 py-1 flex items-center bg-white"><Gauge className="w-3 h-3 mr-1.5"/> {mileageDisplay}</span>}
+          {car?.city && <span className="text-xs font-mono border border-black px-2 py-1 flex items-center bg-white"><MapPin className="w-3 h-3 mr-1.5"/> {car.city}</span>}
+          {car?.source && <span className="text-xs font-mono border border-black px-2 py-1 bg-white uppercase">SRC: {car.source}</span>}
         </div>
 
         {/* Instant Heuristic Tags & AI Warning Flags */}
         {(redFlags.length > 0 || heuristicTags.length > 0) && (
           <div className="flex flex-wrap gap-2 mb-4">
             {heuristicTags.map((tag, idx) => (
-              <span key={`heuristic-${idx}`} className={`inline-flex items-center gap-1.5 border shadow-sm text-xs font-bold px-3 py-1 rounded-full ${
-                tag.type === 'danger' ? 'bg-red-50 border-red-200 text-red-700' :
-                tag.type === 'warning' ? 'bg-orange-50 border-orange-200 text-orange-700' :
-                'bg-green-50 border-green-200 text-green-700'
+              <span key={`heuristic-${idx}`} className={`text-[10px] sm:text-xs font-mono font-bold px-2 py-1 border-2 flex items-center gap-1.5 uppercase tracking-wide ${
+                tag.type === 'danger' ? 'bg-red-100 border-red-600 text-red-700 shadow-[2px_2px_0px_#dc2626]' :
+                tag.type === 'warning' ? 'bg-orange-100 border-orange-600 text-orange-700 shadow-[2px_2px_0px_#ea580c]' :
+                'bg-green-100 border-green-600 text-green-700 shadow-[2px_2px_0px_#16a34a]'
               }`}>
-                {tag.type === 'danger' || tag.type === 'warning' ? <ShieldAlert className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
+                {tag.type === 'danger' || tag.type === 'warning' ? <ShieldAlert className="w-3 h-3" strokeWidth={2.5} /> : <Sparkles className="w-3 h-3" strokeWidth={2.5} />}
                 {tag.text}
               </span>
             ))}
             {redFlags.map((flag, idx) => (
-              <span key={`ai-${idx}`} className="inline-flex items-center gap-1.5 bg-black border border-black text-white shadow-md text-xs font-bold px-3 py-1 rounded-full">
-                <ShieldAlert className="w-3 h-3" />
+              <span key={`ai-${idx}`} className="text-[10px] sm:text-xs font-mono font-bold px-2 py-1 border-2 border-black bg-black text-white shadow-[2px_2px_0px_#dc2626] flex items-center gap-1.5 uppercase tracking-wide">
+                <ShieldAlert className="w-3 h-3 text-red-500" strokeWidth={2.5} />
                 {flag}
               </span>
             ))}
           </div>
         )}
 
-        {/* ── AI Appraisal Results (shown after review) ── */}
+        {/* ── AI Appraisal Results ── */}
         {aiData && justification && (
-          <div className="mb-4 bg-white/40 backdrop-blur-sm rounded-xl p-4 border border-black/10 shadow-sm space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center">
-                <TrendingUp className="w-3.5 h-3.5 text-white" />
-              </div>
-              <h4 className="text-xs font-black uppercase tracking-widest text-black">AI Market Appraisal</h4>
+          <div className="mb-6 bg-white border-2 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <div className="flex items-center gap-2 mb-3 pb-3 border-b-2 border-black">
+              <span className="bg-black text-white px-2 py-0.5 font-mono text-[10px] font-bold tracking-widest uppercase flex items-center gap-1">
+                <TrendingUp className="w-3 h-3" />
+                AI APPRAISAL
+              </span>
             </div>
-            <p className="text-sm text-black/80 leading-relaxed font-bold">
+            <p className="text-sm font-body font-semibold text-black leading-relaxed">
               {justification}
             </p>
           </div>
         )}
 
-        {/* Footer Area: AI Review Button + View Ad */}
-        <div className="mt-auto flex flex-col md:flex-row items-stretch md:items-end gap-4">
+        {/* Footer Area: Buttons */}
+        <div className="mt-auto pt-6 flex flex-col sm:flex-row items-stretch sm:items-end justify-end gap-3 sm:gap-4 border-t-2 border-black border-dashed">
           
-          {/* AI Review Button (replaces old justification box) */}
           {!aiData && (
-            <div className="flex-grow">
+            <div className="flex-grow sm:flex-grow-0 flex flex-col items-end">
               <button
                 onClick={handleEvaluate}
                 disabled={isEvaluating}
-                className="group w-full md:w-auto inline-flex items-center justify-center gap-2 bg-white/60 backdrop-blur-md border border-black/20 hover:border-black hover:bg-white/80 text-black font-bold text-sm px-5 py-3 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto border-2 border-black bg-red-600 text-white font-bold uppercase px-4 py-2 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none flex items-center justify-center gap-2 whitespace-nowrap"
               >
                 {isEvaluating ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Appraising...</span>
+                    <span>APPRAISING...</span>
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4 group-hover:animate-pulse" />
-                    <span>AI Review</span>
+                    <Sparkles className="w-4 h-4" />
+                    <span>[ AI REVIEW ]</span>
                   </>
                 )}
               </button>
               {evalError && (
-                <p className="text-xs font-bold text-black/60 mt-2">{evalError}</p>
+                <p className="text-[10px] font-mono font-bold text-red-600 mt-1 uppercase tracking-wider">{evalError}</p>
               )}
             </div>
           )}
           
           <a 
-            href={car?.listing_url ?? '#'}
+            href={car?.listing_url || car?.url || '#'}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center space-x-2 bg-black hover:bg-neutral-800 shadow-md text-white font-bold py-3 px-6 rounded-xl transition-colors shrink-0"
+            className="w-full sm:w-auto border-2 border-black bg-white text-black font-bold uppercase px-4 py-2 hover:bg-black hover:text-white transition-colors flex items-center justify-center gap-2 whitespace-nowrap active:translate-y-[2px] active:translate-x-[2px]"
           >
-            <span>View Ad</span>
+            <span>[ VIEW ORIGINAL AD ]</span>
             <ExternalLink className="w-4 h-4" />
           </a>
         </div>
