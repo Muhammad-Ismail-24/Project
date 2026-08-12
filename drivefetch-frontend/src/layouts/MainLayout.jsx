@@ -131,7 +131,7 @@ export default function MainLayout() {
               <div className="w-7 h-7 border-2 border-df-black/30 border-t-df-black animate-spin" />
             ) : !isAuthenticated || !user ? (
               <button
-                onClick={() => window.location.href = 'https://carfinder-project-backend.onrender.com/auth/google'}
+                onClick={() => window.location.href = '/auth/login'}
                 className="hidden sm:flex items-center px-4 py-2 border-brutal text-df-black bg-df-white font-mono text-xs font-bold tracking-wide shadow-brutal-sm hover:bg-df-black hover:text-df-white hover:shadow-none transition-none whitespace-nowrap"
               >
                 Google Sign-In
@@ -184,7 +184,7 @@ export default function MainLayout() {
             {/* Mobile Sign-In */}
             {!isAuthenticated && (
               <button
-                onClick={() => window.location.href = 'https://carfinder-project-backend.onrender.com/auth/google'}
+                onClick={() => window.location.href = '/auth/login'}
                 className="w-full px-6 py-4 text-left font-mono text-sm font-bold tracking-wide text-df-black border-b border-df-black/10 hover:bg-df-black hover:text-df-white transition-none"
               >
                 GOOGLE SIGN-IN →
