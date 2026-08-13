@@ -362,20 +362,29 @@ function BrutalistFooter() {
           </div>
           <nav className="flex flex-wrap items-center gap-x-1 gap-y-2">
             {[
-              { label: 'PRIVACY POLICY', href: '#' },
+              { label: 'PRIVACY POLICY', to: '/privacy' },
               { label: 'TERMS', href: '#' },
               { label: 'GITHUB', href: 'https://github.com' },
               { label: 'CONTACT', href: '#' },
             ].map((link, i, arr) => (
               <span key={link.label} className="flex items-center">
-                <a
-                  href={link.href}
-                  target={link.href.startsWith('http') ? '_blank' : undefined}
-                  rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
-                  className="font-mono text-[10px] sm:text-xs font-bold tracking-[0.06em] text-df-black dark:text-zinc-100 bg-transparent hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black px-2 py-1 transition-none"
-                >
-                  {link.label}
-                </a>
+                {link.to ? (
+                  <Link
+                    to={link.to}
+                    className="font-mono text-[10px] sm:text-xs font-bold tracking-[0.06em] text-df-black dark:text-zinc-100 bg-transparent hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black px-2 py-1 transition-none"
+                  >
+                    {link.label}
+                  </Link>
+                ) : (
+                  <a
+                    href={link.href}
+                    target={link.href.startsWith('http') ? '_blank' : undefined}
+                    rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                    className="font-mono text-[10px] sm:text-xs font-bold tracking-[0.06em] text-df-black dark:text-zinc-100 bg-transparent hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black px-2 py-1 transition-none"
+                  >
+                    {link.label}
+                  </a>
+                )}
                 {i < arr.length - 1 && (
                   <span className="text-df-black/15 dark:text-white/15 font-light mx-0.5 select-none">|</span>
                 )}

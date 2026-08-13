@@ -12,6 +12,7 @@ const ChatPage = lazy(() => import('./pages/ChatPage'));
 const About = lazy(() => import('./pages/About'));
 const RecommendPage = lazy(() => import('./pages/RecommendPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 
 /**
  * ChunkErrorBoundary
@@ -123,6 +124,7 @@ export default function App() {
               <Route path="recommend" element={<RecommendPage />} />
               <Route path="about" element={<About />} />
               <Route path="calculators" element={<CalculatorsHub />} />
+              <Route path="privacy" element={<PrivacyPolicy />} />
               
               {/* Catch-all 404 Route */}
               <Route path="*" element={<NotFoundPage />} />
