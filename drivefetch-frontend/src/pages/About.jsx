@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion, useScroll, useTransform } from 'framer-motion';
 
@@ -25,6 +25,39 @@ const slideFromRight = {
    ═══════════════════════════════════════════════════════ */
 
 export default function About() {
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    const formData = new FormData(e.target);
+    formData.append("access_key", "e5b8198a-38e6-4ea5-b5fa-ade6ca15ce58");
+
+    try {
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setIsSubmitted(true);
+        e.target.reset();
+      } else {
+        console.error("Web3Forms error:", data.message);
+        alert("Transmission failed. Please try again.");
+      }
+    } catch (error) {
+      console.error("Network Error:", error);
+      alert("Network error. Please check your connection.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const { scrollYProgress } = useScroll();
 
   /* ── The Data Blueprint: 3-layer scroll crossfade over white ── */
@@ -233,23 +266,23 @@ export default function About() {
             <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-df-black dark:text-zinc-50 mb-8">
               [ TRANSMIT MESSAGE ]
             </h2>
-            <form onSubmit={(e) => { e.preventDefault(); alert('Message Transmitted.'); }} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block font-mono text-xs font-bold text-df-black dark:text-zinc-50 uppercase tracking-widest mb-2">NAME</label>
-                  <input required type="text" placeholder="YOUR NAME" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
+                  <input required name="name" type="text" placeholder="YOUR NAME" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
                 </div>
                 <div>
                   <label className="block font-mono text-xs font-bold text-df-black dark:text-zinc-50 uppercase tracking-widest mb-2">EMAIL</label>
-                  <input required type="email" placeholder="YOUR EMAIL" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
+                  <input required name="email" type="email" placeholder="YOUR EMAIL" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
                 </div>
               </div>
               <div>
                 <label className="block font-mono text-xs font-bold text-df-black dark:text-zinc-50 uppercase tracking-widest mb-2">MESSAGE</label>
-                <textarea required rows="4" placeholder="ENTER MESSAGE" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
+                <textarea required name="message" rows="4" placeholder="ENTER MESSAGE" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
               </div>
-              <button type="submit" className="w-full bg-red-600 text-white font-black uppercase py-4 border-2 border-black dark:border-white hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0px_0px_rgba(255,255,255,1)] transition-all">
-                SUBMIT
+              <button disabled={isSubmitting} type="submit" className="w-full bg-red-600 text-white font-black uppercase py-4 border-2 border-black dark:border-white hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0px_0px_rgba(255,255,255,1)] transition-all disabled:opacity-50 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none">
+                {isSubmitting ? '[ TRANSMITTING... ]' : 'SUBMIT'}
               </button>
             </form>
           </div>
@@ -257,6 +290,29 @@ export default function About() {
 
       </div>
     </main>
+
+    {/* ═══ THANK YOU MODAL ═══ */}
+    {isSubmitted && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="bg-white dark:bg-zinc-900 border-4 border-black dark:border-white p-8 max-w-md w-full shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] dark:shadow-[12px_12px_0px_0px_rgba(255,255,255,1)] text-black dark:text-white transition-all">
+          <div className="text-xs font-mono text-red-600 dark:text-red-500 font-bold mb-2">
+            // STATUS: 200 OK
+          </div>
+          <h3 className="font-black text-2xl uppercase tracking-tight mb-4">
+            [ TRANSMISSION RECEIVED ]
+          </h3>
+          <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium mb-6">
+            Your query has been logged and dispatched directly to DriveFetch operations. We will respond via email shortly.
+          </p>
+          <button
+            onClick={() => setIsSubmitted(false)}
+            className="w-full bg-red-600 text-white font-bold uppercase py-3 px-6 border-2 border-black dark:border-white hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] transition-all"
+          >
+            [ DISMISS ]
+          </button>
+        </div>
+      </div>
+    )}
     </>
   );
 }
