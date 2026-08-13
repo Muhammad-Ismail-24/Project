@@ -45,6 +45,10 @@ from scrapers.normalizer import (
     _clean_int,
     TRIM_ALIASES,
     COMMON_COLORS,
+    # Read-only twin-city corridor table. Shared (not copied) so the city
+    # hard-veto in _score_listing() can never drift out of sync with the
+    # identical rule in normalizer._calculate_relevance_score().
+    NEARBY_CITY_MAP,
 )
 
 # ---------------------------------------------------------------------------
@@ -293,6 +297,162 @@ _CITY_COLOR_EXCEPTIONS: set[str] = {
     "green town", "green valley", "silver city", "silver town", "white city",
     "black town", "red zone", "orange town",
 }
+
+# ---------------------------------------------------------------------------
+# 2025-2026 TAXONOMY EXPANSION — ADDITIVE ONLY
+#
+# Mirrors the expansion applied in scrapers/normalizer.py, but written against
+# this module's PRIVATE copies (_MAKE_VETO_ALIASES / _MODEL_ALIAS_MAP) so the
+# recommendation keyword pipeline stays isolated from the search pipeline, as
+# the module docstring requires.
+#
+# `_merge_new_only` never overwrites an existing key, so this block cannot
+# regress any currently-passing query — it only teaches names that were
+# previously unrecognised.
+# ---------------------------------------------------------------------------
+
+def _merge_new_only(target: dict, additions: dict) -> int:
+    """Insert only absent keys. Existing mappings always win. Returns count added."""
+    added = 0
+    for k, v in additions.items():
+        if k not in target:
+            target[k] = v
+            added += 1
+    return added
+
+
+_merge_new_only(_MAKE_VETO_ALIASES, {
+    # Chinese 2024-2026 wave. Sub-brands accept their parent's name too, because
+    # listing titles are written both ways ("Jaecoo J7" vs "Chery Jaecoo J7").
+    "jetour":      ["jetour", "jetuor", "jetor"],
+    "omoda":       ["omoda", "chery omoda", "chery"],
+    "jaecoo":      ["jaecoo", "jacoo", "jaeco", "chery jaecoo", "chery"],
+    "deepal":      ["deepal", "changan deepal", "changan"],
+    "zeekr":       ["zeekr", "geely zeekr"],
+    "tank":        ["tank", "gwm tank", "haval tank", "gwm", "haval"],
+    "baic":        ["baic", "baic motor"],
+    "dfsk":        ["dfsk", "dongfeng", "seres"],
+    "jac":         ["jac", "jac motors"],
+    "kaiyi":       ["kaiyi", "kayi"],
+    "denza":       ["denza", "byd denza", "byd"],
+    "geely":       ["geely"],
+    "forthing":    ["forthing", "dongfeng forthing"],
+    # Korean / Japanese makes that were missing an explicit entry
+    "daihatsu":    ["daihatsu", "toyota"],
+    "isuzu":       ["isuzu"],
+    "genesis":     ["genesis", "hyundai"],
+})
+
+_merge_new_only(_MODEL_ALIAS_MAP, {
+    # ── Jetour ───────────────────────────────────────────────────────────────
+    "t1":            ["t1", "jetour t1"],
+    "t2":            ["t2", "jetour t2"],
+    "t9":            ["t9", "jetour t9"],
+    "dashing":       ["dashing", "dashng", "jetour dashing"],
+    "x70 plus":      ["x70 plus", "x70plus", "x70-plus", "jetour x70", "x70"],
+    # ── Omoda / Jaecoo (Chery premium sub-brands) ────────────────────────────
+    "c5":            ["c5", "omoda c5", "omoda 5", "omodac5"],
+    "omoda 7":       ["omoda 7", "omoda7", "omoda-7"],
+    "e5":            ["e5", "omoda e5", "omodae5"],
+    "j5":            ["j5", "jaecoo j5", "jaeco j5"],
+    "j6":            ["j6", "jaecoo j6", "jaeco j6"],
+    "j7":            ["j7", "jaecoo j7", "jaeco j7", "jacoo j7"],
+    # ── Chery ────────────────────────────────────────────────────────────────
+    "tiggo 4 pro":   ["tiggo 4 pro", "tiggo 4", "tiggo4", "tiggo 4pro"],
+    "tiggo 7 pro":   ["tiggo 7 pro", "tiggo 7", "tiggo7", "tiggo 7pro"],
+    "tiggo 8 pro":   ["tiggo 8 pro", "tiggo 8", "tiggo8", "tiggo 8pro"],
+    # ── BYD ──────────────────────────────────────────────────────────────────
+    "atto 2":        ["atto 2", "atto2", "atto-2", "byd atto 2"],
+    "atto 3":        ["atto 3", "atto3", "atto-3", "byd atto 3"],
+    "seal":          ["seal", "byd seal"],
+    "sealion 7":     ["sealion 7", "sealion7", "sealion", "seelion", "byd sealion"],
+    "dolphin":       ["dolphin", "dolphn", "dolfin", "byd dolphin"],
+    "shark 6":       ["shark 6", "shark6", "byd shark", "byd shark 6"],
+    "han":           ["han", "byd han"],
+    # ── GWM / Haval / Tank ───────────────────────────────────────────────────
+    "tank 300":      ["tank 300", "tank300", "haval tank 300", "gwm tank 300"],
+    "tank 500":      ["tank 500", "tank500", "haval tank 500", "gwm tank 500"],
+    "h6":            ["h6", "haval h6"],
+    "h6 hev":        ["h6 hev", "h6hev", "haval h6 hev", "h6 hybrid"],
+    "h7":            ["h7", "haval h7"],
+    "jolion":        ["jolion", "jolyon", "joleon", "haval jolion"],
+    "jolion hev":    ["jolion hev", "jolionhev", "jolion hybrid", "haval jolion hev"],
+    # ── Changan / Deepal ─────────────────────────────────────────────────────
+    "alsvin":        ["alsvin", "alswin", "alveen", "changan alsvin"],
+    "deepal s07":    ["deepal s07", "deepal s7", "s07", "deepals07"],
+    "deepal l07":    ["deepal l07", "deepal l7", "l07", "deepall07"],
+    "oshan x7":      ["oshan x7", "oshanx7", "oshan", "changan oshan"],
+    # ── Zeekr ────────────────────────────────────────────────────────────────
+    "x":             ["zeekr x", "zeekrx"],
+    "7x":            ["7x", "zeekr 7x", "zeekr7x"],
+    "009":           ["009", "zeekr 009", "zeekr 9", "zeekr009"],
+    # ── Japanese / Korean 2025-26 refreshes ──────────────────────────────────
+    "sportage l":    ["sportage l", "sportagel", "sportage-l", "kia sportage l"],
+    "hr-v e:hev":    ["hr-v e:hev", "hrv ehev", "hr v e hev", "hrv hybrid",
+                      "hr-v hybrid", "hrvehev"],
+    "tucson hybrid": ["tucson hybrid", "tucsonhybrid", "tucson hev"],
+    "corolla cross": ["corolla cross", "corollacross", "corolla-cross",
+                      "corolla cross hev", "corolla cross hybrid"],
+    "fronx":         ["fronx", "franx", "suzuki fronx"],
+    "raize":         ["raize", "rize", "toyota raize"],
+    "harrier":       ["harrier", "harier", "toyota harrier"],
+    "yaris cross":   ["yaris cross", "yariscross", "yaris-cross"],
+})
+
+_merge_new_only(_FEATURE_KEYWORDS, {
+    # Rare/premium features the 2025-26 wave actually ships. Without these the
+    # keyword engine had no positive tokens to score them on, so a listing
+    # explicitly advertising "ventilated seats" earned nothing for it.
+    "ventilated seats": {
+        "positive": ["ventilated seat", "ventilated seats", "cooled seat",
+                     "cooled seats", "seat ventilation", "air conditioned seats"],
+        "negative": [],
+    },
+    "360 camera": {
+        "positive": ["360 camera", "360-degree camera", "360 degree camera",
+                     "surround view", "svm", "around view", "birds eye camera"],
+        "negative": [],
+    },
+    "head up display": {
+        "positive": ["head up display", "head-up display", "hud", "w-hud"],
+        "negative": [],
+    },
+    "memory seats": {
+        "positive": ["memory seat", "memory seats", "seat memory",
+                     "driver seat memory", "position memory"],
+        "negative": [],
+    },
+    "power tailgate": {
+        "positive": ["power tailgate", "electric tailgate", "power boot",
+                     "powered tailgate", "hands free tailgate", "kick sensor boot"],
+        "negative": [],
+    },
+    "wireless charging": {
+        "positive": ["wireless charging", "wireless charger", "qi charging",
+                     "wireless phone charger"],
+        "negative": [],
+    },
+    "electric parking brake": {
+        "positive": ["electric parking brake", "epb", "electronic parking brake",
+                     "electric handbrake", "auto hold"],
+        "negative": ["hand brake lever", "manual handbrake"],
+    },
+    "adaptive cruise control": {
+        "positive": ["adaptive cruise", "adaptive cruise control", "acc",
+                     "smart cruise", "radar cruise"],
+        "negative": [],
+    },
+    "massaging seats": {
+        "positive": ["massage seat", "massaging seat", "massage seats",
+                     "seat massage"],
+        "negative": [],
+    },
+    "ambient lighting": {
+        "positive": ["ambient light", "ambient lighting", "mood light",
+                     "rgb lighting"],
+        "negative": [],
+    },
+})
 
 # ---------------------------------------------------------------------------
 # HELPER: FEATURE GATES
@@ -584,14 +744,60 @@ def _score_listing(
                             f"Description contains '{color}', user wants '{req_color}'"
                         )
 
-    # ── 5. City (soft signal) ──────────────────────────────────────────────
+    # ── 5. City — HARD VETO with twin/nearby-city amnesty ──────────────────
+    #
+    #   30.0 pts — exact match on car.city OR the listing title
+    #   20.0 pts — twin/nearby city (NEARBY_CITY_MAP corridor)
+    #   VETO    — neither, and the caller supplied a city
+    #
+    # Mirrors the identical rule in scrapers/normalizer.py so the search
+    # pipeline and the AI-recommendation pipeline cannot disagree about
+    # which listings are geographically reachable.
+    #
+    # Two upgrades over the previous soft signal:
+    #   1. The title is now scanned as well as car.city. Scrapers frequently
+    #      leave car.city blank while the headline reads "Corolla Altis
+    #      Grande 2021 Islamabad" — those listings used to be scored 10.0 and
+    #      buried despite being exact matches.
+    #   2. Twin cities are honoured via NEARBY_CITY_MAP, so the veto never
+    #      severs a real cross-city buying corridor.
     car_city_lower = (car.city or "").lower().strip()
     req_city_str   = (requested_city or "").lower().strip()
 
     if req_city_str:
-        req_cities    = [c.strip() for c in re.split(r',|\band\b', req_city_str) if c.strip()]
-        city_matched  = any(rc in car_city_lower for rc in req_cities)
-        city_score    = 30.0 if city_matched else 10.0
+        req_cities = [c.strip() for c in re.split(r',|\band\b', req_city_str) if c.strip()]
+
+        exact_match = any(
+            rc in car_city_lower or rc in title_lower
+            for rc in req_cities
+        )
+
+        twin_match = False
+        matched_twin = None
+        if not exact_match:
+            for rc in req_cities:
+                for nb in NEARBY_CITY_MAP.get(rc, set()):
+                    if nb in car_city_lower or nb in title_lower:
+                        twin_match = True
+                        matched_twin = nb
+                        break
+                if twin_match:
+                    break
+
+        if exact_match:
+            city_score = 30.0
+        elif twin_match:
+            city_score = 20.0
+            if debug:
+                print(
+                    f"  [REC-TWIN-CITY] '{clean_title[:45]}' — nearby city "
+                    f"'{matched_twin}' accepted for '{req_city_str}'"
+                )
+        else:
+            return veto(
+                f"City mismatch: '{car.city}' not in requested "
+                f"'{requested_city}' or twin cities"
+            )
     else:
         city_score = 30.0 if car_city_lower else 15.0
 

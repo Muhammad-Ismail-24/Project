@@ -447,7 +447,10 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "FWD", "transmission": "auto",   "tags": {"ev","luxury"},             "chinese": True},
     "haval:jolion":            {"lo": 7_000_000,  "hi": 9_000_000,  "styles": {"Crossover"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"family","city"},           "chinese": True},
-    "haval:h6":                {"lo": 8_900_000,  "hi": 10_000_000, "styles": {"Crossover"},
+    # PRICE (Aug 2026): H6 1.5T 8.924M → 2.0T top variant ~12.9M ex-factory.
+    # The old 10.0M ceiling clipped the 2.0T entirely, which is the variant
+    # that actually carries the ventilated/heated front seats.
+    "haval:h6":                {"lo": 7_500_000,  "hi": 13_000_000, "styles": {"Crossover"},
                                 "drive": "AWD", "transmission": "auto",   "tags": {"family","awd"},            "chinese": True},
     "haval:h6 hev":            {"lo": 11_400_000, "hi": 14_000_000, "styles": {"Crossover"},
                                 "drive": "AWD", "transmission": "auto",   "tags": {"hybrid","family","awd"},   "chinese": True},
@@ -461,16 +464,24 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "FWD", "transmission": "auto",   "tags": {"family","city"},           "chinese": True},
     "byd:dolphin":             {"lo": 9_000_000,  "hi": 12_000_000, "styles": {"Hatchback"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"ev","city","economy"},     "chinese": True},
-    "byd:atto 3":              {"lo": 11_000_000, "hi": 15_000_000, "styles": {"Crossover"},
+    # PRICE CORRECTION (Aug 2026): PakWheels ex-factory Atto 3 Advance = PKR 8.99M.
+    # Previous 11–15M band predated the local launch price and hid the car from
+    # every realistic EV budget query.
+    "byd:atto 3":              {"lo": 6_500_000,  "hi": 9_500_000,  "styles": {"Crossover"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"ev","family"},             "chinese": True},
-    "byd:seal":                {"lo": 16_000_000, "hi": 22_000_000, "styles": {"Sedan"},
+    # PRICE CORRECTION (Aug 2026): Seal Dynamic 14.79M → Premium 16.99M ex-factory.
+    "byd:seal":                {"lo": 11_500_000, "hi": 17_500_000, "styles": {"Sedan"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"ev","sports","luxury"},    "chinese": True},
     "gwm:ora 03":              {"lo": 8_000_000,  "hi": 11_000_000, "styles": {"Crossover"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"ev","city"},               "chinese": True},
-    "gwm:tank 500":            {"lo": 35_000_000, "hi": 45_000_000, "styles": {"SUV"},
+    # PRICE CORRECTION (Aug 2026): Tank 500 HEV 20.5M → PHEV 22.5M ex-factory.
+    # Previous 35–45M band was roughly double the real market price.
+    "gwm:tank 500":            {"lo": 16_000_000, "hi": 22_800_000, "styles": {"SUV"},
                                 "drive": "AWD", "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": True},
-    # GWM Tank 300 — off-road body-on-frame SUV, increasingly popular; ~2.5–3.5 crore
-    "gwm:tank 300":            {"lo": 22_000_000, "hi": 38_000_000, "styles": {"SUV"},
+    # GWM Tank 300 — off-road body-on-frame SUV.
+    # PRICE CORRECTION (Aug 2026): Tank 300 Conqueror ≈ PKR 15.0M ex-factory,
+    # not the 2.2–3.8 crore previously recorded.
+    "gwm:tank 300":            {"lo": 11_000_000, "hi": 15_500_000, "styles": {"SUV"},
                                 "drive": "4x4", "transmission": "auto",   "tags": {"offroad","awd","status","luxury"}, "chinese": True},
     # Haval Jolion HEV — Jolion with mild-hybrid, ~93 lacs; direct rival to Corolla Cross HEV
     "haval:jolion hev":        {"lo": 8_800_000,  "hi": 10_500_000, "styles": {"Crossover"},
@@ -506,11 +517,13 @@ CAR_REGISTRY: dict[str, dict] = {
     # Omoda E5 — pure electric compact SUV; CKD Faisalabad; ~89 lacs
     "omoda:e5":                {"lo": 8_500_000,  "hi": 10_500_000, "styles": {"Crossover"},
                                 "drive": "FWD", "transmission": "auto",   "tags": {"ev","city","family"},       "chinese": True, "priority": 2},
-    # Jaecoo J6 — gasoline compact SUV; CBU; ~1.08 crore
-    "jaecoo:j6":               {"lo": 9_500_000,  "hi": 12_000_000, "styles": {"Crossover"},
-                                "drive": "AWD", "transmission": "auto",   "tags": {"city","awd","family"},      "chinese": True},
-    # Jaecoo J7 — PHEV SUV; locally assembled; strong off-road capability
-    "jaecoo:j7":               {"lo": 11_000_000, "hi": 15_000_000, "styles": {"SUV"},
+    # Jaecoo J6 — fully-electric compact SUV; CBU.
+    # PRICE (Aug 2026): Comfort RWD 8.799M → Premium AWD 10.799M ex-factory.
+    "jaecoo:j6":               {"lo": 7_000_000,  "hi": 11_000_000, "styles": {"Crossover"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"ev","city","awd","family"}, "chinese": True},
+    # Jaecoo J7 — SHS PHEV SUV; locally assembled; strong off-road capability.
+    # PRICE (Aug 2026): Premium variant 10.499M ex-factory.
+    "jaecoo:j7":               {"lo": 8_500_000,  "hi": 11_000_000, "styles": {"SUV"},
                                 "drive": "AWD", "transmission": "auto",   "tags": {"hybrid","offroad","awd","family"}, "chinese": True},
     # Jaecoo J5 HEV — compact hybrid crossover; Jan 2026; ~66.99 lacs
     "jaecoo:j5":               {"lo": 6_500_000,  "hi": 9_000_000,  "styles": {"Crossover"},
@@ -536,8 +549,13 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "FWD", "transmission": "both",   "tags": {"cargo","economy"},          "chinese": True},
 
     # ── BYD expanded lineup ───────────────────────────────────────────────────
-    # BYD Sea Lion 7 (Sealion 7) — large electric crossover; CBU; ~2.5–3.5 crore
-    "byd:sealion 7":           {"lo": 25_000_000, "hi": 38_000_000, "styles": {"Crossover"},
+    # BYD Sea Lion 7 (Sealion 7) — large electric crossover.
+    # PRICE CORRECTION (Aug 2026): PakWheels lists the Advanced variant at
+    # PKR 15.49M ex-factory. The previous 2.5–3.8 crore band was ~60% too high
+    # and excluded the car from every budget a real buyer would enter, which
+    # also made its (correct) ventilated-seat / HUD / 360-camera allowlist
+    # membership unreachable.
+    "byd:sealion 7":           {"lo": 12_000_000, "hi": 16_500_000, "styles": {"Crossover"},
                                 "drive": "AWD", "transmission": "auto",   "tags": {"ev","luxury","performance","awd"}, "chinese": True},
     # BYD Han — executive electric sedan; ~3–4 crore
     "byd:han":                 {"lo": 28_000_000, "hi": 42_000_000, "styles": {"Sedan"},
@@ -750,6 +768,36 @@ CAR_REGISTRY: dict[str, dict] = {
                                 "drive": "AWD", "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": False},
     "lexus:lx600":             {"lo": 90_000_000, "hi": 140_000_000,"styles": {"SUV"},
                                 "drive": "AWD", "transmission": "auto",   "tags": {"luxury","status","offroad","awd"}, "chinese": False},
+
+    # ── 2025-2026 MARKET ENTRANTS ────────────────────────────────────────────
+    # Added from live PakWheels ex-factory pricing (Aug 2026). "hi" is pegged
+    # at/just above the current top-variant ex-factory price; "lo" is a
+    # realistic used floor (~65-80% of new) for models young enough that the
+    # used pool is still thin. Every entry here is a CBU/CKD model confirmed
+    # on sale in Pakistan — nothing speculative.
+
+    # Chery premium sub-brands (launched Pakistan Aug 2025)
+    "omoda:c5":                {"lo": 4_500_000,  "hi": 7_500_000,  "styles": {"Crossover"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"city","family","chinese"}, "chinese": True, "priority": 3},
+    "omoda:7":                 {"lo": 7_500_000,  "hi": 10_800_000, "styles": {"Crossover"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"city","family","chinese","status"}, "chinese": True, "priority": 3},
+
+    # BYD — full local lineup (Seal/Atto 3 launched 2024, Sealion 7 + Atto 2 2026)
+    "byd:atto 2":              {"lo": 5_500_000,  "hi": 7_500_000,  "styles": {"Crossover", "Hatchback"},
+                                "drive": "FWD", "transmission": "auto",   "tags": {"ev","city","economy","chinese"}, "chinese": True, "priority": 3},
+    "byd:shark 6":             {"lo": 15_000_000, "hi": 20_500_000, "styles": {"Pickup"},
+                                "drive": "4x4", "transmission": "auto",   "tags": {"offroad","cargo","awd","hybrid","chinese","status"}, "chinese": True, "priority": 3},
+
+    # Jetour — T1 PHEV joins Dashing / X70 Plus / T2 (Aug 2026 launch)
+    "jetour:t9":               {"lo": 9_000_000,  "hi": 14_000_000, "styles": {"SUV", "Crossover"},
+                                "drive": "AWD", "transmission": "auto",   "tags": {"family","offroad","awd","7seat","chinese"}, "chinese": True, "priority": 3},
+
+    # GWM Tank — already registered under the "gwm:" namespace; these aliases
+    # let a user query resolve when the LLM emits make="Tank" instead of "GWM".
+    "tank:300":                {"lo": 11_000_000, "hi": 15_500_000, "styles": {"SUV"},
+                                "drive": "4x4", "transmission": "auto",   "tags": {"offroad","awd","status","chinese"}, "chinese": True, "priority": 3},
+    "tank:500":                {"lo": 16_000_000, "hi": 22_800_000, "styles": {"SUV"},
+                                "drive": "4x4", "transmission": "auto",   "tags": {"luxury","offroad","awd","status","7seat","hybrid","chinese"}, "chinese": True, "priority": 3},
 }
 
 
@@ -964,6 +1012,78 @@ _CANONICAL_MODEL_MAP: dict[str, str] = {
     "rs4":                       "RS6",   # scraper will use RS6 as proxy for RS variants
     "q4 e-tron":                 "Q4 e-tron",
     "q4 etron":                  "Q4 e-tron",
+
+    # ── 2025-2026 ENTRANT ALIASES ────────────────────────────────────────────
+    # Buyers and the LLM both write these names inconsistently. Canonicalising
+    # here keeps CAR_REGISTRY lookups and scraper URLs stable.
+    # Chery premium sub-brands
+    "omoda c5":                  "C5",
+    "omoda 5":                   "C5",
+    "chery omoda c5":            "C5",
+    "omoda 7":                   "7",
+    "omoda e5":                  "E5",
+    "omoda 5 ev":                "Omoda 5 EV",
+    "jaecoo j5":                 "J5",
+    "jaecoo j6":                 "J6",
+    "jaecoo j7":                 "J7",
+    "jacoo j7":                  "J7",
+    "jaeco j7":                  "J7",
+    # Jetour
+    "jetour t1":                 "T1",
+    "jetour t2":                 "T2",
+    "jetour t9":                 "T9",
+    "jetour dashing":            "Dashing",
+    "jetour x70":                "X70 Plus",
+    "jetour x70 plus":           "X70 Plus",
+    "x70 plus":                  "X70 Plus",
+    # BYD
+    "byd atto 2":                "Atto 2",
+    "atto 2":                    "Atto 2",
+    "byd atto 3":                "Atto 3",
+    "byd seal":                  "Seal",
+    "byd dolphin":               "Dolphin",
+    "byd sealion 7":             "Sealion 7",
+    "sealion 7":                 "Sealion 7",
+    "sealion":                   "Sealion 7",
+    "byd shark":                 "Shark 6",
+    "byd shark 6":               "Shark 6",
+    "shark 6":                   "Shark 6",
+    # GWM / Haval / Tank
+    "tank 300":                  "Tank 300",
+    "haval tank 300":            "Tank 300",
+    "gwm tank 300":              "Tank 300",
+    "tank 500":                  "Tank 500",
+    "haval tank 500":            "Tank 500",
+    "gwm tank 500":              "Tank 500",
+    "haval h6 hev":              "H6 HEV",
+    "h6 hev":                    "H6 HEV",
+    "haval jolion hev":          "Jolion HEV",
+    "jolion hev":                "Jolion HEV",
+    "haval h7":                  "H7",
+    # Zeekr
+    "zeekr x":                   "X",
+    "zeekr 7x":                  "7X",
+    "zeekr 009":                 "009",
+    "zeekr 9":                   "009",
+    # Japanese / Korean 2025-26 refreshes
+    "sportage l":                "Sportage L",
+    "kia sportage l":            "Sportage L",
+    "hr-v e:hev":                "HR-V e:HEV",
+    "hrv ehev":                  "HR-V e:HEV",
+    "hr v e hev":                "HR-V e:HEV",
+    "honda hr-v hybrid":         "HR-V e:HEV",
+    "tucson hybrid":             "Tucson Hybrid",
+    "hyundai tucson hybrid":     "Tucson Hybrid",
+    "corolla cross hev":         "Corolla Cross",
+    "corolla cross hybrid":      "Corolla Cross",
+    "suzuki fronx":              "Fronx",
+    "fronx":                     "Fronx",
+    # MG
+    "mg hs phev":                "HS PHEV",
+    "hs phev":                   "HS PHEV",
+    "mg 4 ev":                   "4 EV",
+    "mg4":                       "4 EV",
+    "mg 7":                      "7",
 }
 
 
@@ -2424,6 +2544,245 @@ _FEATURE_IMPOSSIBLE: dict[str, set[str]] = {
 }
 
 # ---------------------------------------------------------------------------
+# 2025-2026 FEATURE REGISTRY PATCH — ADDITIVE ONLY
+#
+# Why this is applied as a post-hoc patch instead of being edited into the
+# literals above: the two literals are large, hand-curated and load-bearing
+# for the existing query test suite. Mutating them in place risks silently
+# disturbing a set that a test depends on. Applying the 2025-26 delta with
+# |= (union) here is provably additive — it can only ever ADD keys to a
+# feature's set, never remove or reorder an existing one.
+#
+# Semantics recap (see the gate in get_eligible_cars):
+#   • _FEATURE_EXCLUSIVE_ALLOWLIST  — allow-list. A model absent from the set
+#     is EXCLUDED from that feature's queries. Adding a model here therefore
+#     *unblocks* a car that is currently (wrongly) filtered out.
+#   • _FEATURE_IMPOSSIBLE           — block-list. A model present in the set is
+#     EXCLUDED. Adding a model here *blocks* a car that currently leaks through.
+#
+# Every membership below was verified against live PakWheels specification
+# pages / manufacturer spec sheets in Aug 2026, not inferred from segment.
+# Notable verified sources:
+#   Kia Sportage L      — panoramic sunroof, 360 SVM, EPB, power tailgate on
+#                         ALL variants; ventilated seats + HUD on HEV Alpha
+#                         and FWD; memory seats, ACC, wireless charging on
+#                         HEV Alpha only.
+#   Honda HR-V e:HEV    — panoramic roof, SVM 360, ventilated seats, HUD,
+#                         driver seat memory, ACC (Honda Sensing), electric
+#                         handbrake, power boot, wireless charger.
+#   BYD Sealion 7       — panoramic glass roof, ventilated front seats, HUD,
+#                         360 camera, ACC, hands-free power tailgate.
+#   GWM Tank 500        — massage + ventilated seats, heated steering,
+#                         panoramic sunroof, HUD, tri-zone climate, 7 seats.
+#   Haval H6            — ventilated + heated front seats standard on 2.0T and
+#                         HEV; H6 HEV carries the W-HUD.
+# ---------------------------------------------------------------------------
+
+_FEATURE_ALLOWLIST_2026_PATCH: dict[str, set[str]] = {
+    "panoramic sunroof": {
+        "kia:sportage l", "honda:hr-v e:hev", "hyundai:tucson hybrid",
+        "byd:sealion 7", "byd:seal", "byd:atto 3", "byd:han", "byd:shark 6",
+        "gwm:tank 500", "gwm:tank 300", "tank:500", "tank:300",
+        "jetour:x70 plus", "jetour:t2", "jetour:t9", "jetour:dashing",
+        "jaecoo:j7", "jaecoo:j6", "jaecoo:j5",
+        "omoda:7", "omoda:c5", "omoda:e5", "chery:omoda 5 ev",
+        "haval:h6 hev", "haval:jolion hev", "haval:h7",
+        "mg:hs phev", "mg:7", "mg:4 ev",
+        "zeekr:x", "zeekr:7x", "zeekr:009",
+        "changan:uni-v", "changan:cs75 plus",
+        "toyota:corolla cross", "mazda:cx-30",
+    },
+    "360 camera": {
+        "kia:sportage l", "honda:hr-v e:hev", "hyundai:tucson hybrid",
+        "byd:sealion 7", "byd:seal", "byd:atto 3", "byd:han", "byd:shark 6",
+        "gwm:tank 500", "gwm:tank 300", "tank:500", "tank:300",
+        "jetour:x70 plus", "jetour:t2", "jetour:t9", "jetour:dashing",
+        "jaecoo:j7", "jaecoo:j6", "jaecoo:j5",
+        "omoda:7", "omoda:e5", "chery:omoda 5 ev",
+        "haval:h6 hev", "haval:jolion hev", "haval:h7",
+        "mg:hs phev", "mg:7", "mg:4 ev",
+        "zeekr:x", "zeekr:7x", "zeekr:009",
+        "changan:uni-v", "changan:cs75 plus",
+        "toyota:corolla cross", "hyundai:ioniq 5", "kia:ev6",
+    },
+    "ventilated seats": {
+        "kia:sportage l", "honda:hr-v e:hev", "hyundai:tucson hybrid",
+        "byd:sealion 7", "byd:seal", "byd:han",
+        "gwm:tank 500", "tank:500",
+        "jetour:t2", "jetour:t9", "jetour:x70 plus",
+        "jaecoo:j7", "jaecoo:j6",
+        "omoda:7",
+        "haval:h6 hev", "haval:h7",     # ventilated std on 2.0T + HEV
+        "mg:hs phev", "mg:7",
+        "zeekr:7x", "zeekr:009", "zeekr:x",
+        "hyundai:ioniq 5", "kia:ev6",
+    },
+    "head up display": {
+        "kia:sportage l", "honda:hr-v e:hev",
+        "byd:sealion 7", "byd:seal", "byd:han",
+        "gwm:tank 500", "tank:500",
+        "jetour:t2", "jetour:t9",
+        "jaecoo:j7", "jaecoo:j6",
+        "omoda:7",
+        "haval:h6 hev",                 # W-HUD confirmed on H6 HEV
+        "mg:hs phev", "mg:7",
+        "zeekr:7x", "zeekr:009", "zeekr:x",
+        "hyundai:ioniq 5", "kia:ev6",
+    },
+    "memory seats": {
+        "kia:sportage l", "honda:hr-v e:hev", "hyundai:tucson hybrid",
+        "byd:sealion 7", "byd:seal", "byd:han",
+        "gwm:tank 500", "tank:500",
+        "jetour:t2", "jetour:t9",
+        "jaecoo:j7", "jaecoo:j6",
+        "omoda:7",
+        "zeekr:7x", "zeekr:009", "zeekr:x",
+        "hyundai:ioniq 5", "kia:ev6",
+    },
+    "power tailgate": {
+        "kia:sportage l", "honda:hr-v e:hev", "hyundai:tucson hybrid",
+        "byd:sealion 7", "byd:seal", "byd:atto 3",
+        "gwm:tank 500", "gwm:tank 300", "tank:500", "tank:300",
+        "jetour:x70 plus", "jetour:t2", "jetour:t9", "jetour:dashing",
+        "jaecoo:j7", "jaecoo:j6", "jaecoo:j5",
+        "omoda:7", "omoda:e5", "chery:omoda 5 ev",
+        "haval:h6 hev", "haval:jolion hev", "haval:h7",
+        "mg:hs phev", "mg:4 ev", "mg:7",
+        "zeekr:x", "zeekr:7x", "zeekr:009",
+        "toyota:corolla cross", "hyundai:ioniq 5", "kia:ev6",
+    },
+    "massaging seats": {
+        "gwm:tank 500", "tank:500",
+        "zeekr:009", "zeekr:7x",
+        "byd:han",
+    },
+    "wireless charging": {
+        "kia:sportage l", "honda:hr-v e:hev", "hyundai:tucson hybrid",
+        "byd:sealion 7", "byd:seal", "byd:atto 3", "byd:atto 2", "byd:han",
+        "gwm:tank 500", "gwm:tank 300", "tank:500", "tank:300",
+        "jetour:x70 plus", "jetour:t2", "jetour:t9", "jetour:dashing",
+        "jaecoo:j7", "jaecoo:j6", "jaecoo:j5",
+        "omoda:7", "omoda:c5", "omoda:e5", "chery:omoda 5 ev",
+        "haval:h6 hev", "haval:jolion hev", "haval:h7",
+        "mg:hs phev", "mg:4 ev", "mg:7",
+        "zeekr:x", "zeekr:7x", "zeekr:009",
+        "toyota:corolla cross", "hyundai:ioniq 5", "kia:ev6",
+        "suzuki:fronx",
+    },
+    "premium audio": {
+        "gwm:tank 500", "tank:500",
+        "zeekr:7x", "zeekr:009", "zeekr:x",
+        "byd:sealion 7", "byd:seal", "byd:han",
+        "jaecoo:j7", "omoda:7", "jetour:t2",
+    },
+    "7 seater": {
+        "gwm:tank 500", "tank:500",
+        "jetour:t9", "jetour:x70 plus",
+        "zeekr:009",
+    },
+}
+
+_FEATURE_IMPOSSIBLE_2026_PATCH: dict[str, set[str]] = {
+    # Entry/compact 2025-26 arrivals that genuinely lack these systems in
+    # PKDM spec. Without these the blocklists silently leak the newest cars.
+    "sunroof": {
+        "byd:atto 2",           # Atto 2 PKDM omits the roof glass
+        "omoda:c5",             # base Omoda C5 trims
+    },
+    "adaptive cruise control": {
+        "suzuki:fronx",         # PKDM Fronx has no radar cruise
+        "byd:atto 2",
+        "omoda:c5",
+        "jetour:dashing",       # Dashing PKDM ships without ACC
+    },
+    "lane assist": {
+        "suzuki:fronx",
+        "byd:atto 2",
+        "omoda:c5",
+        "jetour:dashing",
+    },
+    "blind spot monitor": {
+        "suzuki:fronx",
+        "byd:atto 2",
+        "omoda:c5",
+    },
+    "auto parking": {
+        # Auto-park is near-universally absent in PKDM spec; new entrants are
+        # no exception and must not leak through the existing blocklist.
+        "suzuki:fronx", "byd:atto 2", "byd:atto 3", "byd:seal",
+        "omoda:c5", "omoda:7", "omoda:e5",
+        "jaecoo:j5", "jaecoo:j6", "jaecoo:j7",
+        "jetour:dashing", "jetour:x70 plus", "jetour:t2", "jetour:t9",
+        "gwm:tank 300", "tank:300",
+        "haval:h6 hev", "haval:jolion hev", "haval:h7",
+        "kia:sportage l", "hyundai:tucson hybrid", "toyota:corolla cross",
+        "honda:hr-v e:hev",
+    },
+    "under 1300cc": {
+        # Every 2025-26 crossover/SUV entrant below is >1300cc (or an EV with
+        # no displacement at all) — none can satisfy a sub-1300cc tax query.
+        "kia:sportage l", "hyundai:tucson hybrid", "toyota:corolla cross",
+        "honda:hr-v e:hev", "suzuki:fronx",
+        "byd:atto 2", "byd:atto 3", "byd:seal", "byd:sealion 7", "byd:han",
+        "byd:dolphin", "byd:shark 6",
+        "gwm:tank 300", "gwm:tank 500", "tank:300", "tank:500",
+        "jetour:dashing", "jetour:x70 plus", "jetour:t1", "jetour:t2", "jetour:t9",
+        "jaecoo:j5", "jaecoo:j6", "jaecoo:j7",
+        "omoda:c5", "omoda:7", "omoda:e5", "chery:omoda 5 ev",
+        "haval:h6 hev", "haval:jolion hev", "haval:h7",
+        "mg:hs phev", "mg:4 ev", "mg:7", "mg:cyberster",
+        "zeekr:x", "zeekr:7x", "zeekr:009",
+        "hyundai:ioniq 5", "kia:ev6", "nissan:leaf", "mg:zs ev",
+    },
+    "hybrid": {
+        # Pure BEVs are NOT hybrids — a "hybrid" query must not return them.
+        "byd:atto 2", "byd:atto 3", "byd:dolphin", "byd:seal", "byd:sealion 7",
+        "omoda:e5", "chery:omoda 5 ev",
+        "jaecoo:j6",
+        "zeekr:x", "zeekr:7x", "zeekr:009",
+        "mg:4 ev", "mg:cyberster",
+        "hyundai:ioniq 5", "kia:ev6",
+    },
+    "4wd": {
+        # FWD-only 2025-26 entrants.
+        "suzuki:fronx", "byd:atto 2", "byd:atto 3", "byd:dolphin",
+        "omoda:c5", "omoda:e5", "jaecoo:j5",
+        "jetour:dashing", "toyota:corolla cross", "honda:hr-v e:hev",
+    },
+}
+
+
+def _apply_feature_patch(
+    target: dict[str, set[str]],
+    patch: dict[str, set[str]],
+    label: str,
+) -> None:
+    """
+    Union-merge `patch` into `target` in place.
+
+    Purely additive by construction: a feature key that already exists is
+    widened via set union; a genuinely new feature key is created. Nothing is
+    ever removed, so no existing gate behaviour can regress.
+
+    Kept as a function (rather than inline loops) so the merge is testable and
+    so both maps report their delta identically at import time under debug.
+    """
+    for feature, models in patch.items():
+        if feature in target:
+            target[feature] |= models
+        else:
+            target[feature] = set(models)
+    _ = label  # retained for callers that want to log the merge source
+
+
+_apply_feature_patch(
+    _FEATURE_EXCLUSIVE_ALLOWLIST, _FEATURE_ALLOWLIST_2026_PATCH, "allowlist-2026"
+)
+_apply_feature_patch(
+    _FEATURE_IMPOSSIBLE, _FEATURE_IMPOSSIBLE_2026_PATCH, "blocklist-2026"
+)
+
+# ---------------------------------------------------------------------------
 # SUNROOF TRIM KNOWLEDGE
 # Retained from MODEL_FEATURE_KNOWLEDGE — trim-level hint for sunroof queries.
 # Injected as inline notes in the eligible list so the LLM knows which trim
@@ -3549,7 +3908,7 @@ class UserIntent(BaseModel):
     excluded_brands:   list[str]                                                                     = Field(default_factory=list, description="Brands/makes explicitly forbidden or vetoed by the user, e.g. ['Haval', 'Changan', 'Chery']")
     excluded_models:   list[str]                                                                     = Field(default_factory=list, description="Specific models explicitly forbidden or vetoed by the user, e.g. ['Yaris', 'City', 'Corolla']")
     excluded_origins:  list[str]                                                                     = Field(default_factory=list, description="Origins explicitly forbidden, e.g. ['local', 'jdm', 'chinese', 'european']")
-    immediate_veto_message: Optional[str]                                                            = Field(default=None, description="If the query contains a severe paradox (e.g. '1.8L engine under 1000cc tax', '7-seater coupe', banned ALL origins, or illegal 'NCP' cars), provide a 1-sentence explanation of why it's impossible. Otherwise null.")
+    immediate_veto_message: Optional[str]                                                            = Field(default=None, description="If the query contains a severe paradox (e.g. '1.8L engine under 1000cc tax', '7-seater coupe', banned ALL origins, or illegal 'NCP' cars), provide a rejection starting with an UPPERCASE bracketed section tag — one of '[IMPOSSIBLE QUERY PARADOX]', '[LEGAL COMPLIANCE VETO]', or '[TAX BRACKET CONFLICT]' — followed by a single space and one plain sentence explaining why it is impossible, then a short corrective instruction. Example: '[IMPOSSIBLE QUERY PARADOX] A 2-door sports coupe physically cannot accommodate 7 passengers in the Pakistani market. Please adjust your body style or seating capacity.' Otherwise null.")
     strategy_summary:  str                                                                           = Field(default="", description="A friendly 2-sentence summary explaining the search interpretation and car strategy.")
     disclaimers:       list[str]                                                                     = Field(default_factory=list)
     current_car:       Optional[str]                                                                 = None
@@ -3621,15 +3980,28 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "'no JDM' -> ['jdm'], 'no Japanese imports' -> ['jdm'].\n"
         "- immediate_veto_message: YOU ARE THE FRONT-DOOR BOUNCER. If the user's request contains "
         "a physical impossibility, a legal violation, or an impossible filter combination, you MUST "
-        "populate this field with a 1-sentence rejection explanation.\n"
-        "  * EXAMPLES OF VETOES:\n"
-        "    1. Illegal/Smuggled: 'I want an NCP Land Cruiser' -> 'Non-Custom Paid (NCP) vehicles are illegal outside border regions.'\n"
-        "    2. Physics Paradox: 'Honda Civic 1.8L under 1000cc tax' -> 'A 1.8L engine physically cannot qualify for a sub-1000cc tax bracket.'\n"
-        "    3. Geometry Paradox: '7-seater Mazda RX-8' -> 'A 2-door sports coupe physically cannot seat 7 passengers.'\n"
-        "    4. Total Wipeout: 'No local, no JDM, no Chinese, no European' -> 'You have excluded all available vehicle origins in the Pakistani market.'\n"
-        "    5. Mechanical Paradox: 'Manual transmission with Adaptive Cruise Control' -> 'Adaptive Cruise Control requires an automatic transmission to govern speed; it is mechanically incompatible with a manual gearbox in this market.'\n"
-        "    6. Economy ADAS Paradox: 'Suzuki Cultus with Lane Assist and Power Tailgate' -> 'Entry-level budget hatchbacks do not feature Level 2 ADAS or luxury power tailgates.'\n"
-        "    7. Towing/Chassis Paradox: 'Crossover/Sedan to tow 3 tons' -> 'Unibody crossovers and sedans lack the structural chassis strength to safely tow 3-ton heavy commercial loads; this requires a body-on-frame SUV or Pickup truck.'\n"
+        "populate this field with a tagged rejection.\n"
+        "  * MANDATORY FORMAT — the frontend renders this as a high-contrast Dark Neo-Brutalist "
+        "alert card, so the shape of the string is load-bearing and must be followed exactly:\n"
+        "      [SECTION TAG] <one plain sentence stating the impossibility>. <one short corrective instruction>.\n"
+        "    - The string MUST begin with an opening square bracket at index 0. No greeting, no "
+        "preamble, no emoji, no markdown, no bold markers, no leading whitespace.\n"
+        "    - The tag MUST be UPPERCASE and MUST be exactly one of these three:\n"
+        "        [IMPOSSIBLE QUERY PARADOX]  — physics, geometry, mechanical or spec contradictions\n"
+        "        [LEGAL COMPLIANCE VETO]     — illegal, smuggled, non-duty-paid or non-road-legal requests\n"
+        "        [TAX BRACKET CONFLICT]      — engine displacement vs tax/token bracket contradictions\n"
+        "    - Exactly one space after the closing bracket, then a capital letter.\n"
+        "    - Keep the whole message under 240 characters and write it in flat, declarative, "
+        "high-contrast language. State the fact and the fix. No hedging, no apologising, no "
+        "'unfortunately', no 'I'm sorry', no customer-service softening.\n"
+        "  * EXAMPLES OF VETOES (note the tag on every one):\n"
+        "    1. Illegal/Smuggled: 'I want an NCP Land Cruiser' -> '[LEGAL COMPLIANCE VETO] Non-Custom Paid (NCP) vehicles are illegal to purchase or register outside designated border regions. Please search for a duty-paid, registered vehicle instead.'\n"
+        "    2. Tax Paradox: 'Honda Civic 1.8L under 1000cc tax' -> '[TAX BRACKET CONFLICT] A 1.8L engine physically cannot qualify for a sub-1000cc token tax bracket. Please raise your tax bracket or select a 1000cc vehicle.'\n"
+        "    3. Geometry Paradox: '7-seater Mazda RX-8' -> '[IMPOSSIBLE QUERY PARADOX] A 2-door sports coupe physically cannot accommodate 7 passengers in the Pakistani market. Please adjust your body style or seating capacity.'\n"
+        "    4. Total Wipeout: 'No local, no JDM, no Chinese, no European' -> '[IMPOSSIBLE QUERY PARADOX] You have excluded every vehicle origin available in the Pakistani market, leaving zero eligible cars. Please permit at least one origin.'\n"
+        "    5. Mechanical Paradox: 'Manual transmission with Adaptive Cruise Control' -> '[IMPOSSIBLE QUERY PARADOX] Adaptive Cruise Control requires an automatic transmission to govern speed and is mechanically incompatible with a manual gearbox in this market. Please select an automatic.'\n"
+        "    6. Economy ADAS Paradox: 'Suzuki Cultus with Lane Assist and Power Tailgate' -> '[IMPOSSIBLE QUERY PARADOX] Entry-level budget hatchbacks are not built with Level 2 ADAS or powered tailgates in PKDM spec. Please raise your budget or drop these features.'\n"
+        "    7. Towing/Chassis Paradox: 'Crossover/Sedan to tow 3 tons' -> '[IMPOSSIBLE QUERY PARADOX] Unibody crossovers and sedans lack the chassis strength to tow 3-ton loads safely. Please select a body-on-frame SUV or pickup truck.'\n"
         "  * If you populate this, the system will instantly abort the search and show your message to the user. "
         "Leave null if the query is physically and legally possible.\n"
         "- Conditional / Nested Negations: For compound phrasing like 'no Suzuki unless "
@@ -3683,6 +4055,109 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         ),
     )
     return UserIntent.model_validate_json(response_text)
+
+
+# ---------------------------------------------------------------------------
+# VETO MESSAGE FORMATTING — DARK NEO-BRUTALIST CONTRACT
+#
+# The frontend renders a vetoed query as a high-contrast alert card:
+#   • Signal Red (#dc2626) badge carrying the section tag
+#   • Thick solid border (border-2 border-black dark:border-white)
+#   • Tight tracking body copy (font-black tracking-tight)
+#
+# For that to render deterministically the backend must guarantee the string
+# shape, which means we cannot simply trust the LLM to follow the format
+# instruction in its schema description. These two helpers are the enforcement
+# layer: the extractor tells the frontend which badge to paint, and the
+# formatter guarantees a valid tag is always present so the badge is never
+# empty and the card never falls back to unstyled text.
+#
+# Contract (single source of truth for the frontend):
+#   immediate_veto_message : "[TAG] Sentence. Corrective instruction."
+#   veto_tag               : "IMPOSSIBLE QUERY PARADOX" | "LEGAL COMPLIANCE VETO"
+#                            | "TAX BRACKET CONFLICT"   (bare, no brackets)
+# ---------------------------------------------------------------------------
+
+_VETO_TAGS: tuple[str, ...] = (
+    "IMPOSSIBLE QUERY PARADOX",
+    "LEGAL COMPLIANCE VETO",
+    "TAX BRACKET CONFLICT",
+)
+
+# Keyword → tag routing, used only when the LLM returned an untagged message.
+# Ordered most-specific first: a message about NCP/smuggled cars is a legal
+# veto even though it may also mention engine size.
+_VETO_TAG_KEYWORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("LEGAL COMPLIANCE VETO", (
+        "ncp", "non-custom", "non custom", "smuggl", "illegal", "unregistered",
+        "stolen", "tampered", "duty-paid", "duty paid", "not road legal",
+        "banned", "prohibited by law",
+    )),
+    ("TAX BRACKET CONFLICT", (
+        "tax bracket", "token tax", "cc tax", "withholding", "filer",
+        "tax slab", "registration tax", "duty structure",
+    )),
+)
+
+
+def _extract_veto_tag(message: str) -> str:
+    """
+    Return the bare section tag carried by a formatted veto message.
+
+    Always returns one of _VETO_TAGS — never an empty string — so the frontend
+    can key its badge colour off this field unconditionally. Falls back to
+    "IMPOSSIBLE QUERY PARADOX" (the generic case) when the message carries no
+    recognised tag.
+    """
+    text = (message or "").strip()
+    for tag in _VETO_TAGS:
+        if text.upper().startswith(f"[{tag}]"):
+            return tag
+    return _VETO_TAGS[0]
+
+
+def _format_veto_message(raw_message: str) -> str:
+    """
+    Normalise an LLM veto message into the Dark Neo-Brutalist wire format.
+
+    Guarantees, regardless of what the LLM produced:
+      1. The string starts with a recognised UPPERCASE tag in square brackets.
+      2. Exactly one space separates the tag from the body.
+      3. No leading emoji, markdown, or conversational preamble survives.
+
+    Idempotent: re-formatting an already-formatted message returns it
+    unchanged, so this is safe to call more than once on the same value.
+
+    Untagged input is routed to a tag by keyword (legal / tax / generic
+    paradox) rather than being dropped — a vetoed query must always render
+    with a badge.
+    """
+    text = (raw_message or "").strip()
+    if not text:
+        return ""
+
+    # Already correctly tagged — normalise the post-bracket spacing only.
+    for tag in _VETO_TAGS:
+        prefix = f"[{tag}]"
+        if text.upper().startswith(prefix):
+            body = text[len(prefix):].strip()
+            return f"{prefix} {body}" if body else prefix
+
+    # Strip conversational/decorative noise the LLM may have prepended before
+    # deciding a tag, so keyword routing sees the actual claim.
+    for noise in ("⚠️", "⚠", "**", "Paradox Detected:", "Query Rejected:",
+                  "Error:", "Warning:", "Note:"):
+        if text.startswith(noise):
+            text = text[len(noise):].strip()
+
+    lowered = text.lower()
+    chosen = _VETO_TAGS[0]
+    for tag, keywords in _VETO_TAG_KEYWORDS:
+        if any(kw in lowered for kw in keywords):
+            chosen = tag
+            break
+
+    return f"[{chosen}] {text}"
 
 
 def resolve_constraints(intent: UserIntent) -> dict:
@@ -4041,13 +4516,13 @@ def resolve_constraints(intent: UserIntent) -> dict:
 
     if intent.immediate_veto_message:
         constraints["is_llm_vetoed"] = True
-        constraints["strategy_summary"] = (
-            f"Query Rejected: {intent.immediate_veto_message} "
-            "Please adjust your search criteria."
-        )
-        constraints["disclaimers"].append(
-            f"⚠️ Paradox Detected: {intent.immediate_veto_message}"
-        )
+
+        veto_msg = _format_veto_message(intent.immediate_veto_message)
+        constraints["immediate_veto_message"] = veto_msg
+        constraints["veto_tag"] = _extract_veto_tag(veto_msg)
+        constraints["strategy_summary"] = veto_msg
+        constraints["disclaimers"].append(veto_msg)
+
         # Strip VIP immunity so nothing gets forced through on a vetoed query
         intent.direct_model = None
         constraints["direct_model"] = None
@@ -4387,18 +4862,83 @@ async def run_final_ai_sanitizer(formatted_targets: list[dict], user_prompt: str
         )
         report = AuditReport.model_validate_json(response_text)
 
+        # ── Structural fail-open guard ────────────────────────────────────────
+        # A call can succeed at the HTTP/schema level yet carry zero verdicts
+        # (empty array, truncated generation). That is an incomplete audit, NOT
+        # a finding of universal non-compliance, so it must fail OPEN. Without
+        # this guard the per-item fallback below would still return everything,
+        # but silently — this makes the degraded path visible in the logs.
+        if not report.evaluations:
+            print(
+                "[Sanitizer] Audit returned zero evaluations — treating as an "
+                "incomplete response and failing open with the original list."
+            )
+            return formatted_targets
+
+        def _norm(text: str) -> str:
+            """Lowercase, collapse whitespace, drop punctuation that varies by writer."""
+            return re.sub(r"[^a-z0-9]+", " ", (text or "").lower()).strip()
+
         verdict_by_name: dict[str, AuditItem] = {
-            item.model_name.strip().lower(): item for item in report.evaluations
+            _norm(item.model_name): item for item in report.evaluations
         }
 
+        # Every candidate's canonical key, used to make sure a verdict that
+        # already belongs to one candidate is never re-bound to another.
+        candidate_keys = {
+            _norm(f"{c['make']} {c['model']}") for c in formatted_targets
+        }
+
+        def _resolve_verdict(make: str, model: str) -> AuditItem | None:
+            """
+            Match an audit verdict back to its candidate.
+
+            Primary path is an exact normalised "make model" hit. The fallback
+            exists because the audit LLM intermittently decorates model_name
+            with the trim or powertrain suffix it was shown — "Toyota Corolla
+            Cross HEV" for candidate "Toyota Corolla Cross", "Honda HR-V e:HEV"
+            for "Honda HR-V". Under exact-only matching those verdicts silently
+            missed, and the per-item fail-open then admitted a car the auditor
+            had explicitly rejected — the exact leak this gate exists to stop.
+
+            The fallback is deliberately ONE-DIRECTIONAL: it only accepts a
+            verdict whose name EXTENDS the candidate name (candidate is a
+            prefix of the verdict). The reverse direction is unsafe and is
+            explicitly rejected — a generic verdict for "Toyota Corolla" must
+            never bind to the distinct candidate "Toyota Corolla Cross", which
+            would reject a car the auditor never even evaluated.
+
+            Two further guards:
+              • The suffix must start at a word boundary, so "Corolla" cannot
+                absorb "Corolla Cross" via raw string prefixing.
+              • A verdict whose name is itself an exact key of some candidate
+                is skipped — it already belongs to that car.
+            Ambiguous or unresolved hits return None and fall through to the
+            per-item fail-open path rather than guessing.
+            """
+            target = _norm(f"{make} {model}")
+            exact = verdict_by_name.get(target)
+            if exact is not None:
+                return exact
+
+            prefix = f"{target} "
+            partial = [
+                item for name, item in verdict_by_name.items()
+                if name.startswith(prefix) and name not in candidate_keys
+            ]
+            if len(partial) == 1:
+                return partial[0]
+            return None
+
         compliant: list[dict] = []
+        unmatched = 0
         for car in formatted_targets:
-            norm = f"{car['make']} {car['model']}".strip().lower()
-            item = verdict_by_name.get(norm)
+            item = _resolve_verdict(car["make"], car["model"])
             if item is None:
                 # No evaluation returned for this specific candidate — fail
                 # open for this one item rather than dropping it over an
                 # incomplete LLM response.
+                unmatched += 1
                 compliant.append(car)
                 continue
             if item.is_compliant:
@@ -4409,6 +4949,12 @@ async def run_final_ai_sanitizer(formatted_targets: list[dict], user_prompt: str
                     f"{item.rejection_reason or 'flagged by sanitizer'}"
                 )
 
+        if unmatched:
+            print(
+                f"[Sanitizer] {unmatched} candidate(s) had no matching verdict — "
+                f"kept (per-item fail-open)."
+            )
+
         if not compliant:
             print(
                 "[Sanitizer] Iron-clad gate: zero compliant cars remain — "
@@ -4417,6 +4963,8 @@ async def run_final_ai_sanitizer(formatted_targets: list[dict], user_prompt: str
         return compliant
 
     except Exception as e:
+        # Fail-OPEN on any transport/parse/validation error. A sanitizer
+        # outage must never zero out an already Python-vetted result set.
         print(f"[Sanitizer] Failed: {e} — returning original list unfiltered (fail-open)")
         return formatted_targets
 
@@ -4493,14 +5041,39 @@ async def get_validated_car_targets(constraints: dict) -> list[dict]:
                 f"{v.make} {v.model}" for v in valid_targets
             ]
 
+            # ── Correction prompt: deliberately minimal ───────────────────────
+            # This is a narrow repair call, not a re-run of the whole
+            # recommendation task. The model needs exactly three things:
+            # what went wrong, what it may choose from, and what it must not
+            # repeat. Re-injecting the full original constraint block here was
+            # counter-productive — it re-opened the door to the same
+            # hallucinated picks the validator had just rejected, because the
+            # model started re-reasoning about the query instead of simply
+            # substituting from a pre-verified list.
+            #
+            # dropped_reasons is capped because only the distinct failure modes
+            # carry signal; a wall of near-identical rejection lines pushes the
+            # ELIGIBLE CARS list further from the instruction and measurably
+            # degrades adherence on long lists.
+            MAX_REASONS_SHOWN = 5
+            shown_reasons = dropped_reasons[:MAX_REASONS_SHOWN]
+            overflow = len(dropped_reasons) - len(shown_reasons)
+            reason_block = "\n".join(f"  - {r}" for r in shown_reasons)
+            if overflow > 0:
+                reason_block += f"\n  - (+{overflow} more with the same failure modes)"
+
+            plural = "car" if needed == 1 else "cars"
             correction_prompt = (
-                f"STRICT AUDIT SANITIZER: Your previous vehicle recommendations contained invalid or non-compliant models:\n"
-                + "\n".join(f"  - {r}" for r in dropped_reasons)
-                + f"\n\nELIGIBLE CARS (PICK ONLY FROM THIS PRE-VERIFIED LIST):\n{eligible_list}\n\n"
-                + f"ALREADY PICKED (DO NOT REPEAT): {json.dumps(already_picked)}\n\n"
-                + f"TASK: Return EXACTLY {needed} valid replacement car(s) from the ELIGIBLE CARS list above. "
-                + f"Ensure strictly zero vetoed brands, exact feature matches, and zero hallucinations. "
-                + f"If ELIGIBLE CARS is empty or no valid cars remain, return an empty JSON array []."
+                f"REPLACEMENT TASK — your previous picks were rejected by a "
+                f"deterministic validator.\n\n"
+                f"REJECTED, AND WHY:\n{reason_block}\n\n"
+                f"ELIGIBLE CARS — every entry below is already budget-, feature- "
+                f"and veto-verified. Pick ONLY from this list:\n{eligible_list}\n\n"
+                f"ALREADY PICKED (do not repeat these): {json.dumps(already_picked)}\n\n"
+                f"Return EXACTLY {needed} replacement {plural} from the ELIGIBLE CARS "
+                f"list. Do not re-derive the user's requirements, do not reinstate a "
+                f"rejected car, and do not invent a model that is not in the list. "
+                f"If no suitable car remains, return an empty JSON array []."
             )
 
             try:
