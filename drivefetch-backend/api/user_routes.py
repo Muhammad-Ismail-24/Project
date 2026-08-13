@@ -95,6 +95,33 @@ def get_saved_listings(request: Request, db: Session = Depends(get_session)):
             
     return result
 
+class UpdatePreferencesRequest(BaseModel):
+    bot_name: str | None = None
+    theme: str | None = None
+
+@router.patch("/preferences")
+def update_preferences(payload: UpdatePreferencesRequest, request: Request, db: Session = Depends(get_session)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if payload.bot_name is not None:
+        user.agent_name = payload.bot_name
+    if payload.theme is not None:
+        if payload.theme not in ("light", "dark"):
+            raise HTTPException(status_code=400, detail="Theme must be 'light' or 'dark'")
+        user.theme = payload.theme
+    
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    
+    return {"status": "updated", "theme": user.theme, "bot_name": user.agent_name}
+
 # REMINDER: Add this to main.py:
 # from api.user_routes import router as user_router
 # app.include_router(user_router, prefix="/user", tags=["user"])

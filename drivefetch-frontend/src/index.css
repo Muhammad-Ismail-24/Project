@@ -28,11 +28,22 @@
     color: #000000;
     font-family: 'Inter', system-ui, sans-serif;
     overflow-x: hidden;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .dark body {
+    background-color: #18181b;
+    color: #f4f4f5;
   }
 
   ::selection {
     background-color: #000000;
     color: #FFFFFF;
+  }
+
+  .dark ::selection {
+    background-color: #FFFFFF;
+    color: #000000;
   }
 }
 
@@ -42,9 +53,15 @@
   .border-brutal {
     border: 2px solid #000000;
   }
+  .dark .border-brutal {
+    border-color: #FFFFFF;
+  }
 
   .border-brutal-thin {
     border: 1px solid #000000;
+  }
+  .dark .border-brutal-thin {
+    border-color: rgba(255, 255, 255, 0.4);
   }
 
   /* Invert hover — instant, no smoothing */
@@ -75,6 +92,9 @@
     letter-spacing: 0.04em;
     user-select: none;
     pointer-events: none;
+  }
+  .dark .sys-tag {
+    color: rgba(255, 255, 255, 0.12);
   }
 }
 

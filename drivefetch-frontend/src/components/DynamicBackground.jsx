@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { motion, useScroll, useTransform, useMotionValue, useSpring } from 'framer-motion';
+import { useTheme } from '../contexts/ThemeContext';
 
 /**
  * DynamicBackground
@@ -16,9 +17,7 @@ import { motion, useScroll, useTransform, useMotionValue, useSpring } from 'fram
  * Overlapping ranges ensure smooth crossfades with no dead zones.
  */
 
-const PATTERN_COLOR = '#D4D4D4';
 const STROKE = 1.5;
-const LABEL_COLOR = '#D8D8D8';
 
 /* ═══════════════════════════════════════════════════════
    SVG PATTERN DEFINITIONS
@@ -27,7 +26,7 @@ const LABEL_COLOR = '#D8D8D8';
 function TopoPattern() {
   return (
     <svg width="100%" height="100%" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
-      <g fill="none" stroke={PATTERN_COLOR} strokeWidth={STROKE} transform="scale(1.3) translate(-80, -100)">
+      <g fill="none" stroke="var(--df-pattern)" strokeWidth={STROKE} transform="scale(1.3) translate(-80, -100)">
         <path d="M400,300 Q480,220 520,280 Q560,340 500,380 Q440,420 380,370 Q320,320 400,300Z" />
         <path d="M400,300 Q500,190 560,270 Q620,350 530,410 Q440,470 350,390 Q260,310 400,300Z" />
         <path d="M400,300 Q530,160 600,260 Q670,360 560,440 Q450,520 320,410 Q190,300 400,300Z" />
@@ -51,7 +50,7 @@ function TopoPattern() {
 function WavePattern() {
   return (
     <svg width="100%" height="100%" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
-      <g fill="none" stroke={PATTERN_COLOR} strokeWidth={STROKE} transform="translate(0, -100)">
+      <g fill="none" stroke="var(--df-pattern)" strokeWidth={STROKE} transform="translate(0, -100)">
         <polyline points="0,300 50,300 50,260 100,260 100,290 150,290 150,240 200,240 200,270 250,270 250,220 300,220 300,260 350,260 350,200 400,200 400,250 450,250 450,190 500,190 500,230 550,230 550,180 600,180 600,220 650,220 650,170 700,170 700,210 750,210 750,160 800,160" />
         <polyline points="0,380 50,380 50,350 100,350 100,370 150,370 150,330 200,330 200,360 250,360 250,310 300,310 300,350 350,350 350,290 400,290 400,340 450,340 450,280 500,280 500,320 550,320 550,270 600,270 600,310 650,310 650,260 700,260 700,300 750,300 750,250 800,250" />
         <polyline points="0,460 50,460 50,440 100,440 100,450 150,450 150,420 200,420 200,440 250,440 250,400 300,400 300,430 350,430 350,380 400,380 400,420 450,420 450,370 500,370 500,400 550,400 550,360 600,360 600,390 650,390 650,350 700,350 700,380 750,380 750,340 800,340" />
@@ -60,15 +59,15 @@ function WavePattern() {
         <line x1="0" y1="520" x2="800" y2="520" strokeDasharray="2 8" strokeWidth="0.6" />
         <line x1="30" y1="140" x2="30" y2="510" strokeDasharray="3 5" strokeWidth="0.5" />
         <line x1="770" y1="80" x2="770" y2="510" strokeDasharray="3 5" strokeWidth="0.5" />
-        <circle cx="100" cy="260" r="3" fill={PATTERN_COLOR} />
-        <circle cx="250" cy="220" r="3" fill={PATTERN_COLOR} />
-        <circle cx="400" cy="200" r="3" fill={PATTERN_COLOR} />
-        <circle cx="550" cy="180" r="3" fill={PATTERN_COLOR} />
-        <circle cx="700" cy="170" r="3" fill={PATTERN_COLOR} />
-        <circle cx="320" cy="120" r="2.5" fill={PATTERN_COLOR} />
-        <circle cx="560" cy="100" r="2.5" fill={PATTERN_COLOR} />
+        <circle cx="100" cy="260" r="3" fill="var(--df-pattern)" />
+        <circle cx="250" cy="220" r="3" fill="var(--df-pattern)" />
+        <circle cx="400" cy="200" r="3" fill="var(--df-pattern)" />
+        <circle cx="550" cy="180" r="3" fill="var(--df-pattern)" />
+        <circle cx="700" cy="170" r="3" fill="var(--df-pattern)" />
+        <circle cx="320" cy="120" r="2.5" fill="var(--df-pattern)" />
+        <circle cx="560" cy="100" r="2.5" fill="var(--df-pattern)" />
       </g>
-      <g fontFamily="'JetBrains Mono', monospace" fontSize="7" fill={LABEL_COLOR} letterSpacing="0.05em">
+      <g fontFamily="'JetBrains Mono', monospace" fontSize="7" fill="var(--df-label)" letterSpacing="0.05em">
         <text x="105" y="252">[SIGNAL_PULL]</text>
         <text x="405" y="192">[SCRAPE_LATENCY: 0.12s]</text>
         <text x="555" y="172">[NODE_ACTIVE]</text>
@@ -87,15 +86,15 @@ function GridPattern() {
     <svg width="100%" height="100%" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
       <defs>
         <pattern id="bg-smallGrid" width="20" height="20" patternUnits="userSpaceOnUse">
-          <path d="M 20 0 L 0 0 0 20" fill="none" stroke={PATTERN_COLOR} strokeWidth="0.5" />
+          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="var(--df-pattern)" strokeWidth="0.5" />
         </pattern>
         <pattern id="bg-largeGrid" width="100" height="100" patternUnits="userSpaceOnUse">
           <rect width="100" height="100" fill="url(#bg-smallGrid)" />
-          <path d="M 100 0 L 0 0 0 100" fill="none" stroke={PATTERN_COLOR} strokeWidth={STROKE} />
+          <path d="M 100 0 L 0 0 0 100" fill="none" stroke="var(--df-pattern)" strokeWidth={STROKE} />
         </pattern>
       </defs>
       <rect width="100%" height="100%" fill="url(#bg-largeGrid)" />
-      <g stroke={PATTERN_COLOR} strokeWidth={STROKE}>
+      <g stroke="var(--df-pattern)" strokeWidth={STROKE}>
         <line x1="380" y1="280" x2="420" y2="280" />
         <line x1="400" y1="260" x2="400" y2="300" />
         <circle cx="400" cy="280" r="12" fill="none" />
@@ -112,7 +111,7 @@ function GridPattern() {
         <line x1="675" y1="445" x2="675" y2="475" />
         <circle cx="675" cy="460" r="6" fill="none" />
       </g>
-      <g fontFamily="'JetBrains Mono', monospace" fontSize="7" fill={LABEL_COLOR} letterSpacing="0.05em">
+      <g fontFamily="'JetBrains Mono', monospace" fontSize="7" fill="var(--df-label)" letterSpacing="0.05em">
         <text x="415" y="275">[X: 42.08, Y: 108.92]</text>
         <text x="615" y="175">[X: 78.31, Y: 54.60]</text>
         <text x="205" y="415">[X: 12.50, Y: 162.40]</text>
@@ -126,7 +125,7 @@ function GridPattern() {
 function GaugePattern() {
   return (
     <svg width="100%" height="100%" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
-      <g fill="none" stroke={PATTERN_COLOR} strokeWidth={STROKE}>
+      <g fill="none" stroke="var(--df-pattern)" strokeWidth={STROKE}>
         <path d="M200,400 A150,150 0 0,1 350,250" />
         <path d="M200,400 A180,180 0 0,1 380,220" />
         <path d="M200,400 A210,210 0 0,1 410,190" />
@@ -159,6 +158,7 @@ function GaugePattern() {
 
 export default function DynamicBackground() {
   const { scrollYProgress } = useScroll();
+  const { theme } = useTheme();
 
   // Opacity crossfades
   const opacity1 = useTransform(scrollYProgress, [0, 0.2, 0.3], [1, 1, 0]);
@@ -200,8 +200,12 @@ export default function DynamicBackground() {
 
   return (
     <div
-      className="fixed inset-0 w-full h-full -z-10 bg-white pointer-events-none overflow-hidden"
+      className="fixed inset-0 w-full h-full -z-10 bg-white dark:bg-zinc-900 pointer-events-none overflow-hidden transition-colors duration-200"
       aria-hidden="true"
+      style={{
+        '--df-pattern': theme === 'dark' ? '#52525b' : '#D4D4D4',
+        '--df-label': theme === 'dark' ? '#52525b' : '#D8D8D8',
+      }}
     >
       {layers.map(({ Component, opacity }, i) => (
         <motion.div

@@ -48,6 +48,9 @@ class User(SQLModel, table=True):
     # Configurable AI assistant name — user sets this in Settings.
     agent_name: str = Field(default="Drive Fetch Expert")
 
+    # User's preferred UI theme — synced from frontend ThemeContext.
+    theme: str = Field(default="light")
+
     saved_listings: List["SavedListing"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"}

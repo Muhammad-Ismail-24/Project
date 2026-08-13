@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, Link, NavLink, useLocation } from 'react-router-dom';
 import { Menu, X, Bookmark, Settings, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 
 const NAV_LINKS = [
   { to: '/', label: 'DISCOVER' },
@@ -12,6 +13,10 @@ const NAV_LINKS = [
 ];
 
 export default function MainLayout() {
+  return <MainLayoutInner />;
+}
+
+function MainLayoutInner() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -117,16 +122,17 @@ export default function MainLayout() {
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col bg-df-white text-df-black font-body selection:bg-df-black selection:text-df-white">
+    <ThemeProvider user={user}>
+    <div className="relative min-h-screen flex flex-col bg-df-white dark:bg-zinc-900 text-df-black dark:text-zinc-100 font-body selection:bg-df-black selection:text-df-white dark:selection:bg-white dark:selection:text-black transition-colors duration-200">
 
       {/* ═══ HEADER ═══ */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-df-white border-b-[3px] border-df-black">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-df-white dark:bg-zinc-900 border-b-[3px] border-df-black dark:border-white transition-colors duration-200">
         <div className="w-full px-5 sm:px-8 lg:px-12 h-16 sm:h-[72px] flex items-center justify-between">
 
           {/* Logo */}
           <Link
             to="/"
-            className="font-mono text-lg sm:text-xl font-bold tracking-tight text-df-black hover:text-df-red transition-none select-none whitespace-nowrap"
+            className="font-mono text-lg sm:text-xl font-bold tracking-tight text-df-black dark:text-zinc-100 hover:text-df-red transition-none select-none whitespace-nowrap"
           >
             [ DRIVEFETCH ]
           </Link>
@@ -136,7 +142,7 @@ export default function MainLayout() {
             {NAV_LINKS.map((link, i) => (
               <React.Fragment key={link.to}>
                 {i > 0 && (
-                  <span className="text-df-black/25 font-light select-none mx-1">|</span>
+                  <span className="text-df-black/25 dark:text-white/25 font-light select-none mx-1">|</span>
                 )}
                 <NavLink
                   to={link.to}
@@ -144,8 +150,8 @@ export default function MainLayout() {
                   className={({ isActive }) =>
                     `px-3 py-1.5 font-mono text-xs font-bold tracking-[0.08em] transition-none ` +
                     (isActive
-                      ? 'bg-df-black text-df-white'
-                      : 'text-df-black hover:bg-df-black hover:text-df-white')
+                      ? 'bg-df-black text-df-white dark:bg-white dark:text-black'
+                      : 'text-df-black dark:text-zinc-100 hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black')
                   }
                 >
                   {link.label}
@@ -154,27 +160,30 @@ export default function MainLayout() {
             ))}
           </nav>
 
-          {/* Right side: Auth + Mobile toggle */}
+          {/* Right side: Theme Toggle + Auth + Mobile toggle */}
           <div className="flex items-center gap-3">
+            {/* Theme Toggle */}
+            <ThemeToggleButton />
+
             {/* Auth Button */}
             {isLoading ? (
-              <div className="w-7 h-7 border-2 border-df-black/30 border-t-df-black animate-spin" />
+              <div className="w-7 h-7 border-2 border-df-black/30 dark:border-white/30 border-t-df-black dark:border-t-white animate-spin" />
             ) : !isAuthenticated || !user ? (
               <button
                 onClick={() => window.location.href = '/auth/login'}
-                className="hidden sm:flex items-center px-4 py-2 border-brutal text-df-black bg-df-white font-mono text-xs font-bold tracking-wide shadow-brutal-sm hover:bg-df-black hover:text-df-white hover:shadow-none transition-none whitespace-nowrap"
+                className="hidden sm:flex items-center px-4 py-2 border-brutal text-df-black dark:text-zinc-100 bg-df-white dark:bg-zinc-900 font-mono text-xs font-bold tracking-wide shadow-brutal-sm dark:shadow-[3px_3px_0px_0px_#ffffff] hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black hover:shadow-none transition-none whitespace-nowrap"
               >
                 Google Sign-In
               </button>
             ) : (
               <button
                 onClick={() => setIsPreferencesOpen(true)}
-                className="flex items-center gap-2 px-3 py-1.5 border-brutal bg-df-black text-df-white font-mono text-xs font-bold tracking-wide hover:shadow-[3px_3px_0px_#E5202E] transition-none"
+                className="flex items-center gap-2 px-3 py-1.5 border-brutal bg-df-black dark:bg-white text-df-white dark:text-black font-mono text-xs font-bold tracking-wide hover:shadow-[3px_3px_0px_#E5202E] transition-none"
               >
                 {user.picture ? (
-                  <img src={user.picture} alt={user.name} className="w-6 h-6 object-cover border border-df-white/30" />
+                  <img src={user.picture} alt={user.name} className="w-6 h-6 object-cover border border-df-white/30 dark:border-black/30" />
                 ) : (
-                  <span className="w-6 h-6 bg-df-white text-df-black flex items-center justify-center text-[10px] font-bold">
+                  <span className="w-6 h-6 bg-df-white dark:bg-black text-df-black dark:text-white flex items-center justify-center text-[10px] font-bold">
                     {user.name?.charAt(0) || 'U'}
                   </span>
                 )}
@@ -185,7 +194,7 @@ export default function MainLayout() {
             {/* Mobile Hamburger */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 border-brutal-thin hover:bg-df-black hover:text-df-white transition-none"
+              className="md:hidden p-2 border-brutal-thin hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black transition-none"
               aria-label="Toggle menu"
             >
               {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -195,17 +204,17 @@ export default function MainLayout() {
 
         {/* ── Mobile Menu Dropdown ── */}
         {isMobileMenuOpen && (
-          <div className="md:hidden bg-df-white border-t-2 border-df-black">
+          <div className="md:hidden bg-df-white dark:bg-zinc-900 border-t-2 border-df-black dark:border-white">
             {NAV_LINKS.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
                 end={link.to === '/'}
                 className={({ isActive }) =>
-                  `block px-6 py-4 font-mono text-sm font-bold tracking-[0.08em] border-b border-df-black/10 transition-none ` +
+                  `block px-6 py-4 font-mono text-sm font-bold tracking-[0.08em] border-b border-df-black/10 dark:border-white/10 transition-none ` +
                   (isActive
-                    ? 'bg-df-black text-df-white'
-                    : 'text-df-black hover:bg-df-black hover:text-df-white')
+                    ? 'bg-df-black text-df-white dark:bg-white dark:text-black'
+                    : 'text-df-black dark:text-zinc-100 hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black')
                 }
               >
                 {link.label}
@@ -215,7 +224,7 @@ export default function MainLayout() {
             {!isAuthenticated && (
               <button
                 onClick={() => window.location.href = '/auth/login'}
-                className="w-full px-6 py-4 text-left font-mono text-sm font-bold tracking-wide text-df-black border-b border-df-black/10 hover:bg-df-black hover:text-df-white transition-none"
+                className="w-full px-6 py-4 text-left font-mono text-sm font-bold tracking-wide text-df-black dark:text-zinc-100 border-b border-df-black/10 dark:border-white/10 hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black transition-none"
               >
                 GOOGLE SIGN-IN →
               </button>
@@ -234,7 +243,7 @@ export default function MainLayout() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsPreferencesOpen(false)}
-              className="fixed inset-0 z-[60] bg-df-black/20 backdrop-blur-sm"
+              className="fixed inset-0 z-[60] bg-df-black/20 dark:bg-black/40 backdrop-blur-sm"
             />
             {/* Slide-over Panel */}
             <motion.div
@@ -242,13 +251,13 @@ export default function MainLayout() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 bottom-0 z-[70] w-full max-w-sm bg-df-white bg-[linear-gradient(to_right,#e5e7eb_1px,transparent_1px),linear-gradient(to_bottom,#e5e7eb_1px,transparent_1px)] bg-[size:20px_20px] border-l-4 border-df-black shadow-[-10px_0_0_rgba(0,0,0,0.1)] flex flex-col"
+              className="fixed top-0 right-0 bottom-0 z-[70] w-full max-w-sm bg-df-white dark:bg-zinc-900 bg-[linear-gradient(to_right,#e5e7eb_1px,transparent_1px),linear-gradient(to_bottom,#e5e7eb_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#3f3f46_1px,transparent_1px),linear-gradient(to_bottom,#3f3f46_1px,transparent_1px)] bg-[size:20px_20px] border-l-4 border-df-black dark:border-white shadow-[-10px_0_0_rgba(0,0,0,0.1)] dark:shadow-[-10px_0_0_rgba(255,255,255,0.05)] flex flex-col"
             >
-              <div className="flex items-center justify-between p-6 border-b-4 border-df-black flex-shrink-0">
-                <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-df-black mt-1">ACCOUNT</h2>
+              <div className="flex items-center justify-between p-6 border-b-4 border-df-black dark:border-white flex-shrink-0">
+                <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-df-black dark:text-zinc-100 mt-1">ACCOUNT</h2>
                 <button
                   onClick={() => setIsPreferencesOpen(false)}
-                  className="p-2 border-2 border-df-black hover:bg-df-black hover:text-df-white transition-none"
+                  className="p-2 border-2 border-df-black dark:border-white hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black transition-none"
                 >
                   <X className="w-6 h-6" strokeWidth={2.5} />
                 </button>
@@ -256,19 +265,19 @@ export default function MainLayout() {
 
               <div className="p-6 flex-1 flex flex-col gap-6 overflow-y-auto">
                 {user && (
-                  <div className="border-b-2 border-df-black/10 pb-6">
-                    <p className="font-mono text-[10px] font-bold text-df-black/40 tracking-[0.14em] uppercase mb-1">
+                  <div className="border-b-2 border-df-black/10 dark:border-white/10 pb-6">
+                    <p className="font-mono text-[10px] font-bold text-df-black/40 dark:text-white/40 tracking-[0.14em] uppercase mb-1">
                       ACTIVE USER
                     </p>
-                    <p className="font-body text-lg font-bold text-df-black">{user.name}</p>
-                    <p className="font-mono text-xs text-df-black/60">{user.email}</p>
+                    <p className="font-body text-lg font-bold text-df-black dark:text-zinc-100">{user.name}</p>
+                    <p className="font-mono text-xs text-df-black/60 dark:text-white/60">{user.email}</p>
                   </div>
                 )}
 
                 <Link
                   to="/saved"
                   onClick={() => setIsPreferencesOpen(false)}
-                  className="bg-white text-black border-2 border-black font-bold uppercase py-3 px-4 w-full flex items-center justify-center gap-2 transition-all hover:bg-red-600 hover:text-white hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                  className="bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white font-bold uppercase py-3 px-4 w-full flex items-center justify-center gap-2 transition-all hover:bg-red-600 hover:text-white hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]"
                 >
                   <Bookmark className="w-5 h-5" strokeWidth={2} />
                   Saved Vehicles
@@ -276,7 +285,7 @@ export default function MainLayout() {
                 
                 {/* ── Chatbot Name Setting ── */}
                 <div className="flex flex-col gap-2 mt-2">
-                  <label className="font-mono text-[10px] font-bold text-df-black/40 tracking-[0.14em] uppercase">
+                  <label className="font-mono text-[10px] font-bold text-df-black/40 dark:text-white/40 tracking-[0.14em] uppercase">
                     [ AI ASSISTANT NAME ]
                   </label>
                   <div className="flex">
@@ -285,46 +294,34 @@ export default function MainLayout() {
                       placeholder="e.g. JARVIS"
                       value={assistantName}
                       onChange={(e) => setAssistantName(e.target.value)}
-                      className="flex-1 bg-df-white border-2 border-df-black px-3 py-2 font-mono text-xs font-bold text-df-black focus:outline-none focus:ring-2 focus:ring-df-red"
+                      className="flex-1 bg-df-white dark:bg-black border-2 border-df-black dark:border-white px-3 py-2 font-mono text-xs font-bold text-df-black dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-df-red"
                     />
                     <button 
                       onClick={async () => {
                         try {
-                          await fetch('/api/user/preferences', { 
+                          await fetch('/user/preferences', { 
                             method: 'PATCH', 
+                            credentials: 'include',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ bot_name: assistantName }) 
                           });
                         } catch(e) { console.error("Failed to save bot name"); }
                       }}
-                      className="bg-df-red text-df-white border-2 border-l-0 border-df-black px-4 font-mono text-xs font-bold hover:bg-df-black transition-colors"
+                      className="bg-df-red text-df-white border-2 border-l-0 border-df-black dark:border-white px-4 font-mono text-xs font-bold hover:bg-df-black dark:hover:bg-white dark:hover:text-black transition-colors"
                     >
                       [ SAVE ]
                     </button>
                   </div>
                 </div>
 
-                {/* ── Theme Toggler ── */}
-                <div className="flex flex-col gap-2 mt-2">
-                  <label className="font-mono text-[10px] font-bold text-df-black/40 tracking-[0.14em] uppercase">
-                    [ INTERFACE THEME ]
-                  </label>
-                  <div className="flex border-2 border-df-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                    <button className="flex-1 bg-df-black text-df-white py-2 font-mono text-xs font-bold transition-none">
-                      [ LIGHT ]
-                    </button>
-                    <button className="flex-1 bg-df-white text-df-black py-2 font-mono text-xs font-bold border-l-2 border-df-black hover:bg-df-grey transition-none">
-                      [ DARK ]
-                    </button>
-                  </div>
-                </div>
+                {/* Theme Toggler removed — now lives in the header via ThemeToggleButton */}
 
               </div>
 
-              <div className="p-6 border-t-2 border-df-black mt-auto bg-df-grey flex-shrink-0">
+              <div className="p-6 border-t-2 border-df-black dark:border-white mt-auto bg-df-grey dark:bg-black flex-shrink-0">
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-center gap-2 p-4 bg-df-white text-df-black border-2 border-df-black hover:bg-df-red hover:text-df-white transition-none font-mono font-bold tracking-wide uppercase"
+                  className="w-full flex items-center justify-center gap-2 p-4 bg-df-white dark:bg-zinc-900 text-df-black dark:text-zinc-100 border-2 border-df-black dark:border-white hover:bg-df-red hover:text-df-white transition-none font-mono font-bold tracking-wide uppercase"
                 >
                   <LogOut className="w-4 h-4" strokeWidth={2} />
                   Terminate Session
@@ -336,22 +333,23 @@ export default function MainLayout() {
       </AnimatePresence>
 
       {/* ═══ MAIN CONTENT ═══ */}
-      <main className="relative z-10 pt-16 sm:pt-[72px] flex-grow flex flex-col">
+      <main className="relative z-10 pt-16 sm:pt-[72px] flex-grow flex flex-col bg-transparent">
         <Outlet context={{ user, isAuthenticated, isLoading, assistantName, setAssistantName }} />
       </main>
 
       {/* ═══ FOOTER ═══ */}
       {location.pathname !== '/chat' && <BrutalistFooter />}
     </div>
+    </ThemeProvider>
   );
 }
 
 function BrutalistFooter() {
   return (
-    <footer className="relative z-[50] border-t-2 border-df-black bg-df-white mt-auto">
+    <footer className="relative z-[50] border-t-2 border-df-black dark:border-white bg-df-white dark:bg-zinc-900 mt-auto transition-colors duration-200">
       <div className="w-full max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-12 py-6 sm:py-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 md:gap-4">
-          <div className="font-mono text-[10px] sm:text-xs font-bold tracking-[0.06em] text-df-black/50">
+          <div className="font-mono text-[10px] sm:text-xs font-bold tracking-[0.06em] text-df-black/50 dark:text-white/50">
             [ DRIVEFETCH // ALL RIGHTS RESERVED ]
           </div>
           <nav className="flex flex-wrap items-center gap-x-1 gap-y-2">
@@ -366,21 +364,38 @@ function BrutalistFooter() {
                   href={link.href}
                   target={link.href.startsWith('http') ? '_blank' : undefined}
                   rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
-                  className="font-mono text-[10px] sm:text-xs font-bold tracking-[0.06em] text-df-black bg-transparent hover:bg-df-black hover:text-df-white px-2 py-1 transition-none"
+                  className="font-mono text-[10px] sm:text-xs font-bold tracking-[0.06em] text-df-black dark:text-zinc-100 bg-transparent hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black px-2 py-1 transition-none"
                 >
                   {link.label}
                 </a>
                 {i < arr.length - 1 && (
-                  <span className="text-df-black/15 font-light mx-0.5 select-none">|</span>
+                  <span className="text-df-black/15 dark:text-white/15 font-light mx-0.5 select-none">|</span>
                 )}
               </span>
             ))}
           </nav>
-          <div className="font-mono text-[10px] sm:text-xs tracking-[0.06em] text-df-black/25">
+          <div className="font-mono text-[10px] sm:text-xs tracking-[0.06em] text-df-black/25 dark:text-white/25">
             BUILD_VER: 2.0.4_BRUTALIST
           </div>
         </div>
       </div>
     </footer>
+  );
+}
+
+/**
+ * ThemeToggleButton — Minimalist brutalist toggle for the header.
+ * Displays [☾ DARK] or [☀ LIGHT] depending on the current theme.
+ */
+function ThemeToggleButton() {
+  const { theme, toggleTheme } = useTheme();
+  return (
+    <button
+      onClick={toggleTheme}
+      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+      className="border-2 border-black dark:border-white px-2 py-1 font-mono text-xs font-bold uppercase tracking-[0.04em] hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] transition-all"
+    >
+      {theme === 'dark' ? '[ ☀ LIGHT ]' : '[ ☾ DARK ]'}
+    </button>
   );
 }

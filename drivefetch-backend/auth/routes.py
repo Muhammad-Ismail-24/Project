@@ -93,7 +93,9 @@ async def get_current_user(request: Request, db: Session = Depends(get_session))
         "id": user.id,
         "email": user.email,
         "name": user.name,
-        "picture": user.picture
+        "picture": user.picture,
+        "theme": user.theme,
+        "bot_name": user.agent_name,
     }
 
 @router.get("/logout")

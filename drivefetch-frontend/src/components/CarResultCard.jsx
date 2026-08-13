@@ -35,17 +35,17 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
   
   if (!hasCoreFields) {
     return (
-      <div className={`border-2 border-black bg-white p-4 sm:p-6 flex flex-col md:flex-row gap-6 transition-transform duration-200 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] animate-pulse`}>
-        <div className="w-full md:w-1/3 aspect-[4/3] bg-black/10 flex-shrink-0 border-b-2 md:border-b-0 md:border-r-2 border-black/10"></div>
+      <div className={`border-2 border-black dark:border-white bg-white dark:bg-zinc-900 p-4 sm:p-6 flex flex-col md:flex-row gap-6 transition-transform duration-200 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,1)] animate-pulse`}>
+        <div className="w-full md:w-1/3 aspect-[4/3] bg-black/10 dark:bg-white/10 flex-shrink-0 border-b-2 md:border-b-0 md:border-r-2 border-black/10"></div>
         <div className="w-full md:w-2/3 flex flex-col gap-4">
-          <div className="w-2/3 h-8 bg-black/10"></div>
-          <div className="w-1/4 h-8 bg-black/10"></div>
+          <div className="w-2/3 h-8 bg-black/10 dark:bg-white/10"></div>
+          <div className="w-1/4 h-8 bg-black/10 dark:bg-white/10"></div>
           <div className="flex gap-2">
-            <div className="w-16 h-6 bg-black/10 border border-black"></div>
-            <div className="w-16 h-6 bg-black/10 border border-black"></div>
-            <div className="w-16 h-6 bg-black/10 border border-black"></div>
+            <div className="w-16 h-6 bg-black/10 dark:bg-white/10 border border-black dark:border-white"></div>
+            <div className="w-16 h-6 bg-black/10 dark:bg-white/10 border border-black dark:border-white"></div>
+            <div className="w-16 h-6 bg-black/10 dark:bg-white/10 border border-black dark:border-white"></div>
           </div>
-          <div className="w-full h-12 bg-black/10 mt-auto border-2 border-black"></div>
+          <div className="w-full h-12 bg-black/10 dark:bg-white/10 mt-auto border-2 border-black dark:border-white"></div>
         </div>
       </div>
     );
@@ -130,12 +130,12 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
   };
 
   return (
-    <div className={`border-2 border-black bg-white p-4 sm:p-6 flex flex-col md:flex-row gap-6 transition-transform duration-200 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] ${
-      isHighlighted ? 'ring-4 ring-df-red shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]' : ''
+    <div className={`border-2 border-black dark:border-white bg-white dark:bg-zinc-900 p-4 sm:p-6 flex flex-col md:flex-row gap-6 transition-transform duration-200 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0px_0px_rgba(255,255,255,1)] ${
+      isHighlighted ? 'ring-4 ring-df-red shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,1)]' : ''
     }`}>
       
       {/* ── Left: Image Container ── */}
-      <div className="w-full md:w-1/3 aspect-video md:aspect-[4/3] relative overflow-hidden flex-shrink-0 border-b-2 md:border-b-0 md:border-r-2 border-black bg-gray-100 flex items-center justify-center">
+      <div className="w-full md:w-1/3 aspect-video md:aspect-[4/3] relative overflow-hidden flex-shrink-0 border-b-2 md:border-b-0 md:border-r-2 border-black dark:border-white bg-gray-100 dark:bg-zinc-800 flex items-center justify-center">
         {(car?.image_url || car?.images?.[0]) ? (
           <img 
             src={car.image_url || car.images[0]} 
@@ -150,17 +150,17 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
         ) : null}
         
         {/* Fallback (shown if no image or error) */}
-        <div className={`w-full h-full items-center justify-center text-black font-mono text-xs font-bold tracking-widest text-center uppercase p-4 ${(car?.image_url || car?.images?.[0]) ? 'hidden' : 'flex'}`}>
+        <div className={`w-full h-full items-center justify-center text-black dark:text-zinc-100 font-mono text-xs font-bold tracking-widest text-center uppercase p-4 ${(car?.image_url || car?.images?.[0]) ? 'hidden' : 'flex'}`}>
           [ NO IMAGE PROVIDED ]
         </div>
 
         {car?.platform && (
-          <div className="absolute top-3 left-3 bg-black text-white text-[10px] sm:text-xs font-mono font-bold px-3 py-1 border border-black uppercase tracking-wider shadow-sm">
+          <div className="absolute top-3 left-3 bg-black text-white text-[10px] sm:text-xs font-mono font-bold px-3 py-1 border border-black dark:border-white uppercase tracking-wider shadow-sm">
             {car.platform}
           </div>
         )}
         
-        <div className="absolute top-3 right-3 z-10 bg-white border border-black shadow-[2px_2px_0px_#000000]">
+        <div className="absolute top-3 right-3 z-10 bg-white dark:bg-zinc-900 border border-black dark:border-white shadow-[2px_2px_0px_#000000] dark:shadow-[2px_2px_0px_#ffffff]">
           <SaveCarButton 
             listingId={car?.id} 
             platform={car?.platform ?? ''} 
@@ -174,11 +174,11 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
       {/* ── Right: Data Content ── */}
       <div className="w-full md:w-2/3 flex flex-col">
         <div className="flex flex-col sm:flex-row justify-between items-start mb-4 gap-4">
-          <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight text-black leading-none line-clamp-2">
+          <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight text-black dark:text-zinc-100 leading-none line-clamp-2">
             {car?.title || 'UNKNOWN VEHICLE'}
           </h2>
           <div className="text-left sm:text-right shrink-0">
-            <p className="text-xl font-bold bg-gray-100 px-3 py-1 inline-block whitespace-nowrap">
+            <p className="text-xl font-bold bg-gray-100 dark:bg-zinc-800 px-3 py-1 inline-block whitespace-nowrap">
               {priceDisplay}
             </p>
             {liquidityScore && (
@@ -197,10 +197,10 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
 
         {/* Specs Badges */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          {car?.year && <span className="text-xs font-mono border border-black px-2 py-1 flex items-center bg-white"><Calendar className="w-3 h-3 mr-1.5"/> {car.year}</span>}
-          {mileageDisplay && <span className="text-xs font-mono border border-black px-2 py-1 flex items-center bg-white"><Gauge className="w-3 h-3 mr-1.5"/> {mileageDisplay}</span>}
-          {car?.city && <span className="text-xs font-mono border border-black px-2 py-1 flex items-center bg-white"><MapPin className="w-3 h-3 mr-1.5"/> {car.city}</span>}
-          {car?.source && <span className="text-xs font-mono border border-black px-2 py-1 bg-white uppercase">SRC: {car.source}</span>}
+          {car?.year && <span className="text-xs font-mono border border-black dark:border-white px-2 py-1 flex items-center bg-white dark:bg-zinc-900"><Calendar className="w-3 h-3 mr-1.5"/> {car.year}</span>}
+          {mileageDisplay && <span className="text-xs font-mono border border-black dark:border-white px-2 py-1 flex items-center bg-white dark:bg-zinc-900"><Gauge className="w-3 h-3 mr-1.5"/> {mileageDisplay}</span>}
+          {car?.city && <span className="text-xs font-mono border border-black dark:border-white px-2 py-1 flex items-center bg-white dark:bg-zinc-900"><MapPin className="w-3 h-3 mr-1.5"/> {car.city}</span>}
+          {car?.source && <span className="text-xs font-mono border border-black dark:border-white px-2 py-1 bg-white dark:bg-zinc-900 uppercase">SRC: {car.source}</span>}
         </div>
 
         {/* Instant Heuristic Tags & AI Warning Flags */}
@@ -227,28 +227,28 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
 
         {/* ── AI Appraisal Results ── */}
         {aiData && justification && (
-          <div className="mb-6 bg-gray-50 border border-black p-4">
+          <div className="mb-6 bg-gray-50 dark:bg-zinc-800 border border-black dark:border-white p-4">
             <div className="mb-4">
               <span className="bg-red-600 text-white font-bold uppercase px-2 py-1 inline-block border-2 border-black font-mono text-[10px] sm:text-xs tracking-widest shadow-[2px_2px_0px_#000000] flex items-center gap-1.5 w-max">
                 <TrendingUp className="w-3.5 h-3.5" />
                 [ AI APPRAISAL ]
               </span>
             </div>
-            <p className="text-sm font-body font-semibold text-black leading-relaxed border-l-4 border-red-600 pl-4 ml-1">
+            <p className="text-sm font-body font-semibold text-black dark:text-zinc-100 leading-relaxed border-l-4 border-red-600 pl-4 ml-1">
               {justification}
             </p>
           </div>
         )}
 
         {/* Footer Area: Buttons */}
-        <div className="mt-auto pt-6 flex flex-col sm:flex-row items-stretch sm:items-end justify-end gap-3 sm:gap-4 border-t-2 border-black border-dashed">
+        <div className="mt-auto pt-6 flex flex-col sm:flex-row items-stretch sm:items-end justify-end gap-3 sm:gap-4 border-t-2 border-black dark:border-white border-dashed">
           
           {!aiData && (
             <div className="flex-grow sm:flex-grow-0 flex flex-col items-end">
               <button
                 onClick={handleEvaluate}
                 disabled={isEvaluating}
-                className="w-full sm:w-auto border-2 border-black bg-red-600 text-white font-bold uppercase px-4 py-2 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none flex items-center justify-center gap-2 whitespace-nowrap"
+                className="w-full sm:w-auto border-2 border-black dark:border-white bg-red-600 text-white font-bold uppercase px-4 py-2 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none flex items-center justify-center gap-2 whitespace-nowrap"
               >
                 {isEvaluating ? (
                   <>
@@ -272,7 +272,7 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
             href={car?.listing_url || car?.url || '#'}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full sm:w-auto border-2 border-black bg-white text-black font-bold uppercase px-4 py-2 hover:bg-black hover:text-white transition-colors flex items-center justify-center gap-2 whitespace-nowrap active:translate-y-[2px] active:translate-x-[2px]"
+            className="w-full sm:w-auto border-2 border-black dark:border-white bg-white dark:bg-zinc-900 text-black dark:text-zinc-100 font-bold uppercase px-4 py-2 hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black transition-colors flex items-center justify-center gap-2 whitespace-nowrap active:translate-y-[2px] active:translate-x-[2px]"
           >
             <span>[ VIEW ORIGINAL AD ]</span>
             <ExternalLink className="w-4 h-4" />
