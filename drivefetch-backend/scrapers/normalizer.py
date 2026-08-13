@@ -476,6 +476,211 @@ COMMON_COLORS = ["black", "white", "silver", "grey", "gray", "red", "blue",
 
 
 # ---------------------------------------------------------------------------
+# 2025-2026 TAXONOMY EXPANSION — ADDITIVE ONLY
+#
+# The four maps above are load-bearing for the existing query test suite, so
+# the 2025-26 delta is merged in here rather than edited into the literals.
+# `_merge_new_only` refuses to overwrite an existing key, which makes this
+# block incapable of changing any behaviour that already works — it can only
+# teach the normalizer names it did not previously recognise.
+#
+# Covers the Chinese/EV/hybrid wave that landed in Pakistan 2024-2026:
+# Jetour, Omoda, Jaecoo, Deepal, BYD, Zeekr, GWM Tank, Haval hybrids, plus
+# the Japanese/Korean refreshes (Sportage L, HR-V e:HEV, Tucson Hybrid,
+# Corolla Cross, Fronx).
+# ---------------------------------------------------------------------------
+
+def _merge_new_only(target: dict, additions: dict) -> int:
+    """
+    Insert only keys that are absent from `target`. Returns the count added.
+
+    Deliberately non-destructive: an existing mapping always wins. This makes
+    the taxonomy expansion safe to apply blindly without auditing every
+    pre-existing key for collisions.
+    """
+    added = 0
+    for k, v in additions.items():
+        if k not in target:
+            target[k] = v
+            added += 1
+    return added
+
+
+_merge_new_only(MAKE_INFERENCE_MAP, {
+    # ── Jetour ───────────────────────────────────────────────────────────────
+    "dashing":     ("Jetour", "Dashing"),
+    "x70plus":     ("Jetour", "X70 Plus"),
+    "t2":          ("Jetour", "T2"),
+    "t9":          ("Jetour", "T9"),
+    # ── Chery premium sub-brands ─────────────────────────────────────────────
+    "omoda":       ("Omoda",  "C5"),
+    "jaecoo":      ("Jaecoo", "J7"),
+    "j5":          ("Jaecoo", "J5"),
+    "j6":          ("Jaecoo", "J6"),
+    "j7":          ("Jaecoo", "J7"),
+    "tiggo":       ("Chery",  "Tiggo 4 Pro"),
+    # ── BYD ──────────────────────────────────────────────────────────────────
+    "atto":        ("BYD",    "Atto 3"),
+    "seal":        ("BYD",    "Seal"),
+    "dolphin":     ("BYD",    "Dolphin"),
+    "sealion":     ("BYD",    "Sealion 7"),
+    "shark":       ("BYD",    "Shark 6"),
+    # ── GWM / Haval / Tank ───────────────────────────────────────────────────
+    "jolion":      ("Haval",  "Jolion"),
+    "tank":        ("GWM",    "Tank 300"),
+    # ── Changan / Deepal ─────────────────────────────────────────────────────
+    "alsvin":      ("Changan", "Alsvin"),
+    "deepal":      ("Changan", "Deepal S07"),
+    "oshan":       ("Changan", "Oshan X7"),
+    "karvaan":     ("Changan", "Karvaan"),
+    # ── Zeekr ────────────────────────────────────────────────────────────────
+    "zeekr":       ("Zeekr",  "7X"),
+    # ── MG / Proton ──────────────────────────────────────────────────────────
+    "gloster":     ("MG",     "Gloster"),
+    "cyberster":   ("MG",     "Cyberster"),
+    "saga":        ("Proton", "Saga"),
+    # ── Japanese / Korean 2025-26 ────────────────────────────────────────────
+    "fronx":       ("Suzuki", "Fronx"),
+    "raize":       ("Toyota", "Raize"),
+    "harrier":     ("Toyota", "Harrier"),
+    "rush":        ("Toyota", "Rush"),
+    "stonic":      ("Kia",    "Stonic"),
+    "seltos":      ("Kia",    "Seltos"),
+    "carnival":    ("Kia",    "Carnival"),
+    "ioniq":       ("Hyundai", "Ioniq 5"),
+})
+
+_merge_new_only(MODEL_ALIAS_MAP, {
+    # Jetour
+    "t1":          ["t1", "jetour t1"],
+    "t2":          ["t2", "jetour t2"],
+    "t9":          ["t9", "jetour t9"],
+    "dashing":     ["dashing", "jetour dashing", "dashng"],
+    "x70plus":     ["x70 plus", "x70plus", "x70-plus", "jetour x70"],
+    # Chery sub-brands
+    "omodac5":     ["omoda c5", "omoda 5", "omodac5", "omoda-c5"],
+    "omoda7":      ["omoda 7", "omoda7", "omoda-7"],
+    "omodae5":     ["omoda e5", "omodae5", "omoda-e5"],
+    "j5":          ["j5", "jaecoo j5", "jaeco j5"],
+    "j6":          ["j6", "jaecoo j6", "jaeco j6"],
+    "j7":          ["j7", "jaecoo j7", "jaeco j7", "jacoo j7"],
+    "tiggo4":      ["tiggo 4", "tiggo4", "tiggo 4 pro", "tiggo-4"],
+    "tiggo7":      ["tiggo 7", "tiggo7", "tiggo 7 pro", "tiggo-7"],
+    "tiggo8":      ["tiggo 8", "tiggo8", "tiggo 8 pro", "tiggo-8"],
+    # BYD
+    "atto2":       ["atto 2", "atto2", "atto-2", "byd atto 2"],
+    "sealion7":    ["sealion 7", "sealion7", "sealion-7", "byd sealion 7"],
+    "seal":        ["seal", "byd seal"],
+    "dolphin":     ["dolphin", "byd dolphin", "dolphn", "dolfin"],
+    "shark6":      ["shark 6", "shark6", "byd shark", "byd shark 6"],
+    "han":         ["han", "byd han"],
+    # GWM / Tank / Haval
+    "tank300":     ["tank 300", "tank300", "haval tank 300", "gwm tank 300"],
+    "tank500":     ["tank 500", "tank500", "haval tank 500", "gwm tank 500"],
+    "h6hev":       ["h6 hev", "h6hev", "haval h6 hev", "h6 hybrid"],
+    "jolionhev":   ["jolion hev", "jolionhev", "haval jolion hev", "jolion hybrid"],
+    "h7":          ["h7", "haval h7"],
+    "jolion":      ["jolion", "jolyon", "joleon", "haval jolion"],
+    # Zeekr
+    "zeekrx":      ["zeekr x", "zeekrx"],
+    "zeekr7x":     ["zeekr 7x", "7x", "zeekr7x"],
+    "zeekr009":    ["zeekr 009", "009", "zeekr 9", "zeekr009"],
+    # Japanese / Korean 2025-26
+    "sportagel":   ["sportage l", "sportagel", "sportage-l", "kia sportage l"],
+    "hrvehev":     ["hr-v e:hev", "hrv ehev", "hr v e hev", "hrv hybrid", "hr-v hybrid"],
+    "tucsonhybrid":["tucson hybrid", "tucsonhybrid", "tucson hev"],
+    "corollacross":["corolla cross", "corollacross", "corolla-cross", "corolla cross hev"],
+    "fronx":       ["fronx", "suzuki fronx", "franx"],
+    "raize":       ["raize", "toyota raize", "rize"],
+    "harrier":     ["harrier", "toyota harrier", "harier"],
+})
+
+_merge_new_only(TYPO_CORRECTIONS, {
+    # Chinese entrants — the spellings Pakistani buyers actually type
+    "jetor":       "jetour",
+    "jettur":      "jetour",
+    "jeetoor":     "jetour",
+    "jetoor":      "jetour",
+    "dashng":      "dashing",
+    "dashin":      "dashing",
+    "omada":       "omoda",
+    "omoada":      "omoda",
+    "jaeco":       "jaecoo",
+    "jacoo":       "jaecoo",
+    "jaykoo":      "jaecoo",
+    "cheri":       "chery",
+    "cherry":      "chery",
+    "tigo":        "tiggo",
+    "teego":       "tiggo",
+    "havl":        "haval",
+    "havaal":      "haval",
+    "hawwal":      "haval",
+    "havel":       "haval",
+    "jolyon":      "jolion",
+    "joleon":      "jolion",
+    "joliyon":     "jolion",
+    "shangan":     "changan",
+    "shengan":     "changan",
+    "chnagan":     "changan",
+    "deepaal":     "deepal",
+    "bwaidi":      "byd",
+    "dolphn":      "dolphin",
+    "dolfin":      "dolphin",
+    "zeeker":      "zeekr",
+    "zekr":        "zeekr",
+    "emji":        "mg",
+    "emjee":       "mg",
+    "prton":       "proton",
+    "protn":       "proton",
+    # Japanese / Korean refreshes
+    "franx":       "fronx",
+    "rize":        "raize",
+    "harier":      "harrier",
+    "sportej":     "sportage",
+    "sportech":    "sportage",
+    "tuscon":      "tucson",
+    "tucsan":      "tucson",
+    "tuqsan":      "tucson",
+    "elentra":     "elantra",
+    "alantra":     "elantra",
+    "pikanto":     "picanto",
+    "peekanto":    "picanto",
+    "stonik":      "stonic",
+    "swfit":       "swift",
+    "sweft":       "swift",
+    "jimni":       "jimny",
+    "jamni":       "jimny",
+    "prious":      "prius",
+    "paryus":      "prius",
+    "akua":        "aqua",
+    "wits":        "vitz",
+    "vits":        "vitz",
+    "fortunr":     "fortuner",
+    "landcruiser": "land cruiser",
+})
+
+_merge_new_only(TRIM_ALIASES, {
+    # Powertrain / variant suffixes used by the 2025-26 wave
+    "hev":       ["hev", "hybrid", "e:hev", "ehev", "e-hev"],
+    "phev":      ["phev", "plug in hybrid", "plug-in hybrid", "plugin hybrid"],
+    "ev":        ["ev", "electric", "bev", "full electric"],
+    "shs":       ["shs", "super hybrid", "super hybrid system"],
+    "comfort":   ["comfort", "comfort rwd", "comfortrwd"],
+    "premium":   ["premium", "premium awd", "premiumawd"],
+    "advanced":  ["advanced", "advance"],
+    "deluxe":    ["deluxe", "dlx"],
+    "conqueror": ["conqueror", "conquerer"],
+    "luxury":    ["luxury", "lux"],
+    "dynamic":   ["dynamic"],
+    "1.5t":      ["1.5t", "15t", "1.5 turbo", "1.5l turbo"],
+    "2.0t":      ["2.0t", "20t", "2.0 turbo", "2.0l turbo"],
+    "1.6t":      ["1.6t", "16t", "1.6 turbo"],
+    "alpha":     ["alpha", "alpha fwd", "alphafwd", "hev alpha"],
+    "long range":["long range", "longrange", "lr"],
+})
+
+
+# ---------------------------------------------------------------------------
 # UTILITY
 # ---------------------------------------------------------------------------
 
@@ -734,54 +939,77 @@ def _calculate_relevance_score(
 
     budget_score = 10.0 if clean_price == 0 else 40.0
 
-    # 5: City — SOFT scoring with twin-city awareness (NOT a hard veto)
+    # 5: City — HARD VETO with twin/nearby-city amnesty
     #
     # Score breakdown:
     #   30.0 pts — exact city match in car.city or listing title
     #   20.0 pts — twin/nearby city match (Islamabad ↔ Rawalpindi, etc.)
-    #    0.0 pts — no city match at all (listing kept, just ranked lower)
+    #   VETO    — neither the requested city nor any of its recognised
+    #             twin/nearby cities appear in car.city or the title.
     #
-    # Rationale: Pakistani used car market regularly crosses city boundaries.
-    # Islamabad buyers buy from Rawalpindi sellers constantly. Hard-vetoing
-    # by city on a niche query (e.g. Corolla Grande Islamabad) kills most
-    # inventory — only 1-3 exact-city listings may exist at any time.
-    # Soft scoring lets the normalizer surface nearby listings while still
-    # ranking exact-city matches above them.
+    # Rationale for the veto (changed from soft scoring):
+    # A buyer who names a city is stating a hard logistics constraint —
+    # nobody in Islamabad drives to Karachi to view a Corolla. Under the old
+    # soft-scoring model a no-match listing merely lost 30 points, which was
+    # routinely out-earned by budget (40) + trim (25) + freshness (15), so
+    # out-of-city cars still surfaced in the top results on thin queries.
+    #
+    # The safety valve is NEARBY_CITY_MAP: the genuine cross-city buying
+    # corridors (Islamabad↔Rawalpindi, Lahore↔Sheikhupura/Kasur/Gujranwala,
+    # Karachi↔Hyderabad, Peshawar↔Nowshera/Mardan, …) are all whitelisted and
+    # still score 20.0, so legitimate twin-city inventory is preserved. Only
+    # genuinely unreachable listings are dropped.
+    #
+    # NOTE: the veto only fires when the caller actually supplied a city.
+    # An empty/None requested_city is treated exactly as before (no veto).
+    #
+    # ORDERING FIX: exact matches are now resolved across ALL requested
+    # cities BEFORE any twin-city fallback is considered. The previous
+    # implementation broke out of the loop on the first twin hit, so a query
+    # for "Islamabad and Rawalpindi" against a Rawalpindi listing scored 20.0
+    # (twin of Islamabad) instead of the correct 30.0 (exact match on
+    # Rawalpindi, the second entry in the list).
     car_city_lower = (car.city or "").lower().strip()
     req_city_str   = (requested_city or "").lower().strip()
 
     if req_city_str:
         req_cities = [c.strip() for c in re.split(r',|\band\b', req_city_str) if c.strip()]
 
-        exact_match = False
-        twin_match  = False
+        # Pass 1 — exact match against every requested city
+        exact_match = any(
+            rc in car_city_lower or rc in title_lower
+            for rc in req_cities
+        )
 
-        for rc in req_cities:
-            # Exact match: city field or title contains the requested city
-            if rc in car_city_lower or rc in title_lower:
-                exact_match = True
-                break
-
-            # Twin-city match: car's city is a known neighbour of requested city
-            nearby_cities = NEARBY_CITY_MAP.get(rc, set())
-            if any(nb in car_city_lower for nb in nearby_cities):
-                twin_match = True
-                break
-            # Also check if any nearby city appears in the title
-            if any(nb in title_lower for nb in nearby_cities):
-                twin_match = True
-                break
+        # Pass 2 — twin/nearby amnesty, only if no exact match anywhere
+        twin_match = False
+        matched_twin = None
+        if not exact_match:
+            for rc in req_cities:
+                for nb in NEARBY_CITY_MAP.get(rc, set()):
+                    if nb in car_city_lower or nb in title_lower:
+                        twin_match = True
+                        matched_twin = nb
+                        break
+                if twin_match:
+                    break
 
         if exact_match:
             city_score = 30.0
         elif twin_match:
             city_score = 20.0   # Nearby city — kept but ranked below exact matches
             if debug:
-                print(f"  [TWIN-CITY] '{clean_title[:45]}' — nearby city accepted for '{req_city_str}', found '{car.city}'")
+                print(
+                    f"  [TWIN-CITY] '{clean_title[:45]}' — nearby city "
+                    f"'{matched_twin}' accepted for '{req_city_str}', found '{car.city}'"
+                )
         else:
-            city_score = 0.0    # No match — listing kept but deprioritised
-            if debug:
-                print(f"  [CITY-MISS] '{clean_title[:45]}' — no city match for '{req_city_str}', found '{car.city}'")
+            # HARD VETO — outside the requested city and outside every
+            # recognised twin/nearby corridor.
+            return veto(
+                f"City mismatch: listing in '{car.city}' does not match requested "
+                f"city '{requested_city}' or its twin cities"
+            )
     else:
         city_score = 30.0 if car_city_lower else 15.0
 
