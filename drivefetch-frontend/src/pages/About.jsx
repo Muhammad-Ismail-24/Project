@@ -27,10 +27,12 @@ const slideFromRight = {
 export default function About() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setSubmitError('');
 
     const formData = new FormData(e.target);
     formData.append("access_key", "e5b8198a-38e6-4ea5-b5fa-ade6ca15ce58");
@@ -48,11 +50,11 @@ export default function About() {
         e.target.reset();
       } else {
         console.error("Web3Forms error:", data.message);
-        alert("Transmission failed. Please try again.");
+        setSubmitError("Transmission failed. Please try again.");
       }
     } catch (error) {
       console.error("Network Error:", error);
-      alert("Network error. Please check your connection.");
+      setSubmitError("Network error. Please check your connection.");
     } finally {
       setIsSubmitting(false);
     }
@@ -281,6 +283,11 @@ export default function About() {
                 <label className="block font-mono text-xs font-bold text-df-black dark:text-zinc-50 uppercase tracking-widest mb-2">MESSAGE</label>
                 <textarea required name="message" rows="4" placeholder="ENTER MESSAGE" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
               </div>
+              {submitError && (
+                <div className="font-mono text-xs font-bold text-red-600 dark:text-red-500 bg-red-100 dark:bg-red-900/30 border-2 border-red-600 dark:border-red-500 p-3">
+                  [ ERROR ]: {submitError}
+                </div>
+              )}
               <button disabled={isSubmitting} type="submit" className="w-full bg-red-600 text-white font-black uppercase py-4 border-2 border-black dark:border-white hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0px_0px_rgba(255,255,255,1)] transition-all disabled:opacity-50 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none">
                 {isSubmitting ? '[ TRANSMITTING... ]' : 'SUBMIT'}
               </button>
