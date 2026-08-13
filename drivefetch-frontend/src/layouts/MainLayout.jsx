@@ -128,14 +128,26 @@ function MainLayoutInner() {
       {/* ═══ HEADER ═══ */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-black border-b-2 border-black dark:border-white transition-colors duration-200">
         <div className="w-full px-5 sm:px-8 lg:px-12 h-16 sm:h-[72px] flex items-center justify-between">
+          
+          {/* Left side: Hamburger (Mobile) + Logo */}
+          <div className="flex items-center gap-3">
+            {/* Mobile Hamburger */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden p-2 border-brutal-thin hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black transition-none"
+              aria-label="Toggle menu"
+            >
+              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
 
-          {/* Logo */}
-          <Link
-            to="/"
-            className="font-mono text-lg sm:text-xl font-bold tracking-tight text-black dark:text-white hover:text-df-red transition-none select-none whitespace-nowrap"
-          >
-            [ DRIVEFETCH ]
-          </Link>
+            {/* Logo */}
+            <Link
+              to="/"
+              className="font-mono text-lg sm:text-xl font-bold tracking-tight text-black dark:text-white hover:text-df-red transition-none select-none whitespace-nowrap"
+            >
+              [ DRIVEFETCH ]
+            </Link>
+          </div>
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-0">
@@ -160,10 +172,10 @@ function MainLayoutInner() {
             ))}
           </nav>
 
-          {/* Right side: Theme Toggle + Auth + Mobile toggle */}
+          {/* Right side: Theme Toggle + Auth */}
           <div className="flex items-center gap-3">
-            {/* Theme Toggle */}
-            <ThemeToggleButton />
+            {/* Theme Toggle (Hidden on mobile) */}
+            <ThemeToggleButton className="hidden md:block" />
 
             {/* Auth Button */}
             {isLoading ? (
@@ -190,15 +202,6 @@ function MainLayoutInner() {
                 <span className="hidden sm:block uppercase">{user.name?.split(' ')[0]}</span>
               </button>
             )}
-
-            {/* Mobile Hamburger */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 border-brutal-thin hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black transition-none"
-              aria-label="Toggle menu"
-            >
-              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
           </div>
         </div>
 
@@ -229,6 +232,11 @@ function MainLayoutInner() {
                 GOOGLE SIGN-IN →
               </button>
             )}
+            {/* Mobile Theme Toggle */}
+            <div className="px-6 py-4 border-b border-df-black/10 dark:border-white/10 flex items-center justify-between">
+              <span className="font-mono text-sm font-bold tracking-[0.08em] text-df-black dark:text-zinc-100">THEME</span>
+              <ThemeToggleButton />
+            </div>
           </div>
         )}
       </header>
@@ -387,13 +395,13 @@ function BrutalistFooter() {
  * ThemeToggleButton — Minimalist brutalist toggle for the header.
  * Displays [☾ DARK] or [☀ LIGHT] depending on the current theme.
  */
-function ThemeToggleButton() {
+function ThemeToggleButton({ className = '' }) {
   const { theme, toggleTheme } = useTheme();
   return (
     <button
       onClick={toggleTheme}
       aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-      className="border-2 border-black dark:border-white px-2 py-1 font-mono text-xs font-bold uppercase tracking-[0.04em] hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] transition-all"
+      className={`border-2 border-black dark:border-white px-2 py-1 font-mono text-xs font-bold uppercase tracking-[0.04em] hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] transition-all ${className}`}
     >
       {theme === 'dark' ? '[ ☀ LIGHT ]' : '[ ☾ DARK ]'}
     </button>

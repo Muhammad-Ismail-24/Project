@@ -22,6 +22,33 @@ const SYSTEM_TAGS = [
   { label: '[DRIVE_DATA]', top: '76%', left: '2%'   },
 ];
 
+/**
+ * ScrollHoverCard — Handles Neo-Brutalist hover physics on mobile scroll.
+ */
+function ScrollHoverCard({ as = 'div', className, hoverClass, children, ...props }) {
+  const [inView, setInView] = useState(false);
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  
+  // Combine base classes and active mobile-hover classes (stripping 'hover:' prefix for mobile)
+  const activeHover = hoverClass.split(' ').map(c => c.replace(/^hover:/, '')).join(' ');
+  const finalClass = `${className} ${isMobile && inView ? activeHover : hoverClass}`;
+
+  const MotionTag = motion[as];
+
+  return (
+    <MotionTag
+      onViewportEnter={() => isMobile && setInView(true)}
+      onViewportLeave={() => isMobile && setInView(false)}
+      viewport={{ amount: 0.5, margin: "0px 0px -15% 0px" }}
+      className={finalClass}
+      {...props}
+    >
+      {children}
+    </MotionTag>
+  );
+}
+
+
 function SystemTags() {
   return (
     <>
@@ -98,7 +125,10 @@ function GatewayCard({ card }) {
   };
 
   return (
-    <div className="group bg-df-grey dark:bg-black border-brutal flex flex-col shadow-[4px_4px_0px_#000000] dark:shadow-[4px_4px_0px_#ffffff] transition-all duration-200 hover:-translate-y-2 hover:shadow-[8px_8px_0px_#000000] dark:hover:shadow-[8px_8px_0px_#ffffff]">
+    <ScrollHoverCard 
+      className="group bg-df-grey dark:bg-black border-brutal flex flex-col shadow-[4px_4px_0px_#000000] dark:shadow-[4px_4px_0px_#ffffff] transition-all duration-200"
+      hoverClass="hover:-translate-y-2 hover:shadow-[8px_8px_0px_#000000] dark:hover:shadow-[8px_8px_0px_#ffffff]"
+    >
       <div className="px-5 sm:px-6 pt-5 sm:pt-6 pb-3">
         <span className="font-mono text-xs sm:text-sm font-bold tracking-[0.1em] text-df-red">
           {card.index} / {card.tag}
@@ -120,7 +150,7 @@ function GatewayCard({ card }) {
           [ LAUNCH TOOL → ]
         </button>
       </div>
-    </div>
+    </ScrollHoverCard>
   );
 }
 
@@ -235,7 +265,10 @@ export default function Home() {
                   text: 'Duplicate files, suspicious mileage, and sketchy descriptions are instantly caught and graded before you buy.',
                 },
               ].map((card) => (
-                <div key={card.id} className="bg-df-white dark:bg-zinc-900 border-2 border-df-black dark:border-white p-6 shadow-[4px_4px_0px_#000000] dark:shadow-[4px_4px_0px_#ffffff] rounded-none transition-transform duration-200 hover:-translate-y-1">
+                <ScrollHoverCard key={card.id} 
+                  className="bg-df-white dark:bg-zinc-900 border-2 border-df-black dark:border-white p-6 shadow-[4px_4px_0px_#000000] dark:shadow-[4px_4px_0px_#ffffff] rounded-none transition-transform duration-200"
+                  hoverClass="hover:-translate-y-1"
+                >
                   <div className="font-mono text-[10px] sm:text-xs font-bold tracking-[0.08em] text-df-red mb-3">
                     [ ENGINE // {card.id} ]
                   </div>
@@ -245,7 +278,7 @@ export default function Home() {
                   <p className="font-body text-sm sm:text-base text-df-black/70 dark:text-white/70 leading-relaxed">
                     {card.text}
                   </p>
-                </div>
+                </ScrollHoverCard>
               ))}
             </div>
 
@@ -418,10 +451,12 @@ function CommandConsoleSection() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
             {FINANCIAL_TOOLS.map((tool) => (
-              <button
+              <ScrollHoverCard
+                as="button"
                 key={tool.label}
                 onClick={() => navigate('/calculators')}
-                className="group bg-df-grey dark:bg-black border-brutal-thin px-5 py-5 sm:py-6 text-left flex flex-col gap-2.5 shadow-[3px_3px_0px_0px_#000000] dark:shadow-[3px_3px_0px_0px_#ffffff] hover:shadow-[5px_5px_0px_0px_#000000] dark:hover:shadow-[5px_5px_0px_0px_#ffffff] transition-shadow duration-100 hover:bg-df-black dark:hover:bg-white"
+                className="group bg-df-grey dark:bg-black border-brutal-thin px-5 py-5 sm:py-6 text-left flex flex-col gap-2.5 shadow-[3px_3px_0px_0px_#000000] dark:shadow-[3px_3px_0px_0px_#ffffff] transition-shadow duration-100 hover:bg-df-black dark:hover:bg-white"
+                hoverClass="hover:shadow-[5px_5px_0px_0px_#000000] dark:hover:shadow-[5px_5px_0px_0px_#ffffff]"
               >
                 <span className="font-mono text-xs sm:text-sm font-bold tracking-[0.06em] text-df-black dark:text-zinc-100 group-hover:text-df-white dark:group-hover:text-black transition-colors duration-[50ms]">
                   [ {tool.label} ]
@@ -429,7 +464,7 @@ function CommandConsoleSection() {
                 <span className="font-body text-xs text-df-black/50 dark:text-white/50 leading-relaxed group-hover:text-df-white/60 dark:group-hover:text-black/60 transition-colors duration-[50ms]">
                   {tool.desc}
                 </span>
-              </button>
+              </ScrollHoverCard>
             ))}
           </div>
         </div>

@@ -182,7 +182,7 @@ export default function ChatPage() {
      ═══════════════════════════════════════════ */
   return (
     <main
-      className="flex h-[calc(100vh-64px)] sm:h-[calc(100vh-72px)] w-full overflow-hidden font-body text-df-black dark:text-zinc-50 dark:bg-black"
+      className="flex h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] w-full overflow-hidden font-body text-df-black dark:text-zinc-50 dark:bg-black"
     >
       <Helmet>
         <title>AI Car Inspection Assistant | DriveFetch</title>
