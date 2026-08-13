@@ -185,6 +185,76 @@ export default function About() {
           </div>
         </motion.div>
 
+        {/* ═══ 4. FAQ SECTION ═══ */}
+        <motion.div {...slideFromRight}>
+          <div className="space-y-6">
+            <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-df-black dark:text-zinc-50 mb-8 mt-12 md:mt-20">
+              [ FREQUENTLY ASKED QUESTIONS ]
+            </h2>
+            <div className="grid grid-cols-1 gap-6">
+              {[
+                {
+                  q: "How does DriveFetch calculate fair market value?",
+                  a: "Our engine cross-references thousands of live listings, adjusting for mileage, condition, and local market trends to pinpoint the exact true value, eliminating seller inflation."
+                },
+                {
+                  q: "Are the vehicle listings real-time?",
+                  a: "Yes. DriveFetch actively scrapes platforms like PakWheels, OLX, and Gari.pk the moment you execute a search to ensure zero stale data."
+                },
+                {
+                  q: "Does DriveFetch store my passwords?",
+                  a: "Never. We utilize Google OAuth 2.0 for secure, frictionless authentication. We only store basic profile data and your saved preferences."
+                },
+                {
+                  q: "Why do some cars get flagged by the AI?",
+                  a: 'Our NLP models read between the lines of seller descriptions. If a seller claims "B2B genuine" but mentions "sides sprayed," the system immediately flags the contradiction.'
+                },
+                {
+                  q: "Is DriveFetch free to use?",
+                  a: "Yes. Our core matchmaking, scraping, and AI appraisal tools are currently completely free for standard market queries."
+                }
+              ].map((faq, idx) => (
+                <div key={idx} className="bg-white dark:bg-black border-2 border-black dark:border-white shadow-[6px_6px_0px_#000000] dark:shadow-[6px_6px_0px_#ffffff] p-6">
+                  <h3 className="font-mono text-sm md:text-base font-bold text-df-black dark:text-zinc-50 mb-3 uppercase tracking-wide">
+                    Q: {faq.q}
+                  </h3>
+                  <p className="font-body text-sm md:text-base text-df-black/80 dark:text-zinc-50/80 leading-relaxed">
+                    A: {faq.a}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* ═══ 5. CONTACT FORM ═══ */}
+        <motion.div {...slideFromLeft}>
+          <div className="bg-df-grey dark:bg-zinc-900 border-2 border-black dark:border-white shadow-[8px_8px_0px_#000000] dark:shadow-[8px_8px_0px_#ffffff] p-8 md:p-12 mt-12 md:mt-20">
+            <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-df-black dark:text-zinc-50 mb-8">
+              [ TRANSMIT MESSAGE ]
+            </h2>
+            <form onSubmit={(e) => { e.preventDefault(); alert('Message Transmitted.'); }} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block font-mono text-xs font-bold text-df-black dark:text-zinc-50 uppercase tracking-widest mb-2">NAME</label>
+                  <input required type="text" placeholder="YOUR NAME" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
+                </div>
+                <div>
+                  <label className="block font-mono text-xs font-bold text-df-black dark:text-zinc-50 uppercase tracking-widest mb-2">EMAIL</label>
+                  <input required type="email" placeholder="YOUR EMAIL" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
+                </div>
+              </div>
+              <div>
+                <label className="block font-mono text-xs font-bold text-df-black dark:text-zinc-50 uppercase tracking-widest mb-2">MESSAGE</label>
+                <textarea required rows="4" placeholder="ENTER MESSAGE" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
+              </div>
+              <button type="submit" className="w-full bg-red-600 text-white font-black uppercase py-4 border-2 border-black dark:border-white hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0px_0px_rgba(255,255,255,1)] transition-all">
+                SUBMIT
+              </button>
+            </form>
+          </div>
+        </motion.div>
+
       </div>
     </main>
     </>
