@@ -124,9 +124,9 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
 
   // Liquidity badge color mapping
   const liquidityBadge = {
-    High: 'bg-black text-white border-black',
-    Medium: 'bg-white text-black border-black/30',
-    Low: 'bg-white/60 text-black/60 border-black/15',
+    High: 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white',
+    Medium: 'bg-white text-black dark:bg-black dark:text-white border-black/30 dark:border-white/30',
+    Low: 'bg-white/60 text-black/60 dark:bg-black/60 dark:text-white/60 border-black/15 dark:border-white/15',
   };
 
   return (

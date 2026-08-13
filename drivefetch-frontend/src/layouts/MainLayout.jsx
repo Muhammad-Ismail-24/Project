@@ -123,16 +123,16 @@ function MainLayoutInner() {
 
   return (
     <ThemeProvider user={user}>
-    <div className="relative min-h-screen flex flex-col bg-df-white dark:bg-zinc-900 text-df-black dark:text-zinc-100 font-body selection:bg-df-black selection:text-df-white dark:selection:bg-white dark:selection:text-black transition-colors duration-200">
+    <div className="relative min-h-screen flex flex-col bg-white text-black dark:bg-zinc-950 dark:text-zinc-50 font-body selection:bg-df-black selection:text-df-white dark:selection:bg-white dark:selection:text-black transition-colors duration-200">
 
       {/* ═══ HEADER ═══ */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-df-white dark:bg-zinc-900 border-b-[3px] border-df-black dark:border-white transition-colors duration-200">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-black border-b-2 border-black dark:border-white transition-colors duration-200">
         <div className="w-full px-5 sm:px-8 lg:px-12 h-16 sm:h-[72px] flex items-center justify-between">
 
           {/* Logo */}
           <Link
             to="/"
-            className="font-mono text-lg sm:text-xl font-bold tracking-tight text-df-black dark:text-zinc-100 hover:text-df-red transition-none select-none whitespace-nowrap"
+            className="font-mono text-lg sm:text-xl font-bold tracking-tight text-black dark:text-white hover:text-df-red transition-none select-none whitespace-nowrap"
           >
             [ DRIVEFETCH ]
           </Link>
@@ -150,8 +150,8 @@ function MainLayoutInner() {
                   className={({ isActive }) =>
                     `px-3 py-1.5 font-mono text-xs font-bold tracking-[0.08em] transition-none ` +
                     (isActive
-                      ? 'bg-df-black text-df-white dark:bg-white dark:text-black'
-                      : 'text-df-black dark:text-zinc-100 hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black')
+                      ? 'bg-black text-white dark:bg-white dark:text-black'
+                      : 'text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black')
                   }
                 >
                   {link.label}
@@ -213,8 +213,8 @@ function MainLayoutInner() {
                 className={({ isActive }) =>
                   `block px-6 py-4 font-mono text-sm font-bold tracking-[0.08em] border-b border-df-black/10 dark:border-white/10 transition-none ` +
                   (isActive
-                    ? 'bg-df-black text-df-white dark:bg-white dark:text-black'
-                    : 'text-df-black dark:text-zinc-100 hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black')
+                    ? 'bg-black text-white dark:bg-white dark:text-black'
+                    : 'text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black')
                 }
               >
                 {link.label}

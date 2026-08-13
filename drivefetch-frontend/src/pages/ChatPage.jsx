@@ -182,7 +182,7 @@ export default function ChatPage() {
      ═══════════════════════════════════════════ */
   return (
     <main
-      className="flex h-[calc(100vh-64px)] sm:h-[calc(100vh-72px)] w-full overflow-hidden font-body text-df-black"
+      className="flex h-[calc(100vh-64px)] sm:h-[calc(100vh-72px)] w-full overflow-hidden font-body text-df-black dark:text-zinc-50 dark:bg-black"
     >
       <Helmet>
         <title>AI Car Inspection Assistant | DriveFetch</title>
@@ -202,7 +202,7 @@ export default function ChatPage() {
       {!isGuest && (
         <div className={`
           fixed top-16 sm:top-[72px] bottom-0 left-0 z-40 w-64 flex flex-col flex-shrink-0
-          border-r-2 border-df-black bg-df-grey
+          border-r-2 border-df-black bg-df-grey dark:border-white dark:bg-zinc-900
           transition-transform duration-200 ease-out
           md:static md:translate-x-0
           ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -211,7 +211,7 @@ export default function ChatPage() {
           <div className="p-3 border-b-2 border-df-black">
             <button
               onClick={startNewChat}
-              className="w-full flex items-center justify-center gap-2 bg-df-black text-df-white font-mono text-xs font-bold tracking-[0.06em] py-2.5 border-2 border-df-black shadow-[3px_3px_0px_#000000] hover:bg-df-white hover:text-df-black active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-none"
+              className="w-full flex items-center justify-center gap-2 bg-df-black text-df-white font-mono text-xs font-bold tracking-[0.06em] py-2.5 border-2 border-df-black shadow-[3px_3px_0px_#000000] hover:bg-df-white hover:text-df-black active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-none dark:border-white dark:bg-zinc-800 dark:hover:bg-white dark:hover:text-black"
             >
               <Plus className="w-4 h-4" strokeWidth={2.5} />
               NEW CHAT
@@ -220,7 +220,7 @@ export default function ChatPage() {
 
           {/* Session List */}
           <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
-            <p className="font-mono text-[10px] font-bold text-df-black/35 uppercase tracking-[0.12em] px-2 pt-3 pb-2 select-none">
+            <p className="font-mono text-[10px] font-bold text-df-black/35 dark:text-zinc-50/50 uppercase tracking-[0.12em] px-2 pt-3 pb-2 select-none">
               [ HISTORY ]
             </p>
             {sessionsList.map(session => (
@@ -229,8 +229,8 @@ export default function ChatPage() {
                 onClick={() => loadSession(session.session_id)}
                 className={`group flex items-center justify-between px-3 py-2.5 cursor-pointer border-2 transition-none
                   ${activeSessionId === session.session_id
-                    ? 'bg-df-red text-df-white border-df-black shadow-[3px_3px_0px_#000000]'
-                    : 'bg-df-white text-df-black border-df-black/15 hover:border-df-black hover:bg-df-black hover:text-df-white'
+                    ? 'bg-df-red text-df-white border-df-black shadow-[3px_3px_0px_#000000] dark:border-white'
+                    : 'bg-df-white text-df-black border-df-black/15 hover:border-df-black hover:bg-df-black hover:text-df-white dark:bg-black dark:text-zinc-50 dark:border-zinc-700 dark:hover:border-white dark:hover:bg-zinc-800'
                   }`}
               >
                 <div className="flex items-center gap-2 overflow-hidden min-w-0">
@@ -257,8 +257,8 @@ export default function ChatPage() {
           </div>
 
           {/* Sidebar footer tag */}
-          <div className="border-t-2 border-df-black px-3 py-2.5 bg-df-white/50">
-            <p className="font-mono text-[9px] font-bold text-df-black/20 tracking-[0.08em] uppercase select-none">
+          <div className="border-t-2 border-df-black px-3 py-2.5 bg-df-white/50 dark:border-white dark:bg-black">
+            <p className="font-mono text-[9px] font-bold text-df-black/20 dark:text-zinc-50/50 tracking-[0.08em] uppercase select-none">
               SYS::CHAT_V2.1_BRUTALIST
             </p>
           </div>
@@ -269,20 +269,20 @@ export default function ChatPage() {
       <div className="flex-1 flex flex-col min-w-0">
 
         {/* ── Chat Header Bar — with subtle bottom shadow ── */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b-2 border-df-black bg-df-white flex-shrink-0 relative z-10 shadow-[0_2px_0px_rgba(0,0,0,0.04)]">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b-2 border-df-black bg-df-white flex-shrink-0 relative z-10 shadow-[0_2px_0px_rgba(0,0,0,0.04)] dark:border-white dark:bg-black">
           <div className="flex items-center gap-3 min-w-0">
             {/* Mobile sidebar toggle */}
             {!isGuest && (
               <button
                 onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-                className="md:hidden p-1.5 border-2 border-df-black text-df-black shadow-[2px_2px_0px_#000000] hover:bg-df-black hover:text-df-white active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-none"
+                className="md:hidden p-1.5 border-2 border-df-black text-df-black shadow-[2px_2px_0px_#000000] hover:bg-df-black hover:text-df-white active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-none dark:border-white dark:text-zinc-50 dark:hover:bg-white dark:hover:text-black"
               >
                 <MessageSquare className="w-4 h-4" strokeWidth={2} />
               </button>
             )}
             <div className="min-w-0 flex items-center gap-2.5">
               <div className="min-w-0">
-                <h1 className="font-mono text-sm font-bold tracking-[0.04em] text-df-black truncate uppercase">
+                <h1 className="font-mono text-sm font-bold tracking-[0.04em] text-df-black dark:text-zinc-50 truncate uppercase">
                   {user?.bot_name || agentName}
                 </h1>
               </div>
@@ -290,9 +290,9 @@ export default function ChatPage() {
           </div>
 
           {/* Status badge — Signal Red */}
-          <div className="flex items-center gap-2 shrink-0 border-2 border-df-black px-2.5 py-1 bg-df-white shadow-[2px_2px_0px_#000000]">
+          <div className="flex items-center gap-2 shrink-0 border-2 border-df-black px-2.5 py-1 bg-df-white shadow-[2px_2px_0px_#000000] dark:border-white dark:bg-black">
             <span className="w-2 h-2 bg-df-red animate-pulse" />
-            <span className="font-mono text-[10px] font-bold text-df-black tracking-[0.08em] uppercase">
+            <span className="font-mono text-[10px] font-bold text-df-black dark:text-zinc-50 tracking-[0.08em] uppercase">
               LIVE
             </span>
           </div>
@@ -300,10 +300,10 @@ export default function ChatPage() {
 
         {/* ── Message Feed (Scrollable) — Engineering dot-grid canvas ── */}
         <div
-          className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 overscroll-y-contain bg-[radial-gradient(#d1d5db_1px,transparent_1px)] [background-size:20px_20px]"
+          className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 overscroll-y-contain bg-[radial-gradient(#d1d5db_1px,transparent_1px)] dark:bg-[radial-gradient(#333_1px,transparent_1px)] [background-size:20px_20px]"
         >
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center h-full gap-3 text-df-black/40">
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-df-black/40 dark:text-zinc-50/50">
               <Loader2 className="w-5 h-5 animate-spin" strokeWidth={2} />
               <p className="font-mono text-xs font-bold tracking-[0.08em] uppercase">[ LOADING_HISTORY ]</p>
             </div>
@@ -317,15 +317,15 @@ export default function ChatPage() {
                 {msg.role === 'assistant' && (
                   <div className="max-w-[88%] md:max-w-[72%] flex gap-3 items-start">
                     {/* AI avatar — black shadow */}
-                    <div className="w-9 h-9 bg-df-black border-2 border-df-black shadow-[3px_3px_0px_#000000] flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <div className="w-9 h-9 bg-df-black border-2 border-df-black shadow-[3px_3px_0px_#000000] flex items-center justify-center flex-shrink-0 mt-0.5 dark:border-white dark:bg-zinc-800">
                       <Sparkles className="w-4 h-4 text-df-white" strokeWidth={2} />
                     </div>
                     {/* AI bubble — white + hard offset shadow */}
-                    <div className="bg-df-white border-2 border-df-black shadow-[5px_5px_0px_#000000] px-5 py-4">
+                    <div className="bg-df-white border-2 border-df-black shadow-[5px_5px_0px_#000000] px-5 py-4 dark:bg-black dark:border-white">
                       <span className="font-mono text-[10px] font-bold text-df-red tracking-[0.08em] block mb-2 select-none">
                         [ SYSTEM ]:
                       </span>
-                      <p className="text-sm sm:text-[15px] leading-relaxed whitespace-pre-wrap break-words font-body text-df-black">
+                      <p className="text-sm sm:text-[15px] leading-relaxed whitespace-pre-wrap break-words font-body text-df-black dark:text-zinc-50">
                         {msg.content}
                       </p>
                     </div>
@@ -336,11 +336,11 @@ export default function ChatPage() {
                 {msg.role === 'user' && (
                   <div className="max-w-[88%] md:max-w-[72%] flex gap-3 items-start flex-row-reverse">
                     {/* User avatar */}
-                    <div className="w-9 h-9 bg-df-grey border-2 border-df-black shadow-[3px_3px_0px_#000000] flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <User className="w-4 h-4 text-df-black" strokeWidth={2} />
+                    <div className="w-9 h-9 bg-df-grey border-2 border-df-black shadow-[3px_3px_0px_#000000] flex items-center justify-center flex-shrink-0 mt-0.5 dark:bg-zinc-800 dark:border-white">
+                      <User className="w-4 h-4 text-df-black dark:text-zinc-50" strokeWidth={2} />
                     </div>
                     {/* User bubble — solid black, black offset shadow */}
-                    <div className="bg-df-black text-df-white border-2 border-df-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] px-5 py-4">
+                    <div className="bg-df-black text-df-white border-2 border-df-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] px-5 py-4 dark:bg-zinc-800 dark:border-white">
                       <span className="font-mono text-[10px] font-bold text-df-white/40 tracking-[0.08em] block mb-2 select-none">
                         [ YOU ]:
                       </span>
@@ -358,10 +358,10 @@ export default function ChatPage() {
           {isTyping && (
             <div className="flex gap-3 justify-start">
               <div className="flex gap-3 items-start">
-                <div className="w-9 h-9 bg-df-black border-2 border-df-black shadow-[3px_3px_0px_#000000] flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div className="w-9 h-9 bg-df-black border-2 border-df-black shadow-[3px_3px_0px_#000000] flex items-center justify-center flex-shrink-0 mt-0.5 dark:border-white dark:bg-zinc-800">
                   <Sparkles className="w-4 h-4 text-df-white" strokeWidth={2} />
                 </div>
-                <div className="bg-df-white border-2 border-df-black shadow-[5px_5px_0px_#000000] px-5 py-4">
+                <div className="bg-df-white border-2 border-df-black shadow-[5px_5px_0px_#000000] px-5 py-4 dark:bg-black dark:border-white">
                   <span className="font-mono text-[10px] font-bold text-df-red tracking-[0.08em] block mb-2 select-none">
                     [ SYSTEM ]:
                   </span>
@@ -374,17 +374,17 @@ export default function ChatPage() {
         </div>
 
         {/* ═══ INPUT CONSOLE (Pinned Bottom) ═══ */}
-        <div className="flex-shrink-0 border-t-2 border-df-black bg-df-white p-4 sm:p-5">
+        <div className="flex-shrink-0 border-t-2 border-df-black bg-df-white p-4 sm:p-5 dark:border-white dark:bg-black">
           <div className="max-w-3xl mx-auto">
             {/* Guest notice */}
             {isGuest && !isLoading && (
-              <p className="font-mono text-[10px] font-bold text-df-black/35 tracking-[0.06em] text-center mb-3 uppercase select-none">
+              <p className="font-mono text-[10px] font-bold text-df-black/35 dark:text-zinc-50/50 tracking-[0.06em] text-center mb-3 uppercase select-none">
                 [ SIGN IN TO SAVE CONVERSATIONS ]
               </p>
             )}
             <form onSubmit={handleSend} className="flex items-stretch gap-0">
               {/* Input container — industrial terminal style */}
-              <div className="flex-1 border-2 border-df-black bg-df-grey/50 shadow-[3px_3px_0px_#000000] focus-within:shadow-[3px_3px_0px_#E5202E] focus-within:border-df-red transition-none">
+              <div className="flex-1 border-2 border-df-black bg-df-grey/50 shadow-[3px_3px_0px_#000000] focus-within:shadow-[3px_3px_0px_#E5202E] focus-within:border-df-red transition-none dark:border-white dark:bg-zinc-900">
                 <input
                   id="chat-input"
                   type="text"
@@ -392,7 +392,7 @@ export default function ChatPage() {
                   onChange={e => setInput(e.target.value)}
                   placeholder="> Ask about fuel averages, ground clearance…"
                   disabled={isTyping || isLoading}
-                  className="w-full bg-transparent px-5 py-4 outline-none font-mono text-sm text-df-black placeholder-df-black/30 disabled:opacity-40"
+                  className="w-full bg-transparent px-5 py-4 outline-none font-mono text-sm text-df-black placeholder-df-black/30 disabled:opacity-40 dark:text-zinc-50 dark:placeholder-zinc-50/30"
                 />
               </div>
               {/* Send button — brutalist press-offset physics */}
@@ -400,14 +400,14 @@ export default function ChatPage() {
                 id="chat-send-button"
                 type="submit"
                 disabled={isTyping || isLoading || !input.trim()}
-                className="w-14 bg-df-red text-df-white border-2 border-df-black border-l-0 flex items-center justify-center shadow-[3px_3px_0px_#000000] hover:bg-df-black active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-none disabled:opacity-30 disabled:active:translate-x-0 disabled:active:translate-y-0 disabled:active:shadow-[3px_3px_0px_#000000]"
+                className="w-14 bg-df-red text-df-white border-2 border-df-black border-l-0 flex items-center justify-center shadow-[3px_3px_0px_#000000] hover:bg-df-black active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-none disabled:opacity-30 disabled:active:translate-x-0 disabled:active:translate-y-0 disabled:active:shadow-[3px_3px_0px_#000000] dark:border-white"
                 aria-label="Send message"
               >
                 <Send className="w-4 h-4" strokeWidth={2.5} />
               </button>
             </form>
             {/* Terminal footer hint */}
-            <p className="font-mono text-[9px] font-bold text-df-black/15 tracking-[0.06em] mt-2 select-none">
+            <p className="font-mono text-[9px] font-bold text-df-black/15 dark:text-zinc-50/50 tracking-[0.06em] mt-2 select-none">
               DRIVEFETCH_TERMINAL // PRESS ENTER TO SEND
             </p>
           </div>

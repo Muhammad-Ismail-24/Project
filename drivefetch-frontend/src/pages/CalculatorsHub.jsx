@@ -29,8 +29,8 @@ const PROVINCE_OPTIONS = [
    ═══════════════════════════════════════════════════════ */
 
 const cardFloat = {
-  rest: { y: 0, boxShadow: '8px 8px 0px 0px #000000' },
-  float: { y: -14, boxShadow: '12px 14px 0px 0px #000000' },
+  rest: { y: 0, boxShadow: '8px 8px 0px 0px var(--brutal-shadow, #000000)' },
+  float: { y: -14, boxShadow: '12px 14px 0px 0px var(--brutal-shadow, #000000)' },
 };
 
 const cardTransition = { type: 'spring', stiffness: 120, damping: 20, mass: 0.8 };
@@ -43,16 +43,15 @@ const cardTransition = { type: 'spring', stiffness: 120, damping: 20, mass: 0.8 
 function BrutalSelect({ id, label, value, onChange, options }) {
   return (
     <div>
-      <label htmlFor={id} className="block font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 mb-2">
+      <label htmlFor={id} className="block font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 dark:text-zinc-50/50 mb-2">
         {label}
       </label>
       <select
         id={id}
         value={value}
         onChange={onChange}
-        className="w-full p-3 md:p-4 bg-df-white border-2 border-df-black rounded-none outline-none font-mono text-sm md:text-base font-medium cursor-pointer appearance-none focus:ring-2 focus:ring-df-red focus:border-df-red transition-none"
+        className="brutal-select w-full p-3 md:p-4 bg-df-white dark:bg-black border-2 border-df-black dark:border-white rounded-none outline-none font-mono text-sm md:text-base font-medium cursor-pointer appearance-none focus:ring-2 focus:ring-df-red focus:border-df-red transition-none text-df-black dark:text-zinc-50"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23000' stroke-width='2'/%3E%3C/svg%3E")`,
           backgroundRepeat: 'no-repeat',
           backgroundPosition: 'right 16px center',
         }}
@@ -69,7 +68,7 @@ function BrutalSelect({ id, label, value, onChange, options }) {
 function BrutalRadioGroup({ name, label, value, onChange, options }) {
   return (
     <div>
-      <span className="block font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 mb-3">
+      <span className="block font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 dark:text-zinc-50/50 mb-3">
         {label}
       </span>
       <div className="flex flex-wrap gap-3 md:gap-4">
@@ -79,8 +78,8 @@ function BrutalRadioGroup({ name, label, value, onChange, options }) {
             <label
               key={opt.value}
               className={`
-                flex items-center gap-2.5 cursor-pointer px-4 py-3 border-2 border-df-black font-mono text-xs md:text-sm font-bold tracking-wide select-none transition-none
-                ${isSelected ? 'bg-df-black text-df-white' : 'bg-df-white text-df-black hover:bg-df-grey'}
+                flex items-center gap-2.5 cursor-pointer px-4 py-3 border-2 border-df-black dark:border-white font-mono text-xs md:text-sm font-bold tracking-wide select-none transition-none
+                ${isSelected ? 'bg-df-black dark:bg-white text-df-white dark:text-black' : 'bg-df-white dark:bg-black text-df-black dark:text-zinc-50 hover:bg-df-grey dark:hover:bg-zinc-800'}
               `}
             >
               <span className="inline-flex items-center justify-center w-5 h-5 border-2 border-current flex-shrink-0">
@@ -112,19 +111,19 @@ function BrutalSlider({ id, label, value, onChange, min, max, unit }) {
   return (
     <div>
       <div className="flex justify-between items-baseline mb-3">
-        <label htmlFor={id} className="font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50">
+        <label htmlFor={id} className="font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 dark:text-zinc-50/50">
           {label}
         </label>
-        <span className="font-mono text-sm md:text-base font-bold text-df-black tabular-nums">
+        <span className="font-mono text-sm md:text-base font-bold text-df-black dark:text-zinc-50 tabular-nums">
           {value} {unit}
         </span>
       </div>
       <div className="relative h-10 flex items-center">
         {/* Track background */}
-        <div className="absolute inset-x-0 h-[3px] bg-df-black/15" />
+        <div className="absolute inset-x-0 h-[3px] bg-df-black/15 dark:bg-zinc-50/15" />
         {/* Filled track */}
         <div
-          className="absolute left-0 h-[3px] bg-df-black"
+          className="absolute left-0 h-[3px] bg-df-black dark:bg-zinc-50"
           style={{ width: `${pct}%` }}
         />
         <input
@@ -177,13 +176,13 @@ export default function CalculatorsHub() {
         {/* ── Page Header ── */}
         <header className="pt-12 md:pt-20 pb-10 md:pb-14 px-4 md:px-6">
           <div className="max-w-3xl mx-auto">
-            <p className="font-mono text-[10px] md:text-xs font-bold tracking-[0.14em] text-df-black/30 mb-4 uppercase">
+            <p className="font-mono text-[10px] md:text-xs font-bold tracking-[0.14em] text-df-black/30 dark:text-zinc-50/30 mb-4 uppercase">
               [ SYS // FINANCIAL_TOOLS ]
             </p>
-            <h1 className="text-display-lg text-df-black mb-4">
+            <h1 className="text-display-lg text-df-black dark:text-zinc-50 mb-4">
               Calculators
             </h1>
-            <p className="font-body text-base md:text-lg text-df-black/55 font-medium max-w-xl leading-relaxed">
+            <p className="font-body text-base md:text-lg text-df-black/55 dark:text-zinc-50/55 font-medium max-w-xl leading-relaxed">
               Calculate <span className="text-[#E5202E] font-bold">exact</span> running costs, taxes, and transfer fees before you buy. All figures based on latest FBR & Excise data.
             </p>
           </div>
@@ -201,14 +200,14 @@ export default function CalculatorsHub() {
             whileInView="float"
             viewport={{ once: false, amount: 0.3 }}
             transition={cardTransition}
-            className="group max-w-3xl mx-auto bg-white border-2 border-df-black transition-all duration-200 hover:border-[#E5202E] hover:ring-2 hover:ring-[#E5202E] focus-within:border-[#E5202E] focus-within:ring-2 focus-within:ring-[#E5202E]"
+            className="group max-w-3xl mx-auto bg-white dark:bg-black border-2 border-df-black dark:border-white transition-all duration-200 hover:border-[#E5202E] hover:ring-2 hover:ring-[#E5202E] focus-within:border-[#E5202E] focus-within:ring-2 focus-within:ring-[#E5202E]"
           >
               {/* Header Strip */}
-              <div className="px-6 md:px-8 py-4 md:py-5 border-b-2 border-df-black transition-all duration-200 group-hover:border-b-[#E5202E] group-hover:border-b-4 group-focus-within:border-b-[#E5202E] group-focus-within:border-b-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
-                <span className="font-mono text-[10px] md:text-xs font-bold tracking-[0.1em] text-df-black/35">
+              <div className="px-6 md:px-8 py-4 md:py-5 border-b-2 border-df-black dark:border-white transition-all duration-200 group-hover:border-b-[#E5202E] group-hover:border-b-4 group-focus-within:border-b-[#E5202E] group-focus-within:border-b-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
+                <span className="font-mono text-[10px] md:text-xs font-bold tracking-[0.1em] text-df-black/35 dark:text-zinc-50/35">
                   [ TOOL // 01 ]
                 </span>
-                <h2 className="font-display text-2xl md:text-3xl tracking-wide text-df-black uppercase">
+                <h2 className="font-display text-2xl md:text-3xl tracking-wide text-df-black dark:text-zinc-50 uppercase">
                   Fuel Cost Estimator
                 </h2>
               </div>
@@ -254,14 +253,14 @@ export default function CalculatorsHub() {
             whileInView="float"
             viewport={{ once: false, amount: 0.3 }}
             transition={cardTransition}
-            className="group max-w-3xl mx-auto bg-white border-2 border-df-black transition-all duration-200 hover:border-[#E5202E] hover:ring-2 hover:ring-[#E5202E] focus-within:border-[#E5202E] focus-within:ring-2 focus-within:ring-[#E5202E]"
+            className="group max-w-3xl mx-auto bg-white dark:bg-black border-2 border-df-black dark:border-white transition-all duration-200 hover:border-[#E5202E] hover:ring-2 hover:ring-[#E5202E] focus-within:border-[#E5202E] focus-within:ring-2 focus-within:ring-[#E5202E]"
           >
               {/* Header Strip */}
-              <div className="px-6 md:px-8 py-4 md:py-5 border-b-2 border-df-black transition-all duration-200 group-hover:border-b-[#E5202E] group-hover:border-b-4 group-focus-within:border-b-[#E5202E] group-focus-within:border-b-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
-                <span className="font-mono text-[10px] md:text-xs font-bold tracking-[0.1em] text-df-black/35">
+              <div className="px-6 md:px-8 py-4 md:py-5 border-b-2 border-df-black dark:border-white transition-all duration-200 group-hover:border-b-[#E5202E] group-hover:border-b-4 group-focus-within:border-b-[#E5202E] group-focus-within:border-b-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
+                <span className="font-mono text-[10px] md:text-xs font-bold tracking-[0.1em] text-df-black/35 dark:text-zinc-50/35">
                   [ TOOL // 02 ]
                 </span>
-                <h2 className="font-display text-2xl md:text-3xl tracking-wide text-df-black uppercase">
+                <h2 className="font-display text-2xl md:text-3xl tracking-wide text-df-black dark:text-zinc-50 uppercase">
                   Token Tax Calculator
                 </h2>
               </div>
@@ -316,14 +315,14 @@ export default function CalculatorsHub() {
             whileInView="float"
             viewport={{ once: false, amount: 0.3 }}
             transition={cardTransition}
-            className="group max-w-3xl mx-auto bg-white border-2 border-df-black transition-all duration-200 hover:border-[#E5202E] hover:ring-2 hover:ring-[#E5202E] focus-within:border-[#E5202E] focus-within:ring-2 focus-within:ring-[#E5202E]"
+            className="group max-w-3xl mx-auto bg-white dark:bg-black border-2 border-df-black dark:border-white transition-all duration-200 hover:border-[#E5202E] hover:ring-2 hover:ring-[#E5202E] focus-within:border-[#E5202E] focus-within:ring-2 focus-within:ring-[#E5202E]"
           >
               {/* Header Strip */}
-              <div className="px-6 md:px-8 py-4 md:py-5 border-b-2 border-df-black transition-all duration-200 group-hover:border-b-[#E5202E] group-hover:border-b-4 group-focus-within:border-b-[#E5202E] group-focus-within:border-b-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
-                <span className="font-mono text-[10px] md:text-xs font-bold tracking-[0.1em] text-df-black/35">
+              <div className="px-6 md:px-8 py-4 md:py-5 border-b-2 border-df-black dark:border-white transition-all duration-200 group-hover:border-b-[#E5202E] group-hover:border-b-4 group-focus-within:border-b-[#E5202E] group-focus-within:border-b-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
+                <span className="font-mono text-[10px] md:text-xs font-bold tracking-[0.1em] text-df-black/35 dark:text-zinc-50/35">
                   [ TOOL // 03 ]
                 </span>
-                <h2 className="font-display text-2xl md:text-3xl tracking-wide text-df-black uppercase">
+                <h2 className="font-display text-2xl md:text-3xl tracking-wide text-df-black dark:text-zinc-50 uppercase">
                   Transfer Fee Calculator
                 </h2>
               </div>
@@ -382,6 +381,20 @@ export default function CalculatorsHub() {
 
       {/* ── Custom Slider Styles ── */}
       <style>{`
+        :root {
+          --brutal-shadow: #000000;
+        }
+        .dark {
+          --brutal-shadow: #ffffff;
+        }
+        
+        .brutal-select {
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23000' stroke-width='2'/%3E%3C/svg%3E");
+        }
+        .dark .brutal-select {
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E");
+        }
+
         /* Reset native slider appearance */
         .brutal-slider {
           -webkit-appearance: none;
@@ -405,18 +418,18 @@ export default function CalculatorsHub() {
           width: 20px;
           height: 20px;
           background: #E5202E;
-          border: 2px solid #000000;
+          border: 2px solid var(--brutal-shadow);
           border-radius: 0;
           cursor: pointer;
           margin-top: -9px;
-          box-shadow: 2px 2px 0px 0px #000000;
+          box-shadow: 2px 2px 0px 0px var(--brutal-shadow);
           transition: box-shadow 0.1s;
         }
         .brutal-slider::-webkit-slider-thumb:hover {
-          box-shadow: 3px 3px 0px 0px #000000;
+          box-shadow: 3px 3px 0px 0px var(--brutal-shadow);
         }
         .brutal-slider::-webkit-slider-thumb:active {
-          box-shadow: 1px 1px 0px 0px #000000;
+          box-shadow: 1px 1px 0px 0px var(--brutal-shadow);
           transform: translate(1px, 1px);
         }
 
@@ -432,13 +445,13 @@ export default function CalculatorsHub() {
           width: 20px;
           height: 20px;
           background: #E5202E;
-          border: 2px solid #000000;
+          border: 2px solid var(--brutal-shadow);
           border-radius: 0;
           cursor: pointer;
-          box-shadow: 2px 2px 0px 0px #000000;
+          box-shadow: 2px 2px 0px 0px var(--brutal-shadow);
         }
         .brutal-slider::-moz-range-thumb:hover {
-          box-shadow: 3px 3px 0px 0px #000000;
+          box-shadow: 3px 3px 0px 0px var(--brutal-shadow);
         }
 
         /* Focus Ring */

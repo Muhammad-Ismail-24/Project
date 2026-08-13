@@ -200,7 +200,7 @@ export default function DynamicBackground() {
 
   return (
     <div
-      className="fixed inset-0 w-full h-full -z-10 bg-white dark:bg-zinc-900 pointer-events-none overflow-hidden transition-colors duration-200"
+      className="fixed inset-0 w-full h-full -z-10 bg-white dark:bg-zinc-950 bg-[linear-gradient(to_right,#e5e7eb_1px,transparent_1px),linear-gradient(to_bottom,#e5e7eb_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#27272a_1px,transparent_1px),linear-gradient(to_bottom,#27272a_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none overflow-hidden transition-colors duration-200"
       aria-hidden="true"
       style={{
         '--df-pattern': theme === 'dark' ? '#52525b' : '#D4D4D4',

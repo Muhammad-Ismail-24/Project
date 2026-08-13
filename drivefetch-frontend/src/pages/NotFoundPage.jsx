@@ -35,18 +35,18 @@ export default function NotFoundPage() {
       </div>
 
       <div className="min-h-[calc(100vh-140px)] flex flex-col items-center justify-center text-left px-4 md:px-8">
-        <div className="bg-df-white border-brutal shadow-brutal-lg p-8 sm:p-12 md:p-16 max-w-4xl w-full flex flex-col items-start">
+        <div className="bg-df-white dark:bg-black dark:border-white border-brutal shadow-brutal-lg p-8 sm:p-12 md:p-16 max-w-4xl w-full flex flex-col items-start">
           
           {/* Massive Structural Typography */}
-          <h1 className="text-[6rem] sm:text-[8rem] md:text-[10rem] lg:text-[12rem] font-black tracking-tighter text-df-black leading-none mb-2">
+          <h1 className="text-[6rem] sm:text-[8rem] md:text-[10rem] lg:text-[12rem] font-black tracking-tighter text-df-black dark:text-zinc-50 leading-none mb-2">
             404
           </h1>
           
-          <h2 className="font-mono text-lg md:text-2xl font-bold tracking-[0.1em] text-df-black uppercase mb-8">
+          <h2 className="font-mono text-lg md:text-2xl font-bold tracking-[0.1em] text-df-black dark:text-zinc-50 uppercase mb-8">
             [ ROUTE NOT FOUND ]
           </h2>
           
-          <p className="font-body text-base md:text-lg font-medium text-df-black/75 mb-12 border-l-4 border-df-black pl-5 max-w-2xl leading-relaxed">
+          <p className="font-body text-base md:text-lg font-medium text-df-black/75 dark:text-zinc-50/75 mb-12 border-l-4 border-df-black pl-5 max-w-2xl leading-relaxed">
             The destination you are looking for doesn't exist in our current registry. The link might be broken, or the page has been moved. 
           </p>
           

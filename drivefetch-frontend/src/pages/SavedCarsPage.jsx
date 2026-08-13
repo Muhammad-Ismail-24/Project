@@ -62,27 +62,27 @@ export default function SavedCarsPage() {
 
       <div className="relative z-10 w-full pt-12 md:pt-20 px-4 md:px-6 max-w-5xl mx-auto pb-16 md:pb-32 min-h-[calc(100vh-140px)]">
         <div className="mb-10 md:mb-12">
-          <p className="font-mono text-[10px] md:text-xs font-bold tracking-[0.14em] text-df-black/35 mb-2 uppercase">
+          <p className="font-mono text-[10px] md:text-xs font-bold tracking-[0.14em] text-df-black/35 dark:text-zinc-50/35 mb-2 uppercase">
             [ USER DATA // BOOKMARKS ]
           </p>
-          <h1 className="text-display-lg text-df-black mb-4">
+          <h1 className="text-display-lg text-df-black dark:text-zinc-50 mb-4">
             Saved Vehicles
           </h1>
         </div>
 
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 border-2 border-df-black bg-df-white shadow-brutal">
-            <Loader2 className="w-8 h-8 text-df-black animate-spin mb-4" />
-            <p className="font-mono text-xs font-bold tracking-[0.1em] text-df-black uppercase">
+          <div className="flex flex-col items-center justify-center py-20 border-2 border-df-black bg-df-white dark:bg-black dark:border-white shadow-brutal">
+            <Loader2 className="w-8 h-8 text-df-black dark:text-zinc-50 animate-spin mb-4" />
+            <p className="font-mono text-xs font-bold tracking-[0.1em] text-df-black dark:text-zinc-50 uppercase">
               [ LOADING DATA_STREAM ]
             </p>
           </div>
         ) : savedCars.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 md:py-32 px-6 bg-df-white border-2 border-df-black shadow-brutal-lg">
+          <div className="flex flex-col items-center justify-center py-20 md:py-32 px-6 bg-df-white dark:bg-black dark:border-white border-2 border-df-black shadow-brutal-lg">
             <div className="w-16 h-16 bg-df-black flex items-center justify-center border-brutal shadow-brutal-sm mb-8">
               <BookmarkX className="w-8 h-8 text-df-white" strokeWidth={2} />
             </div>
-            <h3 className="font-display text-4xl md:text-5xl text-df-black tracking-wide mb-6 uppercase text-center">
+            <h3 className="font-display text-4xl md:text-5xl text-df-black dark:text-zinc-50 tracking-wide mb-6 uppercase text-center">
               [ NO SAVED VEHICLES ]
             </h3>
             <Link 
