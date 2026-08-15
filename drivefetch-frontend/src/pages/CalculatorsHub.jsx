@@ -9,12 +9,15 @@ import { calculateFuelCost, calculateTokenTax, calculateTransferCost, formatPKR 
    ═══════════════════════════════════════════════════════ */
 
 const CC_OPTIONS = [
-  { value: 800,  label: '800cc (e.g., Suzuki Alto)' },
-  { value: 1000, label: '1000cc (e.g., Suzuki Cultus)' },
-  { value: 1300, label: '1300cc (e.g., Toyota Yaris)' },
-  { value: 1500, label: '1500cc (e.g., Honda Civic)' },
-  { value: 1800, label: '1800cc (e.g., Toyota Grande)' },
-  { value: 2500, label: '2500cc+ (e.g., Toyota Fortuner)' },
+  { value: 660,  label: '660cc (e.g., Suzuki Alto, Daihatsu Mira)' },
+  { value: 800,  label: '800cc (e.g., Suzuki Mehran, Old Alto)' },
+  { value: 1000, label: '1000cc (e.g., Suzuki Cultus, WagonR, Vitz 1.0)' },
+  { value: 1200, label: '1200cc (e.g., Honda City 1.2, Kia Stonic)' },
+  { value: 1300, label: '1300cc (e.g., Toyota Yaris 1.3, City 1.3)' },
+  { value: 1500, label: '1500cc (e.g., Honda Civic 1.5T, BR-V)' },
+  { value: 1800, label: '1800cc (e.g., Toyota Corolla Grande 1.8)' },
+  { value: 1801, label: '1.5L - 1.8L Hybrids (e.g., Aqua, Prius, Vezel, Haval HEV)' },
+  { value: 2500, label: '2.5L+ Diesel (e.g., Fortuner, Hilux Revo)' },
 ];
 
 const PROVINCE_OPTIONS = [
@@ -151,11 +154,7 @@ export default function CalculatorsHub() {
   const [fuelKm, setFuelKm] = useState(40);
 
   const fuelCostResult = useMemo(() => {
-    let engineType = `${fuelCc}cc`;
-    if (fuelCc === 800) engineType = "660cc";
-    if (fuelCc === 2500) engineType = "diesel_suv_pickup";
-    const validEngineType = ['660cc', '1000cc', '1300cc', '1500cc', '1800cc', 'hybrid_1500_1800', 'diesel_suv_pickup'].includes(engineType) ? engineType : '1000cc';
-    return calculateFuelCost(validEngineType, fuelKm * 30, 70);
+    return calculateFuelCost({ cc: fuelCc, dailyKm: fuelKm });
   }, [fuelCc, fuelKm]);
 
   // ── Section 2: Token Tax Calculator State ──
@@ -163,34 +162,34 @@ export default function CalculatorsHub() {
   const [tokenFiler, setTokenFiler] = useState(true);
   const [tokenCc, setTokenCc] = useState(1300);
   const [tokenInvoiceValue, setTokenInvoiceValue] = useState(4000000);
+  const [tokenAge, setTokenAge] = useState(0);
 
   const tokenTaxResult = useMemo(() => {
     return calculateTokenTax({
-      province: tokenProvince.toLowerCase(),
+      province: tokenProvince,
       cc: tokenCc,
+      isFiler: tokenFiler,
       invoiceValue: tokenInvoiceValue,
-      regYear: new Date().getFullYear(),
-      filerStatus: tokenFiler ? 'filer' : 'non-filer',
-      useEpay: true
+      vehicleAge: tokenAge,
+      useEPay: true
     });
-  }, [tokenProvince, tokenFiler, tokenCc, tokenInvoiceValue]);
+  }, [tokenProvince, tokenFiler, tokenCc, tokenInvoiceValue, tokenAge]);
 
   // ── Section 3: Transfer Fee Calculator State ──
   const [transferProvince, setTransferProvince] = useState('Punjab');
   const [transferCc, setTransferCc] = useState(1300);
   const [buyerFiler, setBuyerFiler] = useState(true);
   const [sellerFiler, setSellerFiler] = useState(true);
+  const [transferAge, setTransferAge] = useState(0);
 
   const transferCostResult = useMemo(() => {
     return calculateTransferCost({
-      province: transferProvince.toLowerCase(),
+      province: transferProvince,
       cc: transferCc,
-      regYear: new Date().getFullYear(),
-      filerStatus: buyerFiler ? 'filer' : 'non-filer',
-      isSpeculative: false,
-      includePlates: false
+      isBuyerFiler: buyerFiler,
+      vehicleAge: transferAge
     });
-  }, [transferProvince, transferCc, buyerFiler]);
+  }, [transferProvince, transferCc, buyerFiler, transferAge]);
 
   return (
     <>
@@ -272,7 +271,7 @@ export default function CalculatorsHub() {
                   Est. Monthly Cost
                 </p>
                 <p className="font-mono text-2xl md:text-3xl font-bold text-white tracking-tight">
-                  EST. MONTHLY COST: {formatPKR(fuelCostResult.totalCost)}
+                  EST. MONTHLY COST: {formatPKR(fuelCostResult.monthlyCost)}
                 </p>
               </div>
           </motion.section>
@@ -350,7 +349,7 @@ export default function CalculatorsHub() {
                   Annual Token Tax
                 </p>
                 <p className="font-mono text-2xl md:text-3xl font-bold text-white tracking-tight">
-                  ANNUAL TAX: {formatPKR(tokenTaxResult.total)}
+                  ANNUAL TAX: {formatPKR(tokenTaxResult.totalAnnualTax)}
                 </p>
               </div>
           </motion.section>
@@ -423,11 +422,11 @@ export default function CalculatorsHub() {
                   Transfer Fee Breakdown
                 </p>
                 <div className="font-mono text-sm md:text-base text-white/80 space-y-1.5 leading-relaxed">
-                  <p>&gt; EXCISE FEE: <span className="text-white font-bold">{formatPKR(transferCostResult.mraFee)}</span></p>
-                  <p>&gt; WITHHOLDING TAX: <span className="text-white font-bold">{formatPKR(transferCostResult.advanceTax)}</span></p>
-                  <p>&gt; STAMP DUTY / SMART CARD: <span className="text-white font-bold">{formatPKR(transferCostResult.smartCardFee + transferCostResult.bioFee)}</span></p>
+                  <p>&gt; PROVINCIAL MRA FEE: <span className="text-white font-bold">Rs. {transferCostResult.mraFee.toLocaleString()}</span></p>
+                  <p>&gt; FBR 231B ADVANCE TAX: <span className="text-[#E5202E] font-bold">Rs. {transferCostResult.advanceTax231b.toLocaleString()}</span></p>
+                  <p>&gt; SMART CARD & BIOMETRICS: <span className="text-white font-bold">Rs. {(transferCostResult.smartCardFee + transferCostResult.biometricFee).toLocaleString()}</span></p>
                   <div className="border-t border-white/20 my-2 pt-2">
-                    <p className="text-white font-bold text-lg md:text-xl">&gt; TOTAL: {formatPKR(transferCostResult.total)}</p>
+                    <p className="text-white font-bold text-lg md:text-xl">&gt; TOTAL: Rs. {transferCostResult.totalTransferCost.toLocaleString()}</p>
                   </div>
                 </div>
               </div>

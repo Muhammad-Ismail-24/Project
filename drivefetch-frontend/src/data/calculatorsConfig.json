@@ -1,296 +1,131 @@
 {
   "metadata": {
-    "version": "1.0.0",
+    "version": "2.0.0",
     "fiscal_year": "2026-2027",
-    "effective_date": "2026-08-15",
-    "country": "Pakistan",
-    "currency": "PKR",
-    "sources": [
-      {
-        "title": "Federal Board of Revenue (FBR) - Income Tax Ordinance 2001 & Withholding Tax Card",
-        "url": "https://download1.fbr.gov.pk/Docs/202681113864992WithholdingTaxRatesCard2027.pdf"
-      },
-      {
-        "title": "PakWheels Petroleum Price Index",
-        "url": "https://www.pakwheels.com/petroleum-prices-in-pakistan"
-      },
-      {
-        "title": "Excise, Taxation and Narcotics Control Department Punjab",
-        "url": "https://excise.punjab.gov.pk"
-      },
-      {
-        "title": "Excise & Taxation Department, Islamabad Capital Territory",
-        "url": "https://islamabadexcise.gov.pk"
-      },
-      {
-        "title": "Excise & Taxation Department Khyber Pakhtunkhwa",
-        "url": "https://www.kpexcise.gov.pk/new/mvtax/"
-      }
-    ]
+    "currency": "PKR"
   },
   "fuel_calculator": {
     "fuel_prices_pkr": {
       "petrol_ron92": 325.43,
-      "high_speed_diesel": 382.79,
-      "last_updated": "August 2026"
+      "high_speed_diesel": 383.95
     },
     "engine_averages_kml": {
-      "660cc": {
-        "label": "660cc Kei / Hatchback (Alto, Mira, Hustler)",
-        "city": 17.5,
-        "highway": 21.5,
-        "combined": 18.5,
-        "fuel_type": "petrol_ron92"
-      },
-      "1000cc": {
-        "label": "1000cc Compact (Cultus, WagonR, Vitz)",
-        "city": 14.5,
-        "highway": 18.0,
-        "combined": 15.5,
-        "fuel_type": "petrol_ron92"
-      },
-      "1300cc": {
-        "label": "1300cc Subcompact (City 1.2/1.3, Swift, Yaris 1.3)",
-        "city": 12.0,
-        "highway": 16.0,
-        "combined": 13.5,
-        "fuel_type": "petrol_ron92"
-      },
-      "1500cc": {
-        "label": "1500cc Sedan / Crossover (Civic 1.5T, Yaris 1.5, City 1.5, BR-V)",
-        "city": 10.5,
-        "highway": 15.0,
-        "combined": 12.0,
-        "fuel_type": "petrol_ron92"
-      },
-      "1800cc": {
-        "label": "1800cc Sedan (Civic 1.8, Corolla 1.8 Altis)",
-        "city": 9.5,
-        "highway": 14.0,
-        "combined": 10.5,
-        "fuel_type": "petrol_ron92"
-      },
-      "hybrid_1500_1800": {
-        "label": "1.5L / 1.8L Strong Hybrid (Prius, Aqua, Corolla Cross, Vezel)",
-        "city": 22.0,
-        "highway": 20.0,
-        "combined": 21.0,
-        "fuel_type": "petrol_ron92"
-      },
-      "diesel_suv_pickup": {
-        "label": "2.4L / 2.8L Turbo Diesel SUV/Truck (Hilux Revo, Fortuner)",
-        "city": 8.5,
-        "highway": 12.0,
-        "combined": 9.5,
-        "fuel_type": "high_speed_diesel"
-      }
+      "660": { "label": "660cc (Kei / Hatchbacks: Alto, Mira, Dayz)", "city": 17.5, "highway": 21.5, "fuel_type": "petrol_ron92" },
+      "800": { "label": "800cc (Legacy Budget: Mehran, Old Alto)", "city": 12.0, "highway": 16.0, "fuel_type": "petrol_ron92" },
+      "1000": { "label": "1000cc (Compact Hatchbacks: Cultus, WagonR, Vitz 1.0)", "city": 14.2, "highway": 17.8, "fuel_type": "petrol_ron92" },
+      "1200": { "label": "1200cc (Compact: City 1.2, Stonic, Swift 1.2)", "city": 13.0, "highway": 17.2, "fuel_type": "petrol_ron92" },
+      "1300": { "label": "1300cc (Mid-Size Sedans: Yaris 1.3, City 1.3, Corolla 1.3)", "city": 12.2, "highway": 16.2, "fuel_type": "petrol_ron92" },
+      "1500": { "label": "1500cc (Sedans / CUVs: Civic 1.5T, BR-V, Yaris 1.5)", "city": 11.2, "highway": 15.2, "fuel_type": "petrol_ron92" },
+      "1800": { "label": "1800cc (Executive Sedans: Corolla Grande, Civic 1.8)", "city": 10.5, "highway": 15.2, "fuel_type": "petrol_ron92" },
+      "1801": { "label": "1.5L - 1.8L Strong Hybrids (Aqua, Prius, Vezel, Haval HEV)", "city": 21.0, "highway": 18.8, "fuel_type": "petrol_ron92" },
+      "2500": { "label": "2.5L+ Diesel (SUVs / Pickups: Fortuner, Revo)", "city": 9.0, "highway": 12.0, "fuel_type": "high_speed_diesel" }
     }
   },
-  "fbr_section_234_wht": {
-    "description": "FBR Section 234 Advance Tax on Motor Vehicles (Annual Token Tax Surcharge)",
-    "exemption_age_years": 10,
-    "slabs": [
-      {
-        "id": "up_to_1000",
-        "min_cc": 0,
-        "max_cc": 1000,
-        "filer_pkr": 800,
-        "non_filer_pkr": 1600
+  "token_tax_calculator": {
+    "provincial_token_tax": {
+      "islamabad": {
+        "slabs": [
+          { "min_cc": 0, "max_cc": 1000, "tax_type": "fixed", "amount_pkr": 20000 },
+          { "min_cc": 1001, "max_cc": 2000, "tax_type": "invoice_pct", "rate": 0.0025 },
+          { "min_cc": 2001, "max_cc": 99999, "tax_type": "invoice_pct", "rate": 0.0035 }
+        ]
       },
-      {
-        "id": "1001_to_1199",
-        "min_cc": 1001,
-        "max_cc": 1199,
-        "filer_pkr": 1500,
-        "non_filer_pkr": 3000
+      "punjab": {
+        "epay_discount_pct": 5.0,
+        "slabs": [
+          { "min_cc": 0, "max_cc": 1000, "tax_type": "fixed", "amount_pkr": 20000 },
+          { "min_cc": 1001, "max_cc": 2000, "tax_type": "invoice_pct", "rate": 0.0020 },
+          { "min_cc": 2001, "max_cc": 99999, "tax_type": "invoice_pct", "rate": 0.0030 }
+        ]
       },
-      {
-        "id": "1200_to_1299",
-        "min_cc": 1200,
-        "max_cc": 1299,
-        "filer_pkr": 1750,
-        "non_filer_pkr": 3500
+      "sindh": {
+        "slabs": [
+          { "min_cc": 0, "max_cc": 1000, "amount_pkr": 1000 },
+          { "min_cc": 1001, "max_cc": 1300, "amount_pkr": 2000 },
+          { "min_cc": 1301, "max_cc": 1500, "amount_pkr": 3000 },
+          { "min_cc": 1501, "max_cc": 1600, "amount_pkr": 4000 },
+          { "min_cc": 1601, "max_cc": 2000, "amount_pkr": 4500 },
+          { "min_cc": 2001, "max_cc": 2500, "amount_pkr": 5000 },
+          { "min_cc": 2501, "max_cc": 99999, "amount_pkr": 7000 }
+        ]
       },
-      {
-        "id": "1300_to_1499",
-        "min_cc": 1300,
-        "max_cc": 1499,
-        "filer_pkr": 2500,
-        "non_filer_pkr": 5000
-      },
-      {
-        "id": "1500_to_1599",
-        "min_cc": 1500,
-        "max_cc": 1599,
-        "filer_pkr": 3750,
-        "non_filer_pkr": 7500
-      },
-      {
-        "id": "1600_to_1999",
-        "min_cc": 1600,
-        "max_cc": 1999,
-        "filer_pkr": 4500,
-        "non_filer_pkr": 9000
-      },
-      {
-        "id": "2000_and_above",
-        "min_cc": 2000,
-        "max_cc": 99999,
-        "filer_pkr": 10000,
-        "non_filer_pkr": 20000
-      }
-    ]
-  },
-  "provincial_token_tax": {
-    "punjab": {
-      "province_name": "Punjab",
-      "authority": "Excise, Taxation and Narcotics Control Department, Punjab",
-      "regime_type": "hybrid_invoice_and_cc",
-      "epay_online_rebate_pct": 5.0,
-      "early_bird_discount_pct": 10.0,
-      "rules": {
-        "under_1000cc": {
-          "type": "lifetime_token_tax",
-          "amount_pkr": 20000,
-          "annual_base_mvt_pkr": 0,
-          "transfer_depreciation_pct_per_year": 10,
-          "note": "Vehicles up to 1000cc pay a one-time lifetime token tax of PKR 20,000."
-        },
-        "1001cc_to_2000cc": {
-          "type": "invoice_value_percentage",
-          "tax_rate_pct": 0.20,
-          "multiplier": 0.002,
-          "fallback_cc_flat_pkr": {
-            "1001_to_1300": 1800,
-            "1301_to_1600": 3000,
-            "1601_to_2000": 4500
-          }
-        },
-        "above_2000cc": {
-          "type": "invoice_value_percentage",
-          "tax_rate_pct": 0.30,
-          "multiplier": 0.003,
-          "fallback_cc_flat_pkr": {
-            "2001_to_2500": 6000,
-            "above_2500": 8000
-          }
-        }
+      "kpk": {
+        "slabs": [
+          { "min_cc": 0, "max_cc": 1000, "amount_pkr": 1000 },
+          { "min_cc": 1001, "max_cc": 1300, "amount_pkr": 1500 },
+          { "min_cc": 1301, "max_cc": 1500, "amount_pkr": 2500 },
+          { "min_cc": 1501, "max_cc": 1600, "amount_pkr": 3500 },
+          { "min_cc": 1601, "max_cc": 2000, "amount_pkr": 5000 },
+          { "min_cc": 2001, "max_cc": 2500, "amount_pkr": 8000 },
+          { "min_cc": 2501, "max_cc": 99999, "amount_pkr": 10000 }
+        ]
       }
     },
-    "islamabad": {
-      "province_name": "Islamabad Capital Territory (ICT)",
-      "authority": "Excise & Taxation Department, ICT Administration",
-      "regime_type": "invoice_value_based",
-      "rules": {
-        "under_1000cc": {
-          "type": "lifetime_or_flat",
-          "lifetime_amount_pkr": 20000,
-          "annual_legacy_pkr": 2500,
-          "note": "Under Finance Act 2026, ICT standardized <=1000cc on a flat lifetime token tax of PKR 20,000."
-        },
-        "1001cc_to_2000cc": {
-          "type": "invoice_value_percentage",
-          "tax_rate_pct": 0.25,
-          "multiplier": 0.0025
-        },
-        "above_2000cc": {
-          "type": "invoice_value_percentage",
-          "tax_rate_pct": 0.35,
-          "multiplier": 0.0035
-        }
-      }
-    },
-    "sindh": {
-      "province_name": "Sindh",
-      "authority": "Excise, Taxation & Narcotics Control Department, Sindh",
-      "regime_type": "cc_slab_based",
+    "fbr_section_234_wht": {
+      "exemption_age_years": 10,
       "slabs": [
-        { "min_cc": 0, "max_cc": 1000, "annual_base_mvt_pkr": 1000, "lifetime_pkr": 10000 },
-        { "min_cc": 1001, "max_cc": 1300, "annual_base_mvt_pkr": 3000, "lifetime_pkr": null },
-        { "min_cc": 1301, "max_cc": 1500, "annual_base_mvt_pkr": 4500, "lifetime_pkr": null },
-        { "min_cc": 1501, "max_cc": 2000, "annual_base_mvt_pkr": 9000, "lifetime_pkr": null },
-        { "min_cc": 2001, "max_cc": 2500, "annual_base_mvt_pkr": 14000, "lifetime_pkr": null },
-        { "min_cc": 2501, "max_cc": 99999, "annual_base_mvt_pkr": 20000, "lifetime_pkr": null }
-      ]
-    },
-    "kpk": {
-      "province_name": "Khyber Pakhtunkhwa (KP)",
-      "authority": "Excise, Taxation & Narcotics Control Department, KP",
-      "regime_type": "cc_slab_based",
-      "slabs": [
-        { "min_cc": 0, "max_cc": 1000, "annual_base_mvt_pkr": 1500, "lifetime_pkr": 10000 },
-        { "min_cc": 1001, "max_cc": 1300, "annual_base_mvt_pkr": 2500, "lifetime_pkr": null },
-        { "min_cc": 1301, "max_cc": 1600, "annual_base_mvt_pkr": 4500, "lifetime_pkr": null },
-        { "min_cc": 1601, "max_cc": 2000, "annual_base_mvt_pkr": 7500, "lifetime_pkr": null },
-        { "min_cc": 2001, "max_cc": 2500, "annual_base_mvt_pkr": 12000, "lifetime_pkr": null },
-        { "min_cc": 2501, "max_cc": 99999, "annual_base_mvt_pkr": 18000, "lifetime_pkr": null }
+        { "min_cc": 0, "max_cc": 1000, "filer_pkr": 800, "non_filer_pkr": 1600 },
+        { "min_cc": 1001, "max_cc": 1199, "filer_pkr": 1500, "non_filer_pkr": 3000 },
+        { "min_cc": 1200, "max_cc": 1299, "filer_pkr": 1750, "non_filer_pkr": 3500 },
+        { "min_cc": 1300, "max_cc": 1499, "filer_pkr": 2500, "non_filer_pkr": 5000 },
+        { "min_cc": 1500, "max_cc": 1599, "filer_pkr": 3750, "non_filer_pkr": 7500 },
+        { "min_cc": 1600, "max_cc": 1999, "filer_pkr": 4500, "non_filer_pkr": 9000 },
+        { "min_cc": 2000, "max_cc": 99999, "filer_pkr": 10000, "non_filer_pkr": 20000 }
       ]
     }
   },
   "transfer_calculator": {
     "fbr_section_231b_advance_tax": {
-      "description": "FBR Section 231B Advance Tax on Transfer of Motor Vehicles",
-      "annual_depreciation_pct": 10.0,
-      "max_depreciation_pct": 50.0,
-      "speculative_short_transfer_days": 90,
+      "annual_depreciation_pct": 0.10,
+      "max_depreciation_years": 10,
       "slabs": [
-        { "id": "up_to_850cc", "min_cc": 0, "max_cc": 850, "filer_pkr": 0, "non_filer_pkr": 0 },
-        { "id": "851cc_to_1000cc", "min_cc": 851, "max_cc": 1000, "filer_pkr": 5000, "non_filer_pkr": 10000 },
-        { "id": "1001cc_to_1300cc", "min_cc": 1001, "max_cc": 1300, "filer_pkr": 7500, "non_filer_pkr": 15000 },
-        { "id": "1301cc_to_1600cc", "min_cc": 1301, "max_cc": 1600, "filer_pkr": 12500, "non_filer_pkr": 25000 },
-        { "id": "1601cc_to_1800cc", "min_cc": 1601, "max_cc": 1800, "filer_pkr": 18750, "non_filer_pkr": 37500 },
-        { "id": "1801cc_to_2000cc", "min_cc": 1801, "max_cc": 2000, "filer_pkr": 25000, "non_filer_pkr": 50000 },
-        { "id": "2001cc_to_2500cc", "min_cc": 2001, "max_cc": 2500, "filer_pkr": 37500, "non_filer_pkr": 75000 },
-        { "id": "2501cc_to_3000cc", "min_cc": 2501, "max_cc": 3000, "filer_pkr": 50000, "non_filer_pkr": 100000 },
-        { "id": "above_3000cc", "min_cc": 3001, "max_cc": 99999, "filer_pkr": 75000, "non_filer_pkr": 150000 }
+        { "min_cc": 0, "max_cc": 850, "filer_pkr": 0, "non_filer_pkr": 10000 },
+        { "min_cc": 851, "max_cc": 1000, "filer_pkr": 5000, "non_filer_pkr": 10000 },
+        { "min_cc": 1001, "max_cc": 1300, "filer_pkr": 7500, "non_filer_pkr": 15000 },
+        { "min_cc": 1301, "max_cc": 1600, "filer_pkr": 12500, "non_filer_pkr": 25000 },
+        { "min_cc": 1601, "max_cc": 1800, "filer_pkr": 18750, "non_filer_pkr": 37500 },
+        { "min_cc": 1801, "max_cc": 2000, "filer_pkr": 25000, "non_filer_pkr": 50000 },
+        { "min_cc": 2001, "max_cc": 2500, "filer_pkr": 37500, "non_filer_pkr": 75000 },
+        { "min_cc": 2501, "max_cc": 3000, "filer_pkr": 50000, "non_filer_pkr": 100000 },
+        { "min_cc": 3001, "max_cc": 99999, "filer_pkr": 62500, "non_filer_pkr": 125000 }
       ]
     },
     "provincial_mra_transfer_fees": {
       "punjab": [
         { "min_cc": 0, "max_cc": 1000, "fee_pkr": 1200 },
-        { "min_cc": 1001, "max_cc": 1300, "fee_pkr": 3000 },
-        { "min_cc": 1301, "max_cc": 1600, "fee_pkr": 4000 },
-        { "min_cc": 1601, "max_cc": 1800, "fee_pkr": 5000 },
-        { "min_cc": 1801, "max_cc": 2000, "fee_pkr": 6000 },
-        { "min_cc": 2001, "max_cc": 99999, "fee_pkr": 10000 }
+        { "min_cc": 1001, "max_cc": 1300, "fee_pkr": 1800 },
+        { "min_cc": 1301, "max_cc": 1600, "fee_pkr": 2500 },
+        { "min_cc": 1601, "max_cc": 2000, "fee_pkr": 4000 },
+        { "min_cc": 2001, "max_cc": 2500, "fee_pkr": 5500 },
+        { "min_cc": 2501, "max_cc": 99999, "fee_pkr": 8000 }
       ],
       "islamabad": [
-        { "min_cc": 0, "max_cc": 1000, "fee_pkr": 2750 },
-        { "min_cc": 1001, "max_cc": 1800, "fee_pkr": 4000 },
-        { "min_cc": 1801, "max_cc": 99999, "fee_pkr": 6500 }
+        { "min_cc": 0, "max_cc": 1000, "fee_pkr": 1200 },
+        { "min_cc": 1001, "max_cc": 1300, "fee_pkr": 1800 },
+        { "min_cc": 1301, "max_cc": 1800, "fee_pkr": 3000 },
+        { "min_cc": 1801, "max_cc": 2500, "fee_pkr": 5000 },
+        { "min_cc": 2501, "max_cc": 99999, "fee_pkr": 7500 }
       ],
       "sindh": [
         { "min_cc": 0, "max_cc": 1000, "fee_pkr": 1500 },
-        { "min_cc": 1001, "max_cc": 1300, "fee_pkr": 2500 },
+        { "min_cc": 1001, "max_cc": 1300, "fee_pkr": 2200 },
         { "min_cc": 1301, "max_cc": 1600, "fee_pkr": 3500 },
-        { "min_cc": 1601, "max_cc": 99999, "fee_pkr": 5500 }
+        { "min_cc": 1601, "max_cc": 2000, "fee_pkr": 5000 },
+        { "min_cc": 2001, "max_cc": 2500, "fee_pkr": 6500 },
+        { "min_cc": 2501, "max_cc": 99999, "fee_pkr": 9000 }
       ],
       "kpk": [
-        { "min_cc": 0, "max_cc": 1000, "fee_pkr": 1200 },
-        { "min_cc": 1001, "max_cc": 1300, "fee_pkr": 2000 },
-        { "min_cc": 1301, "max_cc": 1800, "fee_pkr": 3500 },
-        { "min_cc": 1801, "max_cc": 99999, "fee_pkr": 5000 }
+        { "min_cc": 0, "max_cc": 1000, "fee_pkr": 1000 },
+        { "min_cc": 1001, "max_cc": 1300, "fee_pkr": 1500 },
+        { "min_cc": 1301, "max_cc": 1600, "fee_pkr": 2500 },
+        { "min_cc": 1601, "max_cc": 2000, "fee_pkr": 4000 },
+        { "min_cc": 2001, "max_cc": 2500, "fee_pkr": 6000 },
+        { "min_cc": 2501, "max_cc": 99999, "fee_pkr": 8000 }
       ]
     },
     "fixed_administrative_fees": {
-      "smart_card_issuance_pkr": {
-        "punjab": 550,
-        "islamabad": 2000,
-        "sindh": 600,
-        "kpk": 500
-      },
-      "biometric_verification_pkr": {
-        "nadra_e_sahulat_per_party": 150,
-        "pak_identity_mobile_per_party": 500,
-        "excise_counter_per_party": 200,
-        "default_total_both_parties_pkr": 300
-      },
-      "number_plates_if_applicable_pkr": {
-        "punjab": 1500,
-        "islamabad": 2000,
-        "sindh": 1800,
-        "kpk": 1500
-      }
+      "smart_card_pkr": { "punjab": 550, "islamabad": 1215, "sindh": 550, "kpk": 600 },
+      "biometric_and_stamp_pkr": 800
     }
   }
 }
