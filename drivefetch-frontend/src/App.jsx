@@ -7,7 +7,7 @@ import MainLayout from './layouts/MainLayout';
 // Import Pages
 const Home = lazy(() => import('./pages/Home'));
 const SavedCarsPage = lazy(() => import('./pages/SavedCarsPage'));
-const Calculators = lazy(() => import('./pages/Calculators'));
+const CalculatorsHub = lazy(() => import('./pages/CalculatorsHub'));
 const ChatPage = lazy(() => import('./pages/ChatPage'));
 const About = lazy(() => import('./pages/About'));
 const RecommendPage = lazy(() => import('./pages/RecommendPage'));
@@ -123,7 +123,7 @@ export default function App() {
               <Route path="chat" element={<ChatPage />} />
               <Route path="recommend" element={<RecommendPage />} />
               <Route path="about" element={<About />} />
-              <Route path="calculators" element={<Calculators />} />
+              <Route path="calculators" element={<CalculatorsHub />} />
               <Route path="privacy" element={<PrivacyPolicy />} />
               
               {/* Catch-all 404 Route */}

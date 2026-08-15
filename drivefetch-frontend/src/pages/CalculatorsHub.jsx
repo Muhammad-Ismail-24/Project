@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import DynamicBackground from '../components/DynamicBackground';
+import { calculateFuelCost, calculateTokenTax, calculateTransferCost, formatPKR } from '../utils/calculatorEngine';
 
 /* ═══════════════════════════════════════════════════════
    DATA CONSTANTS
@@ -149,15 +150,47 @@ export default function CalculatorsHub() {
   const [fuelCc, setFuelCc] = useState(1000);
   const [fuelKm, setFuelKm] = useState(40);
 
+  const fuelCostResult = useMemo(() => {
+    let engineType = `${fuelCc}cc`;
+    if (fuelCc === 800) engineType = "660cc";
+    if (fuelCc === 2500) engineType = "diesel_suv_pickup";
+    const validEngineType = ['660cc', '1000cc', '1300cc', '1500cc', '1800cc', 'hybrid_1500_1800', 'diesel_suv_pickup'].includes(engineType) ? engineType : '1000cc';
+    return calculateFuelCost(validEngineType, fuelKm * 30, 70);
+  }, [fuelCc, fuelKm]);
+
   // ── Section 2: Token Tax Calculator State ──
   const [tokenProvince, setTokenProvince] = useState('Islamabad');
   const [tokenFiler, setTokenFiler] = useState(true);
   const [tokenCc, setTokenCc] = useState(1300);
+  const [tokenInvoiceValue, setTokenInvoiceValue] = useState(4000000);
+
+  const tokenTaxResult = useMemo(() => {
+    return calculateTokenTax({
+      province: tokenProvince.toLowerCase(),
+      cc: tokenCc,
+      invoiceValue: tokenInvoiceValue,
+      regYear: new Date().getFullYear(),
+      filerStatus: tokenFiler ? 'filer' : 'non-filer',
+      useEpay: true
+    });
+  }, [tokenProvince, tokenFiler, tokenCc, tokenInvoiceValue]);
 
   // ── Section 3: Transfer Fee Calculator State ──
+  const [transferProvince, setTransferProvince] = useState('Punjab');
   const [transferCc, setTransferCc] = useState(1300);
   const [buyerFiler, setBuyerFiler] = useState(true);
   const [sellerFiler, setSellerFiler] = useState(true);
+
+  const transferCostResult = useMemo(() => {
+    return calculateTransferCost({
+      province: transferProvince.toLowerCase(),
+      cc: transferCc,
+      regYear: new Date().getFullYear(),
+      filerStatus: buyerFiler ? 'filer' : 'non-filer',
+      isSpeculative: false,
+      includePlates: false
+    });
+  }, [transferProvince, transferCc, buyerFiler]);
 
   return (
     <>
@@ -239,7 +272,7 @@ export default function CalculatorsHub() {
                   Est. Monthly Cost
                 </p>
                 <p className="font-mono text-2xl md:text-3xl font-bold text-white tracking-tight">
-                  EST. MONTHLY COST: -- PKR
+                  EST. MONTHLY COST: {formatPKR(fuelCostResult.totalCost)}
                 </p>
               </div>
           </motion.section>
@@ -293,6 +326,22 @@ export default function CalculatorsHub() {
                   onChange={(e) => setTokenCc(Number(e.target.value))}
                   options={CC_OPTIONS}
                 />
+
+                {(tokenProvince === 'Punjab' || tokenProvince === 'Islamabad') && tokenCc > 1000 && (
+                  <div>
+                    <label className="block font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 dark:text-zinc-50/50 mb-2">
+                      Vehicle Invoice Value (PKR)
+                    </label>
+                    <input
+                      type="number"
+                      value={tokenInvoiceValue}
+                      onChange={(e) => setTokenInvoiceValue(Number(e.target.value))}
+                      className="w-full p-3 md:p-4 bg-df-white dark:bg-black border-2 border-df-black dark:border-white rounded-none outline-none font-mono text-sm md:text-base font-medium focus:ring-2 focus:ring-df-red focus:border-df-red text-df-black dark:text-zinc-50"
+                      min="0"
+                      step="100000"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Output Box */}
@@ -301,7 +350,7 @@ export default function CalculatorsHub() {
                   Annual Token Tax
                 </p>
                 <p className="font-mono text-2xl md:text-3xl font-bold text-white tracking-tight">
-                  ANNUAL TAX: -- PKR
+                  ANNUAL TAX: {formatPKR(tokenTaxResult.total)}
                 </p>
               </div>
           </motion.section>
@@ -329,6 +378,14 @@ export default function CalculatorsHub() {
 
               {/* Body */}
               <div className="px-6 md:px-8 py-6 md:py-8 space-y-6 md:space-y-8">
+                <BrutalSelect
+                  id="transfer-province"
+                  label="Region / Province"
+                  value={transferProvince}
+                  onChange={(e) => setTransferProvince(e.target.value)}
+                  options={PROVINCE_OPTIONS}
+                />
+
                 <BrutalSelect
                   id="transfer-cc"
                   label="Vehicle Type / Capacity"
@@ -366,11 +423,11 @@ export default function CalculatorsHub() {
                   Transfer Fee Breakdown
                 </p>
                 <div className="font-mono text-sm md:text-base text-white/80 space-y-1.5 leading-relaxed">
-                  <p>&gt; EXCISE FEE: <span className="text-white font-bold">-- PKR</span></p>
-                  <p>&gt; WITHHOLDING TAX: <span className="text-white font-bold">-- PKR</span></p>
-                  <p>&gt; STAMP DUTY: <span className="text-white font-bold">-- PKR</span></p>
+                  <p>&gt; EXCISE FEE: <span className="text-white font-bold">{formatPKR(transferCostResult.mraFee)}</span></p>
+                  <p>&gt; WITHHOLDING TAX: <span className="text-white font-bold">{formatPKR(transferCostResult.advanceTax)}</span></p>
+                  <p>&gt; STAMP DUTY / SMART CARD: <span className="text-white font-bold">{formatPKR(transferCostResult.smartCardFee + transferCostResult.bioFee)}</span></p>
                   <div className="border-t border-white/20 my-2 pt-2">
-                    <p className="text-white font-bold text-lg md:text-xl">&gt; TOTAL: -- PKR</p>
+                    <p className="text-white font-bold text-lg md:text-xl">&gt; TOTAL: {formatPKR(transferCostResult.total)}</p>
                   </div>
                 </div>
               </div>
