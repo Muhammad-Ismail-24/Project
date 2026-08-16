@@ -3,10 +3,20 @@ scrapers/pakwheels.py
 
 Migrated from Playwright to curl_cffi.
 Accepts a curl_cffi AsyncSession and fetches HTML directly.
+
+2026-08-16: age parsing moved onto scrapers/date_utils. The local
+_time_str_to_days / 999-sentinel pair is gone — see date_utils for why the
+old sentinel let listings older than 998 days pose as "age unknown".
 """
 from bs4 import BeautifulSoup
 import re
 from models.car_schema import CarListing
+from scrapers.date_utils import (
+    UNKNOWN_AGE,
+    age_days_from_text,
+    age_days_from_timestamp,
+    is_unknown_age,
+)
 
 MAX_ORGANIC_CARDS = 40
 
@@ -48,34 +58,6 @@ def _extract_image(item) -> str:
     return ''
 
 
-def _time_str_to_days(text: str) -> int:
-    """Converts a relative time string to an integer day count."""
-    t = text.lower()
-
-    if re.search(r"\b(minute|min|hour|hr|just now|today|moments?)s?\b", t):
-        return 0
-    if "yesterday" in t:
-        return 1
-
-    m = re.search(r"(\d+)\s*day", t)
-    if m:
-        return int(m.group(1))
-
-    m = re.search(r"(\d+)\s*week", t)
-    if m:
-        return int(m.group(1)) * 7
-
-    m = re.search(r"(\d+)\s*month", t)
-    if m:
-        return int(m.group(1)) * 30
-
-    m = re.search(r"(\d+)\s*year", t)
-    if m:
-        return int(m.group(1)) * 365
-
-    return 999  # unparseable → treated as stale by normalizer scorer
-
-
 def _parse_age_days(item, debug: bool = False) -> int:
     """
     Extracts listing age in days from a PakWheels DOM card.
@@ -87,31 +69,25 @@ def _parse_age_days(item, debug: bool = False) -> int:
       2. Class-name match for date/time/posted elements.
       3. Per-element regex scan — tests each tag's text individually for a
          relative-time pattern. This is MUCH safer than dumping the full card
-         text into _time_str_to_days, which was hitting mileage strings like
-         "45,000 km" or year numbers and returning 999 silently every time.
+         text into the parser, which was hitting mileage strings like
+         "45,000 km" or year numbers and coming back empty every time.
       4. Debug dump so you can see what the card contains when all else fails.
 
     Returns:
-      0   — posted today (minutes/hours/just now)
-      N   — posted N days ago
-      999 — could not detect age (normalizer scores this as stale = 0 pts)
+      0            — posted today (minutes/hours/just now)
+      N            — posted N days ago
+      UNKNOWN_AGE  — could not detect age; the normalisers rank these below
+                     every listing with a confirmed date
     """
-    from datetime import datetime, timezone
-
     # Strategy 1: <time datetime="..."> — ISO timestamp, most accurate
     time_tag = item.find("time")
     if time_tag:
-        dt_attr = time_tag.get("datetime", "")
-        if dt_attr:
-            try:
-                posted = datetime.fromisoformat(dt_attr.replace("Z", "+00:00"))
-                delta = datetime.now(timezone.utc) - posted
-                return max(0, delta.days)
-            except Exception:
-                pass
-        # No datetime attr — try the text of the tag itself
-        result = _time_str_to_days(time_tag.get_text(strip=True))
-        if result != 999:
+        result = age_days_from_timestamp(time_tag.get("datetime", ""))
+        if not is_unknown_age(result):
+            return result
+        # No usable datetime attr — try the text of the tag itself
+        result = age_days_from_text(time_tag.get_text(strip=True))
+        if not is_unknown_age(result):
             return result
 
     # Strategy 2: class-name match for known date-carrier elements
@@ -119,8 +95,8 @@ def _parse_age_days(item, debug: bool = False) -> int:
         r"(ago|date|time|posted|fresh|listing.?date|added|updated|when)", re.I
     ))
     if time_el:
-        result = _time_str_to_days(time_el.get_text(strip=True))
-        if result != 999:
+        result = age_days_from_text(time_el.get_text(strip=True))
+        if not is_unknown_age(result):
             return result
 
     # Strategy 3: walk every element and test its text individually.
@@ -136,8 +112,8 @@ def _parse_age_days(item, debug: bool = False) -> int:
     for el in item.find_all(True):
         text = el.get_text(strip=True)
         if TIME_PATTERN.search(text):
-            result = _time_str_to_days(text)
-            if result != 999:
+            result = age_days_from_text(text)
+            if not is_unknown_age(result):
                 return result
 
     # Strategy 4: debug dump — prints card snippet when all strategies miss
@@ -145,7 +121,7 @@ def _parse_age_days(item, debug: bool = False) -> int:
         snippet = item.get_text(separator=' ', strip=True)[:300]
         print(f"[PakWheels DEBUG] No date found. Card text: {snippet}")
 
-    return 999  # unparseable — treated as stale = 0 pts by normalizer scorer
+    return UNKNOWN_AGE
 
 
 async def scrape_pakwheels(url: str, session) -> list[CarListing]:
@@ -246,6 +222,6 @@ async def scrape_pakwheels(url: str, session) -> list[CarListing]:
         except Exception:
             continue
 
-    age_found = sum(1 for c in cars if c.age_days != 999)
+    age_found = sum(1 for c in cars if not is_unknown_age(c.age_days))
     print(f"[PakWheels Scraper] Extracted {len(cars)} listings (Age: {age_found}/{len(cars)} parsed)")
     return cars

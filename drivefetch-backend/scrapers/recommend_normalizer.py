@@ -29,11 +29,18 @@ v2.3 updates:
     trim in the headline rank above those that only mention it in the body.
   - Feature gates also scan search_text (title + description) so features
     confirmed only in the description count toward scoring.
+
+2026-08-16 fix:
+  - STALENESS VETO BYPASS: the veto was gated on `car.age_days <= 998`, which
+    exempted the old 999 "unknown" sentinel and, unintentionally, every real
+    age above it. Listings older than ~2.7 years skipped the veto entirely.
+    Unknown is now a negative sentinel that cannot collide with a real age.
 """
 
 import re
 from difflib import SequenceMatcher
 from models.car_schema import CarListing
+from scrapers.date_utils import DATE_MANDATORY_PLATFORMS, is_unknown_age
 
 # ── Import ONLY pure functions + read-only constants from main normalizer ──
 # We do NOT import MAKE_VETO_ALIASES, MODEL_ALIAS_MAP, or _calculate_identity_score
@@ -802,14 +809,31 @@ def _score_listing(
         city_score = 30.0 if car_city_lower else 15.0
 
     # ── 6. Staleness veto + age score ─────────────────────────────────────
+    #
+    # FIXED 2026-08-16. The guard used to read:
+    #     if 0 < car.age_days <= 998 and car.age_days > staleness_limit:
+    #
+    # The `<= 998` half was there to exempt the old 999 "unknown" sentinel, but
+    # it exempted every real age above it too. A Gari.pk listing posted
+    # Jul 19, 2022 is 1489 days old, failed `<= 998`, and skipped the veto
+    # outright — a four-year-old advert entering the recommendation set while a
+    # 90-day-old one was correctly rejected.
+    #
+    # Unknown is now the explicit UNKNOWN_AGE sentinel (negative), so a known
+    # age is tested against the limit with no upper exemption at all.
     staleness_limit = 120 if is_luxury else 60
-    if 0 < car.age_days <= 998 and car.age_days > staleness_limit:
-        return veto(f"Stale: {car.age_days} days old (limit {staleness_limit})")
 
-    if car.age_days > 0:
+    if not is_unknown_age(car.age_days):
+        if car.age_days > staleness_limit:
+            return veto(f"Stale: {car.age_days} days old (limit {staleness_limit})")
         age_score = max(0.0, 15.0 * (1.0 - car.age_days / staleness_limit))
     else:
-        age_score = 10.0
+        # Unknown age is not fatal — Drive.pk, AutoDeals and FameWheels publish
+        # no date — but it must never beat a confirmed one. On platforms where
+        # the date is always published, unknown means our parser broke on that
+        # card, and the listing is unverifiable rather than merely undated.
+        platform_key = (car.platform or "").lower()
+        age_score = 0.0 if platform_key in DATE_MANDATORY_PLATFORMS else 3.0
 
     # ── 7. Year bounds ─────────────────────────────────────────────────────
     if clean_year > 0:

@@ -13,11 +13,17 @@ Upgrade log over v3.3:
     TRIM_ALIASES matches. Counts as a match so sellers who omit trim from title are included.
   - ADDED (v3.5): Trim priority ranking. Title trim match = +25.0 pts, description trim match = +15.0 pts.
     Listings with explicit trim declarations rank above generic model listings.
+  - FIXED (2026-08-16): Staleness veto could be bypassed by very old listings.
+    The freshness block tested `age_days > 998` for "unknown" BEFORE testing
+    `age_days > 90` for "stale", so any listing older than 998 days — e.g. a
+    Gari.pk ad posted Jul 19, 2022 (1489 days) — was scored as "age unknown"
+    and given a neutral +10 instead of being vetoed. See section 8.
 """
 
 import re
 from difflib import SequenceMatcher
 from models.car_schema import CarListing
+from scrapers.date_utils import DATE_MANDATORY_PLATFORMS, is_unknown_age
 
 # ---------------------------------------------------------------------------
 # KNOWLEDGE MAPS
@@ -1075,27 +1081,58 @@ def _calculate_relevance_score(
     # For niche queries (specific trim + city), inventory is thin — a 60-day-old
     # listing is far better than returning 0 results.
     #
-    # New behaviour:
+    # Current behaviour:
     #   0–14 days:  15.0 pts (fresh — full score)
     #   15–45 days: linear decay 15.0 → 5.0 pts (moderately fresh)
     #   46–90 days:  5.0 → 0.0 pts (stale, but kept — ranked below fresh listings)
     #   90+ days:   hard veto — listing is too old to be credible
+    #   unknown:    scored low, never vetoed (see below)
     #
-    # This means a 45-day-old listing scores 5 pts less than a 14-day-old one,
-    # so fresh listings always rank above stale ones when both exist.
-    if car.age_days > 998 or car.age_days == 0:
-        age_score = 10.0   # age unknown — neutral
-    elif car.age_days > 90:
-        return veto(f"Stale listing. Posted {car.age_days} days ago (limit: 90).")
-    elif car.age_days <= 14:
-        age_score = 15.0                                    # fresh — full score
-    elif car.age_days <= 45:
-        # Linear decay: 15.0 at day 14 → 5.0 at day 45
-        age_score = 15.0 - ((car.age_days - 14) / 31) * 10.0
+    # ORDER MATTERS — 2026-08-16 fix.
+    # This block used to open with `if car.age_days > 998 or car.age_days == 0`
+    # and award a neutral 10.0 for "age unknown". Both halves were wrong:
+    #
+    #   > 998   — 998 was meant to catch the old 999 "unknown" sentinel, but it
+    #             also catches every real age above it. A Gari.pk Suzuki Every
+    #             posted Jul 19, 2022 is 1489 days old, sailed past this branch
+    #             as "unknown", scored +10, and never reached the veto below.
+    #             Meanwhile a 969-day listing from Dec 2023 WAS vetoed. Ads that
+    #             crossed ~2.7 years scored better than ads half their age.
+    #
+    #   == 0    — conflated "posted today" with "scraper never set the field".
+    #             Genuinely fresh listings lost 5 pts; Drive.pk / AutoDeals /
+    #             FameWheels listings, which set no date at all, gained 10.
+    #
+    # The staleness veto now runs FIRST against any known age, and "unknown" is
+    # the explicit UNKNOWN_AGE sentinel (negative, so it cannot collide with a
+    # real age). See scrapers/date_utils.py.
+    if not is_unknown_age(car.age_days):
+        if car.age_days > 90:
+            return veto(f"Stale listing. Posted {car.age_days} days ago (limit: 90).")
+        if car.age_days <= 14:
+            age_score = 15.0                                # fresh — full score
+        elif car.age_days <= 45:
+            # Linear decay: 15.0 at day 14 → 5.0 at day 45
+            age_score = 15.0 - ((car.age_days - 14) / 31) * 10.0
+        else:
+            # Linear decay: 5.0 at day 45 → 0.0 at day 90
+            age_score = 5.0 - ((car.age_days - 45) / 45) * 5.0
+            age_score = max(0.0, age_score)
     else:
-        # Linear decay: 5.0 at day 45 → 0.0 at day 90
-        age_score = 5.0 - ((car.age_days - 45) / 45) * 5.0
-        age_score = max(0.0, age_score)
+        # Age unknown. Not a veto — Drive.pk, AutoDeals and FameWheels publish
+        # no usable date, and vetoing them would empty those buckets entirely.
+        # But unknown never outranks a confirmed date: the best an undated
+        # listing can score is below the worst dated one that survives.
+        #
+        # On platforms that always publish a date, unknown means OUR parser
+        # broke on that card. Those score zero here rather than a token amount —
+        # an unverifiable Gari.pk listing has no business ranking at all when
+        # dated Gari.pk listings exist alongside it.
+        platform_key = (car.platform or "").lower()
+        if platform_key in DATE_MANDATORY_PLATFORMS:
+            age_score = 0.0
+        else:
+            age_score = 3.0
 
     # 9: Quality
     year_score = 7.5 if clean_year > 0 else 0.0
@@ -1192,12 +1229,24 @@ def normalize_listings(
     all_scored_cars = list(scored_map.values())
     all_scored_cars.sort(key=lambda x: x["score"], reverse=True)
 
+    # Platform buckets for the cross-platform mix.
+    #
+    # 'Other' is a catch-all and must exist. This loop used to `continue` on any
+    # platform without its own bucket, which silently threw away listings that
+    # had already passed every veto and been scored. FameWheels was the live
+    # casualty: its platform tag is "Famewheels", it matched no bucket key, and
+    # so every FameWheels listing was discarded at selection time. That stayed
+    # invisible only because the FameWheels scraper was itself returning zero
+    # rows; the moment it was fixed, its listings still never reached the user.
+    # recommend_normalizer.py already had an "Other" bucket — this brings the
+    # search pipeline in line with it.
     buckets = {
         'PakWheels': [],
         'OLX':       [],
         'Drive.pk':  [],
         'Gari.pk':   [],
         'AutoDeals': [],
+        'Other':     [],
     }
 
     for item in all_scored_cars:
@@ -1207,14 +1256,16 @@ def normalize_listings(
         elif plat in buckets:
             plat_key = plat
         else:
-            continue
+            plat_key = 'Other'
         buckets[plat_key].append(item)
 
     pw_selected   = buckets['PakWheels'][:5]
     olx_selected  = buckets['OLX'][:4]
     drive_selected = buckets['Drive.pk'][:3]
 
-    gari_auto_pool = buckets['Gari.pk'] + buckets['AutoDeals']
+    # Gari.pk / WiseWheels / AutoDeals / FameWheels and anything new share the
+    # remaining slots, ranked purely on score.
+    gari_auto_pool = buckets['Gari.pk'] + buckets['AutoDeals'] + buckets['Other']
     gari_auto_pool.sort(key=lambda x: x["score"], reverse=True)
     gari_auto_selected = gari_auto_pool[:3]
 
