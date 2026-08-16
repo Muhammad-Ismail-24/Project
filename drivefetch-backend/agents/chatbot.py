@@ -11,8 +11,13 @@ so the AI introduces itself by that name and signs its answers with it.
 
 from google import genai
 from google.genai import types
-from openai import AsyncOpenAI
-from agents.config import settings, async_retry, generate_content_resilient, PRIMARY_MODEL
+from agents.config import (
+    settings,
+    async_retry,
+    generate_content_resilient,
+    execute_groq_fallback,
+    PRIMARY_MODEL,
+)
 
 # Returned when BOTH primary and fallback APIs fail.
 CHATBOT_FALLBACK_RESPONSE = (
@@ -24,36 +29,28 @@ CHATBOT_FALLBACK_RESPONSE = (
 DEFAULT_AGENT_NAME = "Drive Fetch Expert"
 
 
-async def _execute_llama_call(formatted_messages: list) -> str:
-    """Internal helper to execute the Llama 3.3 API request on OpenRouter."""
-    api_key = settings.openrouter_api_key
-    if not api_key:
-        raise ValueError("OPENROUTER_API_KEY is empty/not configured.")
+async def _execute_groq_call(formatted_messages: list) -> str:
+    """
+    Tier 2: executes the chat on Groq (llama-3.3-70b-versatile).
 
-    # FIX 1: max_retries=0 forces instant failover to Gemini if OpenRouter is rate-limited
-    client = AsyncOpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=api_key,
-        max_retries=0  
-    )
+    Replaces the previous OpenRouter call — that free-tier key was inactive, so
+    what used to be the chatbot's PRIMARY path was in practice always failing
+    through to Gemini. The order is now Gemini cascade first, Groq second.
 
-    response = await client.chat.completions.create(
-        model="meta-llama/llama-3.3-70b-instruct:free",
-        messages=formatted_messages,
-        temperature=0.65,   # was 0.3 — too robotic, produces list-heavy textbook output
-        max_tokens=900,     # was 500 — cuts detailed spec/inspection answers mid-sentence
-        timeout=5.0,
-        extra_headers={
-            "HTTP-Referer": "https://github.com/google/antigravity",
-            "X-Title": "CarFinder App Specification Chatbot"
-        }
+    Temperature 0.65 and max_tokens 900 are carried over from the OpenRouter
+    implementation: 0.3 produced robotic list-heavy answers, and 500 tokens cut
+    detailed spec/inspection replies mid-sentence.
+    """
+    return await execute_groq_fallback(
+        formatted_messages,
+        temperature=0.65,
+        max_tokens=900,
     )
-    return response.choices[0].message.content or ""
 
 
 @async_retry(retries=1, delay=1.0)
-async def _execute_gemini_fallback_chat(formatted_messages: list) -> str:
-    """Fallback: executes the chat on Google Gemini if OpenRouter fails."""
+async def _execute_gemini_chat(formatted_messages: list) -> str:
+    """Tier 1: executes the chat on the Gemini cascade."""
     api_key = settings.gemini_api_key
     if not api_key:
         raise ValueError("GEMINI_API_KEY is empty/not configured.")
@@ -1130,8 +1127,15 @@ async def get_chatbot_response(
     agent_name: str = DEFAULT_AGENT_NAME,
 ) -> str:
     """
-    Sends a conversation history to Llama 3.3 70B via OpenRouter.
-    Falls back to Gemini 1.5 Flash if OpenRouter times out or rate-limits (429).
+    Sends a conversation history through the global model waterfall.
+
+    Tier 1: the Gemini cascade (generate_content_resilient walks the whole
+            GEMINI_MODEL_POOL, failing over instantly on each 429).
+    Tier 2: Groq llama-3.3-70b-versatile.
+
+    The order used to be the reverse — OpenRouter first, Gemini as backup — but
+    the OpenRouter free key was inactive, so every chat paid a failed request
+    and its timeout before reaching the model that actually answered.
     """
     system_prompt = _build_system_prompt(agent_name)
 
@@ -1143,21 +1147,21 @@ async def get_chatbot_response(
                 "content": msg["content"],
             })
 
-    # Primary: OpenRouter Llama 3.3 70B
+    # Tier 1: Gemini cascade
     try:
-        reply = await _execute_llama_call(formatted_messages)
-        if reply:
-            return reply.strip()
-    except Exception as e:
-        print(f"[Chatbot] OpenRouter Llama API failed: {e}. Attempting Gemini fallback...")
-
-    # Fallback: Google Gemini
-    try:
-        reply = await _execute_gemini_fallback_chat(formatted_messages)
+        reply = await _execute_gemini_chat(formatted_messages)
         if reply:
             return reply.strip()
     except Exception as gemini_err:
-        print(f"[Chatbot] Gemini fallback API failed: {gemini_err}")
+        print(f"[Chatbot] Gemini cascade exhausted: {gemini_err}. Attempting Groq fallback...")
+
+    # Tier 2: Groq
+    try:
+        reply = await _execute_groq_call(formatted_messages)
+        if reply:
+            return reply.strip()
+    except Exception as groq_err:
+        print(f"[Chatbot] Groq fallback failed: {groq_err}")
 
     return CHATBOT_FALLBACK_RESPONSE
 
