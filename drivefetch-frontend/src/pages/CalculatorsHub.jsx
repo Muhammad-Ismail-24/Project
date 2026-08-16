@@ -2,22 +2,25 @@ import React, { useState, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import DynamicBackground from '../components/DynamicBackground';
-import { calculateFuelCost, calculateTokenTax, calculateTransferCost, formatPKR } from '../utils/calculatorEngine';
+import { calculateFuelCost, calculateTokenTax, calculateTransferCost } from '../utils/calculatorEngine';
 
 /* ═══════════════════════════════════════════════════════
    DATA CONSTANTS
    ═══════════════════════════════════════════════════════ */
 
+// Values are the lookup keys into calculatorsConfig.json — 1801 is the sentinel
+// for strong hybrids (they share a displacement band with 1500-1800cc petrol
+// cars but have their own economy figures), and 2500 covers 2.5L+ diesel.
 const CC_OPTIONS = [
-  { value: 660,  label: '660cc (e.g., Suzuki Alto, Daihatsu Mira)' },
-  { value: 800,  label: '800cc (e.g., Suzuki Mehran, Old Alto)' },
-  { value: 1000, label: '1000cc (e.g., Suzuki Cultus, WagonR, Vitz 1.0)' },
-  { value: 1200, label: '1200cc (e.g., Honda City 1.2, Kia Stonic)' },
-  { value: 1300, label: '1300cc (e.g., Toyota Yaris 1.3, City 1.3)' },
-  { value: 1500, label: '1500cc (e.g., Honda Civic 1.5T, BR-V)' },
-  { value: 1800, label: '1800cc (e.g., Toyota Corolla Grande 1.8)' },
-  { value: 1801, label: '1.5L - 1.8L Hybrids (e.g., Aqua, Prius, Vezel, Haval HEV)' },
-  { value: 2500, label: '2.5L+ Diesel (e.g., Fortuner, Hilux Revo)' },
+  { value: 660,  label: '660cc (e.g., Alto, Mira, Dayz)' },
+  { value: 800,  label: '800cc (e.g., Mehran, Old Alto)' },
+  { value: 1000, label: '1000cc (e.g., Cultus, WagonR, Vitz)' },
+  { value: 1200, label: '1200cc (e.g., City 1.2, Stonic, Swift)' },
+  { value: 1300, label: '1300cc (e.g., Yaris 1.3, City 1.3)' },
+  { value: 1500, label: '1500cc (e.g., Civic 1.5T, BR-V)' },
+  { value: 1800, label: '1800cc (e.g., Corolla Grande, Civic 1.8)' },
+  { value: 1801, label: '1.5L-1.8L Hybrids (e.g., Aqua, Vezel, HEV)' },
+  { value: 2500, label: '2.5L+ Diesel (e.g., Fortuner, Revo)' },
 ];
 
 const PROVINCE_OPTIONS = [
@@ -271,7 +274,7 @@ export default function CalculatorsHub() {
                   Est. Monthly Cost
                 </p>
                 <p className="font-mono text-2xl md:text-3xl font-bold text-white tracking-tight">
-                  EST. MONTHLY COST: {formatPKR(fuelCostResult.monthlyCost)}
+                  Rs. {fuelCostResult.monthlyCost.toLocaleString()}
                 </p>
               </div>
           </motion.section>
@@ -341,6 +344,17 @@ export default function CalculatorsHub() {
                     />
                   </div>
                 )}
+
+                {/* Drives the FBR Section 234 exemption: WHT stops at 10 years. */}
+                <BrutalSlider
+                  id="token-age"
+                  label="Vehicle Age"
+                  value={tokenAge}
+                  onChange={(e) => setTokenAge(Number(e.target.value))}
+                  min={0}
+                  max={15}
+                  unit="yrs"
+                />
               </div>
 
               {/* Output Box */}
@@ -349,8 +363,19 @@ export default function CalculatorsHub() {
                   Annual Token Tax
                 </p>
                 <p className="font-mono text-2xl md:text-3xl font-bold text-white tracking-tight">
-                  ANNUAL TAX: {formatPKR(tokenTaxResult.totalAnnualTax)}
+                  {tokenTaxResult.isLifetimePaid && tokenTaxResult.totalAnnualTax === 0
+                    ? 'LIFETIME PAID (PKR 0/yr)'
+                    : `Rs. ${tokenTaxResult.totalAnnualTax.toLocaleString()}`}
                 </p>
+                {/* Under 1000cc in ICT/Punjab the provincial token is settled for
+                    life at registration, but federal Section 234 WHT is still due
+                    each year until the car turns 10. Showing "LIFETIME PAID" alone
+                    in that case would understate what the owner actually owes. */}
+                {tokenTaxResult.isLifetimePaid && tokenTaxResult.totalAnnualTax > 0 && (
+                  <p className="font-mono text-[10px] md:text-xs font-bold tracking-[0.14em] text-white/40 uppercase mt-1.5">
+                    Lifetime token paid &middot; FBR 234 WHT only
+                  </p>
+                )}
               </div>
           </motion.section>
 
@@ -413,6 +438,18 @@ export default function CalculatorsHub() {
                     { value: true,  label: 'Active Filer' },
                     { value: false, label: 'Non-Filer' },
                   ]}
+                />
+
+                {/* Drives the FBR Section 231B discount: the advance tax drops
+                    10% per year of age and reaches zero at 10 years. */}
+                <BrutalSlider
+                  id="transfer-age"
+                  label="Vehicle Age"
+                  value={transferAge}
+                  onChange={(e) => setTransferAge(Number(e.target.value))}
+                  min={0}
+                  max={10}
+                  unit="yrs"
                 />
               </div>
 
