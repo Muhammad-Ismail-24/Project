@@ -23,6 +23,12 @@ import re
 import json
 from urllib.parse import urlparse, urlunparse
 from models.car_schema import CarListing
+from scrapers.date_utils import (
+    UNKNOWN_AGE,
+    age_days_from_text,
+    age_days_from_timestamp,
+    is_unknown_age,
+)
 
 MAX_ORGANIC_CARDS = 35
 
@@ -149,9 +155,10 @@ def _parse_age_days(item) -> int:
       3. Scan the full card text as broadest fallback.
 
     Returns:
-      0   — posted today (minutes/hours/just now)
-      N   — posted N days ago
-      999 — could not detect age (normalizer scores this as stale = 0 pts)
+      0            — posted today (minutes/hours/just now)
+      N            — posted N days ago
+      UNKNOWN_AGE  — could not detect age; the normalisers rank these below
+                     every listing with a confirmed date
     """
     # Strategy 1: data-aut-id attribute (OLX-specific)
     time_el = item.find(attrs={"data-aut-id": re.compile(r"(date|time|posted|ago)", re.I)})
@@ -167,50 +174,16 @@ def _parse_age_days(item) -> int:
     time_text = ""
     if time_el:
         # If <time datetime="..."> is present, prefer that (ISO format)
-        dt_attr = time_el.get("datetime", "")
-        if dt_attr:
-            from datetime import datetime, timezone
-            try:
-                posted = datetime.fromisoformat(dt_attr.replace("Z", "+00:00"))
-                delta = datetime.now(timezone.utc) - posted
-                return max(0, delta.days)
-            except Exception:
-                pass
+        result = age_days_from_timestamp(time_el.get("datetime", ""))
+        if not is_unknown_age(result):
+            return result
         time_text = time_el.get_text(strip=True)
 
     # Strategy 4: full card text scan
     if not time_text:
         time_text = item.get_text(separator=" ")
 
-    return _time_str_to_days(time_text)
-
-
-def _time_str_to_days(text: str) -> int:
-    """Converts a relative time string to an integer day count."""
-    t = text.lower()
-
-    if re.search(r"\b(minute|min|hour|hr|just now|today|moments?)\b", t):
-        return 0
-    if "yesterday" in t:
-        return 1
-
-    m = re.search(r"(\d+)\s*day", t)
-    if m:
-        return int(m.group(1))
-
-    m = re.search(r"(\d+)\s*week", t)
-    if m:
-        return int(m.group(1)) * 7
-
-    m = re.search(r"(\d+)\s*month", t)
-    if m:
-        return int(m.group(1)) * 30
-
-    m = re.search(r"(\d+)\s*year", t)
-    if m:
-        return int(m.group(1)) * 365
-
-    return 999  # unparseable → treated as stale by normalizer scorer
+    return age_days_from_text(time_text)
 
 
 async def _fetch(session, url: str):
@@ -287,16 +260,9 @@ def _extract_from_hit(item: dict, fallback_url: str, image_map: dict) -> CarList
                     image_url = first
 
     # Age in days — OLX JSON hits carry a unix timestamp in 'createdAt'
-    age_days = 999
-    created_at = item.get("createdAt") or item.get("date") or item.get("activated_at")
-    if created_at:
-        try:
-            from datetime import datetime, timezone
-            posted = datetime.fromtimestamp(int(created_at), tz=timezone.utc)
-            delta = datetime.now(timezone.utc) - posted
-            age_days = max(0, delta.days)
-        except Exception:
-            age_days = 999
+    age_days = age_days_from_timestamp(
+        item.get("createdAt") or item.get("date") or item.get("activated_at")
+    )
 
     return CarListing(
         title=title,
@@ -511,7 +477,7 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
 
     # Debug: report image and age hit rates
     with_images = sum(1 for c in cars if c.image_url)
-    age_found = sum(1 for c in cars if c.age_days != 999)
+    age_found = sum(1 for c in cars if not is_unknown_age(c.age_days))
     print(
         f"[OLX Scraper] Extracted {len(cars)} listings via {source} "
         f"({with_images}/{len(cars)} with images, "

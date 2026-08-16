@@ -18,6 +18,7 @@ Fixes applied 2026-07-19:
   4. `url` field is a ready-made relative path — just prepend domain.
 """
 from models.car_schema import CarListing
+from scrapers.date_utils import age_days_from_timestamp
 from datetime import datetime, timezone
 
 MAX_ORGANIC_CARDS = 40
@@ -148,14 +149,9 @@ async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> 
             image_url = item.get("thumbnail") or ""
 
             # ── Age ────────────────────────────────────────────────────────────
-            age_days = 999
-            created_at = item.get("created_at") or item.get("updated_at")
-            if created_at:
-                try:
-                    dt = datetime.fromisoformat(str(created_at).replace("Z", "+00:00"))
-                    age_days = max(0, (datetime.now(timezone.utc) - dt).days)
-                except Exception:
-                    pass
+            age_days = age_days_from_timestamp(
+                item.get("created_at") or item.get("updated_at")
+            )
 
             # Skip bare skeletons with no useful data
             if price == "0" and year == "0":

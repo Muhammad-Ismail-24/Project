@@ -6,41 +6,66 @@ Since Gari.pk has strictly enforced Cloudflare JS Challenges against data
 center IPs, we use Google's own servers to fetch the HTML for us.
 Cloudflare never blocks Google.
 
-FIXES (2026-07-19):
-  OLD LISTING BLEED:
-    Root cause: Gari.pk search result cards don't show the posting date —
-    only the individual listing detail page does. The scraper was returning
-    age_days=999 for all undated cards, and the normalizer treated 999 as
-    "unknown" with a neutral middle score, letting 600+ day old cars through.
+DATE HANDLING (rewritten 2026-08-16)
+------------------------------------
+Gari.pk publishes the posting date in two places, and they always agree:
 
-    Fix 1: Added DATE_RE which catches absolute date strings like
-    "Oct 15, 2023" or "Sep 3, 2023" embedded anywhere in the card text
-    (sometimes present in hidden elements, data attributes, or alt text).
+  1. Search results card — the LAST cell of `div#price-cat > div.div_feat`.
+     Shows a relative age for recent ads ("1 day ago", "10 hours ago") and
+     an absolute date once the ad is older than roughly three weeks
+     ("Jul 19, 2022", "May 23, 2023", "Aug 10, 2026").
 
-    Fix 2: Added a GARI_MAX_AGE_DAYS cap (90 days). Any Gari.pk listing
-    that returns age_days=999 (no date found on card) is treated as
-    potentially stale and capped at 90 days for scoring purposes.
-    This means undated listings score lower than fresh dated listings,
-    preventing ancient cars from floating to the top.
+  2. Listing detail page — the "Date Posted" row of the spec table:
+       <div class="inner-desc">
+         <div class="desc1"><strong>Date Posted</strong></div>
+         <div class="desc2">Aug 15, 2026</div>
+       </div>
 
-    Fix 3: Broadened Strategy 2 to also scan <td> and <label> elements
-    and increased the char limit to 60 to catch more date containers.
+Verified equivalence: a card reading "17 days ago" resolves to the same day
+as its detail page's "Jul 30, 2026". So the card is the primary source — it
+costs no extra request — and the detail page is the fallback for the rare
+card whose date cell is missing or unparseable.
 
-  WISEWHEELS DATE NOTE (separate file):
-    WiseWheels age=0.0 is correct — those listings were just posted today.
-    The created_at field is accurate. No fix needed there.
+WHAT CHANGED AND WHY
+  - Date extraction now reads the specific `.div_feat` cells inside
+    `#price-cat`, scanning from the last cell backwards. The old code swept
+    every <span>/<p>/<div>/<td> in document order, so a title like
+    "Suzuki Alto VXR 2 2015" could reach the absolute-date regex before the
+    real date cell did. That only ever failed safely because strptime raised
+    on the bogus month token "Vxr" — one alias table away from silently
+    dating listings off their headline.
+  - Undated cards now fall back to fetching the detail page and reading
+    "Date Posted" directly. Bounded by GARI_DETAIL_LOOKUP_CAP and a
+    semaphore so a broken card selector cannot turn one search into 40
+    sequential page loads.
+  - GARI_UNDATED_AGE_DAYS is gone. It wrote a fabricated 90 into age_days,
+    which the search normaliser read as "89.9 days old, just barely fresh"
+    while the recommendation normaliser (60-day limit) read as "stale, veto"
+    with an invented reason. Undated now means UNKNOWN_AGE, and the
+    normalisers decide what an unknown age is worth.
+  - The 999 sentinel is gone everywhere; see scrapers/date_utils.py for why
+    it was actively harmful (it collided with real ages over 998 days, which
+    is exactly how July 2022 listings were scoring as "age unknown").
 """
-from bs4 import BeautifulSoup
+import asyncio
 import re
-import datetime
+
+from bs4 import BeautifulSoup
+
 from models.car_schema import CarListing
+from scrapers.date_utils import (
+    UNKNOWN_AGE,
+    age_days_from_text,
+    is_unknown_age,
+)
 
 MAX_CARDS = 40
 
-# If a Gari.pk card has no detectable date, treat it as this many days old
-# for scoring. High enough to deprioritize but not trigger the 14-day stale veto
-# (which is reserved for listings WITH a confirmed old date).
-GARI_UNDATED_AGE_DAYS = 90
+# Detail-page fallback budget. Only undated cards trigger a lookup, and in
+# practice almost every card carries its date, so this rarely fires at all.
+GARI_DETAIL_LOOKUP_CAP = 12
+GARI_DETAIL_CONCURRENCY = 4
+GARI_DETAIL_TIMEOUT = 15
 
 # Known Pakistani cities for text-scan city detection
 KNOWN_CITIES = (
@@ -56,15 +81,17 @@ PRICE_RE = re.compile(
     re.I
 )
 
-# Matches absolute dates like "Oct 15, 2023" or "15 Oct 2023" or "2023-10-15"
-DATE_RE = re.compile(
-    r'\b(?:'
-    r'(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}'  # Oct 15, 2023
-    r'|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?,?\s+\d{4}'  # 15 Oct 2023
-    r'|\d{4}-\d{2}-\d{2}'                                                                   # 2023-10-15
-    r'|\d{2}-\d{2}-\d{4}'                                                                   # 15-10-2023
-    r')\b',
-    re.I
+# Matches the "Date Posted" spec row on a listing detail page.
+DATE_POSTED_LABEL_RE = re.compile(r'date\s*posted', re.I)
+
+# Text-level fallback for the same row, for when the markup shifts but the
+# label survives: "Date Posted Aug 15, 2026".
+DATE_POSTED_TEXT_RE = re.compile(
+    r'date\s*posted\s*[:\-]?\s*'
+    r'([A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4}'
+    r'|\d{1,2}\s+[A-Za-z]{3,9}\.?,?\s+\d{4}'
+    r'|\d{4}-\d{1,2}-\d{1,2})',
+    re.I,
 )
 
 
@@ -73,158 +100,164 @@ def _normalize_price_prefix(price: str) -> str:
     return re.sub(r'^Rs\.?\s*', 'PKR ', price.strip(), flags=re.I)
 
 
-MONTH_MAP = {
-    'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
-    'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
-    'january': 1, 'february': 2, 'march': 3, 'april': 4, 'june': 6,
-    'july': 7, 'august': 8, 'september': 9, 'october': 10,
-    'november': 11, 'december': 12,
-}
+def _proxy_url(url: str) -> str:
+    """Rewrites a gari.pk URL to its Google Translate proxy equivalent."""
+    path = url.replace("https://www.gari.pk", "").replace("http://www.gari.pk", "")
+    return (
+        f"https://www-gari-pk.translate.goog{path}"
+        f"?_x_tr_sl=auto&_x_tr_tl=en&_x_tr_hl=en&_x_tr_pto=wapp"
+    )
 
 
-def _time_str_to_days(text: str) -> int:
-    t = text.lower().strip()
-    today = datetime.date.today()
+def _unproxy_url(url: str) -> str:
+    """Rewrites a proxied link back to its canonical gari.pk form."""
+    link = url.replace("https://www-gari-pk.translate.goog", "https://www.gari.pk")
+    link = link.split("?_x_tr")[0]
+    if not link.startswith('http'):
+        link = 'https://www.gari.pk' + link
+    return link
 
-    # Absolute: Month Day, Year (e.g., Oct 15, 2023)
-    date_match = re.search(r'([a-z]{3,9})\s+(\d{1,2}),?\s+(\d{4})', t)
-    if date_match:
+
+def _parse_card_age_days(item, debug: bool = False) -> int:
+    """
+    Reads the posting age from a Gari.pk search-result card.
+
+    The date lives in the last cell of `div#price-cat > div.div_feat`. We scan
+    those cells from the end backwards so a shifted column layout still finds
+    it, and we never fall back to sweeping the whole card — the title and the
+    spec values (year, engine cc, mileage) are full of digits that look
+    date-shaped and have no business being read as a posting date.
+
+    Returns UNKNOWN_AGE when the card carries no readable date.
+    """
+    spec_block = item.find(id='price-cat') or item
+    cells = spec_block.find_all('div', class_='div_feat')
+
+    for cell in reversed(cells):
+        text = cell.get_text(strip=True)
+        if not text or text == '-':
+            continue
+        age = age_days_from_text(text)
+        if not is_unknown_age(age):
+            if debug:
+                print(f"[Gari.pk Age] card cell {text!r} -> {age}d")
+            return age
+
+    # Markup drift guard: a dedicated date/posted element anywhere in the card.
+    time_el = item.find(class_=re.compile(r'(posted|listing.?date|date|ago)', re.I))
+    if time_el:
+        age = age_days_from_text(time_el.get_text(strip=True))
+        if not is_unknown_age(age):
+            if debug:
+                print(f"[Gari.pk Age] class-matched element -> {age}d")
+            return age
+
+    if debug:
+        cell_texts = [c.get_text(strip=True) for c in cells]
+        print(f"[Gari.pk Age] no date in card. Cells: {cell_texts}")
+
+    return UNKNOWN_AGE
+
+
+def parse_detail_age_days(html: str, debug: bool = False) -> int:
+    """
+    Reads "Date Posted" from a Gari.pk listing detail page.
+
+    Primary path is the structured spec row:
+        <div class="inner-desc">
+          <div class="desc1"><strong>Date Posted</strong></div>
+          <div class="desc2">Aug 15, 2026</div>
+        </div>
+
+    Falls back to a label-anchored text regex if that markup shifts.
+    Returns UNKNOWN_AGE when the field is absent or unreadable.
+    """
+    if not html:
+        return UNKNOWN_AGE
+
+    soup = BeautifulSoup(html, 'html.parser')
+
+    for row in soup.find_all('div', class_='inner-desc'):
+        label_el = row.find('div', class_='desc1')
+        if not label_el or not DATE_POSTED_LABEL_RE.search(label_el.get_text(strip=True)):
+            continue
+        value_el = row.find('div', class_='desc2')
+        if not value_el:
+            continue
+        raw = value_el.get_text(strip=True)
+        age = age_days_from_text(raw)
+        if debug:
+            print(f"[Gari.pk Age] detail 'Date Posted' = {raw!r} -> {age}d")
+        if not is_unknown_age(age):
+            return age
+
+    # Markup drift guard: label and value adjacent in the flattened text.
+    match = DATE_POSTED_TEXT_RE.search(soup.get_text(separator=' ', strip=True))
+    if match:
+        age = age_days_from_text(match.group(1))
+        if debug:
+            print(f"[Gari.pk Age] detail text fallback {match.group(1)!r} -> {age}d")
+        if not is_unknown_age(age):
+            return age
+
+    return UNKNOWN_AGE
+
+
+async def _fetch_detail_age(session, listing_url: str, semaphore) -> int:
+    """Fetches one detail page through the proxy and returns its age in days."""
+    if not listing_url:
+        return UNKNOWN_AGE
+    async with semaphore:
         try:
-            month_str = date_match.group(1)[:3].capitalize()
-            clean_date = f"{month_str} {date_match.group(2)}, {date_match.group(3)}"
-            posted = datetime.datetime.strptime(clean_date, "%b %d, %Y").date()
-            return max(0, (today - posted).days)
-        except Exception:
-            pass
+            response = await session.get(
+                _proxy_url(listing_url), timeout=GARI_DETAIL_TIMEOUT
+            )
+        except Exception as e:
+            print(f"[Gari.pk Scraper] Detail fetch failed for {listing_url}: {e}")
+            return UNKNOWN_AGE
+        if response.status_code != 200:
+            print(
+                f"[Gari.pk Scraper] Detail HTTP {response.status_code} "
+                f"for {listing_url}"
+            )
+            return UNKNOWN_AGE
+        return parse_detail_age_days(response.text)
 
-    # Absolute: Day Month Year (e.g., 28 Jul 2023)
-    dmy_match = re.search(r'(\d{1,2})\s+([a-z]{3,9}),?\s+(\d{4})', t)
-    if dmy_match:
-        try:
-            month_str = dmy_match.group(2)[:3].capitalize()
-            clean_date = f"{month_str} {dmy_match.group(1)}, {dmy_match.group(3)}"
-            posted = datetime.datetime.strptime(clean_date, "%b %d, %Y").date()
-            return max(0, (today - posted).days)
-        except Exception:
-            pass
 
-    # YYYY-MM-DD
-    m = re.search(r'(\d{4})-(\d{2})-(\d{2})', t)
-    if m:
-        try:
-            posted = datetime.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
-            return max(0, (today - posted).days)
-        except ValueError:
-            pass
+async def _backfill_ages_from_detail_pages(session, cars: list[CarListing]) -> int:
+    """
+    Fills in age_days for cards that had no readable date, by reading
+    "Date Posted" off each listing's detail page.
 
-    # DD-MM-YYYY
-    m = re.search(r'(\d{2})-(\d{2})-(\d{4})', t)
-    if m:
-        try:
-            posted = datetime.date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
-            return max(0, (today - posted).days)
-        except ValueError:
-            pass
-
-    # Relative English
-    m = re.search(r'(?:about\s+)?(\d+)\s*day', t)
-    if m:
-        return int(m.group(1))
-
-    m = re.search(r'(?:about\s+)?(\d+)\s*week', t)
-    if m:
-        return int(m.group(1)) * 7
-
-    m = re.search(r'(?:about\s+)?(\d+)\s*month', t)
-    if m:
-        return int(m.group(1)) * 30
-
-    m = re.search(r'(?:about\s+)?(\d+)\s*year', t)
-    if m:
-        return int(m.group(1)) * 365
-
-    # Urdu relative
-    m = re.search(r'(\d+)\s*دن', t)
-    if m:
-        return int(m.group(1))
-    m = re.search(r'(\d+)\s*ہفتے', t)
-    if m:
-        return int(m.group(1)) * 7
-    m = re.search(r'(\d+)\s*مہینے', t)
-    if m:
-        return int(m.group(1)) * 30
-    m = re.search(r'(\d+)\s*سال', t)
-    if m:
-        return int(m.group(1)) * 365
-
-    # Same-day signals
-    if re.search(r'\b(minute|min|hour|hr|just now|today|moments?)s?\b|ابھی|گھنٹ|منٹ', t):
+    Capped at GARI_DETAIL_LOOKUP_CAP lookups so a card-selector regression
+    cannot turn one search into dozens of extra page loads. Returns the
+    number of ages successfully recovered.
+    """
+    pending = [c for c in cars if is_unknown_age(c.age_days) and c.listing_url]
+    if not pending:
         return 0
 
-    if 'yesterday' in t or 'کل' in t:
-        return 1
+    targets = pending[:GARI_DETAIL_LOOKUP_CAP]
+    if len(pending) > len(targets):
+        print(
+            f"[Gari.pk Scraper] {len(pending)} undated cards, "
+            f"fetching detail pages for the first {len(targets)}."
+        )
 
-    return 999
-
-
-def _parse_age_days(item, debug: bool = False) -> int:
-    """
-    Extracts listing age in days from a Gari.pk card.
-
-    Strategy order:
-      1. Dedicated date/time CSS class element
-      2. Small inline elements (span, p, small, li, div, td, label) < 60 chars
-      3. Data attributes and alt text (catches hidden date metadata)
-      4. Full card text scan (last resort — picks up "Oct 15, 2023" style dates)
-
-    Returns 999 if no date found. Caller should treat 999 as undated
-    and apply GARI_UNDATED_AGE_DAYS as the scoring fallback.
-    """
-    # Strategy 1: dedicated time/date element
-    time_el = item.find(
-        class_=re.compile(r'(ago|date|time|posted|fresh|listing.?date|new|updated)', re.I)
+    semaphore = asyncio.Semaphore(GARI_DETAIL_CONCURRENCY)
+    results = await asyncio.gather(
+        *(_fetch_detail_age(session, c.listing_url, semaphore) for c in targets),
+        return_exceptions=True,
     )
-    if not time_el:
-        time_el = item.find('time')
 
-    time_text = time_el.get_text(strip=True) if time_el else ''
-    if time_text:
-        result = _time_str_to_days(time_text)
-        if result != 999:
-            return result
-
-    # Strategy 2: scan small inline elements
-    for tag in item.find_all(['span', 'p', 'small', 'li', 'div', 'td', 'label']):
-        text = tag.get_text(strip=True)
-        if not text or len(text) > 60:
+    recovered = 0
+    for car, age in zip(targets, results):
+        if isinstance(age, Exception) or is_unknown_age(age):
             continue
-        result = _time_str_to_days(text)
-        if result != 999:
-            if debug:
-                print(f"[Gari.pk Age DEBUG] Strategy 2 match in <{tag.name}>: {repr(text[:60])}")
-            return result
+        car.age_days = age
+        recovered += 1
 
-    # Strategy 3: scan data-* attributes and img alt text for hidden date metadata
-    for tag in item.find_all(True):
-        for attr_name, attr_val in tag.attrs.items():
-            if not isinstance(attr_val, str):
-                continue
-            if DATE_RE.search(attr_val):
-                result = _time_str_to_days(attr_val)
-                if result != 999:
-                    if debug:
-                        print(f"[Gari.pk Age DEBUG] Strategy 3 attr match [{attr_name}]: {repr(attr_val[:60])}")
-                    return result
-
-    # Strategy 4: full card text — catches "Date Posted: Oct 15, 2023" style
-    full_text = item.get_text(separator=' ')
-    if debug:
-        print(f"[Gari.pk Age DEBUG] Strategy 4 full text (first 300): {repr(full_text[:300])}")
-    result = _time_str_to_days(full_text)
-    if result != 999:
-        return result
-
-    return 999
+    return recovered
 
 
 def _extract_city(item, fallback_city: str) -> str:
@@ -278,31 +311,20 @@ def _extract_image(item) -> str:
     return ''
 
 
-async def scrape_gari_pk(
-    url: str,
-    session,
-    search_filters: dict = None
-) -> list[CarListing]:
-    """Fetches Gari.pk via the Google Translate proxy."""
-    filters = search_filters or {}
-    searched_city = filters.get('city', '').replace('-', ' ').title() or 'Unknown'
+def parse_gari_cards(html: str, searched_city: str = 'Unknown',
+                     debug: bool = False, stats: dict = None) -> list[CarListing]:
+    """
+    Parses Gari.pk search-result HTML into CarListings.
 
-    path = url.replace("https://www.gari.pk", "")
-    proxy_url = (
-        f"https://www-gari-pk.translate.goog{path}"
-        f"?_x_tr_sl=auto&_x_tr_tl=en&_x_tr_hl=en&_x_tr_pto=wapp"
-    )
-
-    try:
-        response = await session.get(proxy_url, timeout=15)
-        if response.status_code != 200:
-            print(f"[Gari.pk Scraper] Google Proxy HTTP {response.status_code}")
-            return []
-        html = response.text
-    except Exception as e:
-        print(f"[Gari.pk Scraper] Proxy connection error: {e}")
-        return []
-
+    Split out from scrape_gari_pk so the card and date logic can be exercised
+    against saved fixtures without a live request. Pass `stats` to collect the
+    per-field extraction counters used in the scraper's summary log line.
+    """
+    counters = stats if stats is not None else {}
+    counters.setdefault('price_class', 0)
+    counters.setdefault('price_regex', 0)
+    counters.setdefault('city_dom', 0)
+    counters.setdefault('image', 0)
     soup = BeautifulSoup(html, 'html.parser')
 
     items = soup.find_all('div', class_=re.compile(r'car-item', re.I))
@@ -321,13 +343,6 @@ async def scrape_gari_pk(
         return []
 
     cars = []
-    city_dom_hits  = 0
-    price_class_hits = 0
-    price_regex_hits = 0
-    image_hits     = 0
-    age_found      = 0
-    age_undated    = 0
-
     for item in items[:MAX_CARDS]:
         try:
             text_content = item.get_text(separator=' ')
@@ -351,27 +366,19 @@ async def scrape_gari_pk(
 
             # --- Link ---
             a_tag = item.find('a', href=True)
-            link = a_tag['href'] if a_tag else ""
-            if link:
-                link = link.replace(
-                    "https://www-gari-pk.translate.goog",
-                    "https://www.gari.pk"
-                )
-                link = link.split("?_x_tr")[0]
-                if not link.startswith('http'):
-                    link = 'https://www.gari.pk' + link
+            link = _unproxy_url(a_tag['href']) if a_tag else ""
 
             # --- Price ---
             price_el = item.find(class_=re.compile(r'price', re.I))
             raw_price = price_el.get_text(separator=' ', strip=True) if price_el else ''
             if raw_price and raw_price.strip('0 ') != '':
                 price = _normalize_price_prefix(raw_price)
-                price_class_hits += 1
+                counters['price_class'] += 1
             else:
                 m = PRICE_RE.search(text_content)
                 if m:
                     price = _normalize_price_prefix(m.group(0).strip())
-                    price_regex_hits += 1
+                    counters['price_regex'] += 1
                 else:
                     price = '0'
 
@@ -390,25 +397,23 @@ async def scrape_gari_pk(
             # --- City ---
             city = _extract_city(item, fallback_city=searched_city)
             if city != searched_city:
-                city_dom_hits += 1
+                counters['city_dom'] += 1
 
             # --- Image ---
-            image_url = _extract_image(item) or None
+            # Must be "" and never None: CarListing.image_url is a plain `str`,
+            # so passing None raises a pydantic ValidationError that the
+            # except-continue below would swallow — silently dropping every
+            # image-less card instead of keeping the listing without a photo.
+            image_url = _extract_image(item) or ""
             if image_url:
-                image_hits += 1
+                counters['image'] += 1
 
             # --- Age ---
-            # age_days=999 means no date found on the card.
-            # We replace 999 with GARI_UNDATED_AGE_DAYS so these listings:
-            #   (a) don't get vetoed by the stale-listing rule (that needs a real date)
-            #   (b) score lower than fresh dated listings
-            #   (c) can still appear if there's nothing better
-            age_days = _parse_age_days(item, debug=False)
-            if age_days != 999:
-                age_found += 1
-            else:
-                age_undated += 1
-                age_days = GARI_UNDATED_AGE_DAYS
+            # UNKNOWN_AGE here is honest, not a scoring hint. Undated cards get
+            # a detail-page lookup in scrape_gari_pk; whatever is still unknown
+            # after that is handed to the normalisers as unknown, and they sink
+            # it below every dated listing.
+            age_days = _parse_card_age_days(item, debug=debug)
 
             cars.append(CarListing(
                 title=title,
@@ -424,12 +429,44 @@ async def scrape_gari_pk(
         except Exception:
             continue
 
+    return cars
+
+
+async def scrape_gari_pk(
+    url: str,
+    session,
+    search_filters: dict = None
+) -> list[CarListing]:
+    """Fetches Gari.pk via the Google Translate proxy."""
+    filters = search_filters or {}
+    searched_city = filters.get('city', '').replace('-', ' ').title() or 'Unknown'
+
+    try:
+        response = await session.get(_proxy_url(url), timeout=15)
+        if response.status_code != 200:
+            print(f"[Gari.pk Scraper] Google Proxy HTTP {response.status_code}")
+            return []
+        html = response.text
+    except Exception as e:
+        print(f"[Gari.pk Scraper] Proxy connection error: {e}")
+        return []
+
+    stats = {}
+    cars = parse_gari_cards(html, searched_city=searched_city, stats=stats)
+    if not cars:
+        return []
+
+    from_card = sum(1 for c in cars if not is_unknown_age(c.age_days))
+    recovered = await _backfill_ages_from_detail_pages(session, cars)
+    still_unknown = sum(1 for c in cars if is_unknown_age(c.age_days))
+
     print(
         f"[Gari.pk Scraper] Extracted {len(cars)} listings via Google Proxy. "
-        f"Price: {price_class_hits} class / {price_regex_hits} regex / "
-        f"{len(cars) - price_class_hits - price_regex_hits} missing. "
-        f"Images: {image_hits}/{len(cars)}. "
-        f"City: {city_dom_hits} DOM / {len(cars) - city_dom_hits} fallback. "
-        f"Age: {age_found}/{len(cars)} parsed, {age_undated} undated→{GARI_UNDATED_AGE_DAYS}d."
+        f"Price: {stats['price_class']} class / {stats['price_regex']} regex / "
+        f"{len(cars) - stats['price_class'] - stats['price_regex']} missing. "
+        f"Images: {stats['image']}/{len(cars)}. "
+        f"City: {stats['city_dom']} DOM / {len(cars) - stats['city_dom']} fallback. "
+        f"Age: {from_card} from card, {recovered} from detail page, "
+        f"{still_unknown} unknown."
     )
     return cars
