@@ -29,7 +29,7 @@ v10.0 changes:
 
 Preserved from v8.0:
   - Smart failure classification (SCRAPER_ZERO vs NORMALIZER_ZERO)
-  - city="" passed to runner (soft city signal, recommend_normalizer enforces)
+  - city flows override -> target -> runner -> recommend_normalizer (hard veto)
   - budget * 1.05 passed to runner (negotiate buffer pre-fetch)
   - trim stripped of generic powertrain tags before URL building
   - seen_urls dedup shared across initial + fallback pass
@@ -149,8 +149,16 @@ async def _scrape_one(
     Fires the scraper pipeline for one recommendation dict.
     Used by both the initial pass (Stage 3) and fallback pass (Stage 4.5).
 
-    City passes as "" — runner's strict normalizer would hard-veto nearby-city
-    listings. recommend_normalizer handles city as a soft signal.
+    City resolution order: explicit UI override, then the city carried on the
+    target (extracted from the prompt by resolve_constraints), then "".
+
+    This previously always passed "" on the theory that the runner's normalizer
+    would hard-veto nearby-city listings. That is no longer true — the runner
+    and recommend_normalizer now share the same NEARBY_CITY_MAP twin-city
+    amnesty, so passing the city applies the same rule the recommendation stage
+    applies anyway, and additionally lets the platform URLs target the right
+    city. Scraping nationwide and filtering afterwards just spent the per-target
+    listing budget on inventory the next stage was about to veto.
 
     Budget is pre-expanded 5% so the runner doesn't drop listings that the
     recommend_normalizer's +5% negotiation buffer would have kept.
@@ -175,12 +183,13 @@ async def _scrape_one(
     trim_for_url = trim_raw if trim_raw.lower() not in GENERIC_POWERTRAIN_TAGS else ""
 
     scraper_budget = int(budget * 1.05) if budget else None
+    city           = override_city or rec.get("city") or ""
 
     try:
         listings, _ = await execute_search_pipeline(
             make=make,
             model=model,
-            city=override_city or "",  # physical location query to platform
+            city=city,  # physical location query to platform
             max_budget=scraper_budget,
             min_budget=min_budget,
             color="",

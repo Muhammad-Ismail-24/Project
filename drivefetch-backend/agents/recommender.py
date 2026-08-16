@@ -59,6 +59,7 @@ from pydantic import BaseModel, Field
 load_dotenv()
 
 from agents.config import generate_content_resilient, settings
+from scrapers.normalizer import CITY_ALIAS_MAP, normalize_city
 
 GEMINI_API_KEY = settings.gemini_api_key or settings.google_api_key
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
@@ -3912,6 +3913,7 @@ class UserIntent(BaseModel):
     strategy_summary:  str                                                                           = Field(default="", description="A friendly 2-sentence summary explaining the search interpretation and car strategy.")
     disclaimers:       list[str]                                                                     = Field(default_factory=list)
     current_car:       Optional[str]                                                                 = None
+    city:              Optional[str]                                                                 = Field(default=None, description="Pakistani city the buyer wants to buy in, if stated (e.g. 'in Lahore', 'Karachi walay', 'based in Isb'). Extract the city name only, never a province or country. Null if the user names no location.")
     user_prompt:       str                                                                           = Field(default="", exclude=True)  # injected post-extraction, never sent to LLM
 
 
@@ -3964,6 +3966,13 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "name here (e.g. 'Bolan', 'Mehran').\n"
         "- direct_model: If the user explicitly mentions a specific car model (e.g. 'Civic', "
         "'Vitz', 'Prado'), capture it here.\n"
+        "- city: If the user names a Pakistani city they want to buy in, extract the city name "
+        "only. Examples: 'Family SUV under 80 lacs in Lahore' -> 'Lahore', 'looking in Isb' -> "
+        "'Islamabad', 'Karachi walay' -> 'Karachi', 'based in pindi' -> 'Rawalpindi'. Extract a "
+        "CITY, never a province ('Punjab'), country, or region. If the city appears only as a "
+        "travel destination or route rather than where the buyer is shopping (e.g. 'road trips "
+        "to Murree', 'Islamabad to Lahore highway'), leave this null — it is not a purchase "
+        "location. Null when no buying location is stated.\n"
         "- excluded_features: Extract any feature, engine size, or specification the user EXPLICITLY forbids. Examples: 'no 660cc' -> ['660cc'], 'without a sunroof' -> ['sunroof'], 'no JDM imports' -> ['jdm']. Leave empty if no features are forbidden.\n"
         "- excluded_models: Extract any car model the user explicitly forbids or vetoes. "
         "Examples: 'no Corolla' -> ['Corolla'], 'strictly NO Fortuner or Sportage' -> "
@@ -4160,6 +4169,87 @@ def _format_veto_message(raw_message: str) -> str:
     return f"[{chosen}] {text}"
 
 
+# Cities the buyer might name, longest-first so "rahim yar khan" is tested
+# before "khan" and "wah cantt" before "wah".
+_PROMPT_CITY_TERMS: list[tuple[str, str]] = sorted(
+    (
+        [(alias, canonical) for alias, canonical in CITY_ALIAS_MAP.items()]
+        + [
+            ("islmabad",   "Islamabad"),
+            ("isloo",      "Islamabad"),
+            ("rwp",        "Rawalpindi"),
+            ("gujrat",     "Gujrat"),
+            ("sargodha",   "Sargodha"),
+            ("bahawalpur", "Bahawalpur"),
+            ("sahiwal",    "Sahiwal"),
+            ("jhelum",     "Jhelum"),
+            ("mardan",     "Mardan"),
+            ("attock",     "Attock"),
+            ("sheikhupura", "Sheikhupura"),
+            ("kasur",      "Kasur"),
+            ("okara",      "Okara"),
+            ("wah cantt",  "Wah Cantt"),
+            ("rahim yar khan", "Rahim Yar Khan"),
+        ]
+    ),
+    key=lambda pair: len(pair[0]),
+    reverse=True,
+)
+
+# Phrases that mark a city as somewhere the buyer DRIVES TO, not where they are
+# shopping. "SUV for weekend trips to Murree" is not a Murree inventory search,
+# and "Islamabad to Lahore range" is an EV range statement, not two locations.
+_CITY_DESTINATION_MARKERS = (
+    "trip to", "trips to", "travel to", "travelling to", "traveling to",
+    "drive to", "drives to", "driving to", "go to", "going to", "visit",
+    "route to", "road to", "way to", " to ",
+)
+
+
+def _detect_city_in_prompt(prompt: str) -> str:
+    """
+    Deterministic fallback for the buyer's city when the LLM does not extract one.
+
+    Returns a canonical city name, or "" when the prompt names no city or names
+    one only as a travel destination.
+
+    Prefers a city introduced by a location preposition ("in Lahore", "from
+    Karachi", "based in Isb") over a bare mention, because a bare mention is far
+    more likely to be a destination or a comparison than a buying location.
+    Returning "" is the safe outcome: it leaves the city veto disabled rather
+    than pinning the search to a city the buyer never asked for.
+    """
+    if not prompt:
+        return ""
+
+    lowered = prompt.lower()
+
+    # Pass 1 — preposition-anchored, highest confidence.
+    for alias, canonical in _PROMPT_CITY_TERMS:
+        pattern = (
+            r'\b(?:in|from|at|near|around|within|based\s+in|located\s+in|'
+            r'living\s+in|side)\s+' + re.escape(alias) + r'\b'
+        )
+        if re.search(pattern, lowered):
+            return canonical
+
+    # Pass 2 — bare mention, accepted only when the prompt frames no journey.
+    # A prompt that talks about travelling is describing where the car goes,
+    # not where it is bought.
+    if any(marker in lowered for marker in _CITY_DESTINATION_MARKERS):
+        return ""
+
+    for alias, canonical in _PROMPT_CITY_TERMS:
+        # Require >= 4 chars for a bare hit: two- and three-letter aliases
+        # ("isb", "lhr", "khi") are too collision-prone without a preposition.
+        if len(alias) < 4:
+            continue
+        if re.search(r'\b' + re.escape(alias) + r'\b', lowered):
+            return canonical
+
+    return ""
+
+
 def resolve_constraints(intent: UserIntent) -> dict:
     """
     Phase 1 Python gate — budget floor + derived flags only.
@@ -4206,6 +4296,12 @@ def resolve_constraints(intent: UserIntent) -> dict:
         "strategy_summary":   intent.strategy_summary or "",
         "intent_id":          None,
         "excluded_models":    excluded_models,
+        # Canonicalised buying location, or "" when the user named none.
+        # Carried all the way to recommend_normalizer, which HARD-VETOES any
+        # listing outside this city and its NEARBY_CITY_MAP twin corridor.
+        # An empty string means "no location constraint" and disables that veto,
+        # so it must only ever be empty when the user genuinely named no city.
+        "city":               normalize_city(intent.city or ""),
     }
 
     # ── Deterministic Expansion from LLM-Structured Exclusion Arrays ─────────
@@ -4253,6 +4349,24 @@ def resolve_constraints(intent: UserIntent) -> dict:
     raw_prompt = getattr(intent, "user_prompt", "") or ""
     if raw_prompt:
         constraints = apply_keyword_intent(raw_prompt, constraints)
+
+    # ── City Keyword Fallback ─────────────────────────────────────────────────
+    # Same defence-in-depth pattern as the origin_pref and excluded_brands
+    # scanners above: the LLM is the primary extractor, and this deterministic
+    # pass re-derives the city when it under-extracts.
+    #
+    # This one matters more than the others. An empty city does not merely lose
+    # a scoring signal — it silently DISABLES the hard city veto in both
+    # normalizers, because each guards its veto behind `if req_city_str:`. A
+    # missed city is therefore indistinguishable from "the buyer will drive
+    # anywhere in Pakistan", which is how Karachi and Hyderabad listings were
+    # reaching Lahore searches.
+    #
+    # No-op when the LLM already extracted a city.
+    if raw_prompt and not constraints.get("city"):
+        detected = _detect_city_in_prompt(raw_prompt)
+        if detected:
+            constraints["city"] = detected
 
     # ── Independent 660cc Engine Gate ──────────────────────────────────────────
     # apply_keyword_intent() returns on the FIRST matching KEYWORD_INTENT_MAP
@@ -4731,7 +4845,16 @@ def _deduplicate_and_format(
             "make":              raw.make.strip(),
             "model":             canonical_model,
             "trim":              raw.trim.strip(),
-            "city":              "",   # always empty — recommend_normalizer handles city softly
+            # Propagate the buyer's city into every target.
+            #
+            # This used to be hardcoded "" with the note "recommend_normalizer
+            # handles city softly". It does not — recommend_normalizer HARD-VETOES
+            # out-of-city listings, but only inside `if req_city_str:`. Blanking
+            # the city here meant that guard was always false, the veto never
+            # ran, and a Lahore search happily returned Karachi and Hyderabad
+            # cars. The constraint was erased one step before the code that
+            # existed to enforce it.
+            "city":              constraints.get("city", ""),
             "min_budget":        constraints.get("min_budget", 0),
             "max_budget":        constraints.get("max_budget", 0),
             "min_year":          constraints.get("min_year", 0),
