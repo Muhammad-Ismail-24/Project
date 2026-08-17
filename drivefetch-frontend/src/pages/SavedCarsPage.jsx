@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
 import { Loader2, BookmarkX } from 'lucide-react';
 import CarResultCard from '../components/CarResultCard';
+import SEO from '../components/SEO';
 
 export default function SavedCarsPage() {
   const [savedCars, setSavedCars] = useState([]);
@@ -53,9 +53,14 @@ export default function SavedCarsPage() {
 
   return (
     <>
-      <Helmet>
-        <title>Saved Vehicles | DriveFetch</title>
-      </Helmet>
+      {/* noindex: per-user content behind auth. Indexing it would surface an
+          empty shell to crawlers and is why it is absent from sitemap.xml. */}
+      <SEO
+        title="Saved Vehicles"
+        description="Your saved vehicles on DriveFetch."
+        path="/saved"
+        noindex
+      />
 
       {/* ── Background Pattern ── */}
       <div className="fixed inset-0 pointer-events-none -z-10 bg-df-white bg-[linear-gradient(to_right,#e5e7eb_1px,transparent_1px),linear-gradient(to_bottom,#e5e7eb_1px,transparent_1px)] bg-[size:40px_40px]" />

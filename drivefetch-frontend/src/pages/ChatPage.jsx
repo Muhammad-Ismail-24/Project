@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { Send, Sparkles, User, Loader2, Trash2, Plus, MessageSquare } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
+import SEO from '../components/SEO';
+import { chatSchema } from '../config/seoSchemas';
 
 /* ── Typing Indicator ── */
 function TypingDots() {
@@ -184,11 +185,13 @@ export default function ChatPage() {
     <main
       className="flex h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] w-full overflow-hidden font-body text-df-black dark:text-zinc-50 dark:bg-black"
     >
-      <Helmet>
-        <title>AI Car Inspection Assistant | DriveFetch</title>
-        <meta name="description" content="Chat with our AI Car Inspection Assistant to ask questions about specific car conditions and make an informed buying decision." />
-        <link rel="canonical" href="https://carfinderproject.vercel.app/chat" />
-      </Helmet>
+      <SEO
+        title="Ask DriveFetch AI | 24/7 Pakistani Automotive Expert & Valuation"
+        description="Chat with DriveFetch Expert for ustaad mechanic advice, real-world fuel averages, JDM auction sheet checks, and Pakistan Excise transfer policies."
+        path="/chat"
+        keywords={['car advice Pakistan', 'auction sheet check', 'car inspection AI Pakistan']}
+        schema={chatSchema}
+      />
 
       {/* ── Mobile sidebar backdrop ── */}
       {isMobileSidebarOpen && !isGuest && (
@@ -244,6 +247,8 @@ export default function ChatPage() {
                 </div>
                 <button
                   onClick={(e) => handleDeleteSession(e, session.session_id)}
+                  aria-label="Delete this chat session"
+                  title="Delete chat"
                   className={`p-1 shrink-0 transition-none
                     ${activeSessionId === session.session_id
                       ? 'opacity-70 hover:opacity-100 text-df-white'
@@ -275,6 +280,8 @@ export default function ChatPage() {
             {!isGuest && (
               <button
                 onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+                aria-label={isMobileSidebarOpen ? 'Close chat history' : 'Open chat history'}
+                aria-expanded={isMobileSidebarOpen}
                 className="md:hidden p-1.5 border-2 border-df-black text-df-black shadow-[2px_2px_0px_#000000] hover:bg-df-black hover:text-df-white active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-none dark:border-white dark:text-zinc-50 dark:hover:bg-white dark:hover:text-black"
               >
                 <MessageSquare className="w-4 h-4" strokeWidth={2} />

@@ -122,6 +122,21 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
     }
   };
 
+  // Descriptive alt text for image search and screen readers.
+  // car.title already carries make/model/year ("Toyota Aqua 2015 GS for Sale"),
+  // so the city is appended rather than rebuilding the whole phrase — which
+  // would double up the year on most platforms.
+  const imageAlt = (() => {
+    const base = (car?.title || '').trim();
+    if (!base) return 'Used car listing photo';
+    const city = (car?.city || '').trim();
+    const hasForSale = /for sale/i.test(base);
+    if (city && !new RegExp(`\\b${city}\\b`, 'i').test(base)) {
+      return hasForSale ? `${base} in ${city}` : `${base} for sale in ${city}`;
+    }
+    return hasForSale ? base : `${base} for sale`;
+  })();
+
   // Liquidity badge color mapping
   const liquidityBadge = {
     High: 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white',
@@ -137,9 +152,11 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
       {/* ── Left: Image Container ── */}
       <div className="w-full md:w-1/3 aspect-video md:aspect-[4/3] relative overflow-hidden flex-shrink-0 border-b-2 md:border-b-0 md:border-r-2 border-black dark:border-white bg-gray-100 dark:bg-zinc-800 flex items-center justify-center">
         {(car?.image_url || car?.images?.[0]) ? (
-          <img 
-            src={car.image_url || car.images[0]} 
-            alt={car?.title ?? 'Vehicle'} 
+          <img
+            src={car.image_url || car.images[0]}
+            alt={imageAlt}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
             onError={(e) => { 
               e.target.onerror = null; 

@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import DynamicBackground from '../components/DynamicBackground';
+import SEO from '../components/SEO';
+import { homeSchema } from '../config/seoSchemas';
 import { searchCars } from '../utils/api';
 import CarResultCard from '../components/CarResultCard';
 
@@ -157,11 +158,11 @@ function GatewayCard({ card }) {
 export default function Home() {
   return (
     <main className="relative w-full overflow-x-hidden" style={{ perspective: '1000px' }}>
-      <Helmet>
-        <title>DriveFetch — Find the Right Used Car in Pakistan, Powered by AI</title>
-        <meta name="description" content="Find the perfect used car in Pakistan with DriveFetch. AI-powered search across PakWheels, OLX, Drive.pk, and Gari.pk." />
-        <link rel="canonical" href="https://carfinderproject.vercel.app/" />
-      </Helmet>
+      <SEO
+        path="/"
+        description="Find the perfect used car in Pakistan with DriveFetch. Real-time multi-platform search aggregating PakWheels, OLX & Gari.pk with AI-powered inspection and pricing insights."
+        schema={homeSchema}
+      />
 
       {/* Scroll-Linked SVG Background (Framer Motion) */}
       <DynamicBackground />

@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/generate-seo-assets.mjs",
     "build": "vite build",
+    "seo:assets": "node scripts/generate-seo-assets.mjs",
     "lint": "oxlint",
     "preview": "vite preview"
   },
