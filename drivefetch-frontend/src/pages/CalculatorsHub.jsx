@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import DynamicBackground from '../components/DynamicBackground';
+import SEO from '../components/SEO';
+import { calculatorsSchema } from '../config/seoSchemas';
 import { calculateFuelCost, calculateTokenTax, calculateTransferCost } from '../utils/calculatorEngine';
 
 /* ═══════════════════════════════════════════════════════
@@ -196,11 +197,18 @@ export default function CalculatorsHub() {
 
   return (
     <>
-      <Helmet>
-        <title>Car Tax & Fuel Cost Calculators Pakistan | DriveFetch</title>
-        <meta name="description" content="Calculate your vehicle's fuel cost, transfer fees, and token taxes accurately in Pakistan. Neo-Brutalist financial tools by DriveFetch." />
-        <link rel="canonical" href="https://carfinderproject.vercel.app/calculators" />
-      </Helmet>
+      <SEO
+        title="Car Tax, Transfer Fee & Fuel Cost Calculators Pakistan (FY 2026-27)"
+        description="Calculate exact annual token tax (ICT, Punjab, Sindh, KPK), FBR 231B vehicle transfer fees, and monthly fuel costs with latest 2026-2027 statutory rates."
+        path="/calculators"
+        keywords={[
+          'token tax calculator Pakistan 2026',
+          'vehicle transfer fee calculator FBR 231B',
+          'car fuel cost calculator Pakistan',
+          'Section 234 withholding tax vehicle',
+        ]}
+        schema={calculatorsSchema}
+      />
 
       {/* ── Dynamic Background (scroll-linked, fixed behind content) ── */}
       <DynamicBackground />

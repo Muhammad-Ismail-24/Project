@@ -1,14 +1,18 @@
 import React from 'react';
-import { Helmet } from 'react-helmet-async';
+import SEO from '../components/SEO';
+import { privacySchema } from '../config/seoSchemas';
 
 export default function PrivacyPolicy() {
   return (
     <main className="relative z-10 pt-28 md:pt-40 px-5 sm:px-8 lg:px-12 pb-20 md:pb-32 min-h-screen flex flex-col items-center selection:bg-df-black selection:text-df-white dark:selection:bg-white dark:selection:text-black">
-      <Helmet>
-        <title>Privacy Policy — DriveFetch</title>
-        <meta name="description" content="Privacy Policy and Data Handling practices for DriveFetch." />
-        <link rel="canonical" href="https://carfinderproject.vercel.app/privacy" />
-      </Helmet>
+      {/* Indexed, not noindex: a public privacy policy is a trust signal and
+          Google expects to find one for a real business. */}
+      <SEO
+        title="Privacy Policy"
+        description="How DriveFetch collects, uses and protects your data, including Google OAuth authentication and saved vehicle preferences."
+        path="/privacy"
+        schema={privacySchema}
+      />
 
       <div className="w-full max-w-4xl mx-auto space-y-16">
         

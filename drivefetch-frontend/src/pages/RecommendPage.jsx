@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Helmet } from "react-helmet-async";
 import { Sparkles, Search, X, ChevronRight, Car, Loader2, AlertCircle, Plus, CheckCircle2 } from "lucide-react";
 import CarResultCard from "../components/CarResultCard";
+import SEO from "../components/SEO";
+import { recommendSchema } from "../config/seoSchemas";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
@@ -249,11 +250,13 @@ export default function RecommendPage() {
 
   return (
     <main className="relative w-full flex-grow flex flex-col font-body bg-white dark:bg-zinc-950 text-df-black dark:text-zinc-50 selection:bg-df-black selection:text-df-white overflow-x-hidden">
-      <Helmet>
-        <title>AI Matchmaker | DriveFetch</title>
-        <meta name="description" content="Let DriveFetch AI Matchmaker find the right used car for you. Give our AI your budget and requirements to search across all of Pakistan's top platforms." />
-        <link rel="canonical" href="https://carfinderproject.vercel.app/recommend" />
-      </Helmet>
+      <SEO
+        title="AI Car Matchmaker | Find Your Ideal Car in Pakistan"
+        description="Tell us your budget, city, and lifestyle needs. DriveFetch's AI matchmaker analyzes Pakistani market specs, fuel economy, and resale value to fetch your top 3 cars."
+        path="/recommend"
+        keywords={['AI car recommendation Pakistan', 'best car for my budget Pakistan', 'car matchmaker']}
+        schema={recommendSchema}
+      />
 
       {/* Drafting Grid Background */}
       <div 

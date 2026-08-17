@@ -1,6 +1,36 @@
 import React, { useState } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { motion, useScroll, useTransform } from 'framer-motion';
+import SEO from '../components/SEO';
+import { buildAboutSchema } from '../config/seoSchemas';
+
+/**
+ * Single source for the FAQ. The accordion below renders from this array AND
+ * the FAQPage JSON-LD is generated from it, so the rich snippet can never
+ * describe a question that is not visibly on the page — which is exactly what
+ * Google's FAQ structured-data policy requires.
+ */
+const FAQS = [
+  {
+    q: "How does DriveFetch calculate fair market value?",
+    a: "Our engine cross-references thousands of live listings, adjusting for mileage, condition, and local market trends to pinpoint the exact true value, eliminating seller inflation."
+  },
+  {
+    q: "Are the vehicle listings real-time?",
+    a: "Yes. DriveFetch actively scrapes platforms like PakWheels, OLX, and Gari.pk the moment you execute a search to ensure zero stale data."
+  },
+  {
+    q: "Does DriveFetch store my passwords?",
+    a: "Never. We utilize Google OAuth 2.0 for secure, frictionless authentication. We only store basic profile data and your saved preferences."
+  },
+  {
+    q: "Why do some cars get flagged by the AI?",
+    a: 'Our NLP models read between the lines of seller descriptions. If a seller claims "B2B genuine" but mentions "sides sprayed," the system immediately flags the contradiction.'
+  },
+  {
+    q: "Is DriveFetch free to use?",
+    a: "Yes. Our core matchmaking, scraping, and AI appraisal tools are currently completely free for standard market queries."
+  }
+];
 
 /* ═══════════════════════════════════════════════════════
    ANIMATION VARIANTS — Horizontal Snap
@@ -141,11 +171,13 @@ export default function About() {
     </div>
 
     <main className="relative z-10 pt-28 md:pt-40 px-5 sm:px-8 lg:px-12 pb-20 md:pb-32 min-h-screen flex flex-col items-center">
-      <Helmet>
-        <title>About DriveFetch — How Our AI Car Search Works</title>
-        <meta name="description" content="Learn how DriveFetch uses AI to aggregate listings from PakWheels, OLX, and more to give you the best used car options in Pakistan." />
-        <link rel="canonical" href="https://carfinderproject.vercel.app/about" />
-      </Helmet>
+      <SEO
+        title="About DriveFetch | Intelligent Car Discovery in Pakistan"
+        description="Learn how DriveFetch unifies the Pakistani used car market with multi-agent AI and real-time multi-platform scraping."
+        path="/about"
+        keywords={['how DriveFetch works', 'car search engine Pakistan', 'DriveFetch FAQ']}
+        schema={buildAboutSchema(FAQS)}
+      />
 
       <div className="w-full max-w-4xl space-y-12 md:space-y-20">
 
@@ -227,28 +259,7 @@ export default function About() {
               [ FREQUENTLY ASKED QUESTIONS ]
             </h2>
             <div className="grid grid-cols-1 gap-6">
-              {[
-                {
-                  q: "How does DriveFetch calculate fair market value?",
-                  a: "Our engine cross-references thousands of live listings, adjusting for mileage, condition, and local market trends to pinpoint the exact true value, eliminating seller inflation."
-                },
-                {
-                  q: "Are the vehicle listings real-time?",
-                  a: "Yes. DriveFetch actively scrapes platforms like PakWheels, OLX, and Gari.pk the moment you execute a search to ensure zero stale data."
-                },
-                {
-                  q: "Does DriveFetch store my passwords?",
-                  a: "Never. We utilize Google OAuth 2.0 for secure, frictionless authentication. We only store basic profile data and your saved preferences."
-                },
-                {
-                  q: "Why do some cars get flagged by the AI?",
-                  a: 'Our NLP models read between the lines of seller descriptions. If a seller claims "B2B genuine" but mentions "sides sprayed," the system immediately flags the contradiction.'
-                },
-                {
-                  q: "Is DriveFetch free to use?",
-                  a: "Yes. Our core matchmaking, scraping, and AI appraisal tools are currently completely free for standard market queries."
-                }
-              ].map((faq, idx) => (
+              {FAQS.map((faq, idx) => (
                 <div key={idx} className="bg-white dark:bg-black border-2 border-black dark:border-white shadow-[6px_6px_0px_#000000] dark:shadow-[6px_6px_0px_#ffffff] p-6">
                   <h3 className="font-mono text-sm md:text-base font-bold text-df-black dark:text-zinc-50 mb-3 uppercase tracking-wide">
                     Q: {faq.q}

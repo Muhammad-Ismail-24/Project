@@ -265,6 +265,7 @@ function MainLayoutInner() {
                 <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-df-black dark:text-zinc-100 mt-1">ACCOUNT</h2>
                 <button
                   onClick={() => setIsPreferencesOpen(false)}
+                  aria-label="Close preferences panel"
                   className="p-2 border-2 border-df-black dark:border-white hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black transition-none"
                 >
                   <X className="w-6 h-6" strokeWidth={2.5} />

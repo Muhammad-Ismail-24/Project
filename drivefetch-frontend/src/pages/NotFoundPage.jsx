@@ -1,13 +1,18 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import SEO from '../components/SEO';
 
 export default function NotFoundPage() {
   return (
     <>
-      <Helmet>
-        <title>404 // Route Not Found | DriveFetch</title>
-      </Helmet>
+      {/* noindex: a soft-404 that Google indexes competes with real pages and
+          dilutes the branded "DriveFetch" result set. */}
+      <SEO
+        title="404 // Route Not Found"
+        description="This DriveFetch page could not be found. Head back to the car search to continue."
+        path="/404"
+        noindex
+      />
 
       {/* ── Background Grid Pattern ── */}
       <div className="fixed inset-0 pointer-events-none -z-10 bg-df-white">
