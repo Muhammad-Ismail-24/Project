@@ -29,7 +29,7 @@ export const siteConfig = {
   alternateName: 'Drive Fetch',
   legalName: 'DriveFetch Pakistan',
 
-  url: normaliseUrl(import.meta.env.VITE_SITE_URL) || 'https://carfinderproject.vercel.app',
+  url: normaliseUrl(import.meta.env.VITE_SITE_URL) || 'https://drivefetch.vercel.app',
 
   // NOTE: the asset in /public is og-image.jpg, not .png. Referencing a
   // non-existent .png would silently break every social preview — the crawler

@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import DynamicBackground from '../components/DynamicBackground';
+import { lazy, Suspense } from 'react';
+const DynamicBackground = lazy(() => import('../components/DynamicBackground'));
 import SEO from '../components/SEO';
 import { homeSchema } from '../config/seoSchemas';
 import { searchCars } from '../utils/api';
@@ -165,7 +166,9 @@ export default function Home() {
       />
 
       {/* Scroll-Linked SVG Background (Framer Motion) */}
-      <DynamicBackground />
+      <Suspense fallback={null}>
+        <DynamicBackground />
+      </Suspense>
 
       {/* ═══════════════════════════════════════════════
           SECTION 1 — HERO

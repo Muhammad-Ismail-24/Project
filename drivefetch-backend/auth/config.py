@@ -6,7 +6,7 @@ from agents.config import settings
 # Fallback secret key for local development. In production, this should be set in the environment.
 SECRET_KEY = settings.secret_key
 
-# Define the frontend URL for redirects, falling back to localhost for local development
+# Define the frontend URL for redirects, using the dynamic environment variable
 FRONTEND_URL = settings.frontend_url
 
 # Initialize Authlib config utilizing environment variables

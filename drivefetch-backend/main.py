@@ -3,6 +3,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import create_db_and_tables
+from agents.config import settings
 
 # Core Routers
 from api.calc_routes import router as calc_router
@@ -32,8 +33,7 @@ app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173", 
-        "https://carfinderproject.vercel.app"
+        settings.frontend_url.rstrip("/")
     ],
     allow_credentials=True,
     allow_methods=["*"],
