@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = join(__dirname, '..', 'public');
 
-const DEFAULT_URL = 'https://carfinderproject.vercel.app';
+const DEFAULT_URL = 'https://drivefetch.vercel.app';
 const SITE_URL = (process.env.VITE_SITE_URL || DEFAULT_URL).trim().replace(/\/+$/, '');
 
 /**

@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./drivefetch.db"
     port: int = 8000
     host: str = "0.0.0.0"
-    frontend_url: str = "http://localhost:5173"
+    frontend_url: str = "https://drivefetch.vercel.app"
     secret_key: str = "super-secret-key-for-local-dev"
 
     model_config = SettingsConfigDict(
