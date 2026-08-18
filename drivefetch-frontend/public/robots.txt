@@ -11,4 +11,4 @@ Disallow: /auth/
 # Per-user pages — nothing useful for a crawler, and noindex in the app too.
 Disallow: /saved
 
-Sitemap: https://carfinderproject.vercel.app/sitemap.xml
+Sitemap: https://drivefetch.vercel.app/sitemap.xml
