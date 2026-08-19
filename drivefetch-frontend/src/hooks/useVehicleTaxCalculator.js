@@ -1,13 +1,13 @@
 import { useState, useMemo } from 'react';
 import { calculateVehicleCharges } from '../utils/calculatorEngine';
 
-export function useVehicleTaxCalculator() {
+export function useVehicleTaxCalculator(initialIsTransfer = false) {
   const [province, setProvince] = useState('Islamabad');
   const [engineCc, setEngineCc] = useState(1300);
   const [invoiceVal, setInvoiceVal] = useState(4000000);
   const [vehicleAge, setVehicleAge] = useState(0);
   const [isFiler, setIsFiler] = useState(true);
-  const [isTransfer, setIsTransfer] = useState(true);
+  const [isTransfer, setIsTransfer] = useState(initialIsTransfer);
 
   const results = useMemo(() => {
     return calculateVehicleCharges({

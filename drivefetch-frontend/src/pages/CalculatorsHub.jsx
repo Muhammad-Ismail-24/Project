@@ -10,9 +10,6 @@ import { useVehicleTaxCalculator } from '../hooks/useVehicleTaxCalculator';
    DATA CONSTANTS
    ═══════════════════════════════════════════════════════ */
 
-// Values are the lookup keys into calculatorsConfig.json — 1801 is the sentinel
-// for strong hybrids (they share a displacement band with 1500-1800cc petrol
-// cars but have their own economy figures), and 2500 covers 2.5L+ diesel.
 const CC_OPTIONS = [
   { value: 660,  label: '660cc (e.g., Alto, Mira, Dayz)' },
   { value: 800,  label: '800cc (e.g., Mehran, Old Alto)' },
@@ -48,7 +45,6 @@ const cardTransition = { type: 'spring', stiffness: 120, damping: 20, mass: 0.8 
    BRUTALIST UI PRIMITIVES
    ═══════════════════════════════════════════════════════ */
 
-/** Brutalist Select Dropdown */
 function BrutalSelect({ id, label, value, onChange, options }) {
   return (
     <div>
@@ -73,7 +69,6 @@ function BrutalSelect({ id, label, value, onChange, options }) {
   );
 }
 
-/** Brutalist Square Radio Group */
 function BrutalRadioGroup({ name, label, value, onChange, options }) {
   return (
     <div>
@@ -113,7 +108,6 @@ function BrutalRadioGroup({ name, label, value, onChange, options }) {
   );
 }
 
-/** Brutalist Range Slider */
 function BrutalSlider({ id, label, value, onChange, min, max, unit }) {
   const pct = ((value - min) / (max - min)) * 100;
 
@@ -128,9 +122,7 @@ function BrutalSlider({ id, label, value, onChange, min, max, unit }) {
         </span>
       </div>
       <div className="relative h-10 flex items-center">
-        {/* Track background */}
         <div className="absolute inset-x-0 h-[3px] bg-df-black/15 dark:bg-zinc-50/15" />
-        {/* Filled track */}
         <div
           className="absolute left-0 h-[3px] bg-df-black dark:bg-zinc-50"
           style={{ width: `${pct}%` }}
@@ -162,9 +154,13 @@ export default function CalculatorsHub() {
     return calculateFuelCost({ cc: fuelCc, dailyKm: fuelKm });
   }, [fuelCc, fuelKm]);
 
-  // ── Section 2: Vehicle Tax & Transfer Calculator State ──
-  const taxCalc = useVehicleTaxCalculator();
-  const { state: tState, setters: tSetters, results: tResults } = taxCalc;
+  // ── Section 2: Token Tax State ──
+  const tokenCalc = useVehicleTaxCalculator(false); // isTransfer = false
+  const { state: tokenState, setters: tokenSetters, results: tokenResults } = tokenCalc;
+
+  // ── Section 3: Transfer Fee State ──
+  const transferCalc = useVehicleTaxCalculator(true); // isTransfer = true
+  const { state: transferState, setters: transferSetters, results: transferResults } = transferCalc;
 
   return (
     <>
@@ -181,12 +177,10 @@ export default function CalculatorsHub() {
         schema={calculatorsSchema}
       />
 
-      {/* ── Dynamic Background (scroll-linked, fixed behind content) ── */}
+      {/* ── Dynamic Background ── */}
       <DynamicBackground />
 
-      {/* ── Page Shell — transparent to show DynamicBackground ── */}
       <div className="relative z-10 min-h-screen">
-
         {/* ── Page Header ── */}
         <header className="pt-12 md:pt-20 pb-10 md:pb-14 px-4 md:px-6">
           <div className="max-w-3xl mx-auto">
@@ -202,7 +196,7 @@ export default function CalculatorsHub() {
           </div>
         </header>
 
-        {/* ── Calculator Sections — Vertical Stack ── */}
+        {/* ── Calculator Sections ── */}
         <div className="px-4 md:px-6 pb-16 md:pb-24 space-y-16 md:space-y-24">
 
           {/* ═══════════════════════════════════════════
@@ -216,7 +210,6 @@ export default function CalculatorsHub() {
             transition={cardTransition}
             className="group max-w-3xl mx-auto bg-white dark:bg-black border-2 border-df-black dark:border-white transition-all duration-200 hover:border-[#E5202E] hover:ring-2 hover:ring-[#E5202E] focus-within:border-[#E5202E] focus-within:ring-2 focus-within:ring-[#E5202E]"
           >
-              {/* Header Strip */}
               <div className="px-6 md:px-8 py-4 md:py-5 border-b-2 border-df-black dark:border-white transition-all duration-200 group-hover:border-b-[#E5202E] group-hover:border-b-4 group-focus-within:border-b-[#E5202E] group-focus-within:border-b-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
                 <span className="font-mono text-[10px] md:text-xs font-bold tracking-[0.1em] text-df-black/35 dark:text-zinc-50/35">
                   [ TOOL // 01 ]
@@ -226,7 +219,6 @@ export default function CalculatorsHub() {
                 </h2>
               </div>
 
-              {/* Body */}
               <div className="px-6 md:px-8 py-6 md:py-8 space-y-6 md:space-y-8">
                 <BrutalSelect
                   id="fuel-cc"
@@ -247,7 +239,6 @@ export default function CalculatorsHub() {
                 />
               </div>
 
-              {/* Output Box */}
               <div className="bg-df-black px-6 md:px-8 py-5 md:py-6">
                 <p className="font-mono text-[10px] md:text-xs font-bold tracking-[0.14em] text-white/40 uppercase mb-1.5">
                   Est. Monthly Cost
@@ -259,7 +250,7 @@ export default function CalculatorsHub() {
           </motion.section>
 
           {/* ═══════════════════════════════════════════
-             SECTION 2: VEHICLE TAX & TRANSFER CALCULATOR
+             SECTION 2: TOKEN TAX CALCULATOR
              ═══════════════════════════════════════════ */}
           <motion.section
             variants={cardFloat}
@@ -269,47 +260,33 @@ export default function CalculatorsHub() {
             transition={cardTransition}
             className="group max-w-3xl mx-auto bg-white dark:bg-black border-2 border-df-black dark:border-white transition-all duration-200 hover:border-[#E5202E] hover:ring-2 hover:ring-[#E5202E] focus-within:border-[#E5202E] focus-within:ring-2 focus-within:ring-[#E5202E]"
           >
-              {/* Header Strip */}
               <div className="px-6 md:px-8 py-4 md:py-5 border-b-2 border-df-black dark:border-white transition-all duration-200 group-hover:border-b-[#E5202E] group-hover:border-b-4 group-focus-within:border-b-[#E5202E] group-focus-within:border-b-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
                 <span className="font-mono text-[10px] md:text-xs font-bold tracking-[0.1em] text-df-black/35 dark:text-zinc-50/35">
                   [ TOOL // 02 ]
                 </span>
                 <h2 className="font-display text-2xl md:text-3xl tracking-wide text-df-black dark:text-zinc-50 uppercase">
-                  Tax & Transfer Calculator
+                  Token Tax Calculator
                 </h2>
               </div>
 
-              {/* Body */}
               <div className="px-6 md:px-8 py-6 md:py-8 space-y-6 md:space-y-8">
-                
-                <BrutalRadioGroup
-                  name="transactionType"
-                  label="Transaction Type"
-                  value={tState.isTransfer}
-                  onChange={(val) => tSetters.setIsTransfer(val)}
-                  options={[
-                    { value: false, label: 'Annual Token Tax Only' },
-                    { value: true,  label: 'Transfer Ownership (+ Token Tax)' },
-                  ]}
-                />
-
                 <BrutalSelect
-                  id="tax-province"
+                  id="token-province"
                   label="Region / Province"
-                  value={tState.province}
-                  onChange={(e) => tSetters.setProvince(e.target.value)}
+                  value={tokenState.province}
+                  onChange={(e) => tokenSetters.setProvince(e.target.value)}
                   options={PROVINCE_OPTIONS}
                 />
 
                 <BrutalSelect
-                  id="tax-cc"
+                  id="token-cc"
                   label="Engine Capacity"
-                  value={tState.engineCc}
-                  onChange={(e) => tSetters.setEngineCc(Number(e.target.value))}
+                  value={tokenState.engineCc}
+                  onChange={(e) => tokenSetters.setEngineCc(Number(e.target.value))}
                   options={CC_OPTIONS}
                 />
 
-                {tState.engineCc <= 1000 ? (
+                {tokenState.engineCc <= 1000 ? (
                   <div>
                     <label className="block font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 dark:text-zinc-50/50 mb-2">
                       Vehicle Invoice Value (PKR)
@@ -325,8 +302,8 @@ export default function CalculatorsHub() {
                     </label>
                     <input
                       type="number"
-                      value={tState.invoiceVal}
-                      onChange={(e) => tSetters.setInvoiceVal(Number(e.target.value))}
+                      value={tokenState.invoiceVal}
+                      onChange={(e) => tokenSetters.setInvoiceVal(Number(e.target.value))}
                       className="w-full p-3 md:p-4 bg-df-white dark:bg-black border-2 border-df-black dark:border-white rounded-none outline-none font-mono text-sm md:text-base font-medium focus:ring-2 focus:ring-df-red focus:border-df-red text-df-black dark:text-zinc-50"
                       min="0"
                       step="100000"
@@ -335,10 +312,10 @@ export default function CalculatorsHub() {
                 )}
 
                 <BrutalRadioGroup
-                  name="taxFiler"
-                  label="Filer Status (Buyer/Owner)"
-                  value={tState.isFiler}
-                  onChange={(val) => tSetters.setIsFiler(val)}
+                  name="tokenFiler"
+                  label="Owner Filer Status"
+                  value={tokenState.isFiler}
+                  onChange={(val) => tokenSetters.setIsFiler(val)}
                   options={[
                     { value: true,  label: 'Active Filer' },
                     { value: false, label: 'Non-Filer' },
@@ -346,36 +323,128 @@ export default function CalculatorsHub() {
                 />
 
                 <BrutalSlider
-                  id="tax-age"
+                  id="token-age"
                   label="Vehicle Age"
-                  value={tState.vehicleAge}
-                  onChange={(e) => tSetters.setVehicleAge(Number(e.target.value))}
+                  value={tokenState.vehicleAge}
+                  onChange={(e) => tokenSetters.setVehicleAge(Number(e.target.value))}
                   min={0}
                   max={15}
                   unit="yrs"
                 />
               </div>
 
-              {/* Output Box — Monospace Receipt Layout */}
               <div className="bg-df-black px-6 md:px-8 py-5 md:py-6">
                 <p className="font-mono text-[10px] md:text-xs font-bold tracking-[0.14em] text-white/40 uppercase mb-3">
-                  Cost Breakdown
+                  Token Tax Breakdown
                 </p>
                 <div className="font-mono text-sm md:text-base text-white/80 space-y-1.5 leading-relaxed">
-                  <p>&gt; PROVINCIAL TOKEN TAX: <span className="text-white font-bold">Rs. {tResults.netProvincialToken.toLocaleString()} {tResults.isLifetimeToken ? '(LIFETIME)' : ''}</span></p>
+                  <p>&gt; PROVINCIAL TOKEN TAX: <span className="text-white font-bold">Rs. {tokenResults.netProvincialToken.toLocaleString()} {tokenResults.isLifetimeToken ? '(LIFETIME)' : ''}</span></p>
                   
-                  <p>&gt; FBR SEC 234 ADVANCE TAX: <span className="text-[#E5202E] font-bold">{tResults.vehicleAge >= 10 ? 'Rs. 0 (Exempt)' : `Rs. ${tResults.fbrSection234.toLocaleString()}`}</span></p>
+                  <p>&gt; FBR SEC 234 ADVANCE TAX: <span className="text-[#E5202E] font-bold">{tokenResults.vehicleAge >= 10 ? 'Rs. 0 (Exempt)' : `Rs. ${tokenResults.fbrSection234.toLocaleString()}`}</span></p>
                   
-                  {tState.isTransfer && (
-                    <>
-                      <p>&gt; FBR SEC 231B TRANSFER TAX: <span className="text-[#E5202E] font-bold">{tResults.vehicleAge >= 5 ? 'Rs. 0 (Exempt)' : `Rs. ${tResults.fbrSection231b.toLocaleString()}`}</span></p>
-                      <p>&gt; PROVINCIAL MRA FEE & SMART CARD: <span className="text-white font-bold">Rs. {(tResults.mraTransferFee + tResults.smartCardFee).toLocaleString()}</span></p>
-                      <p>&gt; NADRA BIOMETRICS: <span className="text-white font-bold">Rs. {tResults.biometricFee.toLocaleString()}</span></p>
-                    </>
-                  )}
+                  <div className="border-t border-white/20 my-2 pt-2">
+                    <p className="text-white font-bold text-lg md:text-xl">&gt; NET PAYABLE: Rs. {tokenResults.totalAnnualToken.toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+          </motion.section>
+
+          {/* ═══════════════════════════════════════════
+             SECTION 3: TRANSFER FEE CALCULATOR
+             ═══════════════════════════════════════════ */}
+          <motion.section
+            variants={cardFloat}
+            initial="rest"
+            whileInView="float"
+            viewport={{ once: false, amount: 0.3 }}
+            transition={cardTransition}
+            className="group max-w-3xl mx-auto bg-white dark:bg-black border-2 border-df-black dark:border-white transition-all duration-200 hover:border-[#E5202E] hover:ring-2 hover:ring-[#E5202E] focus-within:border-[#E5202E] focus-within:ring-2 focus-within:ring-[#E5202E]"
+          >
+              <div className="px-6 md:px-8 py-4 md:py-5 border-b-2 border-df-black dark:border-white transition-all duration-200 group-hover:border-b-[#E5202E] group-hover:border-b-4 group-focus-within:border-b-[#E5202E] group-focus-within:border-b-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
+                <span className="font-mono text-[10px] md:text-xs font-bold tracking-[0.1em] text-df-black/35 dark:text-zinc-50/35">
+                  [ TOOL // 03 ]
+                </span>
+                <h2 className="font-display text-2xl md:text-3xl tracking-wide text-df-black dark:text-zinc-50 uppercase">
+                  Transfer Fee Calculator
+                </h2>
+              </div>
+
+              <div className="px-6 md:px-8 py-6 md:py-8 space-y-6 md:space-y-8">
+                <BrutalSelect
+                  id="transfer-province"
+                  label="Region / Province"
+                  value={transferState.province}
+                  onChange={(e) => transferSetters.setProvince(e.target.value)}
+                  options={PROVINCE_OPTIONS}
+                />
+
+                <BrutalSelect
+                  id="transfer-cc"
+                  label="Engine Capacity"
+                  value={transferState.engineCc}
+                  onChange={(e) => transferSetters.setEngineCc(Number(e.target.value))}
+                  options={CC_OPTIONS}
+                />
+
+                {transferState.engineCc <= 1000 ? (
+                  <div>
+                    <label className="block font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 dark:text-zinc-50/50 mb-2">
+                      Vehicle Invoice Value (PKR)
+                    </label>
+                    <div className="w-full p-3 md:p-4 bg-[#E5202E] border-2 border-df-black dark:border-white font-mono text-sm md:text-base font-bold text-white text-center select-none uppercase tracking-wider shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]">
+                      Not Applicable
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 dark:text-zinc-50/50 mb-2">
+                      Vehicle Invoice Value (PKR)
+                    </label>
+                    <input
+                      type="number"
+                      value={transferState.invoiceVal}
+                      onChange={(e) => transferSetters.setInvoiceVal(Number(e.target.value))}
+                      className="w-full p-3 md:p-4 bg-df-white dark:bg-black border-2 border-df-black dark:border-white rounded-none outline-none font-mono text-sm md:text-base font-medium focus:ring-2 focus:ring-df-red focus:border-df-red text-df-black dark:text-zinc-50"
+                      min="0"
+                      step="100000"
+                    />
+                  </div>
+                )}
+
+                <BrutalRadioGroup
+                  name="transferFiler"
+                  label="Buyer Filer Status"
+                  value={transferState.isFiler}
+                  onChange={(val) => transferSetters.setIsFiler(val)}
+                  options={[
+                    { value: true,  label: 'Active Filer' },
+                    { value: false, label: 'Non-Filer' },
+                  ]}
+                />
+
+                <BrutalSlider
+                  id="transfer-age"
+                  label="Vehicle Age"
+                  value={transferState.vehicleAge}
+                  onChange={(e) => transferSetters.setVehicleAge(Number(e.target.value))}
+                  min={0}
+                  max={15}
+                  unit="yrs"
+                />
+              </div>
+
+              <div className="bg-df-black px-6 md:px-8 py-5 md:py-6">
+                <p className="font-mono text-[10px] md:text-xs font-bold tracking-[0.14em] text-white/40 uppercase mb-3">
+                  Transfer Fee Breakdown
+                </p>
+                <div className="font-mono text-sm md:text-base text-white/80 space-y-1.5 leading-relaxed">
+                  <p>&gt; FBR SEC 231B TRANSFER TAX: <span className="text-[#E5202E] font-bold">{transferResults.vehicleAge >= 5 ? 'Rs. 0 (Exempt)' : `Rs. ${transferResults.fbrSection231b.toLocaleString()}`}</span></p>
+                  <p>&gt; PROVINCIAL MRA FEE: <span className="text-white font-bold">Rs. {transferResults.mraTransferFee.toLocaleString()}</span></p>
+                  <p>&gt; SMART CARD: <span className="text-white font-bold">Rs. {transferResults.smartCardFee.toLocaleString()}</span></p>
+                  <p>&gt; NADRA BIOMETRICS: <span className="text-white font-bold">Rs. {transferResults.biometricFee.toLocaleString()}</span></p>
 
                   <div className="border-t border-white/20 my-2 pt-2">
-                    <p className="text-white font-bold text-lg md:text-xl">&gt; GRAND TOTAL: Rs. {tResults.totalPayable.toLocaleString()}</p>
+                    <p className="text-white font-bold text-lg md:text-xl">&gt; TOTAL TRANSFER COST: Rs. {transferResults.totalTransferCost.toLocaleString()}</p>
                   </div>
                 </div>
               </div>
@@ -384,7 +453,6 @@ export default function CalculatorsHub() {
         </div>
       </div>
 
-      {/* ── Custom Slider Styles ── */}
       <style>{`
         :root {
           --brutal-shadow: #000000;
@@ -400,7 +468,6 @@ export default function CalculatorsHub() {
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E");
         }
 
-        /* Reset native slider appearance */
         .brutal-slider {
           -webkit-appearance: none;
           appearance: none;
@@ -409,14 +476,12 @@ export default function CalculatorsHub() {
           margin: 0;
         }
 
-        /* Webkit Track (invisible — we draw custom track above) */
         .brutal-slider::-webkit-slider-runnable-track {
           height: 3px;
           background: transparent;
           border: none;
         }
 
-        /* Webkit Thumb — Heavy red square */
         .brutal-slider::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
@@ -438,14 +503,12 @@ export default function CalculatorsHub() {
           transform: translate(1px, 1px);
         }
 
-        /* Firefox Track */
         .brutal-slider::-moz-range-track {
           height: 3px;
           background: transparent;
           border: none;
         }
 
-        /* Firefox Thumb */
         .brutal-slider::-moz-range-thumb {
           width: 20px;
           height: 20px;
@@ -459,7 +522,6 @@ export default function CalculatorsHub() {
           box-shadow: 3px 3px 0px 0px var(--brutal-shadow);
         }
 
-        /* Focus Ring */
         .brutal-slider:focus {
           outline: none;
         }
