@@ -365,25 +365,21 @@ export default function CalculatorsHub() {
                 />
               </div>
 
-              {/* Output Box */}
+              {/* Output Box — Monospace Receipt Layout */}
               <div className="bg-df-black px-6 md:px-8 py-5 md:py-6">
-                <p className="font-mono text-[10px] md:text-xs font-bold tracking-[0.14em] text-white/40 uppercase mb-1.5">
-                  Annual Token Tax
+                <p className="font-mono text-[10px] md:text-xs font-bold tracking-[0.14em] text-white/40 uppercase mb-3">
+                  Token Tax Breakdown
                 </p>
-                <p className="font-mono text-2xl md:text-3xl font-bold text-white tracking-tight">
-                  {tokenTaxResult.isLifetimePaid && tokenTaxResult.totalAnnualTax === 0
-                    ? 'LIFETIME PAID (PKR 0/yr)'
-                    : `Rs. ${tokenTaxResult.totalAnnualTax.toLocaleString()}`}
-                </p>
-                {/* Under 1000cc in ICT/Punjab the provincial token is settled for
-                    life at registration, but federal Section 234 WHT is still due
-                    each year until the car turns 10. Showing "LIFETIME PAID" alone
-                    in that case would understate what the owner actually owes. */}
-                {tokenTaxResult.isLifetimePaid && tokenTaxResult.totalAnnualTax > 0 && (
-                  <p className="font-mono text-[10px] md:text-xs font-bold tracking-[0.14em] text-white/40 uppercase mt-1.5">
-                    Lifetime token paid &middot; FBR 234 WHT only
-                  </p>
-                )}
+                <div className="font-mono text-sm md:text-base text-white/80 space-y-1.5 leading-relaxed">
+                  <p>&gt; PROVINCIAL TOKEN TAX: <span className="text-white font-bold">Rs. {tokenTaxResult.provincialTokenBase.toLocaleString()} {tokenTaxResult.isLifetimePaid ? '(LIFETIME)' : ''}</span></p>
+                  {(tokenTaxResult.tokenRebate > 0 || tokenTaxResult.tokenSurcharge > 0) && (
+                    <p>&gt; REBATE / SURCHARGE: <span className="text-white font-bold">Rs. {(tokenTaxResult.tokenSurcharge - tokenTaxResult.tokenRebate).toLocaleString()}</span></p>
+                  )}
+                  <p>&gt; FBR SEC 234 WHT: <span className="text-[#E5202E] font-bold">Rs. {tokenTaxResult.fbrSec234.toLocaleString()}</span></p>
+                  <div className="border-t border-white/20 my-2 pt-2">
+                    <p className="text-white font-bold text-lg md:text-xl">&gt; TOTAL ANNUAL TAX: Rs. {tokenTaxResult.totalAnnualTax.toLocaleString()}</p>
+                  </div>
+                </div>
               </div>
           </motion.section>
 
@@ -469,7 +465,8 @@ export default function CalculatorsHub() {
                 <div className="font-mono text-sm md:text-base text-white/80 space-y-1.5 leading-relaxed">
                   <p>&gt; PROVINCIAL MRA FEE: <span className="text-white font-bold">Rs. {transferCostResult.mraFee.toLocaleString()}</span></p>
                   <p>&gt; FBR 231B ADVANCE TAX: <span className="text-[#E5202E] font-bold">Rs. {transferCostResult.advanceTax231b.toLocaleString()}</span></p>
-                  <p>&gt; SMART CARD & BIOMETRICS: <span className="text-white font-bold">Rs. {(transferCostResult.smartCardFee + transferCostResult.biometricFee).toLocaleString()}</span></p>
+                  <p>&gt; SMART CARD FEE: <span className="text-white font-bold">Rs. {transferCostResult.smartCardFee.toLocaleString()}</span></p>
+                  <p>&gt; BIOMETRIC FEE: <span className="text-white font-bold">Rs. {transferCostResult.biometricFee.toLocaleString()}</span></p>
                   <div className="border-t border-white/20 my-2 pt-2">
                     <p className="text-white font-bold text-lg md:text-xl">&gt; TOTAL: Rs. {transferCostResult.totalTransferCost.toLocaleString()}</p>
                   </div>

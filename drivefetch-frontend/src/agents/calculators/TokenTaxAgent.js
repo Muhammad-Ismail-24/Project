@@ -1,47 +1,105 @@
-import config from '../../data/calculatorsConfig.json';
-
 export class TokenTaxAgent {
-  static calculate({ province, cc, isFiler, invoiceValue = 0, vehicleAge = 0, useEPay = false }) {
-    const provKey = (province || 'islamabad').toLowerCase();
-    const provData = config.token_tax_calculator.provincial_token_tax[provKey] || config.token_tax_calculator.provincial_token_tax.islamabad;
+  static calculate({ province, cc, isFiler, invoiceValue = 0, vehicleAge = 0, isEv = false }) {
+    const provKey = (province || 'islamabad').toUpperCase();
     
-    let baseTax = 0;
-    let isLifetimePaid = false;
+    let provincial_token = 0;
+    let is_lifetime = false;
 
-    // Check if province uses invoice-based rules (Islamabad & Punjab)
-    if (provData.slabs[0]?.tax_type) {
-      const slab = provData.slabs.find(s => cc >= s.min_cc && cc <= s.max_cc);
-      if (slab) {
-        if (slab.tax_type === 'fixed') {
-          baseTax = 0; // Lifetime token tax assumed paid at registration
-          isLifetimePaid = true;
-        } else {
-          baseTax = invoiceValue * slab.rate;
-        }
-      }
-      if (provKey === 'punjab' && useEPay && provData.epay_discount_pct) {
-        baseTax = baseTax * (1 - provData.epay_discount_pct / 100);
+    if (isEv) {
+      if (provKey === 'ISLAMABAD') {
+        provincial_token = 0.0;
+      } else if (provKey === 'PUNJAB') {
+        provincial_token = invoiceValue * 0.003 * 0.05; // 95% waiver
+      } else if (provKey === 'SINDH') {
+        provincial_token = 1000.0 * 0.25; // 75% concession
       }
     } else {
-      const slab = provData.slabs.find(s => cc >= s.min_cc && cc <= s.max_cc);
-      baseTax = slab ? slab.amount_pkr : 0;
-    }
-
-    // Federal Section 234 WHT (10-Year Age Exemption Rule)
-    let wht = 0;
-    const whtConfig = config.token_tax_calculator.fbr_section_234_wht;
-    if (vehicleAge < whtConfig.exemption_age_years) {
-      const whtSlab = whtConfig.slabs.find(s => cc >= s.min_cc && cc <= s.max_cc);
-      if (whtSlab) {
-        wht = isFiler ? whtSlab.filer_pkr : whtSlab.non_filer_pkr;
+      if (cc <= 1000) {
+        if (vehicleAge === 0) {
+          provincial_token = 20000.0;
+          is_lifetime = true;
+        } else {
+          provincial_token = 0.0;
+          is_lifetime = true;
+        }
+      } else {
+        if (provKey === 'ISLAMABAD') {
+          if (cc <= 2000) {
+            provincial_token = invoiceValue * 0.0025;
+          } else {
+            provincial_token = invoiceValue * 0.0035;
+          }
+        } else if (provKey === 'PUNJAB') {
+          if (cc <= 2000) {
+            provincial_token = invoiceValue * (invoiceValue <= 2000000 ? 0.0020 : 0.0030);
+          } else {
+            provincial_token = invoiceValue * 0.0040;
+          }
+        } else if (provKey === 'SINDH') {
+          if (cc <= 1300) {
+            provincial_token = 2500.0;
+          } else if (cc <= 1500) {
+            provincial_token = 4500.0;
+          } else if (cc <= 2000) {
+            provincial_token = 6000.0;
+          } else if (cc <= 2500) {
+            provincial_token = 12000.0;
+          } else {
+            provincial_token = 15000.0;
+          }
+        }
       }
     }
 
+    let token_rebate = 0.0;
+    let token_surcharge = 0.0;
+
+    if (!is_lifetime && provincial_token > 0) {
+      const pay_month = new Date().getMonth() + 1;
+      if (pay_month === 7 || pay_month === 8) {
+        token_rebate = provincial_token * 0.10;
+        // The spec mentioned +5% e-Pay in Punjab, but python didn't explicitly implement it in the main rebate variable. 
+        // We'll leave it as the python code did.
+      } else if (pay_month >= 10 && pay_month <= 12) {
+        token_surcharge = provincial_token * 0.20;
+      } else if (pay_month >= 1 && pay_month <= 3) {
+        token_surcharge = provincial_token * 0.50;
+      } else if (pay_month >= 4 && pay_month <= 6) {
+        token_surcharge = provincial_token * 1.00;
+      }
+    }
+
+    const net_token_tax = Math.max(0.0, provincial_token - token_rebate + token_surcharge);
+
+    let fbr_sec_234 = 0.0;
+    if (!isEv && vehicleAge < 10 && !is_lifetime) {
+      const sec_234_bands = [
+        { limit: 1000, rate: 800 },
+        { limit: 1199, rate: 1500 },
+        { limit: 1299, rate: 1750 },
+        { limit: 1499, rate: 2500 },
+        { limit: 1599, rate: 3750 },
+        { limit: 1999, rate: 4500 },
+        { limit: Infinity, rate: 10000 }
+      ];
+      for (const band of sec_234_bands) {
+        if (cc <= band.limit) {
+          fbr_sec_234 = isFiler ? band.rate : band.rate * 2;
+          break;
+        }
+      }
+    }
+
+    const totalAnnualTax = net_token_tax + fbr_sec_234;
+
     return {
-      baseTax: Math.round(baseTax),
-      wht: Math.round(wht),
-      totalAnnualTax: Math.round(baseTax + wht),
-      isLifetimePaid
+      provincialTokenBase: Math.round(provincial_token),
+      tokenRebate: Math.round(token_rebate),
+      tokenSurcharge: Math.round(token_surcharge),
+      netProvincialToken: Math.round(net_token_tax),
+      fbrSec234: Math.round(fbr_sec_234),
+      totalAnnualTax: Math.round(totalAnnualTax),
+      isLifetimePaid: is_lifetime
     };
   }
 }
