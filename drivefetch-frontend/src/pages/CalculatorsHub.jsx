@@ -3,7 +3,8 @@ import { motion } from 'framer-motion';
 import DynamicBackground from '../components/DynamicBackground';
 import SEO from '../components/SEO';
 import { calculatorsSchema } from '../config/seoSchemas';
-import { calculateFuelCost, calculateTokenTax, calculateTransferCost } from '../utils/calculatorEngine';
+import { calculateFuelCost } from '../utils/calculatorEngine';
+import { useVehicleTaxCalculator } from '../hooks/useVehicleTaxCalculator';
 
 /* ═══════════════════════════════════════════════════════
    DATA CONSTANTS
@@ -161,39 +162,9 @@ export default function CalculatorsHub() {
     return calculateFuelCost({ cc: fuelCc, dailyKm: fuelKm });
   }, [fuelCc, fuelKm]);
 
-  // ── Section 2: Token Tax Calculator State ──
-  const [tokenProvince, setTokenProvince] = useState('Islamabad');
-  const [tokenFiler, setTokenFiler] = useState(true);
-  const [tokenCc, setTokenCc] = useState(1300);
-  const [tokenInvoiceValue, setTokenInvoiceValue] = useState(4000000);
-  const [tokenAge, setTokenAge] = useState(0);
-
-  const tokenTaxResult = useMemo(() => {
-    return calculateTokenTax({
-      province: tokenProvince,
-      cc: tokenCc,
-      isFiler: tokenFiler,
-      invoiceValue: tokenInvoiceValue,
-      vehicleAge: tokenAge,
-      useEPay: true
-    });
-  }, [tokenProvince, tokenFiler, tokenCc, tokenInvoiceValue, tokenAge]);
-
-  // ── Section 3: Transfer Fee Calculator State ──
-  const [transferProvince, setTransferProvince] = useState('Punjab');
-  const [transferCc, setTransferCc] = useState(1300);
-  const [buyerFiler, setBuyerFiler] = useState(true);
-  const [sellerFiler, setSellerFiler] = useState(true);
-  const [transferAge, setTransferAge] = useState(0);
-
-  const transferCostResult = useMemo(() => {
-    return calculateTransferCost({
-      province: transferProvince,
-      cc: transferCc,
-      isBuyerFiler: buyerFiler,
-      vehicleAge: transferAge
-    });
-  }, [transferProvince, transferCc, buyerFiler, transferAge]);
+  // ── Section 2: Vehicle Tax & Transfer Calculator State ──
+  const taxCalc = useVehicleTaxCalculator();
+  const { state: tState, setters: tSetters, results: tResults } = taxCalc;
 
   return (
     <>
@@ -288,7 +259,7 @@ export default function CalculatorsHub() {
           </motion.section>
 
           {/* ═══════════════════════════════════════════
-             SECTION 2: TOKEN TAX CALCULATOR
+             SECTION 2: VEHICLE TAX & TRANSFER CALCULATOR
              ═══════════════════════════════════════════ */}
           <motion.section
             variants={cardFloat}
@@ -304,48 +275,58 @@ export default function CalculatorsHub() {
                   [ TOOL // 02 ]
                 </span>
                 <h2 className="font-display text-2xl md:text-3xl tracking-wide text-df-black dark:text-zinc-50 uppercase">
-                  Token Tax Calculator
+                  Tax & Transfer Calculator
                 </h2>
               </div>
 
               {/* Body */}
               <div className="px-6 md:px-8 py-6 md:py-8 space-y-6 md:space-y-8">
-                <BrutalSelect
-                  id="token-province"
-                  label="Region / Province"
-                  value={tokenProvince}
-                  onChange={(e) => setTokenProvince(e.target.value)}
-                  options={PROVINCE_OPTIONS}
-                />
-
+                
                 <BrutalRadioGroup
-                  name="tokenFiler"
-                  label="Filer Status"
-                  value={tokenFiler}
-                  onChange={(val) => setTokenFiler(val)}
+                  name="transactionType"
+                  label="Transaction Type"
+                  value={tState.isTransfer}
+                  onChange={(val) => tSetters.setIsTransfer(val)}
                   options={[
-                    { value: true,  label: 'Active Filer' },
-                    { value: false, label: 'Non-Filer' },
+                    { value: false, label: 'Annual Token Tax Only' },
+                    { value: true,  label: 'Transfer Ownership (+ Token Tax)' },
                   ]}
                 />
 
                 <BrutalSelect
-                  id="token-cc"
+                  id="tax-province"
+                  label="Region / Province"
+                  value={tState.province}
+                  onChange={(e) => tSetters.setProvince(e.target.value)}
+                  options={PROVINCE_OPTIONS}
+                />
+
+                <BrutalSelect
+                  id="tax-cc"
                   label="Engine Capacity"
-                  value={tokenCc}
-                  onChange={(e) => setTokenCc(Number(e.target.value))}
+                  value={tState.engineCc}
+                  onChange={(e) => tSetters.setEngineCc(Number(e.target.value))}
                   options={CC_OPTIONS}
                 />
 
-                {(tokenProvince === 'Punjab' || tokenProvince === 'Islamabad') && tokenCc > 1000 && (
+                {tState.engineCc <= 1000 ? (
+                  <div>
+                    <label className="block font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 dark:text-zinc-50/50 mb-2">
+                      Vehicle Invoice Value (PKR)
+                    </label>
+                    <div className="w-full p-3 md:p-4 bg-[#E5202E] border-2 border-df-black dark:border-white font-mono text-sm md:text-base font-bold text-white text-center select-none uppercase tracking-wider shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]">
+                      Lifetime Tax (Rs. 20,000)
+                    </div>
+                  </div>
+                ) : (
                   <div>
                     <label className="block font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 dark:text-zinc-50/50 mb-2">
                       Vehicle Invoice Value (PKR)
                     </label>
                     <input
                       type="number"
-                      value={tokenInvoiceValue}
-                      onChange={(e) => setTokenInvoiceValue(Number(e.target.value))}
+                      value={tState.invoiceVal}
+                      onChange={(e) => tSetters.setInvoiceVal(Number(e.target.value))}
                       className="w-full p-3 md:p-4 bg-df-white dark:bg-black border-2 border-df-black dark:border-white rounded-none outline-none font-mono text-sm md:text-base font-medium focus:ring-2 focus:ring-df-red focus:border-df-red text-df-black dark:text-zinc-50"
                       min="0"
                       step="100000"
@@ -353,12 +334,22 @@ export default function CalculatorsHub() {
                   </div>
                 )}
 
-                {/* Drives the FBR Section 234 exemption: WHT stops at 10 years. */}
+                <BrutalRadioGroup
+                  name="taxFiler"
+                  label="Filer Status (Buyer/Owner)"
+                  value={tState.isFiler}
+                  onChange={(val) => tSetters.setIsFiler(val)}
+                  options={[
+                    { value: true,  label: 'Active Filer' },
+                    { value: false, label: 'Non-Filer' },
+                  ]}
+                />
+
                 <BrutalSlider
-                  id="token-age"
+                  id="tax-age"
                   label="Vehicle Age"
-                  value={tokenAge}
-                  onChange={(e) => setTokenAge(Number(e.target.value))}
+                  value={tState.vehicleAge}
+                  onChange={(e) => tSetters.setVehicleAge(Number(e.target.value))}
                   min={0}
                   max={15}
                   unit="yrs"
@@ -368,107 +359,23 @@ export default function CalculatorsHub() {
               {/* Output Box — Monospace Receipt Layout */}
               <div className="bg-df-black px-6 md:px-8 py-5 md:py-6">
                 <p className="font-mono text-[10px] md:text-xs font-bold tracking-[0.14em] text-white/40 uppercase mb-3">
-                  Token Tax Breakdown
+                  Cost Breakdown
                 </p>
                 <div className="font-mono text-sm md:text-base text-white/80 space-y-1.5 leading-relaxed">
-                  <p>&gt; PROVINCIAL TOKEN TAX: <span className="text-white font-bold">Rs. {tokenTaxResult.provincialTokenBase.toLocaleString()} {tokenTaxResult.isLifetimePaid ? '(LIFETIME)' : ''}</span></p>
-                  {(tokenTaxResult.tokenRebate > 0 || tokenTaxResult.tokenSurcharge > 0) && (
-                    <p>&gt; REBATE / SURCHARGE: <span className="text-white font-bold">Rs. {(tokenTaxResult.tokenSurcharge - tokenTaxResult.tokenRebate).toLocaleString()}</span></p>
+                  <p>&gt; PROVINCIAL TOKEN TAX: <span className="text-white font-bold">Rs. {tResults.netProvincialToken.toLocaleString()} {tResults.isLifetimeToken ? '(LIFETIME)' : ''}</span></p>
+                  
+                  <p>&gt; FBR SEC 234 ADVANCE TAX: <span className="text-[#E5202E] font-bold">{tResults.vehicleAge >= 10 ? 'Rs. 0 (Exempt)' : `Rs. ${tResults.fbrSection234.toLocaleString()}`}</span></p>
+                  
+                  {tState.isTransfer && (
+                    <>
+                      <p>&gt; FBR SEC 231B TRANSFER TAX: <span className="text-[#E5202E] font-bold">{tResults.vehicleAge >= 5 ? 'Rs. 0 (Exempt)' : `Rs. ${tResults.fbrSection231b.toLocaleString()}`}</span></p>
+                      <p>&gt; PROVINCIAL MRA FEE & SMART CARD: <span className="text-white font-bold">Rs. {(tResults.mraTransferFee + tResults.smartCardFee).toLocaleString()}</span></p>
+                      <p>&gt; NADRA BIOMETRICS: <span className="text-white font-bold">Rs. {tResults.biometricFee.toLocaleString()}</span></p>
+                    </>
                   )}
-                  <p>&gt; FBR SEC 234 WHT: <span className="text-[#E5202E] font-bold">Rs. {tokenTaxResult.fbrSec234.toLocaleString()}</span></p>
+
                   <div className="border-t border-white/20 my-2 pt-2">
-                    <p className="text-white font-bold text-lg md:text-xl">&gt; TOTAL ANNUAL TAX: Rs. {tokenTaxResult.totalAnnualTax.toLocaleString()}</p>
-                  </div>
-                </div>
-              </div>
-          </motion.section>
-
-          {/* ═══════════════════════════════════════════
-             SECTION 3: TRANSFER FEE CALCULATOR
-             ═══════════════════════════════════════════ */}
-          <motion.section
-            variants={cardFloat}
-            initial="rest"
-            whileInView="float"
-            viewport={{ once: false, amount: 0.3 }}
-            transition={cardTransition}
-            className="group max-w-3xl mx-auto bg-white dark:bg-black border-2 border-df-black dark:border-white transition-all duration-200 hover:border-[#E5202E] hover:ring-2 hover:ring-[#E5202E] focus-within:border-[#E5202E] focus-within:ring-2 focus-within:ring-[#E5202E]"
-          >
-              {/* Header Strip */}
-              <div className="px-6 md:px-8 py-4 md:py-5 border-b-2 border-df-black dark:border-white transition-all duration-200 group-hover:border-b-[#E5202E] group-hover:border-b-4 group-focus-within:border-b-[#E5202E] group-focus-within:border-b-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
-                <span className="font-mono text-[10px] md:text-xs font-bold tracking-[0.1em] text-df-black/35 dark:text-zinc-50/35">
-                  [ TOOL // 03 ]
-                </span>
-                <h2 className="font-display text-2xl md:text-3xl tracking-wide text-df-black dark:text-zinc-50 uppercase">
-                  Transfer Fee Calculator
-                </h2>
-              </div>
-
-              {/* Body */}
-              <div className="px-6 md:px-8 py-6 md:py-8 space-y-6 md:space-y-8">
-                <BrutalSelect
-                  id="transfer-province"
-                  label="Region / Province"
-                  value={transferProvince}
-                  onChange={(e) => setTransferProvince(e.target.value)}
-                  options={PROVINCE_OPTIONS}
-                />
-
-                <BrutalSelect
-                  id="transfer-cc"
-                  label="Vehicle Type / Capacity"
-                  value={transferCc}
-                  onChange={(e) => setTransferCc(Number(e.target.value))}
-                  options={CC_OPTIONS}
-                />
-
-                <BrutalRadioGroup
-                  name="buyerFiler"
-                  label="Buyer Filer Status"
-                  value={buyerFiler}
-                  onChange={(val) => setBuyerFiler(val)}
-                  options={[
-                    { value: true,  label: 'Active Filer' },
-                    { value: false, label: 'Non-Filer' },
-                  ]}
-                />
-
-                <BrutalRadioGroup
-                  name="sellerFiler"
-                  label="Seller Filer Status"
-                  value={sellerFiler}
-                  onChange={(val) => setSellerFiler(val)}
-                  options={[
-                    { value: true,  label: 'Active Filer' },
-                    { value: false, label: 'Non-Filer' },
-                  ]}
-                />
-
-                {/* Drives the FBR Section 231B discount: the advance tax drops
-                    10% per year of age and reaches zero at 10 years. */}
-                <BrutalSlider
-                  id="transfer-age"
-                  label="Vehicle Age"
-                  value={transferAge}
-                  onChange={(e) => setTransferAge(Number(e.target.value))}
-                  min={0}
-                  max={10}
-                  unit="yrs"
-                />
-              </div>
-
-              {/* Output Box — Monospace Receipt Layout */}
-              <div className="bg-df-black px-6 md:px-8 py-5 md:py-6">
-                <p className="font-mono text-[10px] md:text-xs font-bold tracking-[0.14em] text-white/40 uppercase mb-3">
-                  Transfer Fee Breakdown
-                </p>
-                <div className="font-mono text-sm md:text-base text-white/80 space-y-1.5 leading-relaxed">
-                  <p>&gt; PROVINCIAL MRA FEE: <span className="text-white font-bold">Rs. {transferCostResult.mraFee.toLocaleString()}</span></p>
-                  <p>&gt; FBR 231B ADVANCE TAX: <span className="text-[#E5202E] font-bold">Rs. {transferCostResult.advanceTax231b.toLocaleString()}</span></p>
-                  <p>&gt; SMART CARD FEE: <span className="text-white font-bold">Rs. {transferCostResult.smartCardFee.toLocaleString()}</span></p>
-                  <p>&gt; BIOMETRIC FEE: <span className="text-white font-bold">Rs. {transferCostResult.biometricFee.toLocaleString()}</span></p>
-                  <div className="border-t border-white/20 my-2 pt-2">
-                    <p className="text-white font-bold text-lg md:text-xl">&gt; TOTAL: Rs. {transferCostResult.totalTransferCost.toLocaleString()}</p>
+                    <p className="text-white font-bold text-lg md:text-xl">&gt; GRAND TOTAL: Rs. {tResults.totalPayable.toLocaleString()}</p>
                   </div>
                 </div>
               </div>
