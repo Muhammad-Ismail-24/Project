@@ -8,6 +8,8 @@ export function useVehicleTaxCalculator(initialIsTransfer = false) {
   const [vehicleAge, setVehicleAge] = useState(0);
   const [isFiler, setIsFiler] = useState(true);
   const [isTransfer, setIsTransfer] = useState(initialIsTransfer);
+  const [sellerRetainingNumber, setSellerRetainingNumber] = useState(false);
+  const [needsNewPlates, setNeedsNewPlates] = useState(false);
 
   const results = useMemo(() => {
     return calculateVehicleCharges({
@@ -18,9 +20,11 @@ export function useVehicleTaxCalculator(initialIsTransfer = false) {
       isFiler,
       isEv: false, // Defaulting to false for now, can be expanded later
       isTransfer,
+      sellerRetainingNumber,
+      needsNewPlates,
       paymentDate: new Date(),
     });
-  }, [province, engineCc, invoiceVal, vehicleAge, isFiler, isTransfer]);
+  }, [province, engineCc, invoiceVal, vehicleAge, isFiler, isTransfer, sellerRetainingNumber, needsNewPlates]);
 
   return {
     state: {
@@ -30,6 +34,8 @@ export function useVehicleTaxCalculator(initialIsTransfer = false) {
       vehicleAge,
       isFiler,
       isTransfer,
+      sellerRetainingNumber,
+      needsNewPlates,
     },
     setters: {
       setProvince,
@@ -38,6 +44,8 @@ export function useVehicleTaxCalculator(initialIsTransfer = false) {
       setVehicleAge,
       setIsFiler,
       setIsTransfer,
+      setSellerRetainingNumber,
+      setNeedsNewPlates,
     },
     results,
   };

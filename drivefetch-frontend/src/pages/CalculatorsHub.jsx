@@ -69,10 +69,10 @@ function BrutalSelect({ id, label, value, onChange, options }) {
   );
 }
 
-function BrutalRadioGroup({ name, label, value, onChange, options }) {
+function BrutalRadioGroup({ name, label, value, onChange, options, disabled = false }) {
   return (
-    <div>
-      <span className="block font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 dark:text-zinc-50/50 mb-3">
+    <div className={disabled ? "opacity-50 pointer-events-none" : ""}>
+      <span className="block font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 dark:text-zinc-50/50 mb-3 flex items-center gap-2">
         {label}
       </span>
       <div className="flex flex-wrap gap-3 md:gap-4">
@@ -98,6 +98,7 @@ function BrutalRadioGroup({ name, label, value, onChange, options }) {
                 checked={isSelected}
                 onChange={() => onChange(opt.value)}
                 className="sr-only"
+                disabled={disabled}
               />
               {opt.label}
             </label>
@@ -155,11 +156,11 @@ export default function CalculatorsHub() {
   }, [fuelCc, fuelKm]);
 
   // ── Section 2: Token Tax State ──
-  const tokenCalc = useVehicleTaxCalculator(false); // isTransfer = false
+  const tokenCalc = useVehicleTaxCalculator(false);
   const { state: tokenState, setters: tokenSetters, results: tokenResults } = tokenCalc;
 
   // ── Section 3: Transfer Fee State ──
-  const transferCalc = useVehicleTaxCalculator(true); // isTransfer = true
+  const transferCalc = useVehicleTaxCalculator(true);
   const { state: transferState, setters: transferSetters, results: transferResults } = transferCalc;
 
   return (
@@ -422,6 +423,38 @@ export default function CalculatorsHub() {
                   ]}
                 />
 
+                <BrutalRadioGroup
+                  name="transferSellerRetention"
+                  label="Seller Retaining Number (CNIC-Linked)"
+                  value={transferState.sellerRetainingNumber}
+                  onChange={(val) => transferSetters.setSellerRetainingNumber(val)}
+                  options={[
+                    { value: true,  label: 'Yes' },
+                    { value: false, label: 'No' },
+                  ]}
+                />
+
+                <BrutalRadioGroup
+                  name="transferNeedsPlates"
+                  label={
+                    <div className="flex items-center gap-2">
+                      Universal / Replacement Plates Required
+                      {transferState.vehicleAge >= 7 && (
+                        <span className="bg-[#E5202E] text-white text-[8px] md:text-[10px] px-2 py-0.5 font-bold uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]">
+                          [ MANDATORY RETROFIT (PRE-2020) ]
+                        </span>
+                      )}
+                    </div>
+                  }
+                  value={transferState.vehicleAge >= 7 || transferState.needsNewPlates}
+                  onChange={(val) => transferSetters.setNeedsNewPlates(val)}
+                  disabled={transferState.vehicleAge >= 7}
+                  options={[
+                    { value: true,  label: 'Yes' },
+                    { value: false, label: 'No' },
+                  ]}
+                />
+
                 <BrutalSlider
                   id="transfer-age"
                   label="Vehicle Age"
@@ -438,10 +471,14 @@ export default function CalculatorsHub() {
                   Transfer Fee Breakdown
                 </p>
                 <div className="font-mono text-sm md:text-base text-white/80 space-y-1.5 leading-relaxed">
-                  <p>&gt; FBR SEC 231B TRANSFER TAX: <span className="text-[#E5202E] font-bold">{transferResults.vehicleAge >= 5 ? 'Rs. 0 (Exempt)' : `Rs. ${transferResults.fbrSection231b.toLocaleString()}`}</span></p>
-                  <p>&gt; PROVINCIAL MRA FEE: <span className="text-white font-bold">Rs. {transferResults.mraTransferFee.toLocaleString()}</span></p>
-                  <p>&gt; SMART CARD: <span className="text-white font-bold">Rs. {transferResults.smartCardFee.toLocaleString()}</span></p>
+                  <p>&gt; MRA BASE TRANSFER FEE: <span className="text-white font-bold">Rs. {transferResults.mraTransferFee.toLocaleString()}</span></p>
+                  <p>&gt; FBR SEC 231B ADVANCE TAX: <span className="text-[#E5202E] font-bold">{transferResults.vehicleAge >= 5 ? 'Rs. 0 (Exempt)' : `Rs. ${transferResults.fbrSection231b.toLocaleString()}`}</span></p>
+                  <p>&gt; SMART CARD FEE: <span className="text-white font-bold">Rs. {transferResults.smartCardFee.toLocaleString()}</span></p>
                   <p>&gt; NADRA BIOMETRICS: <span className="text-white font-bold">Rs. {transferResults.biometricFee.toLocaleString()}</span></p>
+                  <p>&gt; UNIVERSAL NUMBER PLATES: <span className="text-white font-bold">Rs. {transferResults.numberPlateFee.toLocaleString()}</span></p>
+                  {transferResults.additionalRegMarkFee > 0 && (
+                    <p>&gt; ADDITIONAL REG MARK FEE: <span className="text-[#E5202E] font-bold">Rs. {transferResults.additionalRegMarkFee.toLocaleString()}</span></p>
+                  )}
 
                   <div className="border-t border-white/20 my-2 pt-2">
                     <p className="text-white font-bold text-lg md:text-xl">&gt; TOTAL TRANSFER COST: Rs. {transferResults.totalTransferCost.toLocaleString()}</p>

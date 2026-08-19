@@ -456,7 +456,7 @@ var PROVINCES = {
 	SINDH: "SINDH"
 };
 var VehicleTaxAgent = class {
-	static calculate({ province = "ISLAMABAD", engineCc = 1300, invoiceVal = 4e6, vehicleAge = 0, isFiler = true, isEv = false, isTransfer = false, paymentDate = /* @__PURE__ */ new Date() }) {
+	static calculate({ province = "ISLAMABAD", engineCc = 1300, invoiceVal = 4e6, vehicleAge = 0, isFiler = true, isEv = false, isTransfer = false, sellerRetainingNumber = false, needsNewPlates = false, isInterProvincial = false, paymentDate = /* @__PURE__ */ new Date() }) {
 		const age = Math.max(0, parseInt(vehicleAge, 10) || 0);
 		const cc = parseInt(engineCc, 10) || 0;
 		const val = parseFloat(invoiceVal) || 0;
@@ -567,18 +567,25 @@ var VehicleTaxAgent = class {
 			fbrSec231b = Math.max(0, whtRate * (1 - .1 * age));
 		} else fbrSec231b = 0;
 		let mraTransferFee = 0, smartCardFee = 0, biometricFee = isTransfer ? 300 : 0;
-		if (isTransfer) if (normProvince === PROVINCES.PUNJAB) {
-			mraTransferFee = cc <= 1e3 ? 2750 : cc <= 1800 ? 3850 : 5500;
-			smartCardFee = 550;
-		} else if (normProvince === PROVINCES.ISLAMABAD) {
-			mraTransferFee = cc <= 1e3 ? 1500 : cc <= 1800 ? 2500 : 3500;
-			smartCardFee = 1500;
-		} else {
-			mraTransferFee = cc <= 1e3 ? 1e3 : cc <= 1800 ? 1500 : 2500;
-			smartCardFee = 1e3;
+		let numberPlateFee = 0, additionalRegMarkFee = 0;
+		if (isTransfer) {
+			if (normProvince === PROVINCES.PUNJAB) smartCardFee = 1300;
+			else if (normProvince === PROVINCES.ISLAMABAD) smartCardFee = 1500;
+			else smartCardFee = 1e3;
+			if (normProvince === PROVINCES.PUNJAB) mraTransferFee = cc <= 1e3 ? 2750 : cc <= 1800 ? 3850 : 5500;
+			else if (normProvince === PROVINCES.ISLAMABAD) mraTransferFee = cc <= 1e3 ? 1500 : cc <= 1800 ? 2500 : 3500;
+			else mraTransferFee = cc <= 1e3 ? 1e3 : cc <= 1800 ? 1500 : 2500;
+			if (paymentDate.getFullYear() - age < 2020 || sellerRetainingNumber || needsNewPlates) if (normProvince === PROVINCES.PUNJAB) numberPlateFee = 1800;
+			else if (normProvince === PROVINCES.ISLAMABAD) if (cc <= 1e3) numberPlateFee = 1200;
+			else if (cc <= 1800) numberPlateFee = 2e3;
+			else numberPlateFee = 3e3;
+			else numberPlateFee = 1200;
+			if (sellerRetainingNumber || isInterProvincial) {
+				if (normProvince === PROVINCES.PUNJAB) additionalRegMarkFee = 4e3;
+			}
 		}
 		const totalAnnualToken = netProvincialToken + fbrSec234;
-		const totalTransferCost = mraTransferFee + fbrSec231b + smartCardFee + biometricFee;
+		const totalTransferCost = mraTransferFee + fbrSec231b + smartCardFee + biometricFee + numberPlateFee + additionalRegMarkFee;
 		return {
 			provincialTokenBase: Math.round(provincialToken),
 			netProvincialToken: Math.round(netProvincialToken),
@@ -587,6 +594,8 @@ var VehicleTaxAgent = class {
 			mraTransferFee: Math.round(mraTransferFee),
 			smartCardFee: Math.round(smartCardFee),
 			biometricFee: Math.round(biometricFee),
+			numberPlateFee: Math.round(numberPlateFee),
+			additionalRegMarkFee: Math.round(additionalRegMarkFee),
 			totalAnnualToken: Math.round(totalAnnualToken),
 			totalTransferCost: Math.round(totalTransferCost),
 			totalPayable: Math.round(isTransfer ? totalAnnualToken + totalTransferCost : totalAnnualToken),
