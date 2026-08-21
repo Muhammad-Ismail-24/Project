@@ -3276,11 +3276,6 @@ def get_eligible_cars(
         # are classified as "Crossover" in registry but must pass an "SUV" query.
         if body_style and not is_direct_target:
             allowed_styles = {body_style}
-            if intent_id != "true_suv_demand":
-                if body_style == "SUV":
-                    allowed_styles.add("Crossover")
-                elif body_style == "Crossover":
-                    allowed_styles.add("SUV")
             if not any(style in info["styles"] for style in allowed_styles):
                 continue
 
@@ -3743,11 +3738,6 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
         # 3. Body style gate — SUV/Crossover treated as interchangeable (mirror of gate in get_eligible_cars)
         if info and body_style and not is_direct_target:
             allowed_styles = {body_style}
-            if constraints.get("intent_id") != "true_suv_demand":
-                if body_style == "SUV":
-                    allowed_styles.add("Crossover")
-                elif body_style == "Crossover":
-                    allowed_styles.add("SUV")
             if not any(style in info["styles"] for style in allowed_styles):
                 reason = f"Dropped {t.make} {t.model}: Body style '{'/'.join(info['styles'])}' does not match requested '{body_style}'."
                 print(f"[Validator] Dropping {t.make} {t.model} — not a {body_style}")
@@ -5409,4 +5399,5 @@ async def get_extended_recommendations(
         print(f"[ExtendedMapper] Failed: {e}")
         traceback.print_exc()
         return []
+
 
