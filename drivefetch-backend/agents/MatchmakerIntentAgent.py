@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from google import genai
 from google.genai import types
 
-from agents.config import generate_content_resilient, settings, MODEL_BODY_STYLE_MAP
+from agents.config import generate_content_resilient, settings
 from agents.recommender import (
     CAR_REGISTRY,
     _CANONICAL_MODEL_MAP,
@@ -14,6 +14,14 @@ from agents.recommender import (
     CITY_ALIAS_MAP
 )
 from scrapers.normalizer import normalize_city
+
+_MODEL_BODY_STYLE_MAP = {
+    'Crossover': ['Sportage', 'Tucson', 'CR-V', 'RAV4', 'HR-V', 'Vezel', 'CX-5', 'Stonic', 'Seltos'],
+    'SUV': ['Fortuner', 'Prado', 'Land Cruiser', 'Pajero', 'Patrol', 'Wrangler', 'Defender'],
+    'Sedan': ['Corolla', 'Civic', 'City', 'Elantra', 'Camry', 'Accord'],
+    'Hatchback': ['Swift', 'Alto', 'Cultus', 'Vitz', 'Picanto', 'Fit'],
+    'Pickup': ['Hilux', 'Revo', 'Ranger', 'D-Max']
+}
 
 class UserIntent(BaseModel):
     max_budget:        Optional[int]                                                                 = None
@@ -178,11 +186,7 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "'alternatives to [MODEL]', or 'something similar to [MODEL]', you MUST:\n"
         "  1. Set direct_model to the mentioned model name (e.g. 'Sportage')\n"
         "  2. ALSO infer the body_style from the reference model's known category. Use this map:\n"
-        "     Sportage/Tucson/CR-V/RAV4/HR-V/Vezel/CX-5/Stonic/Seltos -> Crossover\n"
-        "     Fortuner/Prado/Land Cruiser/Pajero/Patrol/Wrangler/Defender -> SUV\n"
-        "     Corolla/Civic/City/Elantra/Camry/Accord -> Sedan\n"
-        "     Swift/Alto/Cultus/Vitz/Picanto/Fit -> Hatchback\n"
-        "     Hilux/Revo/Ranger/D-Max -> Pickup\n"
+    ) + "".join(f"     {'/'.join(models)} -> {style}\n" for style, models in _MODEL_BODY_STYLE_MAP.items()) + (
         "  3. Do NOT leave body_style null when the reference model unambiguously belongs to a category.\n"
         "- TRUE SUV / PROPER SUV DETECTION: If the user says 'proper SUV', 'true SUV', "
         "'real SUV', 'ladder-frame', 'body-on-frame', or 'rugged 4x4', you MUST:\n"
@@ -1186,3 +1190,4 @@ def resolve_constraints(intent: UserIntent) -> dict:
         constraints["direct_model"] = None
 
     return constraints
+
