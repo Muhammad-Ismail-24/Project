@@ -3553,6 +3553,8 @@ def get_eligible_cars(
                 budget_tier_penalty = -0.50  # Heavy penalty: wipes out Liana/Baleno for 18L+ budgets
 
         final_score = fit_score + priority_boost + youth_penalty + sedan_tier_boost + youth_style_score + budget_tier_penalty
+        if is_direct_target:
+            final_score += 1.0
 
         # Display string with JDM / feature trim annotations
         display = f"{make.title()} {model.title()}"
@@ -4752,7 +4754,8 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         "From the eligible list above, pick the best 1–3 cars for this buyer.\n\n"
         f"BUYER PROFILE:\n{json.dumps(buyer_profile, indent=2)}\n\n"
         "RANKING RULES:\n"
-        "1. LIST ONLY: Never suggest a car not in the eligible list. "
+        "1. DIRECT MODEL MANDATE: If 'direct_model' is present in the BUYER PROFILE and exists in the ELIGIBLE CARS list, you MUST place that exact model as Recommendation #1. The remaining slots must be the best alternative competitors. If it does NOT appear in ELIGIBLE CARS (due to budget/features), do not force it.\n"
+        "2. LIST ONLY: Never suggest a car not in the eligible list. "
         "The list is pre-verified by Python — trust it completely.\n"
         "2. PRINCIPLES FIRST: Apply the use-case principles above when ranking. "
         "They encode real Pakistani market knowledge — follow them.\n"
@@ -5406,3 +5409,4 @@ async def get_extended_recommendations(
         print(f"[ExtendedMapper] Failed: {e}")
         traceback.print_exc()
         return []
+

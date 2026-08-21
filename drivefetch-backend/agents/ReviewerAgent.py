@@ -55,7 +55,7 @@ async def review_recommendations(
         "- Origin violation (e.g., user said 'no Chinese' but got a Chinese car, or requested 'local' and got 'JDM')\n"
         "- Explicit brand/model vetoes\n"
         "- Transmission mismatch\n"
-        "- Powertrain mismatch (e.g., user asked for hybrid but got petrol)\n\n"
+        "- Powertrain mismatch (e.g., user asked for hybrid but got petrol)\n- DIRECT MODEL ALIGNMENT: If the user explicitly requested a specific model (direct_model) and it is eligible, it MUST be the primary recommendation. This is not a violation.\n\n"
         "If ALL cars pass these hard constraints: return is_approved=True and feedback='Approved'.\n"
         "If ANY car fails: return is_approved=False and feedback containing a strict, 1-sentence corrective prompt. "
         "For example: 'The user asked for a Crossover like Sportage, but you provided a Sedan. Replace the Sedan with a Crossover.'"
@@ -75,3 +75,4 @@ async def review_recommendations(
     except Exception as e:
         print(f"[ReviewerAgent] Failed: {e} — failing OPEN (Approved)")
         return ReviewVerdict(is_approved=True, feedback="Approved")
+
