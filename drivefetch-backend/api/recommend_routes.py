@@ -44,11 +44,9 @@ from typing import AsyncGenerator
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
+from agents.MatchmakerController import run_matchmaker_pipeline
+from agents.MatchmakerIntentAgent import extract_intent, resolve_constraints
 from agents.recommender import (
-    extract_intent,
-    resolve_constraints,
-    select_car_targets,
-    _deduplicate_and_format_targets,
     get_fallback_recommendations,
     get_extended_recommendations,
 )
@@ -334,39 +332,43 @@ async def run_recommend_pipeline(
     override_budget: int | None = None,
 ) -> AsyncGenerator[str, None]:
 
-    # ── Stage 1: Intent Extraction & Constraint Resolution ─────────────────
-    yield _sse("status", {"message": "🧠 Analysing your requirements...", "stage": "mapping"})
+    # ── Stage 1 & 2: Matchmaker Chain of Command ─────────────────
+    yield _sse("status", {"message": "🧠 Analysing requirements and consulting agents...", "stage": "mapping"})
 
     try:
-        intent = await extract_intent(user_prompt)
+        controller_result = await run_matchmaker_pipeline(
+            user_prompt=user_prompt, 
+            override_city=override_city, 
+            override_budget=override_budget
+        )
         
-        # Inject the raw prompt into the intent object so apply_keyword_intent 
-        # can scan it for Python-level overrides.
-        intent.user_prompt = user_prompt
-        
-        if override_budget is not None and override_budget > 0:
-            intent.max_budget = override_budget
-        constraints = resolve_constraints(intent)
-        if override_city:
-            constraints["city"] = override_city
-
-        # ── Stage 2: Car Selection & Validation ───────────────────────────────
-        raw_targets     = await select_car_targets(constraints)
+        if "error" in controller_result:
+            disclaimers = controller_result.get("disclaimers", [])
+            summary = controller_result.get("strategy_summary", "")
+            if disclaimers or summary:
+                yield _sse("strategy", {
+                    "summary":     summary,
+                    "disclaimers": disclaimers,
+                    "targets":     [],
+                })
+            yield _sse("error", {
+                "message": controller_result.get("veto_message") or controller_result.get("error", "Request failed.")
+            })
+            return
+            
+        recommendations = controller_result["recommendations"]
+        constraints = controller_result["constraints"]
         
     except Exception as e:
-        print(f"[API Error] Google Gemini failed during mapping/selection: {e}")
+        print(f"[API Error] Matchmaker Controller failed: {e}")
         yield _sse("error", {
             "message": "The AI matchmaker is currently experiencing high demand and is overloaded. Please wait a few seconds and try again."
         })
         return
 
-    recommendations = _deduplicate_and_format_targets(raw_targets, constraints)
-
     if not recommendations:
-        # Emit strategy brief with disclaimers even on empty results —
-        # gives user meaningful feedback instead of a dead-end error.
-        disclaimers = constraints.get("disclaimers", [])
-        summary = constraints.get("strategy_summary", "")
+        disclaimers = constraints.get("disclaimers", []) if constraints else []
+        summary = constraints.get("strategy_summary", "") if constraints else ""
         if disclaimers or summary:
             yield _sse("strategy", {
                 "summary":     summary,
