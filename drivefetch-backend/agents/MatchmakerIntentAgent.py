@@ -140,6 +140,9 @@ async def extract_intent(user_prompt: str) -> UserIntent:
         "    5. Mechanical Paradox: 'Manual transmission with Adaptive Cruise Control' -> '[IMPOSSIBLE QUERY PARADOX] Adaptive Cruise Control requires an automatic transmission to govern speed and is mechanically incompatible with a manual gearbox in this market. Please select an automatic.'\n"
         "    6. Economy ADAS Paradox: 'Suzuki Cultus with Lane Assist and Power Tailgate' -> '[IMPOSSIBLE QUERY PARADOX] Entry-level budget hatchbacks are not built with Level 2 ADAS or powered tailgates in PKDM spec. Please raise your budget or drop these features.'\n"
         "    7. Towing/Chassis Paradox: 'Crossover/Sedan to tow 3 tons' -> '[IMPOSSIBLE QUERY PARADOX] Unibody crossovers and sedans lack the chassis strength to tow 3-ton loads safely. Please select a body-on-frame SUV or pickup truck.'\n"
+        "    8. CNG + Hybrid Paradox: 'I want a hybrid to install CNG' -> '[IMPOSSIBLE QUERY PARADOX] Installing aftermarket CNG on a hybrid vehicle is mechanically incompatible and a severe fire hazard for the battery system. Please select a conventional petrol car for CNG conversion.'\n"
+        "    9. Diesel Hybrid Paradox: 'I need a diesel hybrid crossover' -> '[IMPOSSIBLE QUERY PARADOX] True diesel-electric hybrids do not exist in the Pakistani crossover/SUV market. All mainstream hybrids (e.g., Vezel, Cross, Sportage HEV) are petrol-electric. Please adjust your fuel preference.'\n"
+        "  * You MUST catch semantic variations and spelling mistakes (e.g., 'diesal', 'c.n.g') and trigger the veto.\n"
         "  * If you populate this, the system will instantly abort the search and show your message to the user. "
         "Leave null if the query is physically and legally possible.\n"
         "- Conditional / Nested Negations: For compound phrasing like 'no Suzuki unless "
@@ -1145,27 +1148,6 @@ def resolve_constraints(intent: UserIntent) -> dict:
             "legally registered, tax-paid alternatives in your target city."
         )
 
-    # ── Diesel-Electric Hybrid Paradox Intercept (Test 74) ────────────────────
-    # No diesel-electric hybrid crossover exists in the Pakistani market under
-    # PKR 90 Lakhs — every local/JDM hybrid crossover in this registry
-    # (Corolla Cross, Haval HEV, Honda Vezel, Fronx, etc.) is petrol-electric.
-    # Detected directly from raw_prompt so get_eligible_cars() can cleanly
-    # zero out rather than silently substituting a petrol hybrid the user
-    # never asked for.
-    _DIESEL_TERMS = ("diesel",)
-    _HYBRID_TERMS = ("hybrid", "hev", "phev")
-    if raw_prompt:
-        _prompt_lower_dh = raw_prompt.lower()
-        if (any(t in _prompt_lower_dh for t in _DIESEL_TERMS)
-                and any(t in _prompt_lower_dh for t in _HYBRID_TERMS)):
-            constraints["is_diesel_hybrid_query"] = True
-            constraints["disclaimers"].append(
-                "⚠️ Fuel Disclaimer: Diesel-Electric Hybrids are extremely rare and "
-                "unavailable in crossover body styles under PKR 90 Lakhs in Pakistan. "
-                "Mainstream hybrid crossovers (Corolla Cross, Haval HEV, Honda Vezel) "
-                "use petrol-electric powertrains."
-            )
-
     # Detect direct model request and override strategy summary
     constraints["direct_model"] = None
     if intent.direct_model:
@@ -1201,4 +1183,9 @@ def resolve_constraints(intent: UserIntent) -> dict:
         constraints["direct_model"] = None
 
     return constraints
+
+
+
+
+
 
