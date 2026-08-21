@@ -819,8 +819,8 @@ def resolve_constraints(intent: UserIntent) -> dict:
     min_budget = 0
 
     if max_budget > 0:
-        # Wider floor for luxury — heavy depreciation on high-end cars
-        floor_pct  = 0.50 if max_budget >= 30_000_000 else 0.70
+        # Wider floor for luxury - heavy depreciation on high-end cars
+        floor_pct  = 0.50 if max_budget >= 30_000_000 else 0.80
         min_budget = int(max_budget * floor_pct)
 
     # Apex luxury: 3 crore+ OR explicit luxury signal at 1 crore+

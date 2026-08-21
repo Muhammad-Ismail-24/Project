@@ -3503,7 +3503,7 @@ def get_eligible_cars(
 
                 # If budget is extremely high relative to a cheap car (e.g., 50L budget for Mehran/Liana),
                 # penalize so the user gets recommended cars matching their status/budget, not cheap economy cars.
-                if max_budget > hi * 1.3:
+                if max_budget > hi * 1.05:
                     fit_score = max(0.20, 0.85 - ((max_budget - hi) / max_budget))
             else:
                 # Budget is slightly below 'lo' floor (passed 80% leniency check)
