@@ -3130,6 +3130,7 @@ def get_eligible_cars(
     is_diesel_hybrid_query: bool = False,
     excluded_origins: list[str] | None = None,
     is_llm_vetoed: bool = False,
+    intent_id: str | None = None,
 ) -> str:
     """
     Returns a priority-weighted, fit-score-sorted eligible car list as a prompt string.
@@ -3275,10 +3276,11 @@ def get_eligible_cars(
         # are classified as "Crossover" in registry but must pass an "SUV" query.
         if body_style and not is_direct_target:
             allowed_styles = {body_style}
-            if body_style == "SUV":
-                allowed_styles.add("Crossover")
-            elif body_style == "Crossover":
-                allowed_styles.add("SUV")
+            if intent_id != "true_suv_demand":
+                if body_style == "SUV":
+                    allowed_styles.add("Crossover")
+                elif body_style == "Crossover":
+                    allowed_styles.add("SUV")
             if not any(style in info["styles"] for style in allowed_styles):
                 continue
 
@@ -3739,10 +3741,11 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
         # 3. Body style gate — SUV/Crossover treated as interchangeable (mirror of gate in get_eligible_cars)
         if info and body_style and not is_direct_target:
             allowed_styles = {body_style}
-            if body_style == "SUV":
-                allowed_styles.add("Crossover")
-            elif body_style == "Crossover":
-                allowed_styles.add("SUV")
+            if constraints.get("intent_id") != "true_suv_demand":
+                if body_style == "SUV":
+                    allowed_styles.add("Crossover")
+                elif body_style == "Crossover":
+                    allowed_styles.add("SUV")
             if not any(style in info["styles"] for style in allowed_styles):
                 reason = f"Dropped {t.make} {t.model}: Body style '{'/'.join(info['styles'])}' does not match requested '{body_style}'."
                 print(f"[Validator] Dropping {t.make} {t.model} — not a {body_style}")
@@ -4705,6 +4708,7 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
         is_diesel_hybrid_query=constraints.get("is_diesel_hybrid_query", False),
         excluded_origins=constraints.get("excluded_origins", []),
         is_llm_vetoed=constraints.get("is_llm_vetoed", False),
+        intent_id=constraints.get("intent_id"),
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
@@ -5141,6 +5145,7 @@ async def get_validated_car_targets(constraints: dict) -> list[dict]:
                 is_diesel_hybrid_query = constraints.get("is_diesel_hybrid_query", False),
                 excluded_origins = constraints.get("excluded_origins", []),
                 is_llm_vetoed    = constraints.get("is_llm_vetoed", False),
+                intent_id        = constraints.get("intent_id"),
             )
 
             # ── Empty Eligible List Short-Circuit ─────────────────────────────
@@ -5272,6 +5277,7 @@ async def get_fallback_recommendations(
         is_diesel_hybrid_query=constraints.get("is_diesel_hybrid_query", False),
         excluded_origins=constraints.get("excluded_origins", []),
         is_llm_vetoed=constraints.get("is_llm_vetoed", False),
+        intent_id=constraints.get("intent_id"),
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)
@@ -5355,6 +5361,7 @@ async def get_extended_recommendations(
         is_diesel_hybrid_query=original_constraints.get("is_diesel_hybrid_query", False),
         excluded_origins=original_constraints.get("excluded_origins", []),
         is_llm_vetoed=original_constraints.get("is_llm_vetoed", False),
+        intent_id=original_constraints.get("intent_id"),
     )
 
     principles = _get_relevant_principles(use_case, is_luxury)

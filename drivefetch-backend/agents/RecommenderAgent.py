@@ -51,6 +51,7 @@ async def execute_recommendation(constraints: dict) -> list[dict]:
                 is_diesel_hybrid_query = constraints.get("is_diesel_hybrid_query", False),
                 excluded_origins = constraints.get("excluded_origins", []),
                 is_llm_vetoed    = constraints.get("is_llm_vetoed", False),
+                intent_id        = constraints.get("intent_id"),
             )
 
             if eligible_list.startswith("No eligible cars found"):
@@ -149,6 +150,7 @@ async def execute_corrective_recommendation(
         is_diesel_hybrid_query = constraints.get("is_diesel_hybrid_query", False),
         excluded_origins = constraints.get("excluded_origins", []),
         is_llm_vetoed    = constraints.get("is_llm_vetoed", False),
+        intent_id        = constraints.get("intent_id"),
     )
 
     if eligible_list.startswith("No eligible cars found"):

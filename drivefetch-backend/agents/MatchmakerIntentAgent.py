@@ -206,6 +206,17 @@ async def extract_intent(user_prompt: str) -> UserIntent:
     return UserIntent.model_validate_json(response_text)
 
 KEYWORD_INTENT_MAP: list[dict] = [
+    # ── 0. True SUV Demand (Hard Gate for Proper 4x4s) ─────────────
+    {
+        "intent_id":        "true_suv_demand",
+        "keywords":         ["proper suv", "true suv", "real suv", "ladder frame", "body on frame", "rugged 4x4", "ladder-frame", "body-on-frame"],
+        "exclude_keywords": [],
+        "force_body_style":  "SUV",
+        "use_case_override": "offroad",
+        "force_transmission": None,
+        "max_budget_cap":    None,
+        "append_features":   [],
+    },
     {
         "intent_id":        "hyper_miler",
         "keywords":         ["20 km/l", "20km/l", "25 km/l", "maximum average", "best average", "30 km/l", "kam fuel"],
