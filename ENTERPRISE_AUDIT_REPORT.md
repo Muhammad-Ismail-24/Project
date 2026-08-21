@@ -101,3 +101,5 @@ A coordinated push addressing the critical and high-priority gaps below is requi
    - Centralize environment variables exclusively into `agents.config.Settings`.
    - Separate data dictionaries out of `normalizer.py`.
    - Implement automated unit testing (Pytest) and CI/CD pipelines to enforce code quality on PRs.
+## Phase 4: Code Smells & Maintainability
+- **Configuration Consolidation**: Removed fragmented `os.environ.get(GEMINI_MODEL_POOL)` references within `agents/config.py` and consolidated them correctly into the Pydantic `Settings` model structure for single-source-of-truth initialization guarantees.
