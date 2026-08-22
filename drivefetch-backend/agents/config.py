@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     frontend_url: str = "https://drivefetch.vercel.app"
     secret_key: str = "super-secret-key-for-local-dev"
+    gemini_model_pool: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -129,7 +130,7 @@ _DEFAULT_GEMINI_MODEL_POOL = [
     "gemini-3.1-pro",          # 10 RPM (Heavy reasoning fallback)
 ]
 
-_pool_override = (os.environ.get("GEMINI_MODEL_POOL") or "").strip()
+_pool_override = settings.gemini_model_pool.strip()
 GEMINI_MODEL_POOL = (
     [m.strip() for m in _pool_override.split(",") if m.strip()]
     if _pool_override else list(_DEFAULT_GEMINI_MODEL_POOL)
