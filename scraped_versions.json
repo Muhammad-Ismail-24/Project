@@ -1,0 +1,31 @@
+{
+  "toyota:corolla": [
+    "altis-grande"
+  ],
+  "toyota:yaris": [],
+  "toyota:fortuner": [],
+  "toyota:prado": [],
+  "toyota:vitz": [],
+  "toyota:aqua": [],
+  "toyota:hilux": [],
+  "honda:civic": [],
+  "honda:city": [],
+  "honda:br-v": [],
+  "honda:vezel": [],
+  "honda:hr-v": [],
+  "suzuki:alto": [
+    "eco"
+  ],
+  "suzuki:cultus": [],
+  "suzuki:wagon-r": [],
+  "suzuki:swift": [],
+  "kia:sportage": [
+    "limited%20edition"
+  ],
+  "kia:stonic": [],
+  "hyundai:tucson": [],
+  "hyundai:elantra": [],
+  "haval:h6": [],
+  "changan:oshan-x7": [],
+  "mg:hs": []
+}

@@ -55,11 +55,12 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./drivefetch.db"
     port: int = 8000
     host: str = "0.0.0.0"
-    FRONTEND_URL: str
+    FRONTEND_URL: str = "https://drivefetch.vercel.app"
     secret_key: SecretStr = SecretStr("super-secret-key-for-local-dev")
     SESSION_SECRET_KEY: SecretStr = SecretStr("change-this-in-production")
     GOOGLE_CLIENT_ID: str
     GOOGLE_CLIENT_SECRET: SecretStr
+    gemini_model_pool: SecretStr = SecretStr("")
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -135,7 +136,7 @@ _DEFAULT_GEMINI_MODEL_POOL = [
     "gemini-3.1-pro",          # 10 RPM (Heavy reasoning fallback)
 ]
 
-_pool_override = (os.environ.get("GEMINI_MODEL_POOL") or "").strip()
+_pool_override = settings.gemini_model_pool.get_secret_value().strip()
 GEMINI_MODEL_POOL = (
     [m.strip() for m in _pool_override.split(",") if m.strip()]
     if _pool_override else list(_DEFAULT_GEMINI_MODEL_POOL)
