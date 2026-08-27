@@ -10,6 +10,8 @@ export default function SavedCarsPage() {
   const [savedListingIds, setSavedListingIds] = useState(new Set());
 
   useEffect(() => {
+    const controller = new AbortController();
+    
     const fetchSavedCars = async () => {
       if (!document.cookie.includes('has_auth=1')) {
         setSavedCars([]);
@@ -21,25 +23,38 @@ export default function SavedCarsPage() {
         const response = await fetch('/user/saved-listings', {
           method: 'GET',
           credentials: 'include',
+          signal: controller.signal,
         });
         if (response.ok) {
           const data = await response.json();
-          setSavedCars(data);
-          setSavedListingIds(new Set(data.map(car => car.id || car.listing_id)));
+          if (!controller.signal.aborted) {
+            setSavedCars(data);
+            setSavedListingIds(new Set(data.map(car => car.id || car.listing_id)));
+          }
         } else {
           if (response.status === 401) {
             document.cookie = "has_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
           }
-          setSavedCars([]);
-          setSavedListingIds(new Set());
+          if (!controller.signal.aborted) {
+            setSavedCars([]);
+            setSavedListingIds(new Set());
+          }
         }
       } catch (error) {
+        if (error.name === 'AbortError') return;
         console.error("Failed to fetch saved cars:", error);
       } finally {
-        setIsLoading(false);
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
       }
     };
+    
     fetchSavedCars();
+    
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   const handleUnsave = (listingId) => {

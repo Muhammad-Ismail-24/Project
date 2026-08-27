@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 """
 scrapers/famewheels.py
 
@@ -198,17 +200,17 @@ async def _fetch_page(session, page: int) -> list[dict]:
             API_URL, params={"user_id": 0, "page": page}, timeout=REQUEST_TIMEOUT
         )
     except Exception as e:
-        print(f"[FameWheels Scraper] API request failed (page {page}): {e}")
+        logger.error(f"[FameWheels Scraper] API request failed (page {page}, exc_info=True): {e}")
         return []
 
     if response.status_code != 200:
-        print(f"[FameWheels Scraper] API HTTP {response.status_code} (page {page})")
+        logger.info(f"[FameWheels Scraper] API HTTP {response.status_code} (page {page})")
         return []
 
     try:
         payload = response.json()
     except Exception as e:
-        print(f"[FameWheels Scraper] API returned non-JSON (page {page}): {e}")
+        logger.info(f"[FameWheels Scraper] API returned non-JSON (page {page}): {e}")
         return []
 
     posts = payload.get("posts")
@@ -218,7 +220,7 @@ async def _fetch_page(session, page: int) -> list[dict]:
     if isinstance(posts, list):
         return posts
 
-    print(f"[FameWheels Scraper] Unexpected API shape, keys={list(payload)[:8]}")
+    logger.info(f"[FameWheels Scraper] Unexpected API shape, keys={list(payload)[:8]}")
     return []
 
 
@@ -249,7 +251,7 @@ async def scrape_famewheels(url: str, session) -> list[CarListing]:
             try:
                 listing = _build_listing(item)
             except Exception as e:
-                print(f"[FameWheels Scraper] Skipped malformed record: {e}")
+                logger.info(f"[FameWheels Scraper] Skipped malformed record: {e}")
                 continue
             if listing:
                 cars.append(listing)
@@ -259,7 +261,7 @@ async def scrape_famewheels(url: str, session) -> list[CarListing]:
 
     cars = cars[:MAX_ORGANIC_CARDS]
     age_found = sum(1 for c in cars if not is_unknown_age(c.age_days))
-    print(
+    logger.info(
         f"[FameWheels Scraper] Extracted {len(cars)} listings via API "
         f"(scanned {scanned} across {min(page, MAX_PAGES)} page(s), "
         f"filter make={want_make or '-'} model={want_model or '-'}). "

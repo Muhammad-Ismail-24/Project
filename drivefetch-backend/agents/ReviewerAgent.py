@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 import json
 import re
 from pydantic import BaseModel, Field
@@ -73,6 +75,6 @@ async def review_recommendations(
         verdict = ReviewVerdict.model_validate_json(response_text)
         return verdict
     except Exception as e:
-        print(f"[ReviewerAgent] Failed: {e} — failing OPEN (Approved)")
+        logger.info(f"[ReviewerAgent] Failed: {e} — failing OPEN (Approved)")
         return ReviewVerdict(is_approved=True, feedback="Approved")
 

@@ -59,6 +59,7 @@ Allow: /
 # API and auth endpoints return JSON or redirects, never indexable content.
 Disallow: /api/
 Disallow: /auth/
+Disallow: /callback
 
 # Per-user pages — nothing useful for a crawler, and noindex in the app too.
 Disallow: /saved
@@ -86,3 +87,4 @@ writeFileSync(join(PUBLIC_DIR, 'sitemap.xml'), sitemap, 'utf8');
 
 console.log(`[seo] robots.txt + sitemap.xml written for ${SITE_URL}`);
 console.log(`[seo] ${ROUTES.length} routes listed`);
+

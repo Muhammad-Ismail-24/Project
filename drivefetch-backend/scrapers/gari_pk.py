@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 """
 scrapers/gari_pk.py
 
@@ -66,6 +68,10 @@ MAX_CARDS = 40
 GARI_DETAIL_LOOKUP_CAP = 12
 GARI_DETAIL_CONCURRENCY = 4
 GARI_DETAIL_TIMEOUT = 15
+
+# Global semaphore: limits total concurrent outbound detail page fetches
+# across all coroutines within this process.
+GARI_DETAIL_SEMAPHORE = asyncio.Semaphore(GARI_DETAIL_CONCURRENCY)
 
 # Known Pakistani cities for text-scan city detection
 KNOWN_CITIES = (
@@ -140,7 +146,7 @@ def _parse_card_age_days(item, debug: bool = False) -> int:
         age = age_days_from_text(text)
         if not is_unknown_age(age):
             if debug:
-                print(f"[Gari.pk Age] card cell {text!r} -> {age}d")
+                logger.info(f"[Gari.pk Age] card cell {text!r} -> {age}d")
             return age
 
     # Markup drift guard: a dedicated date/posted element anywhere in the card.
@@ -149,12 +155,12 @@ def _parse_card_age_days(item, debug: bool = False) -> int:
         age = age_days_from_text(time_el.get_text(strip=True))
         if not is_unknown_age(age):
             if debug:
-                print(f"[Gari.pk Age] class-matched element -> {age}d")
+                logger.info(f"[Gari.pk Age] class-matched element -> {age}d")
             return age
 
     if debug:
         cell_texts = [c.get_text(strip=True) for c in cells]
-        print(f"[Gari.pk Age] no date in card. Cells: {cell_texts}")
+        logger.info(f"[Gari.pk Age] no date in card. Cells: {cell_texts}")
 
     return UNKNOWN_AGE
 
@@ -187,7 +193,7 @@ def parse_detail_age_days(html: str, debug: bool = False) -> int:
         raw = value_el.get_text(strip=True)
         age = age_days_from_text(raw)
         if debug:
-            print(f"[Gari.pk Age] detail 'Date Posted' = {raw!r} -> {age}d")
+            logger.info(f"[Gari.pk Age] detail 'Date Posted' = {raw!r} -> {age}d")
         if not is_unknown_age(age):
             return age
 
@@ -196,7 +202,7 @@ def parse_detail_age_days(html: str, debug: bool = False) -> int:
     if match:
         age = age_days_from_text(match.group(1))
         if debug:
-            print(f"[Gari.pk Age] detail text fallback {match.group(1)!r} -> {age}d")
+            logger.info(f"[Gari.pk Age] detail text fallback {match.group(1)!r} -> {age}d")
         if not is_unknown_age(age):
             return age
 
@@ -213,10 +219,10 @@ async def _fetch_detail_age(session, listing_url: str, semaphore) -> int:
                 _proxy_url(listing_url), timeout=GARI_DETAIL_TIMEOUT
             )
         except Exception as e:
-            print(f"[Gari.pk Scraper] Detail fetch failed for {listing_url}: {e}")
+            logger.error(f"[Gari.pk Scraper] Detail fetch failed for {listing_url}: {e}", exc_info=True)
             return UNKNOWN_AGE
         if response.status_code != 200:
-            print(
+            logger.info(
                 f"[Gari.pk Scraper] Detail HTTP {response.status_code} "
                 f"for {listing_url}"
             )
@@ -239,14 +245,13 @@ async def _backfill_ages_from_detail_pages(session, cars: list[CarListing]) -> i
 
     targets = pending[:GARI_DETAIL_LOOKUP_CAP]
     if len(pending) > len(targets):
-        print(
+        logger.info(
             f"[Gari.pk Scraper] {len(pending)} undated cards, "
             f"fetching detail pages for the first {len(targets)}."
         )
 
-    semaphore = asyncio.Semaphore(GARI_DETAIL_CONCURRENCY)
     results = await asyncio.gather(
-        *(_fetch_detail_age(session, c.listing_url, semaphore) for c in targets),
+        *(_fetch_detail_age(session, c.listing_url, GARI_DETAIL_SEMAPHORE) for c in targets),
         return_exceptions=True,
     )
 
@@ -336,7 +341,7 @@ def parse_gari_cards(html: str, searched_city: str = 'Unknown',
         items = soup.find_all('div', class_=re.compile(r'\bcard\b', re.I))
 
     if not items:
-        print(
+        logger.info(
             f"[Gari.pk Scraper] 0 card elements found via Google Proxy. "
             f"Raw HTML (first 1000 chars):\n{html[:1000]}"
         )
@@ -444,11 +449,11 @@ async def scrape_gari_pk(
     try:
         response = await session.get(_proxy_url(url), timeout=15)
         if response.status_code != 200:
-            print(f"[Gari.pk Scraper] Google Proxy HTTP {response.status_code}")
+            logger.info(f"[Gari.pk Scraper] Google Proxy HTTP {response.status_code}")
             return []
         html = response.text
     except Exception as e:
-        print(f"[Gari.pk Scraper] Proxy connection error: {e}")
+        logger.info(f"[Gari.pk Scraper] Proxy connection error: {e}")
         return []
 
     stats = {}
@@ -460,7 +465,7 @@ async def scrape_gari_pk(
     recovered = await _backfill_ages_from_detail_pages(session, cars)
     still_unknown = sum(1 for c in cars if is_unknown_age(c.age_days))
 
-    print(
+    logger.info(
         f"[Gari.pk Scraper] Extracted {len(cars)} listings via Google Proxy. "
         f"Price: {stats['price_class']} class / {stats['price_regex']} regex / "
         f"{len(cars) - stats['price_class'] - stats['price_regex']} missing. "

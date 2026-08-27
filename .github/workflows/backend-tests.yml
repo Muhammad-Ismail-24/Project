@@ -1,0 +1,32 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          cd drivefetch-backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio httpx
+      - name: Run tests
+        env:
+          GEMINI_API_KEY: test-key
+          GOOGLE_CLIENT_ID: test-id
+          GOOGLE_CLIENT_SECRET: test-secret
+          SESSION_SECRET_KEY: test-session-key-32chars-padded!
+          REDIS_URL: redis://localhost:6379
+          FRONTEND_URL: http://localhost:5173
+        run: |
+          cd drivefetch-backend
+          pytest tests/ -v --tb=short

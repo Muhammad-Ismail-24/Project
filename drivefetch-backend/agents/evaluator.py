@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 import json
 import re
 from google import genai
@@ -52,9 +54,9 @@ async def evaluate_scraped_listings(listings: List[CarListing], original_user_qu
         return []
 
     # Get API key from global settings helper
-    api_key = settings.gemini_api_key
+    api_key = settings.gemini_api_key.get_secret_value()
     if not api_key:
-        print("[Evaluator] WARNING: GEMINI_API_KEY is not configured in settings. Using fallbacks.")
+        logger.warning("[Evaluator] WARNING: GEMINI_API_KEY is not configured in settings. Using fallbacks.")
         return [
             {**json.loads(car.model_dump_json()), "ai_analysis": DEFAULT_AI_ANALYSIS}
             for car in listings
@@ -151,14 +153,14 @@ async def evaluate_scraped_listings(listings: List[CarListing], original_user_qu
             return final_listings
 
         except (json.JSONDecodeError, TypeError) as parse_err:
-            print(f"[Evaluator] Error decoding Gemini JSON: {parse_err}. Raw output: {repr(response_text)}")
+            logger.error(f"[Evaluator] Error decoding Gemini JSON: {parse_err}. Raw output: {repr(response_text, exc_info=True)}", exc_info=True)
             return [
                 {**json.loads(car.model_dump_json()), "ai_analysis": DEFAULT_AI_ANALYSIS}
                 for car in listings
             ]
 
     except Exception as e:
-        print(f"[Evaluator] Exception during Gemini generation: {e}")
+        logger.error(f"[Evaluator] Exception during Gemini generation: {e}", exc_info=True)
         return [
             {**json.loads(car.model_dump_json()), "ai_analysis": DEFAULT_AI_ANALYSIS}
             for car in listings
@@ -171,9 +173,9 @@ async def evaluate_single_listing(listing: dict, original_user_query: str) -> di
     Returns a dict with keys: red_flags, liquidity_score, justification.
     Falls back to DEFAULT_AI_ANALYSIS on any failure.
     """
-    api_key = settings.gemini_api_key
+    api_key = settings.gemini_api_key.get_secret_value()
     if not api_key:
-        print("[Evaluator] WARNING: GEMINI_API_KEY not configured. Returning default analysis.")
+        logger.warning("[Evaluator] WARNING: GEMINI_API_KEY not configured. Returning default analysis.")
         return DEFAULT_AI_ANALYSIS
 
     try:
@@ -220,7 +222,7 @@ async def evaluate_single_listing(listing: dict, original_user_query: str) -> di
 
         # Validate and normalize the parsed result
         if not isinstance(parsed, dict):
-            print(f"[Evaluator] Single listing response is not a dict: {type(parsed)}")
+            logger.info(f"[Evaluator] Single listing response is not a dict: {type(parsed)}")
             return DEFAULT_AI_ANALYSIS
 
         red_flags = parsed.get("red_flags", [])
@@ -242,5 +244,5 @@ async def evaluate_single_listing(listing: dict, original_user_query: str) -> di
         }
 
     except Exception as e:
-        print(f"[Evaluator] Exception during single listing evaluation: {e}")
+        logger.error(f"[Evaluator] Exception during single listing evaluation: {e}", exc_info=True)
         return DEFAULT_AI_ANALYSIS

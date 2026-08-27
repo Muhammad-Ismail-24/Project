@@ -1,5 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel, Field
+from api.rate_limiter import limiter
 
 router = APIRouter(prefix="/api/calc", tags=["Calculators"])
 
@@ -26,7 +27,8 @@ class TokenRequest(BaseModel):
 # ==========================================
 
 @router.post("/fuel")
-def calculate_monthly_fuel(req: FuelRequest):
+@limiter.limit("30/minute")
+def calculate_monthly_fuel(request: Request, response: Response, req: FuelRequest):
     """Calculates estimated monthly fuel cost in PKR based on engine CC and daily commute.
     Assumes standard PKR 300/L rate.
     """
@@ -58,7 +60,8 @@ def calculate_monthly_fuel(req: FuelRequest):
 
 
 @router.post("/transfer-fee")
-def calculate_transfer_costs(req: TransferRequest):
+@limiter.limit("30/minute")
+def calculate_transfer_costs(request: Request, response: Response, req: TransferRequest):
     """Calculates mock Excise transfer fee and FBR withholding tax.
     Imposes a high withholding penalty on non-filers.
     """
@@ -94,7 +97,8 @@ def calculate_transfer_costs(req: TransferRequest):
 
 
 @router.post("/token-tax")
-def calculate_annual_token_tax(req: TokenRequest):
+@limiter.limit("30/minute")
+def calculate_annual_token_tax(request: Request, response: Response, req: TokenRequest):
     """Calculates mock annual token tax in Pakistan based on province, CC, and tax status."""
     cc = req.engine_cc
     filer = req.is_filer

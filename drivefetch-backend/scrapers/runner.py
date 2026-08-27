@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 """
 scrapers/runner.py
 
@@ -21,6 +23,10 @@ from scrapers.wise_wheels import scrape_wise_wheels
 from scrapers.normalizer import normalize_listings, MAKE_ALIAS_MAP
 from scrapers.url_builder import build_platform_search_url
 from models.car_schema import CarListing
+
+# Global semaphore: limits total concurrent outbound scraper connections
+# across all coroutines within this process.
+SCRAPER_SEMAPHORE = asyncio.Semaphore(10)
 
 OLX_CITY_MAP = {
     "lahore":       "lahore_g4060673",
@@ -120,7 +126,7 @@ async def execute_search_pipeline(
     famewheels_urls  = []
 
     PAGES_TO_FETCH = 2
-    print(f"[Runner] Query Pushdown active: fetching {PAGES_TO_FETCH} pages/platform.")
+    logger.info(f"[Runner] Query Pushdown active: fetching {PAGES_TO_FETCH} pages/platform.")
 
     for target_city in cities_to_search:
         c                = target_city.lower().replace(" ", "-")
@@ -251,16 +257,14 @@ async def execute_search_pipeline(
             )
             wisewheels_tasks.append((ww_url, search_filters))
 
-    print(
+    logger.info(
         f"[Pipeline] Search -> Make={safe_make}, Model={safe_model}, "
         f"Cities={cities_to_search}, Color={safe_color}, Trim={safe_trim}, "
         f"Year={min_year}-{max_year}, Budget={safe_min_budget}-{safe_budget}"
     )
 
-    sem = asyncio.Semaphore(10)
-
     async def bounded_task(coro):
-        async with sem:
+        async with SCRAPER_SEMAPHORE:
             return await coro
 
     futures = []

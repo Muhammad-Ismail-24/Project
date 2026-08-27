@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 """
 scrapers/pakwheels.py
 
@@ -119,7 +121,7 @@ def _parse_age_days(item, debug: bool = False) -> int:
     # Strategy 4: debug dump — prints card snippet when all strategies miss
     if debug:
         snippet = item.get_text(separator=' ', strip=True)[:300]
-        print(f"[PakWheels DEBUG] No date found. Card text: {snippet}")
+        logger.info(f"[PakWheels DEBUG] No date found. Card text: {snippet}")
 
     return UNKNOWN_AGE
 
@@ -129,11 +131,11 @@ async def scrape_pakwheels(url: str, session) -> list[CarListing]:
     try:
         response = await session.get(url, timeout=20)
         if response.status_code != 200:
-            print(f"[PakWheels Scraper] HTTP {response.status_code} for {url}")
+            logger.info(f"[PakWheels Scraper] HTTP {response.status_code} for {url}")
             return []
         html = response.text
     except Exception as e:
-        print(f"[PakWheels Scraper] Request failed: {e}")
+        logger.error(f"[PakWheels Scraper] Request failed: {e}", exc_info=True)
         return []
 
     if not html or len(html) < 500:
@@ -223,5 +225,5 @@ async def scrape_pakwheels(url: str, session) -> list[CarListing]:
             continue
 
     age_found = sum(1 for c in cars if not is_unknown_age(c.age_days))
-    print(f"[PakWheels Scraper] Extracted {len(cars)} listings (Age: {age_found}/{len(cars)} parsed)")
+    logger.info(f"[PakWheels Scraper] Extracted {len(cars)} listings (Age: {age_found}/{len(cars)} parsed)")
     return cars

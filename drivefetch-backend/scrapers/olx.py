@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 """
 scrapers/olx.py
 
@@ -191,7 +193,7 @@ async def _fetch(session, url: str):
         response = await session.get(url, headers=STANDARD_HEADERS, timeout=20)
         return response.status_code, response.text
     except Exception as e:
-        print(f"[OLX Scraper] Request failed: {e}")
+        logger.error(f"[OLX Scraper] Request failed: {e}", exc_info=True)
         return None, None
 
 
@@ -287,11 +289,11 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
     if status_code == 404:
         fallback_url = _strip_filter_and_sort(url)
         if fallback_url != url:
-            print(f"[OLX Scraper] ⚠ 404 on rich URL. Retrying stripped fallback: {fallback_url}")
+            logger.info(f"[OLX Scraper] ⚠ 404 on rich URL. Retrying stripped fallback: {fallback_url}")
             status_code, html = await _fetch(session, fallback_url)
 
     if status_code != 200:
-        print(f"[OLX Scraper] HTTP {status_code} for {url}")
+        logger.info(f"[OLX Scraper] HTTP {status_code} for {url}")
         return []
 
     if not html or len(html) < 500:
@@ -308,7 +310,7 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
     # a lookup table, and then every hit in Layer 3 uses it for free.
     # ------------------------------------------------------------------ #
     image_map = _scrape_dom_images(soup)
-    print(f"[OLX Scraper] DOM image map: {len(image_map)} entries scraped from HTML cards.")
+    logger.info(f"[OLX Scraper] DOM image map: {len(image_map)} entries scraped from HTML cards.")
 
     # ------------------------------------------------------------------ #
     # LAYER 1: JSON State Extraction
@@ -356,7 +358,7 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
     # LAYER 2: Visual DOM Fallback (when JSON found nothing)
     # ------------------------------------------------------------------ #
     if not hits:
-        print(
+        logger.info(
             f"[OLX Scraper] ⚠ JSON state missing for {url}. "
             f"Using Visual DOM Fallback."
         )
@@ -367,7 +369,7 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
             cards = soup.find_all("article")
 
         if not cards:
-            print(f"[OLX Scraper] ❌ DOM fallback also empty. Raw HTML (first 1000 chars):\n{html[:1000]}")
+            logger.info(f"[OLX Scraper] ❌ DOM fallback also empty. Raw HTML (first 1000 chars):\n{html[:1000]}")
             return []
 
         for card in cards:
@@ -431,13 +433,13 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
             except Exception:
                 continue
 
-        print(f"[OLX Scraper] DOM fallback extracted {len(cars)} listings")
+        logger.info(f"[OLX Scraper] DOM fallback extracted {len(cars)} listings")
         return cars
 
     # ------------------------------------------------------------------ #
     # LAYER 3: Parse hits from confirmed-shape JSON
     # ------------------------------------------------------------------ #
-    print(f"[OLX Scraper] Using JSON source: {source} ({len(hits)} raw hits)")
+    logger.info(f"[OLX Scraper] Using JSON source: {source} ({len(hits)} raw hits)")
 
     featured_items = []
     organic_items = []
@@ -453,7 +455,7 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
         ordered_items = organic_items
         skipped_count = len(featured_items)
     else:
-        print(
+        logger.info(
             f"[OLX Scraper] ⚠ All {len(featured_items)} hits flagged as featured — "
             f"looks like over-broad detection. Including them rather than returning 0."
         )
@@ -473,18 +475,18 @@ async def scrape_olx(url: str, session, search_filters: dict = None) -> list[Car
             continue
 
     if skipped_count > 0:
-        print(f"[OLX Scraper] Skipped {skipped_count} featured/boosted ads.")
+        logger.info(f"[OLX Scraper] Skipped {skipped_count} featured/boosted ads.")
 
     # Debug: report image and age hit rates
     with_images = sum(1 for c in cars if c.image_url)
     age_found = sum(1 for c in cars if not is_unknown_age(c.age_days))
-    print(
+    logger.info(
         f"[OLX Scraper] Extracted {len(cars)} listings via {source} "
         f"({with_images}/{len(cars)} with images, "
         f"Age: {age_found}/{len(cars)} parsed)."
     )
 
     if not cars:
-        print(f"[OLX Scraper] ❌ 0 listings. Raw HTML (first 1000 chars):\n{html[:1000]}")
+        logger.info(f"[OLX Scraper] ❌ 0 listings. Raw HTML (first 1000 chars):\n{html[:1000]}")
 
     return cars

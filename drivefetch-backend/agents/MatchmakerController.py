@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 import inspect
 import traceback
 from typing import Optional, Any
@@ -23,7 +25,7 @@ async def run_matchmaker_pipeline(
     
     # Stage 1: Intent Extraction
     try:
-        print("[MatchmakerController] Stage 1 - Intent Extraction")
+        logger.info("[MatchmakerController] Stage 1 - Intent Extraction")
         pipeline_stages.append("intent_extraction")
         
         intent = await _maybe_await(extract_intent(user_prompt))
@@ -39,7 +41,7 @@ async def run_matchmaker_pipeline(
                 
         # Check for early veto
         if constraints.get("is_llm_vetoed", False):
-            print("[MatchmakerController] Intent vetoed — impossible/illegal query detected.")
+            logger.info("[MatchmakerController] Intent vetoed — impossible/illegal query detected.")
             veto_msg = constraints.get("immediate_veto_message", constraints.get("strategy_summary", "Request vetoed."))
             return {
                 "error": "Request vetoed",
@@ -51,35 +53,35 @@ async def run_matchmaker_pipeline(
             }
             
     except Exception as e:
-        print("[MatchmakerController] Error in Stage 1 - Intent Extraction")
+        logger.error("[MatchmakerController] Error in Stage 1 - Intent Extraction", exc_info=True)
         traceback.print_exc()
         return {"error": "Failed during intent extraction", "details": str(e), "pipeline_stages": pipeline_stages}
 
     # Stage 2: Recommendation Execution
     try:
-        print("[MatchmakerController] Stage 2 - Recommendation Execution")
+        logger.info("[MatchmakerController] Stage 2 - Recommendation Execution")
         pipeline_stages.append("recommendation")
         
         proposed_cars = await _maybe_await(execute_recommendation(constraints))
         if not proposed_cars:
-            print("[MatchmakerController] Error: Empty recommendation result.")
+            logger.error("[MatchmakerController] Error: Empty recommendation result.", exc_info=True)
             return {"error": "No recommendations found", "pipeline_stages": pipeline_stages, "constraints": constraints}
             
     except Exception as e:
-        print("[MatchmakerController] Error in Stage 2 - Recommendation Execution")
+        logger.error("[MatchmakerController] Error in Stage 2 - Recommendation Execution", exc_info=True)
         traceback.print_exc()
         return {"error": "Failed during recommendation execution", "details": str(e), "pipeline_stages": pipeline_stages, "constraints": constraints}
 
     # Stage 3: Review
     try:
-        print("[MatchmakerController] Stage 3 - Review")
+        logger.info("[MatchmakerController] Stage 3 - Review")
         pipeline_stages.append("review")
         
         verdict = await _maybe_await(review_recommendations(user_prompt, constraints, proposed_cars))
         is_approved = getattr(verdict, "is_approved", True)
         feedback = getattr(verdict, "feedback", "")
     except Exception as e:
-        print("[MatchmakerController] Error in Stage 3 - Review (failing open)")
+        logger.error("[MatchmakerController] Error in Stage 3 - Review (failing open)", exc_info=True)
         traceback.print_exc()
         is_approved = True
         feedback = "Fail-open due to review error."
@@ -89,17 +91,17 @@ async def run_matchmaker_pipeline(
     # Stage 4: Corrective Retry
     if not is_approved:
         try:
-            print("[MatchmakerController] Stage 4 - Corrective Retry")
+            logger.info("[MatchmakerController] Stage 4 - Corrective Retry")
             pipeline_stages.append("corrective_retry")
             
             final_cars = await _maybe_await(execute_corrective_recommendation(constraints, feedback, proposed_cars))
         except Exception as e:
-            print("[MatchmakerController] Error in Stage 4 - Corrective Retry (failing open)")
+            logger.error("[MatchmakerController] Error in Stage 4 - Corrective Retry (failing open)", exc_info=True)
             traceback.print_exc()
             final_cars = proposed_cars
 
     # Output
-    print("[MatchmakerController] Pipeline completed successfully.")
+    logger.info("[MatchmakerController] Pipeline completed successfully.")
     
     strategy_summary = constraints.get("strategy_summary", "")
     disclaimers = constraints.get("disclaimers", [])

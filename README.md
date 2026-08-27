@@ -11,3 +11,9 @@ For detailed specification of the project requirements, architecture, and roadma
 
 - `/drivefetch-backend` - FastAPI server with scrapers, SQLModel database, and AI Orchestration (Mistral, Gemini, Llama).
 - `/drivefetch-frontend` - React single-page application powered by Vite, Tailwind CSS, and Three.js.
+
+## Environment Variables
+
+Make sure to configure the following environment variables in your deployment environments (e.g. Vercel for frontend, Render for backend):
+
+- `FRONTEND_URL`: The full URL of the deployed frontend, e.g. `https://drivefetch.vercel.app`

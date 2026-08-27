@@ -51,59 +51,81 @@ function MainLayoutInner() {
   }, [user?.bot_name]);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
     const checkAuth = async () => {
       try {
         const response = await fetch('/auth/me', {
           method: 'GET',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
+          signal,
         });
         if (response.ok) {
           const userData = await response.json();
-          setUser(userData);
-          setIsAuthenticated(true);
-          if (userData.bot_name) {
-            setAssistantName(userData.bot_name);
-          } else {
-            // Fetch from chat sessions history (working logic from ChatPage)
-            try {
-              const sessRes = await fetch('/api/chat/sessions', {
-                method: 'GET',
-                credentials: 'include',
-              });
-              if (sessRes.ok) {
-                const sessData = await sessRes.json();
-                if (!sessData.is_guest && sessData.sessions && sessData.sessions.length > 0) {
-                  const histRes = await fetch(`/api/chat/history/${sessData.sessions[0].session_id}`, {
-                    method: 'GET',
-                    credentials: 'include',
-                  });
-                  if (histRes.ok) {
-                    const histData = await histRes.json();
-                    if (histData.agent_name) {
-                      setAssistantName(histData.agent_name);
-                      setUser(prev => ({ ...prev, bot_name: histData.agent_name }));
+          if (!signal.aborted) {
+            setUser(userData);
+            setIsAuthenticated(true);
+            if (userData.bot_name) {
+              setAssistantName(userData.bot_name);
+            } else {
+              // Fetch from chat sessions history (working logic from ChatPage)
+              try {
+                const sessRes = await fetch('/api/chat/sessions', {
+                  method: 'GET',
+                  credentials: 'include',
+                  signal,
+                });
+                if (sessRes.ok) {
+                  const sessData = await sessRes.json();
+                  if (!sessData.is_guest && sessData.sessions && sessData.sessions.length > 0) {
+                    const histRes = await fetch(`/api/chat/history/${sessData.sessions[0].session_id}`, {
+                      method: 'GET',
+                      credentials: 'include',
+                      signal,
+                    });
+                    if (histRes.ok) {
+                      const histData = await histRes.json();
+                      if (!signal.aborted && histData.agent_name) {
+                        setAssistantName(histData.agent_name);
+                        setUser(prev => ({ ...prev, bot_name: histData.agent_name }));
+                      }
                     }
                   }
                 }
+              } catch (chatErr) {
+                if (chatErr.name !== 'AbortError') {
+                  console.error("Chat preferences fetch failed:", chatErr);
+                }
               }
-            } catch (chatErr) {
-              console.error("Chat preferences fetch failed:", chatErr);
             }
           }
         } else {
+          if (!signal.aborted) {
+            setIsAuthenticated(false);
+            setUser(null);
+          }
+        }
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.error("Auth check failed:", error);
+        }
+        if (!signal.aborted) {
           setIsAuthenticated(false);
           setUser(null);
         }
-      } catch (error) {
-        console.error("Auth check failed:", error);
-        setIsAuthenticated(false);
-        setUser(null);
       } finally {
-        setIsLoading(false);
+        if (!signal.aborted) {
+          setIsLoading(false);
+        }
       }
     };
     checkAuth();
+    
+    return () => {
+      controller.abort();
+    };
   }, [location]);
 
   const handleLogout = async () => {

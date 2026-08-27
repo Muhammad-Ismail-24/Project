@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 """
 api/recommend_routes.py
 Route: POST /api/recommend
@@ -41,7 +43,7 @@ import asyncio
 import json
 from typing import AsyncGenerator
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Response, Request
 from fastapi.responses import StreamingResponse
 
 from agents.MatchmakerController import run_matchmaker_pipeline
@@ -197,7 +199,7 @@ async def _scrape_one(
         )
         return listings, rec
     except Exception as e:
-        print(f"[Recommend] Scraper exception for {make} {model}: {e}")
+        logger.info(f"[Recommend] Scraper exception for {make} {model}: {e}")
         return [], rec
 
 
@@ -229,7 +231,7 @@ def _normalise_one(
     year_suffix = f" (from {min_year})" if min_year else ""
 
     if not raw_listings:
-        print(f"[Recommend] {label}: SCRAPER_ZERO — 0 raw listings from any platform")
+        logger.info(f"[Recommend] {label}: SCRAPER_ZERO — 0 raw listings from any platform")
         return _FAIL_SCRAPER_ZERO
 
     clean_listings = normalize_recommendation_target(
@@ -249,14 +251,14 @@ def _normalise_one(
     )
 
     if not clean_listings:
-        print(
+        logger.info(
             f"[Recommend] {label}{year_suffix}: NORMALIZER_ZERO — "
             f"{len(raw_listings)} raw listings all vetoed "
             f"(dry inventory or model mismatch)"
         )
         return _FAIL_NORMALIZER_ZERO
 
-    print(
+    logger.info(
         f"[Recommend] {label}{year_suffix}: "
         f"{len(raw_listings)} raw → {len(clean_listings)} clean"
     )
@@ -360,7 +362,7 @@ async def run_recommend_pipeline(
         constraints = controller_result["constraints"]
         
     except Exception as e:
-        print(f"[API Error] Matchmaker Controller failed: {e}")
+        logger.error(f"[API Error] Matchmaker Controller failed: {e}", exc_info=True)
         yield _sse("error", {
             "message": "The AI matchmaker is currently experiencing high demand and is overloaded. Please wait a few seconds and try again."
         })
@@ -438,7 +440,7 @@ async def run_recommend_pipeline(
             for r in recommendations
         ]
 
-        print(f"[Recommend] Stage 4.5 FIRING: {fire_reason}")
+        logger.info(f"[Recommend] Stage 4.5 FIRING: {fire_reason}")
 
         yield _sse("status", {
             "message": f"🔄 Finding alternatives for {len(failed_recs)} dry search(es)...",
@@ -452,7 +454,7 @@ async def run_recommend_pipeline(
                 excluded_models=tried_models,
             )
         except Exception as e:
-            print(f"[API Error] Google Gemini failed during fallback selection: {e}")
+            logger.error(f"[API Error] Google Gemini failed during fallback selection: {e}", exc_info=True)
             fallback_recs = []
 
         if fallback_recs:
@@ -476,13 +478,13 @@ async def run_recommend_pipeline(
             all_recommendations.extend(fallback_recs)
 
         else:
-            print("[Recommend] Stage 4.5: fallback returned no replacements")
+            logger.info("[Recommend] Stage 4.5: fallback returned no replacements")
 
     elif failed_recs:
         _, skip_reason = _should_trigger_fallback(
             failed_recs, failure_types, len(recommendations)
         )
-        print(f"[Recommend] Stage 4.5 SKIPPED: {skip_reason}")
+        logger.warning(f"[Recommend] Stage 4.5 SKIPPED: {skip_reason}")
 
     # ── Stage 5: Emit Results ─────────────────────────────────────────────
     if not output:
@@ -609,7 +611,7 @@ async def recommend_extend(request: Request):
                 excluded_models=exclude_models,
             )
         except Exception as e:
-            print(f"[API Error] Google Gemini failed during extension: {e}")
+            logger.error(f"[API Error] Google Gemini failed during extension: {e}", exc_info=True)
             yield _sse("error", {
                 "message": "The AI matchmaker is currently experiencing high demand. Please try again in a few moments."
             })

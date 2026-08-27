@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 """
 scrapers/drive_pk.py
 
@@ -156,22 +158,22 @@ async def scrape_drive_pk(url: str, session, search_filters: dict = None) -> lis
     try:
         response = await session.get(API_URL, params=params, timeout=REQUEST_TIMEOUT)
     except Exception as e:
-        print(f"[Drive.pk Scraper] API request failed: {e}")
+        logger.error(f"[Drive.pk Scraper] API request failed: {e}", exc_info=True)
         return []
 
     if response.status_code != 200:
-        print(f"[Drive.pk Scraper] API HTTP {response.status_code} for params {params}")
+        logger.info(f"[Drive.pk Scraper] API HTTP {response.status_code} for params {params}")
         return []
 
     try:
         payload = response.json()
     except Exception as e:
-        print(f"[Drive.pk Scraper] API returned non-JSON: {e}")
+        logger.info(f"[Drive.pk Scraper] API returned non-JSON: {e}")
         return []
 
     records = payload.get("data")
     if not isinstance(records, list):
-        print(f"[Drive.pk Scraper] Unexpected API shape, keys={list(payload)[:8]}")
+        logger.info(f"[Drive.pk Scraper] Unexpected API shape, keys={list(payload)[:8]}")
         return []
 
     cars: list[CarListing] = []
@@ -181,14 +183,14 @@ async def scrape_drive_pk(url: str, session, search_filters: dict = None) -> lis
         try:
             listing = _build_listing(item)
         except Exception as e:
-            print(f"[Drive.pk Scraper] Skipped malformed record: {e}")
+            logger.info(f"[Drive.pk Scraper] Skipped malformed record: {e}")
             continue
         if listing:
             cars.append(listing)
 
     age_found = sum(1 for c in cars if not is_unknown_age(c.age_days))
     total = (payload.get("pagination") or {}).get("total")
-    print(
+    logger.info(
         f"[Drive.pk Scraper] Extracted {len(cars)} listings via API "
         f"(matched {total} total). Age: {age_found}/{len(cars)} parsed."
     )

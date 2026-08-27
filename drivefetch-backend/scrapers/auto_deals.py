@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 """
 scrapers/auto_deals.py
 
@@ -173,30 +175,30 @@ async def scrape_auto_deals(url: str, session, search_filters: dict = None) -> l
             API_URL, params=params, headers=_API_HEADERS, timeout=REQUEST_TIMEOUT
         )
     except Exception as e:
-        print(f"[AutoDeals Scraper] API request failed: {e}")
+        logger.error(f"[AutoDeals Scraper] API request failed: {e}", exc_info=True)
         return []
 
     if response.status_code == 403:
         # Almost certainly the Origin header was stripped or the gateway
         # tightened. Say so explicitly rather than reporting an empty search.
-        print(
+        logger.info(
             "[AutoDeals Scraper] API HTTP 403 — origin rejected. "
             f"Body: {response.text[:120]}"
         )
         return []
     if response.status_code != 200:
-        print(f"[AutoDeals Scraper] API HTTP {response.status_code} for params {params}")
+        logger.info(f"[AutoDeals Scraper] API HTTP {response.status_code} for params {params}")
         return []
 
     try:
         payload = response.json()
     except Exception as e:
-        print(f"[AutoDeals Scraper] API returned non-JSON: {e}")
+        logger.info(f"[AutoDeals Scraper] API returned non-JSON: {e}")
         return []
 
     records = payload.get("records")
     if not isinstance(records, list):
-        print(f"[AutoDeals Scraper] Unexpected API shape, keys={list(payload)[:8]}")
+        logger.info(f"[AutoDeals Scraper] Unexpected API shape, keys={list(payload)[:8]}")
         return []
 
     cars: list[CarListing] = []
@@ -206,13 +208,13 @@ async def scrape_auto_deals(url: str, session, search_filters: dict = None) -> l
         try:
             listing = _build_listing(item)
         except Exception as e:
-            print(f"[AutoDeals Scraper] Skipped malformed record: {e}")
+            logger.info(f"[AutoDeals Scraper] Skipped malformed record: {e}")
             continue
         if listing:
             cars.append(listing)
 
     age_found = sum(1 for c in cars if not is_unknown_age(c.age_days))
-    print(
+    logger.info(
         f"[AutoDeals Scraper] Extracted {len(cars)} listings via API "
         f"(matched {payload.get('count')} total). Age: {age_found}/{len(cars)} parsed."
     )

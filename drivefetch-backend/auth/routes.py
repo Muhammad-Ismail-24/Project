@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import RedirectResponse, JSONResponse
+from datetime import datetime
 from sqlmodel import Session, select
 from auth.config import oauth, SECRET_KEY
 from database import get_session
@@ -15,7 +16,7 @@ async def login(request: Request):
     # We MUST explicitly send the Vercel URL to Google to match Cloud Console.
     
     # Defaults to Vercel, but allows local testing if FRONTEND_URL is set to localhost
-    frontend_url = settings.frontend_url.rstrip("/")
+    frontend_url = settings.FRONTEND_URL.rstrip("/")
     redirect_uri = f"{frontend_url}/auth/google/callback"
 
     return await oauth.google.authorize_redirect(request, redirect_uri)
@@ -65,11 +66,16 @@ async def auth_callback(request: Request, db: Session = Depends(get_session)):
             db.commit()
             db.refresh(user)
 
+    # Prevent session fixation: clear existing session before setting new identity
+    request.session.clear()
+
     # Store the user ID in the session
-    request.session["user_id"] = user.id
+    request.session["user_id"] = str(user.id)
+    request.session["email"] = user.email
+    request.session["logged_in_at"] = datetime.utcnow().isoformat()
 
     # Redirect to the frontend dashboard
-    frontend_url = settings.frontend_url.rstrip("/")
+    frontend_url = settings.FRONTEND_URL.rstrip("/")
     response = RedirectResponse(url=f"{frontend_url}/")
     response.set_cookie(key="has_auth", value="1", httponly=True, max_age=14 * 24 * 60 * 60, samesite="lax", secure=True, path="/")
     return response

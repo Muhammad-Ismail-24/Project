@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 from agents.recommender import (
     get_eligible_cars,
     select_car_targets,
@@ -26,7 +28,7 @@ async def execute_recommendation(constraints: dict) -> list[dict]:
 
     if dropped_reasons and len(valid_targets) < len(raw_targets):
         needed = max(0, 3 - len(valid_targets))
-        print(
+        logger.info(
             f"[RecommenderAgent] {len(dropped_reasons)} car(s) dropped — triggering self-correction "
             f"to find {needed} replacement(s). Reasons:\n  " + "\n  ".join(dropped_reasons)
         )
@@ -55,7 +57,7 @@ async def execute_recommendation(constraints: dict) -> list[dict]:
             )
 
             if eligible_list.startswith("No eligible cars found"):
-                print(
+                logger.info(
                     "[RecommenderAgent] Eligible list is empty — skipping LLM self-correction "
                     "to avoid hallucination on a zero-option list."
                 )
@@ -103,17 +105,17 @@ async def execute_recommendation(constraints: dict) -> list[dict]:
                     replacement_raws, constraints
                 )
                 if still_dropped:
-                    print(
+                    logger.info(
                         f"[RecommenderAgent] Correction still dropped {len(still_dropped)} car(s) "
                         f"on second pass — accepting partial result."
                     )
                 valid_targets.extend(valid_replacements)
-                print(
+                logger.info(
                     f"[RecommenderAgent] Self-correction complete — "
                     f"{len(valid_replacements)} replacement(s) added."
                 )
             except Exception as e:
-                print(f"[RecommenderAgent] Self-correction LLM call failed: {e}")
+                logger.error(f"[RecommenderAgent] Self-correction LLM call failed: {e}", exc_info=True)
 
     return _deduplicate_and_format(valid_targets, constraints)
 
@@ -154,7 +156,7 @@ async def execute_corrective_recommendation(
     )
 
     if eligible_list.startswith("No eligible cars found"):
-        print(
+        logger.info(
             "[RecommenderAgent] Eligible list is empty — skipping corrective recommendation "
             "to avoid hallucination on a zero-option list."
         )
@@ -187,10 +189,10 @@ async def execute_corrective_recommendation(
         valid_targets, dropped = _validate_targets(replacement_raws, constraints)
         
         if dropped:
-            print(f"[RecommenderAgent] Corrective pass dropped {len(dropped)} cars: {dropped}")
+            logger.info(f"[RecommenderAgent] Corrective pass dropped {len(dropped)} cars: {dropped}")
             
         return _deduplicate_and_format(valid_targets, constraints)
         
     except Exception as e:
-        print(f"[RecommenderAgent] Corrective LLM call failed: {e}")
+        logger.error(f"[RecommenderAgent] Corrective LLM call failed: {e}", exc_info=True)
         return []

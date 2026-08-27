@@ -1,11 +1,13 @@
-from fastapi import APIRouter, HTTPException, Request, Depends
+from core.logger import get_logger
+logger = get_logger(__name__)
+from fastapi import APIRouter, Response, HTTPException, Request, Depends
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 from typing import Optional, List
 import uuid
 
 from agents.chatbot import get_chatbot_response, CHATBOT_FALLBACK_RESPONSE, DEFAULT_AGENT_NAME
-from models.db_models import User, ChatMessage
+from models.db_models import User, ChatMessage as DBChatMessage
 from database import get_session
 
 router = APIRouter(prefix="/api/chat", tags=["Chatbot"])
@@ -14,13 +16,17 @@ CONTEXT_WINDOW_SIZE = 20  # was 10 (5 exchanges) — increased to 10 full exchan
                           # so the expert remembers which car was being discussed
                           # across a longer technical conversation
 
+class ChatMessage(BaseModel):
+    role: str
+    content: str = Field(..., max_length=4000)
+
 class ChatRequest(BaseModel):
-    message: str = Field(..., min_length=1)
+    message: str = Field(..., min_length=1, max_length=2000)
     session_id: Optional[str] = None
     # Guest history: frontend passes the full in-memory conversation so
     # the expert has context even without DB persistence. This gives guests
     # a coherent multi-turn experience within the same browser session.
-    guest_history: Optional[List[dict]] = None
+    guest_history: Optional[List[ChatMessage]] = Field(None, max_length=30)
 
 class UpdateAgentNameRequest(BaseModel):
     agent_name: str = Field(..., min_length=1, max_length=40)
@@ -69,9 +75,9 @@ async def get_chat_sessions(request: Request, session: Session = Depends(get_ses
         return {"sessions": [], "is_guest": True}
 
     messages = session.exec(
-        select(ChatMessage)
-        .where(ChatMessage.user_id == user.id)
-        .order_by(ChatMessage.created_at.desc())
+        select(DBChatMessage)
+        .where(DBChatMessage.user_id == user.id)
+        .order_by(DBChatMessage.created_at.desc())
     ).all()
 
     seen_sessions = set()
@@ -96,9 +102,9 @@ async def get_session_history(session_id: str, request: Request, session: Sessio
         return {"agent_name": DEFAULT_AGENT_NAME, "messages": [], "is_guest": True}
 
     messages = session.exec(
-        select(ChatMessage)
-        .where(ChatMessage.user_id == user.id, ChatMessage.session_id == session_id)
-        .order_by(ChatMessage.created_at.asc())
+        select(DBChatMessage)
+        .where(DBChatMessage.user_id == user.id, DBChatMessage.session_id == session_id)
+        .order_by(DBChatMessage.created_at.asc())
     ).all()
 
     return {
@@ -110,7 +116,10 @@ async def get_session_history(session_id: str, request: Request, session: Sessio
         "is_guest": False,
     }
 
+from api.rate_limiter import limiter
+
 @router.post("")
+@limiter.limit("10/minute")
 async def send_message(request: Request, body: ChatRequest, session: Session = Depends(get_session)):
     new_message_text = body.message.strip()
     user = _get_user_or_none(request, session)
@@ -120,7 +129,7 @@ async def send_message(request: Request, body: ChatRequest, session: Session = D
         session_id = uuid.uuid4().hex
 
     if user:
-        user_msg_row = ChatMessage(
+        user_msg_row = DBChatMessage(
             user_id=user.id,
             session_id=session_id,
             role="user",
@@ -130,9 +139,9 @@ async def send_message(request: Request, body: ChatRequest, session: Session = D
         session.commit()
 
         recent_rows = session.exec(
-            select(ChatMessage)
-            .where(ChatMessage.user_id == user.id, ChatMessage.session_id == session_id)
-            .order_by(ChatMessage.created_at.desc())
+            select(DBChatMessage)
+            .where(DBChatMessage.user_id == user.id, DBChatMessage.session_id == session_id)
+            .order_by(DBChatMessage.created_at.desc())
             .limit(CONTEXT_WINDOW_SIZE)
         ).all()
 
@@ -147,11 +156,9 @@ async def send_message(request: Request, body: ChatRequest, session: Session = D
         # rather than a single cold message. Sanitise to prevent injection.
         raw_history = body.guest_history or []
         safe_history = [
-            {"role": h["role"], "content": h["content"]}
+            {"role": h.role, "content": h.content}
             for h in raw_history
-            if isinstance(h, dict)
-            and h.get("role") in ("user", "assistant")
-            and isinstance(h.get("content"), str)
+            if h.role in ("user", "assistant")
         ]
         # Append current message if not already the last entry
         if not safe_history or safe_history[-1].get("content") != new_message_text:
@@ -163,7 +170,7 @@ async def send_message(request: Request, body: ChatRequest, session: Session = D
     try:
         reply = await get_chatbot_response(context_messages, agent_name=agent_name)
     except Exception as e:
-        print(f"[Chat Router] LLM call failed: {e}")
+        logger.error(f"[Chat Router] LLM call failed: {e}", exc_info=True)
         raise HTTPException(
             status_code=503,
             detail="Automotive chat service is temporarily unavailable. Please try again later."
@@ -176,7 +183,7 @@ async def send_message(request: Request, body: ChatRequest, session: Session = D
         )
 
     if user:
-        ai_msg_row = ChatMessage(
+        ai_msg_row = DBChatMessage(
             user_id=user.id,
             session_id=session_id,
             role="assistant",
@@ -206,7 +213,7 @@ async def delete_chat_session(session_id: str, request: Request, session: Sessio
         raise HTTPException(status_code=401, detail="Login required.")
 
     messages = session.exec(
-        select(ChatMessage).where(ChatMessage.user_id == user.id, ChatMessage.session_id == session_id)
+        select(DBChatMessage).where(DBChatMessage.user_id == user.id, DBChatMessage.session_id == session_id)
     ).all()
 
     for msg in messages:

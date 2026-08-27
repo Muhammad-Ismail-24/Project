@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 import re
 from typing import Optional, Literal
 from pydantic import BaseModel, Field
@@ -498,14 +500,14 @@ def apply_keyword_intent(user_prompt: str, constraints: dict) -> dict:
 
         # ── Apply all overrides ───────────────────────────────────────────────
         intent_id = intent["intent_id"]
-        print(f"[IntentMapper] Triggered intent: '{intent_id}' from prompt: '{user_prompt[:60]}'")
+        logger.info(f"[IntentMapper] Triggered intent: '{intent_id}' from prompt length={len(user_prompt)}")
 
         if intent.get("force_body_style"):
             # NEVER override an explicit body style from the user
             if not has_explicit_body:
                 constraints["body_style"] = intent["force_body_style"]
             else:
-                print(f"[IntentMapper] Skipping body_style override '{intent['force_body_style']}' — user explicitly stated a body style")
+                logger.info(f"[IntentMapper] Skipping body_style override '{intent['force_body_style']}' — user explicitly stated a body style")
 
         if intent.get("use_case_override"):
             constraints["use_case"] = intent["use_case_override"]
@@ -515,7 +517,7 @@ def apply_keyword_intent(user_prompt: str, constraints: dict) -> dict:
             if not has_explicit_manual:
                 constraints["transmission"] = intent["force_transmission"]
             else:
-                print(f"[IntentMapper] Skipping transmission override — user explicitly requested Manual")
+                logger.info(f"[IntentMapper] Skipping transmission override — user explicitly requested Manual")
 
         if intent.get("max_budget_cap") and constraints.get("max_budget", 0) > intent["max_budget_cap"]:
             constraints["max_budget"] = intent["max_budget_cap"]

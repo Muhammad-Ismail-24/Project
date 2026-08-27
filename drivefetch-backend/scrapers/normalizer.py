@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 """
 scrapers/normalizer.py
 Drive Fetch — API-Free Heuristic Scoring Normalizer v3.5
@@ -846,7 +848,7 @@ def _calculate_relevance_score(
 
     def veto(reason: str) -> float:
         if debug:
-            print(f"  [VETO] '{clean_title[:50]}' — {reason}")
+            logger.info(f"  [VETO] '{clean_title[:50]}' — {reason}")
         return 0.0
 
     # 1: Identity
@@ -1005,7 +1007,7 @@ def _calculate_relevance_score(
         elif twin_match:
             city_score = 20.0   # Nearby city — kept but ranked below exact matches
             if debug:
-                print(
+                logger.info(
                     f"  [TWIN-CITY] '{clean_title[:45]}' — nearby city "
                     f"'{matched_twin}' accepted for '{req_city_str}', found '{car.city}'"
                 )
@@ -1144,7 +1146,7 @@ def _calculate_relevance_score(
     total_score = raw_total * identity_score
 
     if debug:
-        print(f"  [SCORE] '{car.title[:45]}' | id={identity_score:.2f} score={total_score:.2f}")
+        logger.info(f"  [SCORE] '{car.title[:45]}' | id={identity_score:.2f} score={total_score:.2f}")
 
     return round(total_score, 2)
 

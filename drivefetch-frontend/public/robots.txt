@@ -7,6 +7,7 @@ Allow: /
 # API and auth endpoints return JSON or redirects, never indexable content.
 Disallow: /api/
 Disallow: /auth/
+Disallow: /callback
 
 # Per-user pages — nothing useful for a crawler, and noindex in the app too.
 Disallow: /saved

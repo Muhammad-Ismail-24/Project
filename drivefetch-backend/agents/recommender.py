@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 """
 agents/recommender.py
 LLM logic for the AI Matchmaker — Hybrid Pipeline with Unified Car Registry.
@@ -61,7 +63,7 @@ load_dotenv()
 from agents.config import generate_content_resilient, settings
 from scrapers.normalizer import CITY_ALIAS_MAP, normalize_city
 
-GEMINI_API_KEY = settings.gemini_api_key or settings.google_api_key
+GEMINI_API_KEY = settings.gemini_api_key.get_secret_value() or settings.google_api_key.get_secret_value()
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 
@@ -1664,14 +1666,14 @@ def apply_keyword_intent(user_prompt: str, constraints: dict) -> dict:
 
         # ── Apply all overrides ───────────────────────────────────────────────
         intent_id = intent["intent_id"]
-        print(f"[IntentMapper] Triggered intent: '{intent_id}' from prompt: '{user_prompt[:60]}'")
+        logger.info(f"[IntentMapper] Triggered intent: '{intent_id}' from prompt length={len(user_prompt)}")
 
         if intent.get("force_body_style"):
             # NEVER override an explicit body style from the user
             if not has_explicit_body:
                 constraints["body_style"] = intent["force_body_style"]
             else:
-                print(f"[IntentMapper] Skipping body_style override '{intent['force_body_style']}' — user explicitly stated a body style")
+                logger.info(f"[IntentMapper] Skipping body_style override '{intent['force_body_style']}' — user explicitly stated a body style")
 
         if intent.get("use_case_override"):
             constraints["use_case"] = intent["use_case_override"]
@@ -1681,7 +1683,7 @@ def apply_keyword_intent(user_prompt: str, constraints: dict) -> dict:
             if not has_explicit_manual:
                 constraints["transmission"] = intent["force_transmission"]
             else:
-                print(f"[IntentMapper] Skipping transmission override — user explicitly requested Manual")
+                logger.info(f"[IntentMapper] Skipping transmission override — user explicitly requested Manual")
 
         if intent.get("max_budget_cap") and constraints.get("max_budget", 0) > intent["max_budget_cap"]:
             constraints["max_budget"] = intent["max_budget_cap"]
@@ -2875,13 +2877,6 @@ _JDM_HYBRID_RECENT_FLOOR_2018 = 3_800_000  # ~38 Lakhs PKR — stricter floor fo
 # to Lahore is 380km). Hard-blocked when a highway/long-range EV is requested.
 _CITY_MICRO_EVS = {"honri:ve", "rinco:aria", "metro:enfon"}
 
-# ── Origin Preference Hard Gate (Test 63) ───────────────────────────────────
-# origin_pref="European" is enforced as a HARD registry filter in both
-# get_eligible_cars() and _validate_targets() — everything else (JDM, Chinese,
-# Local) remains a soft preference surfaced only inside the target-selection
-# LLM prompt (see select_car_targets), unchanged by this gate. Peugeot is
-# included per spec even though the registry currently has zero Peugeot
-# entries — correct but inert for that make unless one is ever registered.
 _EUROPEAN_MAKES = {"bmw", "mercedes-benz", "audi", "porsche", "land rover", "volkswagen", "peugeot"}
 
 # ── Legacy Luxury Feature Price-Floor (Test 54) ─────────────────────────────
@@ -3685,26 +3680,26 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
         )
         if is_vetoed:
             reason = f"Dropped {t.make} {t.model}: Explicitly vetoed by user."
-            print(f"[Validator] Hard-dropping {t.make} {t.model} — matches excluded_models veto")
+            logger.info(f"[Validator] Hard-dropping {t.make} {t.model} — matches excluded_models veto")
             dropped_reasons.append(reason)
             continue
 
         # 2. Chinese gate
         if info and info["chinese"] and not allow_chinese:
             reason = f"Dropped {t.make} {t.model}: Chinese brand not requested by user."
-            print(f"[Validator] Dropping {t.make} {t.model} — Chinese brand not requested")
+            logger.info(f"[Validator] Dropping {t.make} {t.model} — Chinese brand not requested")
             dropped_reasons.append(reason)
             continue
 
         # 2b. Origin Preference Hard Gate (Test 63 European + Test 71/72 Local, mirrors get_eligible_cars)
         if info and origin_pref == "European" and make_lower not in _EUROPEAN_MAKES:
             reason = f"Dropped {t.make} {t.model}: Not a European make; user requested European origin only."
-            print(f"[Validator] Dropping {t.make} {t.model} — non-European make for European-only query")
+            logger.info(f"[Validator] Dropping {t.make} {t.model} — non-European make for European-only query")
             dropped_reasons.append(reason)
             continue
         if info and origin_pref == "Local" and "jdm" in info.get("tags", set()):
             reason = f"Dropped {t.make} {t.model}: Imported JDM model; user explicitly requested local PKDM assembly."
-            print(f"[Validator] Dropping {t.make} {t.model} — JDM model for Local-only query")
+            logger.info(f"[Validator] Dropping {t.make} {t.model} — JDM model for Local-only query")
             dropped_reasons.append(reason)
             continue
 
@@ -3731,7 +3726,7 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
 
                 if v_skip_origin:
                     reason = f"Dropped {t.make} {t.model}: Origin is forbidden by user's explicit exclusion."
-                    print(f"[Validator] Dropping {t.make} {t.model} — excluded origin")
+                    logger.info(f"[Validator] Dropping {t.make} {t.model} — excluded origin")
                     dropped_reasons.append(reason)
                     continue
 
@@ -3740,7 +3735,7 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
             allowed_styles = {body_style}
             if not any(style in info["styles"] for style in allowed_styles):
                 reason = f"Dropped {t.make} {t.model}: Body style '{'/'.join(info['styles'])}' does not match requested '{body_style}'."
-                print(f"[Validator] Dropping {t.make} {t.model} — not a {body_style}")
+                logger.info(f"[Validator] Dropping {t.make} {t.model} — not a {body_style}")
                 dropped_reasons.append(reason)
                 continue
 
@@ -3750,12 +3745,12 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
             car_trans = info.get("transmission", "both")
             if transmission_req == "Manual" and car_trans == "auto":
                 reason = f"Dropped {t.make} {t.model}: Auto-only car, user requires Manual."
-                print(f"[Validator] Dropping {t.make} {t.model} — auto-only, user wants Manual")
+                logger.info(f"[Validator] Dropping {t.make} {t.model} — auto-only, user wants Manual")
                 dropped_reasons.append(reason)
                 continue
             if transmission_req == "Automatic" and car_trans == "manual":
                 reason = f"Dropped {t.make} {t.model}: Manual-only car, user requires Automatic."
-                print(f"[Validator] Dropping {t.make} {t.model} — manual-only, user wants Automatic")
+                logger.info(f"[Validator] Dropping {t.make} {t.model} — manual-only, user wants Automatic")
                 dropped_reasons.append(reason)
                 continue
 
@@ -3764,12 +3759,12 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
             lo, hi = info["lo"], info["hi"]
             if max_budget < lo * 0.85:
                 reason = f"Dropped {t.make} {t.model}: Budget floor PKR {lo:,} is unreachable at PKR {max_budget:,}."
-                print(f"[Validator] Dropping {t.make} {t.model} — floor PKR {lo:,} unreachable")
+                logger.info(f"[Validator] Dropping {t.make} {t.model} — floor PKR {lo:,} unreachable")
                 dropped_reasons.append(reason)
                 continue
             if min_budget > 0 and hi < min_budget * 0.80:
                 reason = f"Dropped {t.make} {t.model}: Price ceiling PKR {hi:,} is below budget floor PKR {min_budget:,}."
-                print(f"[Validator] Dropping {t.make} {t.model} — ceiling PKR {hi:,} below budget floor")
+                logger.info(f"[Validator] Dropping {t.make} {t.model} — ceiling PKR {hi:,} below budget floor")
                 dropped_reasons.append(reason)
                 continue
 
@@ -3778,12 +3773,12 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
         if _luxury_tier_active_v and info:
             if not ({"luxury", "status"} & info.get("tags", set())):
                 reason = f"Dropped {t.make} {t.model}: Lacks luxury/status tag required for apex luxury query."
-                print(f"[Validator] Dropping {t.make} {t.model} — no luxury/status tag for apex luxury query")
+                logger.info(f"[Validator] Dropping {t.make} {t.model} — no luxury/status tag for apex luxury query")
                 dropped_reasons.append(reason)
                 continue
             if max_budget > 0 and info["hi"] < max_budget * 0.55:
                 reason = f"Dropped {t.make} {t.model}: Too affordable (max PKR {info['hi']:,}) for apex luxury query."
-                print(f"[Validator] Dropping {t.make} {t.model} — too cheap for apex luxury query")
+                logger.info(f"[Validator] Dropping {t.make} {t.model} — too cheap for apex luxury query")
                 dropped_reasons.append(reason)
                 continue
 
@@ -3812,7 +3807,7 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
                 if normalised in _FEATURE_EXCLUSIVE_ALLOWLIST:
                     if key not in _FEATURE_EXCLUSIVE_ALLOWLIST[normalised]:
                         reason = f"Dropped {t.make} {t.model}: Does not natively possess required feature '{normalised}'."
-                        print(f"[Validator] Dropping {t.make} {t.model} — missing {normalised}")
+                        logger.info(f"[Validator] Dropping {t.make} {t.model} — missing {normalised}")
                         dropped_reasons.append(reason)
                         feature_violation = True
                         break
@@ -3820,7 +3815,7 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
                 elif normalised in _FEATURE_IMPOSSIBLE:
                     if key in _FEATURE_IMPOSSIBLE[normalised]:
                         reason = f"Dropped {t.make} {t.model}: Cannot feature '{normalised}' in PKDM spec."
-                        print(f"[Validator] Dropping {t.make} {t.model} — blocked for {normalised}")
+                        logger.info(f"[Validator] Dropping {t.make} {t.model} — blocked for {normalised}")
                         dropped_reasons.append(reason)
                         feature_violation = True
                         break
@@ -3837,19 +3832,19 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
 
                 if normalised_excl == "660cc" and key in _FEATURE_EXCLUSIVE_ALLOWLIST.get("660cc", set()):
                     reason = f"Dropped {t.make} {t.model}: Contains forbidden feature '{normalised_excl}'."
-                    print(f"[Validator] Dropping {t.make} {t.model} — forbidden feature {normalised_excl}")
+                    logger.info(f"[Validator] Dropping {t.make} {t.model} — forbidden feature {normalised_excl}")
                     dropped_reasons.append(reason)
                     skip_due_to_exclusion = True
                     break
                 if normalised_excl == "jdm" and "jdm" in info.get("tags", set()):
                     reason = f"Dropped {t.make} {t.model}: Contains forbidden feature '{normalised_excl}'."
-                    print(f"[Validator] Dropping {t.make} {t.model} — forbidden feature {normalised_excl}")
+                    logger.info(f"[Validator] Dropping {t.make} {t.model} — forbidden feature {normalised_excl}")
                     dropped_reasons.append(reason)
                     skip_due_to_exclusion = True
                     break
                 if normalised_excl in _FEATURE_EXCLUSIVE_ALLOWLIST and key in _FEATURE_EXCLUSIVE_ALLOWLIST[normalised_excl]:
                     reason = f"Dropped {t.make} {t.model}: Contains forbidden feature '{normalised_excl}'."
-                    print(f"[Validator] Dropping {t.make} {t.model} — forbidden feature {normalised_excl}")
+                    logger.info(f"[Validator] Dropping {t.make} {t.model} — forbidden feature {normalised_excl}")
                     dropped_reasons.append(reason)
                     skip_due_to_exclusion = True
                     break
@@ -3862,7 +3857,7 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
         # Prevent LLM from simulating JDM imports on Local PKDM queries
         if constraints.get("origin_pref") == "Local" and ("660cc" in trim_lower or "jdm" in trim_lower):
             reason = f"Dropped {t.make} {t.model}: Appended '{t.trim}' to a local car, simulating a banned JDM import."
-            print(f"[Validator] Dropping {t.make} {t.model} — {reason}")
+            logger.info(f"[Validator] Dropping {t.make} {t.model} — {reason}")
             dropped_reasons.append(reason)
             continue
 
@@ -3871,7 +3866,7 @@ def _validate_targets(targets: list, constraints: dict) -> tuple[list, list[str]
                 # Allow exceptions for legitimate non-hatchback micro engines
                 if key not in {"mitsubishi:mini pajero", "suzuki:jimny", "daihatsu:terios"}:
                     reason = f"Dropped {t.make} {t.model}: Hallucinated micro-engine trim '{t.trim}' on a large vehicle."
-                    print(f"[Validator] Dropping {t.make} {t.model} — Hallucinated micro-engine")
+                    logger.info(f"[Validator] Dropping {t.make} {t.model} — Hallucinated micro-engine")
                     dropped_reasons.append(reason)
                     continue
 
@@ -4810,7 +4805,7 @@ async def select_car_targets(constraints: dict) -> list[CarTargetRaw]:
     try:
         return [CarTargetRaw.model_validate(item) for item in json.loads(response_text)]
     except Exception as e:
-        print(f"[Selector] Parse failed: {e}\nRaw: {response_text[:300]}")
+        logger.error(f"[Selector] Parse failed: {e}\nRaw length: {len(response_text)}", exc_info=True)
         return []
 
 
@@ -4989,7 +4984,7 @@ async def run_final_ai_sanitizer(formatted_targets: list[dict], user_prompt: str
         # this guard the per-item fallback below would still return everything,
         # but silently — this makes the degraded path visible in the logs.
         if not report.evaluations:
-            print(
+            logger.info(
                 "[Sanitizer] Audit returned zero evaluations — treating as an "
                 "incomplete response and failing open with the original list."
             )
@@ -5064,19 +5059,19 @@ async def run_final_ai_sanitizer(formatted_targets: list[dict], user_prompt: str
             if item.is_compliant:
                 compliant.append(car)
             else:
-                print(
+                logger.info(
                     f"[Sanitizer] Flagging {car['make']} {car['model']}: "
                     f"{item.rejection_reason or 'flagged by sanitizer'}"
                 )
 
         if unmatched:
-            print(
+            logger.info(
                 f"[Sanitizer] {unmatched} candidate(s) had no matching verdict — "
                 f"kept (per-item fail-open)."
             )
 
         if not compliant:
-            print(
+            logger.info(
                 "[Sanitizer] Iron-clad gate: zero compliant cars remain — "
                 "returning empty result rather than falling back to flagged cars."
             )
@@ -5085,7 +5080,7 @@ async def run_final_ai_sanitizer(formatted_targets: list[dict], user_prompt: str
     except Exception as e:
         # Fail-OPEN on any transport/parse/validation error. A sanitizer
         # outage must never zero out an already Python-vetted result set.
-        print(f"[Sanitizer] Failed: {e} — returning original list unfiltered (fail-open)")
+        logger.info(f"[Sanitizer] Failed: {e} — returning original list unfiltered (fail-open)")
         return formatted_targets
 
 
@@ -5112,7 +5107,7 @@ async def get_validated_car_targets(constraints: dict) -> list[dict]:
     # This avoids a needless extra LLM call when all 3 passed first time.
     if dropped_reasons and len(valid_targets) < len(raw_targets):
         needed = max(0, 3 - len(valid_targets))
-        print(
+        logger.info(
             f"[Fallback] {len(dropped_reasons)} car(s) dropped — triggering self-correction "
             f"to find {needed} replacement(s). Reasons:\n  " + "\n  ".join(dropped_reasons)
         )
@@ -5150,7 +5145,7 @@ async def get_validated_car_targets(constraints: dict) -> list[dict]:
             # because it had nothing legitimate to choose from. Return early
             # and let the caller receive a clean, possibly-empty result.
             if eligible_list.startswith("No eligible cars found"):
-                print(
+                logger.info(
                     "[Fallback] Eligible list is empty — skipping LLM self-correction "
                     "to avoid hallucination on a zero-option list."
                 )
@@ -5214,17 +5209,17 @@ async def get_validated_car_targets(constraints: dict) -> list[dict]:
                     replacement_raws, constraints
                 )
                 if still_dropped:
-                    print(
+                    logger.info(
                         f"[Fallback] Correction still dropped {len(still_dropped)} car(s) "
                         f"on second pass — accepting partial result."
                     )
                 valid_targets.extend(valid_replacements)
-                print(
+                logger.info(
                     f"[Fallback] Self-correction complete — "
                     f"{len(valid_replacements)} replacement(s) added."
                 )
             except Exception as e:
-                print(f"[Fallback] Self-correction LLM call failed: {e}")
+                logger.error(f"[Fallback] Self-correction LLM call failed: {e}", exc_info=True)
 
     formatted = _deduplicate_and_format(valid_targets, constraints)
     return await run_final_ai_sanitizer(formatted, constraints.get("user_prompt", ""))
@@ -5313,7 +5308,7 @@ async def get_fallback_recommendations(
         valid, _dropped = _validate_targets(valid, constraints)
         return _deduplicate_and_format(valid, constraints)
     except Exception as e:
-        print(f"[FallbackMapper] Failed: {e}")
+        logger.info(f"[FallbackMapper] Failed: {e}")
         traceback.print_exc()
         return []
 
@@ -5396,7 +5391,7 @@ async def get_extended_recommendations(
         valid, _dropped = _validate_targets(valid, original_constraints)
         return _deduplicate_and_format(valid, original_constraints)
     except Exception as e:
-        print(f"[ExtendedMapper] Failed: {e}")
+        logger.info(f"[ExtendedMapper] Failed: {e}")
         traceback.print_exc()
         return []
 

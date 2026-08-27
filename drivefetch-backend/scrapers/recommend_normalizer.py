@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 """
 scrapers/recommend_normalizer.py
 Drive Fetch — AI Matchmaker Normalizer v2.3
@@ -495,7 +497,7 @@ def _check_feature_gates(
         if found_positive:
             feature_score += 15.0
             if debug:
-                print(f"  [FEATURE +15] '{feat}' confirmed in title")
+                logger.info(f"  [FEATURE +15] '{feat}' confirmed in title")
 
         # Find model gate (try exact feature name, then first word)
         model_gates = _MODEL_TRIM_GATES.get(gate_key, {})
@@ -510,7 +512,7 @@ def _check_feature_gates(
             if veto_trims == ["any"]:
                 reason = f"{requested_make} {requested_model} has no factory {feat} in any trim"
                 if debug:
-                    print(f"  [FEAT-VETO] {reason}")
+                    logger.info(f"  [FEAT-VETO] {reason}")
                 return 0.0, reason
 
             # Specific trim vetoes
@@ -518,14 +520,14 @@ def _check_feature_gates(
                 if vt in title_lower:
                     reason = f"Trim '{vt}' confirmed to NOT have {feat}"
                     if debug:
-                        print(f"  [FEAT-VETO] {reason}")
+                        logger.info(f"  [FEAT-VETO] {reason}")
                     return 0.0, reason
 
             # Year gate
             if min_year > 0 and clean_year > 0 and clean_year < min_year:
                 reason = f"{feat} only available from {min_year} (listing is {clean_year})"
                 if debug:
-                    print(f"  [FEAT-VETO] {reason}")
+                    logger.info(f"  [FEAT-VETO] {reason}")
                 return 0.0, reason
 
             # require_trims soft check — penalty if feature not confirmed and trim not shown
@@ -534,7 +536,7 @@ def _check_feature_gates(
                 if not has_required:
                     feature_score -= 5.0
                     if debug:
-                        print(f"  [FEATURE -5] '{feat}' required trim not found in title")
+                        logger.info(f"  [FEATURE -5] '{feat}' required trim not found in title")
 
     return feature_score, None
 
@@ -627,7 +629,7 @@ def _score_listing(
 
     def veto(reason: str) -> float:
         if debug:
-            print(f"  [REC-VETO] '{clean_title[:55]}' — {reason}")
+            logger.info(f"  [REC-VETO] '{clean_title[:55]}' — {reason}")
         return 0.0
 
     # ── 1. Identity score ──────────────────────────────────────────────────
@@ -796,7 +798,7 @@ def _score_listing(
         elif twin_match:
             city_score = 20.0
             if debug:
-                print(
+                logger.info(
                     f"  [REC-TWIN-CITY] '{clean_title[:45]}' — nearby city "
                     f"'{matched_twin}' accepted for '{req_city_str}'"
                 )
@@ -921,7 +923,7 @@ def _score_listing(
     total_score = round(raw_total * identity_score, 2)
 
     if debug:
-        print(
+        logger.info(
             f"  [REC-SCORE] '{clean_title[:50]}' | "
             f"id={identity_score:.2f} "
             f"budget={budget_score:.1f} city={city_score:.1f} "
@@ -1027,7 +1029,7 @@ def normalize_recommendation_target(
             }
 
     label = f"{corrected_make} {corrected_model}".strip()
-    print(
+    logger.info(
         f"[RecNorm] {label}: "
         f"{len(raw_listings)} raw → {len(scored_map)} qualified, "
         f"{veto_count} vetoed"
@@ -1095,7 +1097,7 @@ def normalize_recommendation_target(
         backup  = [item for item in all_scored if id(item) not in already]
         selection.extend(backup[:shortfall])
         if debug and backup[:shortfall]:
-            print(
+            logger.info(
                 f"[RecNorm] {label}: backfilled "
                 f"{min(shortfall, len(backup))} from overflow pool"
             )
@@ -1126,7 +1128,7 @@ def normalize_recommendation_target(
     third_n = len(third_selected)
     bf_n    = max(0, shortfall)
 
-    print(
+    logger.info(
         f"[RecNorm] {label}: returning {len(result)}/{top_k} "
         f"(PW={pw_n}, OLX={olx_n}, 3rd={third_n}, backfill={bf_n})"
     )

@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 """
 agents/config.py
 
@@ -36,6 +38,7 @@ import os
 
 from google import genai
 from google.genai import types
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -45,15 +48,18 @@ class Settings(BaseSettings):
     """
     # DEPRECATED: the OpenRouter free-tier key is inactive. Retained so existing
     # .env files keep parsing; no code path reads it any more. Use groq_api_key.
-    openrouter_api_key: str = ""
-    groq_api_key: str = ""
-    gemini_api_key: str = ""
-    google_api_key: str = ""
+    openrouter_api_key: SecretStr = SecretStr("")
+    groq_api_key: SecretStr = SecretStr("")
+    gemini_api_key: SecretStr = SecretStr("")
+    google_api_key: SecretStr = SecretStr("")
     database_url: str = "sqlite:///./drivefetch.db"
     port: int = 8000
     host: str = "0.0.0.0"
-    frontend_url: str = "https://drivefetch.vercel.app"
-    secret_key: str = "super-secret-key-for-local-dev"
+    FRONTEND_URL: str
+    secret_key: SecretStr = SecretStr("super-secret-key-for-local-dev")
+    SESSION_SECRET_KEY: SecretStr = SecretStr("change-this-in-production")
+    GOOGLE_CLIENT_ID: str
+    GOOGLE_CLIENT_SECRET: SecretStr
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -90,7 +96,7 @@ def async_retry(retries: int = 2, delay: float = 1.0):
                     last_exc = e
                     is_rate_limit = _is_rate_limit(e)
                     backoff = 15.0 if is_rate_limit else delay
-                    print(
+                    logger.info(
                         f"[Retry Wrapper] Attempt {attempt + 1}/{retries + 1} failed for '{func.__name__}': {e}."
                         f" {'Rate limit hit — sleeping 15s.' if is_rate_limit else f'Retrying in {backoff}s.'}"
                     )
@@ -106,7 +112,7 @@ def async_retry(retries: int = 2, delay: float = 1.0):
 # TIER 1 — GEMINI CASCADE
 # ---------------------------------------------------------------------------
 
-GEMINI_API_KEY = settings.gemini_api_key or settings.google_api_key
+GEMINI_API_KEY = settings.gemini_api_key.get_secret_value() or settings.google_api_key.get_secret_value()
 ai_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 # Ordered by capability first, because the live AI Studio limits make that free:
@@ -228,7 +234,7 @@ async def generate_content_resilient(
                     config=config,
                 )
                 if index > 0:
-                    print(f"[ModelRouter] Served by fallback model '{model_name}'.")
+                    logger.info(f"[ModelRouter] Served by fallback model '{model_name}'.")
                 return response.text
 
             except Exception as e:
@@ -238,19 +244,19 @@ async def generate_content_resilient(
                     # Zero-delay failover: a different model is a different
                     # quota bucket, so sleeping here would waste the request.
                     if next_model:
-                        print(
+                        logger.info(
                             f"[ModelRouter] Rate limit hit on {model_name}. "
                             f"Failing over to {next_model}..."
                         )
                     else:
-                        print(
+                        logger.info(
                             f"[ModelRouter] Rate limit hit on {model_name}. "
                             f"No models left in the Gemini pool."
                         )
                     break
 
                 if _is_model_unavailable(e):
-                    print(
+                    logger.info(
                         f"[ModelRouter] Model '{model_name}' is not available "
                         f"({e}). Skipping to next model in pool."
                     )
@@ -258,13 +264,13 @@ async def generate_content_resilient(
 
                 if _is_transient(e):
                     if attempt == 0:
-                        print(
+                        logger.info(
                             f"[ModelRouter] {model_name} temporarily unavailable. "
                             f"Retrying once in 2s..."
                         )
                         await asyncio.sleep(2.0)
                         continue
-                    print(
+                    logger.info(
                         f"[ModelRouter] {model_name} still unavailable after retry. "
                         f"Failing over to {next_model or 'nothing — pool exhausted'}..."
                     )
@@ -298,7 +304,7 @@ GROQ_TIMEOUT = 20.0
 
 def _groq_client():
     """Builds an AsyncOpenAI client pointed at Groq, or raises if unconfigured."""
-    api_key = settings.groq_api_key
+    api_key = settings.groq_api_key.get_secret_value()
     if not api_key:
         raise ValueError("GROQ_API_KEY is empty/not configured.")
 
@@ -378,19 +384,19 @@ async def execute_groq_fallback(
                 model=model_name, **request_kwargs
             )
             text = (response.choices[0].message.content or "").strip()
-            print(f"[ModelRouter] Groq fallback served by '{model_name}'.")
+            logger.info(f"[ModelRouter] Groq fallback served by '{model_name}'.")
             return text
 
         except Exception as e:
             last_error = e
             if _is_rate_limit(e) or _is_transient(e):
                 if next_model:
-                    print(
+                    logger.info(
                         f"[ModelRouter] Groq {model_name} unavailable ({e}). "
                         f"Failing over to {next_model}..."
                     )
                     continue
-                print(f"[ModelRouter] Groq {model_name} unavailable and no models left.")
+                logger.info(f"[ModelRouter] Groq {model_name} unavailable and no models left.")
                 break
             # Bad key / malformed request — the next model would fail identically.
             raise

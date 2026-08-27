@@ -31,7 +31,11 @@ async function fetchSessionHistory(sessionId) {
   return res.json();
 }
 
+const MAX_HISTORY_MESSAGES = 20;
+
 async function sendMessage(message, sessionId, guestHistory = []) {
+  const trimmedHistory = guestHistory.slice(-MAX_HISTORY_MESSAGES);
+  
   const res = await fetch(`${API_BASE}/api/chat`, {
     method: 'POST',
     credentials: 'include',
@@ -39,7 +43,7 @@ async function sendMessage(message, sessionId, guestHistory = []) {
     body: JSON.stringify({
       message,
       session_id: sessionId,
-      guest_history: guestHistory.map(m => ({ role: m.role, content: m.content })),
+      guest_history: trimmedHistory.map(m => ({ role: m.role, content: m.content })),
     }),
   });
   if (!res.ok) {
@@ -413,8 +417,12 @@ export default function ChatPage() {
                 <Send className="w-4 h-4" strokeWidth={2.5} />
               </button>
             </form>
-            {/* Terminal footer hint */}
-            <p className="font-mono text-[9px] font-bold text-df-black/15 dark:text-zinc-50/50 tracking-[0.06em] mt-2 select-none">
+            {messages.length > MAX_HISTORY_MESSAGES && (
+              <p className="font-mono text-[9px] font-bold text-df-black/40 dark:text-zinc-50/50 tracking-[0.06em] mt-2 text-center uppercase select-none">
+                [ Showing recent conversation context only ]
+              </p>
+            )}
+            <p className="font-mono text-[9px] font-bold text-df-black/15 dark:text-zinc-50/50 tracking-[0.06em] mt-2 text-center select-none">
               DRIVEFETCH_TERMINAL // PRESS ENTER TO SEND
             </p>
           </div>

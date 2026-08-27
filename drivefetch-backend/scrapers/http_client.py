@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 """
 scrapers/http_client.py
 
@@ -21,21 +23,21 @@ async def fetch_html(url: str) -> str:
             response = await session.get(url, timeout=REQUEST_TIMEOUT)
 
             if response.status_code in (401, 403):
-                print(f"[HTTP Client] Blocked ({response.status_code}) for {url}")
+                logger.info(f"[HTTP Client] Blocked ({response.status_code}) for {url}")
                 return ""
 
             html = response.text
             if not html or len(html) < 500:
-                print(f"[HTTP Client] Response too short ({len(html) if html else 0} chars) for {url}")
+                logger.info(f"[HTTP Client] Response too short ({len(html) if html else 0} chars) for {url}")
                 return ""
 
             # Detect Cloudflare challenge pages
             if "cf-browser-verification" in html or "challenges.cloudflare.com" in html:
-                print(f"[HTTP Client] Cloudflare challenge detected for {url}")
+                logger.info(f"[HTTP Client] Cloudflare challenge detected for {url}")
                 return ""
 
             return html
 
     except Exception as e:
-        print(f"[HTTP Client] Request failed for {url}: {e}")
+        logger.error(f"[HTTP Client] Request failed for {url}: {e}", exc_info=True)
         return ""

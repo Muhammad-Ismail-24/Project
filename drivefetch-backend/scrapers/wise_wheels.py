@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 """
 scrapers/wise_wheels.py (WiseWheels.com.pk)
 
@@ -77,28 +79,28 @@ async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> 
         requested_city = (search_filters.get("city") or "").strip()
 
     try:
-        print(f"[WiseWheels API] Intercepting: {api_url}")
+        logger.info(f"[WiseWheels API] Intercepting: {api_url}")
         response = await session.get(api_url, headers=STANDARD_HEADERS, timeout=15)
 
         if response.status_code != 200:
-            print(f"[WiseWheels ❌] HTTP {response.status_code} for {api_url}")
+            logger.info(f"[WiseWheels ❌] HTTP {response.status_code} for {api_url}")
             return []
 
         data = response.json()
 
     except Exception as e:
-        print(f"[WiseWheels ❌] Request/parse failed: {e}")
+        logger.error(f"[WiseWheels ❌] Request/parse failed: {e}", exc_info=True)
         return []
 
     # Envelope: {"dealer": null, "data": [...20 items...], "pagination": {...}}
     if not isinstance(data, dict):
-        print(f"[WiseWheels ❌] Unexpected top-level type: {type(data).__name__}")
+        logger.info(f"[WiseWheels ❌] Unexpected top-level type: {type(data).__name__}")
         return []
 
     items = data.get("data", [])
 
     if not isinstance(items, list) or not items:
-        print(f"[WiseWheels ❌] No items in response. Keys: {list(data.keys())}")
+        logger.info(f"[WiseWheels ❌] No items in response. Keys: {list(data.keys())}")
         return []
 
     cars = []
@@ -170,10 +172,10 @@ async def scrape_wise_wheels(url: str, session, search_filters: dict = None) -> 
             ))
 
         except Exception as e:
-            print(f"[WiseWheels Mapping Error] {e}")
+            logger.error(f"[WiseWheels Mapping Error] {e}", exc_info=True)
             continue
 
-    print(
+    logger.info(
         f"[WiseWheels Scraper] Extracted {len(cars)} formatted listings from API. "
         f"(city-filtered: {skipped_city} skipped)"
     )

@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from core.logger import get_logger
+logger = get_logger(__name__)
+from fastapi import APIRouter, Response, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 from datetime import datetime, timezone, timedelta
@@ -25,7 +27,7 @@ async def search_cars(request: Request, search_req: SearchRequest, session: Sess
     # ----------------------------------------------------
     # STEP 1: Orchestration FIRST (Takes ~0.5 seconds)
     # ----------------------------------------------------
-    print(f"[Live Pipeline] Orchestrating query parsing: '{search_req.query}'")
+    logger.info(f"[Live Pipeline] Orchestrating query parsing, length={len(search_req.query)}")
     params = await parse_user_query(search_req.query)
 
     make = (params.get("make") or "").strip()
@@ -39,7 +41,7 @@ async def search_cars(request: Request, search_req: SearchRequest, session: Sess
     # --- THE NEW FAILSAFE GUARD ---
     # If the AIs hit a rate limit and return empty variables, STOP THE PIPELINE!
     if not make and not model:
-        print("[Live Pipeline] ⚠ CRITICAL: Orchestrator returned empty Make/Model. API Rate Limit likely hit.")
+        logger.error("[Live Pipeline] ⚠ CRITICAL: Orchestrator returned empty Make/Model. API Rate Limit likely hit.", exc_info=True)
         raise HTTPException(
             status_code=503, 
             detail="Our AI servers are currently experiencing heavy traffic or rate limits. Please check your API keys or wait a moment and try again!"
@@ -76,7 +78,7 @@ async def search_cars(request: Request, search_req: SearchRequest, session: Sess
             # Verify cache age is under 2 hours
             now = datetime.now(timezone.utc)
             if now - cache_record.created_at.replace(tzinfo=timezone.utc) < timedelta(hours=2):
-                print(f"[Smart Cache] Hit! Loading search results from database for key: '{cache_key}'")
+                logger.info(f"[Smart Cache] Hit! Loading search results from database for key: '{cache_key}'")
                 
                 # Fetch related CachedCarListing records
                 cached_cars = cache_record.listings
@@ -102,12 +104,12 @@ async def search_cars(request: Request, search_req: SearchRequest, session: Sess
                 return reconstructed_listings
             else:
                 # Cache expired, delete the old record and cascading listings
-                print(f"[Smart Cache] Expired record deleted for key: '{cache_key}'")
+                logger.info(f"[Smart Cache] Expired record deleted for key: '{cache_key}'")
                 session.delete(cache_record)
                 session.commit()
     except Exception as cache_err:
         # Log error but do not crash; fallback to live search pipeline
-        print(f"[Smart Cache] Error checking database cache: {cache_err}")
+        logger.error(f"[Smart Cache] Error checking database cache: {cache_err}", exc_info=True)
 
     # ----------------------------------------------------
     # STEP 3: Scraping (ThreadPool Scraper Runner)
@@ -118,11 +120,11 @@ async def search_cars(request: Request, search_req: SearchRequest, session: Sess
     city = params.get("city") or ""
     trim = (params.get("trim") or "").strip()
     
-    print(f"[Live Pipeline] Executing scraper runner: Make={make}, Model={model}, City={city}, Budget={budget}, Color={color}, Trim={trim}, Year={min_year}-{max_year}")
+    logger.info(f"[Live Pipeline] Executing scraper runner: Make={make}, Model={model}, City={city}, Budget={budget}, Color={color}, Trim={trim}, Year={min_year}-{max_year}")
     clean_listings, is_empty = await execute_search_pipeline(make, model, city, max_budget=budget, color=color, trim=trim, min_year=min_year, max_year=max_year)
 
     if is_empty or not clean_listings:
-        print("[Live Pipeline] Result flagged as empty. Skipping Gemini appraisal and skipping database cache to avoid memorizing blank pages.")
+        logger.info("[Live Pipeline] Result flagged as empty. Skipping Gemini appraisal and skipping database cache to avoid memorizing blank pages.")
         return []
 
     # ----------------------------------------------------
@@ -131,7 +133,7 @@ async def search_cars(request: Request, search_req: SearchRequest, session: Sess
     # AI appraisal is now triggered per-card by the user via the "AI Review" button.
     # Cards are returned clean without any ai_analysis payload.
     # ----------------------------------------------------
-    print(f"[Pipeline] Returning {len(clean_listings)} clean listings (no batch AI appraisal).")
+    logger.info(f"[Pipeline] Returning {len(clean_listings)} clean listings (no batch AI appraisal).")
 
     evaluated_listings = [
         {**car.model_dump(), "ai_analysis": None}
@@ -167,9 +169,9 @@ async def search_cars(request: Request, search_req: SearchRequest, session: Sess
             )
             session.add(db_car)
         session.commit()
-        print(f"[Smart Cache] Saved {len(evaluated_listings)} listings for key: '{cache_key}'")
+        logger.info(f"[Smart Cache] Saved {len(evaluated_listings)} listings for key: '{cache_key}'")
     except Exception as db_err:
-        print(f"[Cache Error] Failed to save search results to database: {db_err}")
+        logger.error(f"[Cache Error] Failed to save search results to database: {db_err}", exc_info=True)
         session.rollback()
 
     return evaluated_listings
@@ -182,7 +184,7 @@ async def search_cars_stream(request: Request, search_req: SearchRequest, sessio
     async def event_generator():
         yield f"data: {json.dumps({'status': 'AI analyzing your request...'})}\n\n"
         
-        print(f"[Live Pipeline] Orchestrating query parsing: '{search_req.query}'")
+        logger.info(f"[Live Pipeline] Orchestrating query parsing: '{search_req.query}'")
         params = await parse_user_query(search_req.query)
 
         make = (params.get("make") or "").strip()
@@ -194,7 +196,7 @@ async def search_cars_stream(request: Request, search_req: SearchRequest, sessio
         max_year = int(params.get("max_year") or 0)
 
         if not make and not model:
-            print("[Live Pipeline] ⚠ CRITICAL: Orchestrator returned empty Make/Model. API Rate Limit likely hit.")
+            logger.error("[Live Pipeline] ⚠ CRITICAL: Orchestrator returned empty Make/Model. API Rate Limit likely hit.", exc_info=True)
             yield f"data: {json.dumps({'error': 'Our AIs are currently experiencing heavy traffic. Please try again!'})}\n\n"
             return
 
@@ -223,7 +225,7 @@ async def search_cars_stream(request: Request, search_req: SearchRequest, sessio
             if cache_record:
                 now = datetime.now(timezone.utc)
                 if now - cache_record.created_at.replace(tzinfo=timezone.utc) < timedelta(hours=2):
-                    print(f"[Smart Cache] Hit! Loading search results from database for key: '{cache_key}'")
+                    logger.info(f"[Smart Cache] Hit! Loading search results from database for key: '{cache_key}'")
                     cached_cars = cache_record.listings
                     reconstructed_listings = []
                     for car in cached_cars:
@@ -247,11 +249,11 @@ async def search_cars_stream(request: Request, search_req: SearchRequest, sessio
                     yield f"data: {json.dumps({'status': 'done', 'results': reconstructed_listings})}\n\n"
                     return
                 else:
-                    print(f"[Smart Cache] Expired record deleted for key: '{cache_key}'")
+                    logger.info(f"[Smart Cache] Expired record deleted for key: '{cache_key}'")
                     session.delete(cache_record)
                     session.commit()
         except Exception as cache_err:
-            print(f"[Smart Cache] Error checking database cache: {cache_err}")
+            logger.error(f"[Smart Cache] Error checking database cache: {cache_err}", exc_info=True)
 
         make = params.get("make") or ""
         model = params.get("model") or ""
@@ -299,9 +301,9 @@ async def search_cars_stream(request: Request, search_req: SearchRequest, sessio
                 )
                 session.add(db_car)
             session.commit()
-            print(f"[Smart Cache] Saved {len(evaluated_listings)} listings for key: '{cache_key}'")
+            logger.info(f"[Smart Cache] Saved {len(evaluated_listings)} listings for key: '{cache_key}'")
         except Exception as db_err:
-            print(f"[Cache Error] Failed to save search results to database: {db_err}")
+            logger.error(f"[Cache Error] Failed to save search results to database: {db_err}", exc_info=True)
             session.rollback()
 
         yield f"data: {json.dumps({'status': 'done', 'results': evaluated_listings})}\n\n"
