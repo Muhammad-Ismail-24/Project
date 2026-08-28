@@ -16,6 +16,10 @@ export interface Car {
   platform?: string;
   source?: string;
   ai_evaluation?: CarEvaluation | null;
+  ai_analysis?: CarEvaluation | null;
+  red_flags_json?: string | string[];
+  relevance_score?: number;
+  score?: number;
 }
 
 export interface CarEvaluation {

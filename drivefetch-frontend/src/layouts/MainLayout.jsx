@@ -159,7 +159,7 @@ function MainLayoutInner() {
               className="md:hidden p-2 border-brutal-thin hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black transition-none"
               aria-label="Toggle menu"
             >
-              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {isMobileMenuOpen ? <X aria-hidden="true" className="w-5 h-5" /> : <Menu aria-hidden="true" className="w-5 h-5" />}
             </button>
 
             {/* Logo */}
@@ -290,7 +290,7 @@ function MainLayoutInner() {
                   aria-label="Close preferences panel"
                   className="p-2 border-2 border-df-black dark:border-white hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black transition-none"
                 >
-                  <X className="w-6 h-6" strokeWidth={2.5} />
+                  <X aria-hidden="true" className="w-6 h-6" strokeWidth={2.5} />
                 </button>
               </div>
 

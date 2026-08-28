@@ -357,7 +357,12 @@ function CommandConsoleSection() {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') handleSearch();
+    if (e.key === 'Enter') {
+      handleSearch().catch(error => {
+        console.error('Search failed:', error);
+        setError('Search failed. Please try again.');
+      });
+    }
   };
 
   return (
@@ -400,7 +405,12 @@ function CommandConsoleSection() {
             </div>
             <button
               id="console-execute-btn"
-              onClick={() => handleSearch()}
+              onClick={() => {
+                handleSearch().catch(error => {
+                  console.error('Search failed:', error);
+                  setError('Search failed. Please try again.');
+                });
+              }}
               disabled={isLoading}
               className="px-6 sm:px-8 py-4 sm:py-5 bg-df-red text-df-white font-mono text-xs sm:text-sm font-bold tracking-[0.08em] border-t sm:border-t-0 sm:border-l border-df-black dark:border-white whitespace-nowrap transition-none hover:bg-[#C41A25] active:translate-x-[1px] active:translate-y-[1px] disabled:opacity-60 disabled:cursor-not-allowed"
             >

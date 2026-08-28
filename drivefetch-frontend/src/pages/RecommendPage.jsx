@@ -144,7 +144,10 @@ export default function RecommendPage() {
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSearch();
+      handleSearch().catch(error => {
+        console.error('Matchmaking failed:', error);
+        setError('Matchmaking failed. Please try again.');
+      });
     }
   };
 
@@ -310,7 +313,12 @@ export default function RecommendPage() {
                 </button>
               )}
               <button 
-                onClick={handleSearch}
+                onClick={() => {
+                  handleSearch().catch(error => {
+                    console.error('Matchmaking failed:', error);
+                    setError('Matchmaking failed. Please try again.');
+                  });
+                }}
                 disabled={!prompt.trim() || loading}
                 className="bg-[#E5202E] text-white opacity-100 font-mono text-xs sm:text-sm font-bold tracking-[0.08em] px-5 sm:px-6 py-2.5 sm:py-3 border-2 border-df-black dark:border-white hover:bg-[#C41A25] transition-none focus:outline-none focus:ring-0 active:translate-y-[2px] active:translate-x-[2px] disabled:cursor-not-allowed shadow-[4px_4px_0px_#000000] dark:shadow-[4px_4px_0px_#ffffff] active:shadow-none"
               >

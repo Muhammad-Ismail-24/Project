@@ -3,7 +3,7 @@ import { Sparkles, MapPin, Calendar, Gauge, ExternalLink, Loader2, ShieldAlert, 
 // @ts-ignore
 import SaveCarButton from './SaveCarButton';
 import { evaluateSingleCar } from '../utils/api';
-import { Car } from '../types';
+import { Car, CarEvaluation } from '../types';
 
 
 interface Tag {
@@ -40,7 +40,7 @@ const generateHeuristicTags = (title: string = ''): Tag[] => {
 
 
 interface Props {
-  car: Car | any;
+  car: Car;
   isHighlighted?: boolean;
   savedListingIds?: Set<string>;
   onUnsave?: (id: string) => void;
@@ -74,15 +74,13 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
   
   // ─── On-Demand AI Appraisal State ───
   const [isEvaluating, setIsEvaluating] = useState(false);
-  const [aiData, setAiData] = useState<any>(null);
+  const [aiData, setAiData] = useState<CarEvaluation | null>(null);
   const [evalError, setEvalError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
+      abortControllerRef.current?.abort();
     };
   }, []);
 
@@ -123,18 +121,37 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
 
   // ─── On-Demand Evaluate Handler ───
   const handleEvaluate = async () => {
+    // Cancel any in-flight request from a previous click
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    // Create a fresh controller for this request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    
     setIsEvaluating(true);
     setEvalError(null);
-    abortControllerRef.current = new AbortController();
+    
     try {
-      const result = await evaluateSingleCar(car, userQuery, abortControllerRef.current.signal);
-      if (result !== null) {
+      const result = await evaluateSingleCar(car, userQuery, controller.signal);
+      
+      // Only update state if this request wasn't cancelled
+      if (!controller.signal.aborted && result !== null) {
         setAiData(result);
+      }
+    } catch (error: unknown) {
+      if (error instanceof Error && (error.name === 'CanceledError' || error.name === 'AbortError')) {
+        return; // Request was intentionally cancelled
+      }
+      if (!controller.signal.aborted) {
+        setEvalError('Appraisal failed. Please try again.');
+        console.error('Evaluation failed:', error);
+      }
+    } finally {
+      if (!controller.signal.aborted) {
         setIsEvaluating(false);
       }
-    } catch (err) {
-      setEvalError('Appraisal failed. Please try again.');
-      setIsEvaluating(false);
     }
   };
 
@@ -165,7 +182,7 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
       <div className="w-full md:w-1/3 aspect-video md:aspect-[4/3] relative overflow-hidden flex-shrink-0 border-b-2 md:border-b-0 md:border-r-2 border-black dark:border-white bg-gray-100 dark:bg-zinc-800 flex items-center justify-center">
         {(car?.image_url || car?.images?.[0]) ? (
           <img
-            src={car.image_url || car.images[0]}
+            src={car.image_url || car.images?.[0]}
             alt={imageAlt}
             loading="lazy"
             decoding="async"
@@ -275,7 +292,12 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
           {!aiData && (
             <div className="flex-grow sm:flex-grow-0 flex flex-col items-end">
               <button
-                onClick={handleEvaluate}
+                onClick={() => {
+                  handleEvaluate().catch(error => {
+                    console.error('Appraisal failed:', error);
+                    setEvalError('Appraisal failed. Please try again.');
+                  });
+                }}
                 disabled={isEvaluating}
                 className="w-full sm:w-auto border-2 border-black dark:border-white bg-red-600 text-white font-bold uppercase px-4 py-2 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none flex items-center justify-center gap-2 whitespace-nowrap"
               >

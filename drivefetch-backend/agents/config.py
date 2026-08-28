@@ -146,6 +146,13 @@ GEMINI_MODEL_POOL = (
 PRIMARY_MODEL = GEMINI_MODEL_POOL[0]
 FALLBACK_MODELS = GEMINI_MODEL_POOL[1:]
 
+# ---------------------------------------------------------------------------
+# TIMEOUT — the same 30-second budget for both Gemini and Groq tiers.
+# Gemini's google-genai SDK wants milliseconds; Groq's openai SDK wants seconds.
+# ---------------------------------------------------------------------------
+GEMINI_TIMEOUT_SECONDS = 30
+GEMINI_TIMEOUT_MS = GEMINI_TIMEOUT_SECONDS * 1000
+
 # Transient faults worth one quick retry on the SAME model (the model is fine,
 # the server is briefly busy).
 _TRANSIENT_MARKERS = ("503", "unavailable", "high demand", "500",
@@ -233,10 +240,26 @@ async def generate_content_resilient(
                     model=model_name,
                     contents=contents,
                     config=config,
+                    http_options=types.HttpOptions(timeout=GEMINI_TIMEOUT_MS),
                 )
                 if index > 0:
                     logger.info(f"[ModelRouter] Served by fallback model '{model_name}'.")
                 return response.text
+
+            except (TimeoutError, asyncio.TimeoutError) as e:
+                last_error = e
+                logger.error(
+                    f"[ModelRouter] Gemini call to {model_name} timed out "
+                    f"after {GEMINI_TIMEOUT_SECONDS}s (attempt {attempt + 1})."
+                )
+                if attempt == 0:
+                    await asyncio.sleep(1.0)
+                    continue
+                if next_model:
+                    logger.info(
+                        f"[ModelRouter] Failing over to {next_model} after timeout..."
+                    )
+                break
 
             except Exception as e:
                 last_error = e
@@ -300,7 +323,7 @@ GROQ_MODEL_POOL = [
     "llama-3.1-8b-instant",
 ]
 
-GROQ_TIMEOUT = 20.0
+GROQ_TIMEOUT = float(GEMINI_TIMEOUT_SECONDS)  # aligned with Gemini tier
 
 
 def _groq_client():

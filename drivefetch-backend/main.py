@@ -54,8 +54,11 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     )
 
 
-# Render HTTPS Trust Headers
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+# Trust proxy headers from Render's load balancer.
+# Safe on Render because their infrastructure strips client-supplied
+# X-Forwarded-For headers before they reach this service.
+# IMPORTANT: If migrating off Render, audit this setting first.
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=["*"])
 
 # CORS Middleware (Updated with expose_headers for SSE streaming)
 app.add_middleware(
@@ -89,6 +92,18 @@ app.include_router(user_router, prefix="/user", tags=["user"])
 def on_startup():
     """Trigger database and tables creation on application startup."""
     create_db_and_tables()
+
+
+@app.get("/health", tags=["Health"])
+async def health_check():
+    """
+    Dedicated health check endpoint for Render's health monitor.
+    Returns 200 if the application is running correctly.
+    """
+    return {
+        "status": "healthy",
+        "service": "drivefetch-backend",
+    }
 
 
 @app.get("/")

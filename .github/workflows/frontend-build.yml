@@ -1,0 +1,46 @@
+name: Frontend Build Check
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: drivefetch-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: drivefetch-frontend
+        run: npm ci
+
+      - name: TypeScript type check
+        working-directory: drivefetch-frontend
+        run: npx tsc --noEmit
+
+      - name: Build frontend
+        working-directory: drivefetch-frontend
+        env:
+          VITE_API_URL: https://placeholder-backend.onrender.com
+          VITE_GOOGLE_CLIENT_ID: placeholder-client-id
+        run: npm run build
+
+      - name: Confirm dist output exists
+        run: |
+          if [ ! -d "drivefetch-frontend/dist" ]; then
+            echo "Build failed: dist directory not found"
+            exit 1
+          fi
+          echo "Build succeeded: dist directory exists"
+          ls -la drivefetch-frontend/dist/

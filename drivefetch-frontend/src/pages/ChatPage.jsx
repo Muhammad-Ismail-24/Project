@@ -233,7 +233,9 @@ export default function ChatPage() {
             {sessionsList.map(session => (
               <div
                 key={session.session_id}
-                onClick={() => loadSession(session.session_id)}
+                onClick={() => {
+                  loadSession(session.session_id).catch(err => console.error('Failed to load session:', err));
+                }}
                 className={`group flex items-center justify-between px-3 py-2.5 cursor-pointer border-2 transition-none
                   ${activeSessionId === session.session_id
                     ? 'bg-df-red text-df-white border-df-black shadow-[3px_3px_0px_#000000] dark:border-white'
@@ -250,7 +252,9 @@ export default function ChatPage() {
                   </span>
                 </div>
                 <button
-                  onClick={(e) => handleDeleteSession(e, session.session_id)}
+                  onClick={(e) => {
+                    handleDeleteSession(e, session.session_id).catch(err => console.error('Failed to delete session:', err));
+                  }}
                   aria-label="Delete this chat session"
                   title="Delete chat"
                   className={`p-1 shrink-0 transition-none

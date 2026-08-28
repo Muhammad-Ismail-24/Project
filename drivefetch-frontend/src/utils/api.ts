@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Car, ChatMessage, CarEvaluation } from '../types';
+import { Car, ChatMessage, CarEvaluation, CalculatorResult } from '../types';
 
 // PROXY FIX: All API requests will now prepend /api. 
 // Vercel routes this instantly to your Render backend!
@@ -17,7 +17,7 @@ export const searchCars = async (query: string): Promise<Car[]> => {
   return Array.isArray(response.data) ? response.data : (response.data.listings || []);
 };
 
-export const searchCarsStream = async (query: string, onMessage: (data: any) => void): Promise<void> => {
+export const searchCarsStream = async (query: string, onMessage: (data: unknown) => void): Promise<void> => {
   // Uses /api/search/stream perfectly
   const response = await fetch(`${API_BASE}/search/stream`, {
     method: 'POST',
@@ -52,17 +52,17 @@ export const searchCarsStream = async (query: string, onMessage: (data: any) => 
   }
 };
 
-export const calculateFuel = async (data: Record<string, any>): Promise<any> => {
+export const calculateFuel = async (data: Record<string, unknown>): Promise<CalculatorResult> => {
   const response = await api.post('/calc/fuel', data);
   return response.data;
 };
 
-export const calculateTransfer = async (data: Record<string, any>): Promise<any> => {
+export const calculateTransfer = async (data: Record<string, unknown>): Promise<CalculatorResult> => {
   const response = await api.post('/calc/transfer-fee', data);
   return response.data;
 };
 
-export const calculateToken = async (data: Record<string, any>): Promise<any> => {
+export const calculateToken = async (data: Record<string, unknown>): Promise<CalculatorResult> => {
   const response = await api.post('/calc/token-tax', data);
   return response.data;
 };
@@ -72,7 +72,7 @@ export const chatWithBot = async (messages: ChatMessage[]): Promise<string> => {
   return response.data.reply;
 };
 
-export const evaluateSingleCar = async (listingData: Car | any, userQuery: string, signal: AbortSignal | null = null): Promise<CarEvaluation | null> => {
+export const evaluateSingleCar = async (listingData: Car, userQuery: string, signal: AbortSignal | null = null): Promise<CarEvaluation | null> => {
   try {
     const response = await api.post('/evaluate-single', {
       title: listingData.title,
@@ -87,8 +87,8 @@ export const evaluateSingleCar = async (listingData: Car | any, userQuery: strin
       timeout: 15000,
     });
     return response.data;
-  } catch (err: any) {
-    if (axios.isCancel(err) || err.name === 'CanceledError') {
+  } catch (err: unknown) {
+    if (axios.isCancel(err) || (err instanceof Error && err.name === 'CanceledError')) {
       return null;
     }
     console.error('[evaluateSingleCar] API error:', err);
