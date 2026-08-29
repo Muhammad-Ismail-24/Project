@@ -23,7 +23,7 @@ class SearchRequest(BaseModel):
 
 @router.post("")
 @limiter.limit("5/minute")
-async def search_cars(request: Request, search_req: SearchRequest, session: Session = Depends(get_session)):
+async def search_cars(request: Request, response: Response, search_req: SearchRequest, session: Session = Depends(get_session)):
     # ----------------------------------------------------
     # STEP 1: Orchestration FIRST (Takes ~0.5 seconds)
     # ----------------------------------------------------
@@ -180,7 +180,7 @@ from fastapi.responses import StreamingResponse
 
 @router.post("/stream")
 @limiter.limit("5/minute")
-async def search_cars_stream(request: Request, search_req: SearchRequest, session: Session = Depends(get_session)):
+async def search_cars_stream(request: Request, response: Response, search_req: SearchRequest, session: Session = Depends(get_session)):
     async def event_generator():
         yield f"data: {json.dumps({'status': 'AI analyzing your request...'})}\n\n"
         

@@ -525,7 +525,7 @@ async def run_recommend_pipeline(
 
 @router.post("/api/recommend")
 @limiter.limit("5/minute")
-async def recommend_cars(request: Request):
+async def recommend_cars(request: Request, response: Response):
     try:
         body = await request.json()
     except Exception:
@@ -562,7 +562,7 @@ async def recommend_cars(request: Request):
 
 @router.post("/api/recommend/extend")
 @limiter.limit("5/minute")
-async def recommend_extend(request: Request):
+async def recommend_extend(request: Request, response: Response):
     """
     Generates 1–3 alternative recommendations for the 'Show More Options'
     button. Receives the original prompt plus models already shown.

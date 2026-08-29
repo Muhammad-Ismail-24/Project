@@ -120,7 +120,7 @@ from api.rate_limiter import limiter
 
 @router.post("")
 @limiter.limit("10/minute")
-async def send_message(request: Request, body: ChatRequest, session: Session = Depends(get_session)):
+async def send_message(request: Request, response: Response, body: ChatRequest, session: Session = Depends(get_session)):
     new_message_text = body.message.strip()
     user = _get_user_or_none(request, session)
 
