@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, NavLink, useLocation } from 'react-router-dom';
-import { Menu, X, Bookmark, Settings, LogOut } from 'lucide-react';
+import { Menu, X, Bookmark, Settings, LogOut, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 
