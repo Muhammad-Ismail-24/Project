@@ -114,7 +114,10 @@ def async_retry(retries: int = 2, delay: float = 1.0):
 # ---------------------------------------------------------------------------
 
 GEMINI_API_KEY = settings.gemini_api_key.get_secret_value() or settings.google_api_key.get_secret_value()
-ai_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+ai_client = genai.Client(
+    api_key=GEMINI_API_KEY,
+    http_options=types.HttpOptions(timeout=30000)
+) if GEMINI_API_KEY else None
 
 # Ordered by capability first, because the live AI Studio limits make that free:
 # the three strongest lite models all sit at the maximum 15 RPM, so leading with
@@ -240,7 +243,6 @@ async def generate_content_resilient(
                     model=model_name,
                     contents=contents,
                     config=config,
-                    http_options=types.HttpOptions(timeout=GEMINI_TIMEOUT_MS),
                 )
                 if index > 0:
                     logger.info(f"[ModelRouter] Served by fallback model '{model_name}'.")
@@ -372,10 +374,19 @@ async def execute_groq_fallback(
     if not formatted_messages:
         raise ValueError("execute_groq_fallback called with no messages.")
 
-    client = _groq_client()
-    messages = [dict(m) for m in formatted_messages]
-
     want_json = json_mode or response_schema is not None
+    fallback_result = json.dumps({"make": "Unknown", "model": "Unknown"}) if want_json else "Unknown"
+
+    try:
+        client = _groq_client()
+    except ValueError as e:
+        logger.warning(f"Groq fallback skipped: {e}")
+        return fallback_result
+    except Exception as e:
+        logger.error(f"Failed to initialize Groq client: {e}")
+        return fallback_result
+
+    messages = [dict(m) for m in formatted_messages]
 
     if response_schema is not None:
         schema_text = _schema_to_text(response_schema)
@@ -423,9 +434,11 @@ async def execute_groq_fallback(
                 logger.info(f"[ModelRouter] Groq {model_name} unavailable and no models left.")
                 break
             # Bad key / malformed request — the next model would fail identically.
-            raise
+            logger.error(f"[ModelRouter] Groq fallback failed: {e}")
+            return fallback_result
 
-    raise RuntimeError(f"Groq fallback exhausted all models. Last error: {last_error}")
+    logger.error(f"Groq fallback exhausted all models. Last error: {last_error}")
+    return fallback_result
 
 
 def _schema_to_text(response_schema) -> str:

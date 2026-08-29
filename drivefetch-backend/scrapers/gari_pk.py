@@ -3,10 +3,9 @@ logger = get_logger(__name__)
 """
 scrapers/gari_pk.py
 
-HACKER BYPASS: The Google Translate Proxy.
-Since Gari.pk has strictly enforced Cloudflare JS Challenges against data
-center IPs, we use Google's own servers to fetch the HTML for us.
-Cloudflare never blocks Google.
+NOTE: The Google Translate proxy is used to fetch HTML because
+Gari.pk enforces strict Cloudflare JS Challenges against datacenter IPs.
+Using Google's servers bypasses these blocks as they are not restricted.
 
 DATE HANDLING (rewritten 2026-08-16)
 ------------------------------------

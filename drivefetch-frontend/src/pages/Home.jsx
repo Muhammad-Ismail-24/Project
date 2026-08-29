@@ -7,6 +7,7 @@ import SEO from '../components/SEO';
 import { homeSchema } from '../config/seoSchemas';
 import { searchCars } from '../utils/api';
 import CarResultCard from '../components/CarResultCard';
+import FeatureErrorBoundary from '../components/FeatureErrorBoundary';
 
 /**
  * Floating monospace system tags scattered in the background.
@@ -446,14 +447,16 @@ function CommandConsoleSection() {
               </div>
             )}
             {results && results.length > 0 && !isLoading && (
-              <div className="space-y-3">
-                <div className="font-mono text-[10px] sm:text-xs font-bold tracking-[0.1em] text-df-black/30 dark:text-white/30 mb-4">
-                  [{results.length} RESULT{results.length !== 1 ? 'S' : ''} FOUND]:
+              <FeatureErrorBoundary featureName="Search Results">
+                <div className="space-y-3">
+                  <div className="font-mono text-[10px] sm:text-xs font-bold tracking-[0.1em] text-df-black/30 dark:text-white/30 mb-4">
+                    [{results.length} RESULT{results.length !== 1 ? 'S' : ''} FOUND]:
+                  </div>
+                  {results.map((car, i) => (
+                    <CarResultCard key={car.id || i} car={car} userQuery={query} />
+                  ))}
                 </div>
-                {results.map((car, i) => (
-                  <CarResultCard key={car.id || i} car={car} userQuery={query} />
-                ))}
-              </div>
+              </FeatureErrorBoundary>
             )}
           </div>
         )}

@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Ping API Root
         run: |
-          curl -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36" -s https://carfinder-project-backend.onrender.com/ > /dev/null
+          curl -f -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36" -s ${{ secrets.RENDER_BACKEND_URL }}/health > /dev/null || true
         
       - name: Log Success
         run: echo "Successfully pinged the GaariGuru backend!"

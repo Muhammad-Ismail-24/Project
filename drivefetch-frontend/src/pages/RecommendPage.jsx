@@ -145,7 +145,10 @@ export default function RecommendPage() {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSearch().catch(error => {
-        console.error('Matchmaking failed:', error);
+        if (import.meta.env.DEV) {
+          console.error('Full error for debugging:', error);
+        }
+        console.error('Matchmaking failed:', error instanceof Error ? error.message : 'Unknown error');
         setError('Matchmaking failed. Please try again.');
       });
     }
@@ -238,7 +241,10 @@ export default function RecommendPage() {
       setExtLoading(false);
       setExtDone(true);
     } catch (err) {
-      console.error("Extension error:", err);
+      if (import.meta.env.DEV) {
+        console.error('Full error for debugging:', err);
+      }
+      console.error('Extension error:', err instanceof Error ? err.message : 'Unknown error');
       setExtLoading(false);
       setExtDone(true);
     }
@@ -315,7 +321,10 @@ export default function RecommendPage() {
               <button 
                 onClick={() => {
                   handleSearch().catch(error => {
-                    console.error('Matchmaking failed:', error);
+                    if (import.meta.env.DEV) {
+                      console.error('Full error for debugging:', error);
+                    }
+                    console.error('Matchmaking failed:', error instanceof Error ? error.message : 'Unknown error');
                     setError('Matchmaking failed. Please try again.');
                   });
                 }}

@@ -45,7 +45,11 @@ export const searchCarsStream = async (query: string, onMessage: (data: unknown)
           const data = JSON.parse(dataStr);
           onMessage(data);
         } catch (e) {
-          console.error("Error parsing SSE JSON:", e);
+          // @ts-ignore
+          if (import.meta.env.DEV) {
+            console.error('Full error for debugging:', e);
+          }
+          console.error('Error parsing SSE JSON:', e instanceof Error ? e.message : 'Unknown error');
         }
       }
     }
@@ -91,7 +95,11 @@ export const evaluateSingleCar = async (listingData: Car, userQuery: string, sig
     if (axios.isCancel(err) || (err instanceof Error && err.name === 'CanceledError')) {
       return null;
     }
-    console.error('[evaluateSingleCar] API error:', err);
+    // @ts-ignore
+    if (import.meta.env.DEV) {
+      console.error('Full error for debugging:', err);
+    }
+    console.error('[evaluateSingleCar] API error:', err instanceof Error ? err.message : 'Unknown error');
     return {
       red_flags: [],
       liquidity_score: 'Medium',

@@ -137,7 +137,12 @@ export default function ChatPage() {
       if (data.agent_name) setAgentName(data.agent_name);
       setMessages(data.messages.map(m => ({ role: m.role, content: m.content })));
       setSession(sessionId);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.error('Full error for debugging:', err);
+      }
+      console.error('Request failed:', err instanceof Error ? err.message : 'Unknown error');
+    }
     finally { setIsLoading(false); }
   };
 
@@ -234,7 +239,12 @@ export default function ChatPage() {
               <div
                 key={session.session_id}
                 onClick={() => {
-                  loadSession(session.session_id).catch(err => console.error('Failed to load session:', err));
+                  loadSession(session.session_id).catch(err => {
+                    if (import.meta.env.DEV) {
+                      console.error('Full error for debugging:', err);
+                    }
+                    console.error('Failed to load session:', err instanceof Error ? err.message : 'Unknown error');
+                  });
                 }}
                 className={`group flex items-center justify-between px-3 py-2.5 cursor-pointer border-2 transition-none
                   ${activeSessionId === session.session_id
@@ -253,7 +263,12 @@ export default function ChatPage() {
                 </div>
                 <button
                   onClick={(e) => {
-                    handleDeleteSession(e, session.session_id).catch(err => console.error('Failed to delete session:', err));
+                    handleDeleteSession(e, session.session_id).catch(err => {
+                      if (import.meta.env.DEV) {
+                        console.error('Full error for debugging:', err);
+                      }
+                      console.error('Failed to delete session:', err instanceof Error ? err.message : 'Unknown error');
+                    });
                   }}
                   aria-label="Delete this chat session"
                   title="Delete chat"
@@ -263,7 +278,7 @@ export default function ChatPage() {
                       : 'opacity-0 group-hover:opacity-60 group-hover:hover:opacity-100 text-df-white'
                     }`}
                 >
-                  <Trash2 className="w-3.5 h-3.5" strokeWidth={2} />
+                  <Trash2 aria-hidden="true" className="w-3.5 h-3.5" strokeWidth={2} />
                 </button>
               </div>
             ))}
@@ -292,7 +307,7 @@ export default function ChatPage() {
                 aria-expanded={isMobileSidebarOpen}
                 className="md:hidden p-1.5 border-2 border-df-black text-df-black shadow-[2px_2px_0px_#000000] hover:bg-df-black hover:text-df-white active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-none dark:border-white dark:text-zinc-50 dark:hover:bg-white dark:hover:text-black"
               >
-                <MessageSquare className="w-4 h-4" strokeWidth={2} />
+                <MessageSquare aria-hidden="true" className="w-4 h-4" strokeWidth={2} />
               </button>
             )}
             <div className="min-w-0 flex items-center gap-2.5">

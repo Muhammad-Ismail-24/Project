@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useOutletContext } from 'react-
 
 // Import Layout
 import MainLayout from './layouts/MainLayout';
+import FeatureErrorBoundary from './components/FeatureErrorBoundary';
 
 // Import Pages
 const Home = lazy(() => import('./pages/Home'));
@@ -120,8 +121,8 @@ export default function App() {
               {/* Page Routes */}
               {/* Public Routes */}
               <Route path="saved" element={<SavedCarsPage />} />
-              <Route path="chat" element={<ChatPage />} />
-              <Route path="recommend" element={<RecommendPage />} />
+              <Route path="chat" element={<FeatureErrorBoundary featureName="AI Chat"><ChatPage /></FeatureErrorBoundary>} />
+              <Route path="recommend" element={<FeatureErrorBoundary featureName="AI Matchmaker"><RecommendPage /></FeatureErrorBoundary>} />
               <Route path="about" element={<About />} />
               <Route path="calculators" element={<CalculatorsHub />} />
               <Route path="privacy" element={<PrivacyPolicy />} />

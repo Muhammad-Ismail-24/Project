@@ -435,7 +435,7 @@ function ThemeToggleButton({ className = '' }) {
       aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
       className={`border-2 border-black dark:border-white px-2 py-1 font-mono text-xs font-bold uppercase tracking-[0.04em] hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] transition-all ${className}`}
     >
-      {theme === 'dark' ? '[ ☀ LIGHT ]' : '[ ☾ DARK ]'}
+      {theme === 'dark' ? <Sun aria-hidden="true" className="w-4 h-4" /> : <Moon aria-hidden="true" className="w-4 h-4" />}
     </button>
   );
 }
