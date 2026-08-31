@@ -56,6 +56,5 @@
                          "source":  "/(.*)",
                          "destination":  "/index.html"
                      }
-                 ],
-    "_comment_server_header":  "Vercel controls the server header at infrastructure level. Cannot be removed. Accepted as low risk."
+                 ]
 }
