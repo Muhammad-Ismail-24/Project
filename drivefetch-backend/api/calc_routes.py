@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from api.rate_limiter import limiter
 
 router = APIRouter(prefix="/api/calc", tags=["Calculators"])
@@ -9,17 +9,21 @@ router = APIRouter(prefix="/api/calc", tags=["Calculators"])
 # ==========================================
 
 class FuelRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     car_segment_cc: int = Field(..., description="Engine capacity in CC", ge=1)
     daily_commute_km: int = Field(..., description="Average daily commute distance in kilometers", ge=0)
 
 class TransferRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     engine_cc: int = Field(..., description="Engine capacity in CC", ge=1)
     is_filer: bool = Field(..., description="Tax status: Filer (True) or Non-Filer (False)")
 
 class TokenRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     engine_cc: int = Field(..., description="Engine capacity in CC", ge=1)
     is_filer: bool = Field(..., description="Tax status: Filer (True) or Non-Filer (False)")
     province: str = Field(..., description="Province of registration (Punjab, Sindh, KPK, Islamabad)")
+
 
 
 # ==========================================

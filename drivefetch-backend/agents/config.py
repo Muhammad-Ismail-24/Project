@@ -61,6 +61,9 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str
     GOOGLE_CLIENT_SECRET: SecretStr
     gemini_model_pool: SecretStr = SecretStr("")
+    ENABLE_API_DOCS: bool = False
+    SENTRY_DSN_BACKEND: str = ""
+    # Empty string disables Sentry in local dev
 
     model_config = SettingsConfigDict(
         env_file=".env",

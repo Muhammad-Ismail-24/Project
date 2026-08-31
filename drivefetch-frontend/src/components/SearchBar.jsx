@@ -29,6 +29,8 @@ export default function SearchBar({ onSearch, isLoading }) {
         <input
           ref={inputRef}
           type="text"
+          maxLength={200}
+          required
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="E.g., Honda Civic in Lahore under 50 Lakhs"

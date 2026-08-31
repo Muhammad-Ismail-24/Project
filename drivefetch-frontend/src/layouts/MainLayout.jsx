@@ -96,7 +96,8 @@ function MainLayoutInner() {
                 }
               } catch (chatErr) {
                 if (chatErr.name !== 'AbortError') {
-                  console.error("Chat preferences fetch failed:", chatErr);
+                  if (import.meta.env.DEV) { console.error("Full error details:", chatErr); }
+                  console.error("Chat preferences fetch failed:", chatErr instanceof Error ? chatErr.message : "Unknown error");
                 }
               }
             }
@@ -109,7 +110,8 @@ function MainLayoutInner() {
         }
       } catch (error) {
         if (error.name !== 'AbortError') {
-          console.error("Auth check failed:", error);
+          if (import.meta.env.DEV) { console.error("Full error details:", error); }
+          console.error("Auth check failed:", error instanceof Error ? error.message : "Unknown error");
         }
         if (!signal.aborted) {
           setIsAuthenticated(false);
@@ -132,7 +134,8 @@ function MainLayoutInner() {
     try {
       await fetch('/auth/logout', { method: 'GET', credentials: 'include' });
     } catch (error) {
-      console.error("Logout request failed", error);
+      if (import.meta.env.DEV) { console.error("Full error details:", error); }
+      console.error("Logout request failed", error instanceof Error ? error.message : "Unknown error");
     } finally {
       localStorage.clear();
       sessionStorage.clear();

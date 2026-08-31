@@ -1,7 +1,7 @@
 from core.logger import get_logger
 logger = get_logger(__name__)
 from fastapi import APIRouter, Response, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from sqlmodel import Session, select
 from datetime import datetime, timezone, timedelta
 from typing import List
@@ -19,6 +19,7 @@ from api.rate_limiter import limiter
 router = APIRouter(prefix="/api/search", tags=["Search"])
 
 class SearchRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     query: str = Field(..., description="Natural language search query", json_schema_extra={"example": "Cheap civic in Lahore"})
 
 @router.post("")

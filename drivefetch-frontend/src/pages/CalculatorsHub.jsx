@@ -303,10 +303,12 @@ export default function CalculatorsHub() {
                     </label>
                     <input
                       type="number"
+                      min={1}
+                      max={999999999}
+                      required
                       value={tokenState.invoiceVal}
                       onChange={(e) => tokenSetters.setInvoiceVal(Number(e.target.value))}
                       className="w-full p-3 md:p-4 bg-df-white dark:bg-black border-2 border-df-black dark:border-white rounded-none outline-none font-mono text-sm md:text-base font-medium focus:ring-2 focus:ring-df-red focus:border-df-red text-df-black dark:text-zinc-50"
-                      min="0"
                       step="100000"
                     />
                   </div>
@@ -403,10 +405,12 @@ export default function CalculatorsHub() {
                     </label>
                     <input
                       type="number"
+                      min={1}
+                      max={999999999}
+                      required
                       value={transferState.invoiceVal}
                       onChange={(e) => transferSetters.setInvoiceVal(Number(e.target.value))}
                       className="w-full p-3 md:p-4 bg-df-white dark:bg-black border-2 border-df-black dark:border-white rounded-none outline-none font-mono text-sm md:text-base font-medium focus:ring-2 focus:ring-df-red focus:border-df-red text-df-black dark:text-zinc-50"
-                      min="0"
                       step="100000"
                     />
                   </div>

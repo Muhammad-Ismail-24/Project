@@ -288,7 +288,12 @@ async def execute_search_pipeline(
 
     raw_listings = []
     for result_set in all_results:
-        if isinstance(result_set, list):
+        if isinstance(result_set, Exception):
+            logger.error(
+                f"Scraper task failed: "
+                f"{result_set.__class__.__name__}: {result_set}"
+            )
+        elif isinstance(result_set, list):
             raw_listings.extend(result_set)
 
     clean_listings, is_empty = normalize_listings(

@@ -418,6 +418,8 @@ export default function ChatPage() {
                 <input
                   id="chat-input"
                   type="text"
+                  maxLength={200}
+                  required
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   placeholder="> Ask about fuel averages, ground clearance…"

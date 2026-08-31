@@ -1,7 +1,7 @@
 from core.logger import get_logger
 logger = get_logger(__name__)
 from fastapi import APIRouter, Response, HTTPException, Request, Depends
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from sqlmodel import Session, select
 from typing import Optional, List
 import uuid
@@ -17,10 +17,12 @@ CONTEXT_WINDOW_SIZE = 20  # was 10 (5 exchanges) — increased to 10 full exchan
                           # across a longer technical conversation
 
 class ChatMessage(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     role: str
     content: str = Field(..., max_length=4000)
 
 class ChatRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     message: str = Field(..., min_length=1, max_length=2000)
     session_id: Optional[str] = None
     # Guest history: frontend passes the full in-memory conversation so
@@ -29,6 +31,7 @@ class ChatRequest(BaseModel):
     guest_history: Optional[List[ChatMessage]] = Field(None, max_length=30)
 
 class UpdateAgentNameRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     agent_name: str = Field(..., min_length=1, max_length=40)
 
 def _get_user_or_none(request: Request, session: Session) -> Optional[User]:

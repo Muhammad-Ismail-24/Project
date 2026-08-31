@@ -64,7 +64,8 @@ export function ThemeProvider({ children, user }) {
         body: JSON.stringify({ theme: newTheme }),
       });
     } catch (err) {
-      console.error('[ThemeContext] Failed to sync theme to DB:', err);
+      if (import.meta.env.DEV) { console.error("[ThemeContext] Full error:", err); }
+      console.error("[ThemeContext] Failed to sync theme to DB:", err instanceof Error ? err.message : "Unknown error");
     }
   }, [user]);
 

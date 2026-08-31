@@ -397,6 +397,8 @@ function CommandConsoleSection() {
               <input
                 id="console-search-input"
                 type="text"
+                maxLength={200}
+                required
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -408,11 +410,12 @@ function CommandConsoleSection() {
               id="console-execute-btn"
               onClick={() => {
                 handleSearch().catch(error => {
-                  console.error('Search failed:', error);
+                  if (import.meta.env.DEV) { console.error("Full error details:", error); }
+                  console.error("Search failed:", error instanceof Error ? error.message : "Unknown error");
                   setError('Search failed. Please try again.');
                 });
               }}
-              disabled={isLoading}
+              disabled={isLoading || !query.trim()}
               className="px-6 sm:px-8 py-4 sm:py-5 bg-df-red text-df-white font-mono text-xs sm:text-sm font-bold tracking-[0.08em] border-t sm:border-t-0 sm:border-l border-df-black dark:border-white whitespace-nowrap transition-none hover:bg-[#C41A25] active:translate-x-[1px] active:translate-y-[1px] disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isLoading ? '[ SEARCHING... ]' : '[ EXECUTE SEARCH ]'}

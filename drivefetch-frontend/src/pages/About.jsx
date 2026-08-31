@@ -58,6 +58,9 @@ export default function About() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [formName, setFormName] = useState('');
+  const [formEmail, setFormEmail] = useState('');
+  const [formMessage, setFormMessage] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -283,23 +286,23 @@ export default function About() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block font-mono text-xs font-bold text-df-black dark:text-zinc-50 uppercase tracking-widest mb-2">NAME</label>
-                  <input required name="name" type="text" placeholder="YOUR NAME" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
+                  <input required name="name" type="text" maxLength={200} value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="YOUR NAME" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
                 </div>
                 <div>
                   <label className="block font-mono text-xs font-bold text-df-black dark:text-zinc-50 uppercase tracking-widest mb-2">EMAIL</label>
-                  <input required name="email" type="email" placeholder="YOUR EMAIL" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
+                  <input required name="email" type="email" maxLength={200} value={formEmail} onChange={(e) => setFormEmail(e.target.value)} placeholder="YOUR EMAIL" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
                 </div>
               </div>
               <div>
                 <label className="block font-mono text-xs font-bold text-df-black dark:text-zinc-50 uppercase tracking-widest mb-2">MESSAGE</label>
-                <textarea required name="message" rows="4" placeholder="ENTER MESSAGE" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
+                <textarea required name="message" rows="4" maxLength={200} value={formMessage} onChange={(e) => setFormMessage(e.target.value)} placeholder="ENTER MESSAGE" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
               </div>
               {submitError && (
                 <div className="font-mono text-xs font-bold text-red-600 dark:text-red-500 bg-red-100 dark:bg-red-900/30 border-2 border-red-600 dark:border-red-500 p-3">
                   [ ERROR ]: {submitError}
                 </div>
               )}
-              <button disabled={isSubmitting} type="submit" className="w-full bg-red-600 text-white font-black uppercase py-4 border-2 border-black dark:border-white hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0px_0px_rgba(255,255,255,1)] transition-all disabled:opacity-50 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none">
+              <button disabled={isSubmitting || !formName.trim() || !formEmail.trim() || !formMessage.trim()} type="submit" className="w-full bg-red-600 text-white font-black uppercase py-4 border-2 border-black dark:border-white hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0px_0px_rgba(255,255,255,1)] transition-all disabled:opacity-50 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none">
                 {isSubmitting ? '[ TRANSMITTING... ]' : 'SUBMIT'}
               </button>
             </form>

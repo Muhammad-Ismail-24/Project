@@ -2,12 +2,13 @@ from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlmodel import Session, select
 from database import get_session
 from models.db_models import User, SavedListing, CachedCarListing
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 import urllib.parse
 
 router = APIRouter(tags=["user"])
 
 class SaveListingRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     listing_id: str
     platform: str
     title: str
@@ -96,6 +97,7 @@ def get_saved_listings(request: Request, db: Session = Depends(get_session)):
     return result
 
 class UpdatePreferencesRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     bot_name: str | None = None
     theme: str | None = None
 

@@ -23,10 +23,61 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from api.rate_limiter import limiter
 
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.starlette import StarletteIntegration
+
+if settings.SENTRY_DSN_BACKEND:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN_BACKEND.get_secret_value() 
+            if hasattr(settings.SENTRY_DSN_BACKEND, 
+                       'get_secret_value') 
+            else settings.SENTRY_DSN_BACKEND,
+        integrations=[
+            StarletteIntegration(transaction_style="url"),
+            FastApiIntegration(transaction_style="url"),
+        ],
+        traces_sample_rate=0.1,  # 10% of requests traced
+        profiles_sample_rate=0.1,
+        environment="production",
+        # Never send user PII to Sentry
+        send_default_pii=False,
+    )
+
 # Initialize FastAPI App
-app = FastAPI(title="CarFinder API")
+app = FastAPI(
+    title="DriveFetch API",
+    docs_url="/docs" if settings.ENABLE_API_DOCS else None,
+    redoc_url="/redoc" if settings.ENABLE_API_DOCS else None,
+    openapi_url="/openapi.json" if settings.ENABLE_API_DOCS else None,
+)
+
+logger.info(
+    f"API docs enabled: {settings.ENABLE_API_DOCS} "
+    f"— docs_url is "
+    f"{'active' if settings.ENABLE_API_DOCS else 'disabled'}"
+)
+
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+import time
+from fastapi import Request
+from core.logger import get_logger
+
+request_logger = get_logger("drivefetch.requests")
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.time()
+    response = await call_next(request)
+    duration = time.time() - start
+    request_logger.info(
+        f"{request.method} {request.url.path} "
+        f"→ {response.status_code} "
+        f"({duration:.3f}s)"
+    )
+    return response
 
 from fastapi import Request
 from fastapi.responses import JSONResponse

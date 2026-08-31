@@ -212,3 +212,5 @@ xdis==6.1.7
 xxhash==4.0.0
 yarl==1.24.2
 zstandard==0.25.0
+
+sentry-sdk[fastapi]==2.27.0

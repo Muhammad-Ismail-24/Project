@@ -3,9 +3,9 @@ logger = get_logger(__name__)
 """
 scrapers/gari_pk.py
 
-NOTE: The Google Translate proxy is used to fetch HTML because
-Gari.pk enforces strict Cloudflare JS Challenges against datacenter IPs.
-Using Google's servers bypasses these blocks as they are not restricted.
+# NOTE: gari.pk blocks direct scraper requests.
+# Routing through a translation proxy bypasses this 
+# restriction. Review if scraping failures increase.
 
 DATE HANDLING (rewritten 2026-08-16)
 ------------------------------------
@@ -256,7 +256,13 @@ async def _backfill_ages_from_detail_pages(session, cars: list[CarListing]) -> i
 
     recovered = 0
     for car, age in zip(targets, results):
-        if isinstance(age, Exception) or is_unknown_age(age):
+        if isinstance(age, Exception):
+            logger.error(
+                f"Scraper task failed: "
+                f"{age.__class__.__name__}: {age}"
+            )
+            continue
+        if is_unknown_age(age):
             continue
         car.age_days = age
         recovered += 1

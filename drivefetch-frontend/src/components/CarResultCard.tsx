@@ -96,7 +96,8 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
         ? JSON.parse(car.red_flags_json) 
         : car.red_flags_json;
     } catch (e) {
-      console.error("Failed to parse red flags:", e);
+      if (import.meta.env.DEV) { console.error("Full error details:", e); }
+      console.error("Failed to parse red flags:", e instanceof Error ? e.message : "Unknown error");
     }
   }
 
@@ -146,7 +147,8 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
       }
       if (!controller.signal.aborted) {
         setEvalError('Appraisal failed. Please try again.');
-        console.error('Evaluation failed:', error);
+        if (import.meta.env.DEV) { console.error("Full error details:", error); }
+        console.error("Evaluation failed:", error instanceof Error ? error.message : "Unknown error");
       }
     } finally {
       if (!controller.signal.aborted) {
@@ -293,8 +295,9 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
             <div className="flex-grow sm:flex-grow-0 flex flex-col items-end">
               <button
                 onClick={() => {
-                  handleEvaluate().catch(error => {
-                    console.error('Appraisal failed:', error);
+                  handleEvaluate().catch((error: unknown) => {
+                    if (import.meta.env.DEV) { console.error("Full error details:", error); }
+                    console.error("Appraisal failed:", error instanceof Error ? error.message : "Unknown error");
                     setEvalError('Appraisal failed. Please try again.');
                   });
                 }}

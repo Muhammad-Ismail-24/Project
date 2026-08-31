@@ -4053,7 +4053,15 @@ async def extract_intent(user_prompt: str) -> UserIntent:
             temperature=0.0,
         ),
     )
-    return UserIntent.model_validate_json(response_text)
+    try:
+        return UserIntent.model_validate_json(response_text)
+    except Exception as e:
+        logger.error(
+            f"LLM response parsing failed: "
+            f"{e.__class__.__name__}: {e}"
+        )
+        # Return a safe default instead of crashing
+        return {"error": "Could not process AI response. Please try again."}
 
 
 # ---------------------------------------------------------------------------

@@ -64,7 +64,8 @@ export default function SaveCarButton({ listingId, platform, title, savedListing
         }
       }
     } catch (error) {
-      console.error("Failed to toggle save state:", error);
+      if (import.meta.env.DEV) { console.error("Full error details:", error); }
+      console.error("Failed to toggle save state:", error instanceof Error ? error.message : "Unknown error");
     } finally {
       setIsLoading(false);
     }

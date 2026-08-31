@@ -403,9 +403,23 @@ async def run_recommend_pipeline(
     })
 
     # ── Stage 3: Parallel Scrape ──────────────────────────────────────────
-    scrape_results = await asyncio.gather(
-        *[_scrape_one(rec, override_city, override_budget) for rec in recommendations]
+    results_raw = await asyncio.gather(
+        *[_scrape_one(rec, override_city, override_budget) for rec in recommendations],
+        return_exceptions=True
     )
+    
+    scrape_results = []
+    for result in results_raw:
+        if isinstance(result, Exception):
+            logger.error(f"Scraper task failed: {result.__class__.__name__}: {result}")
+        else:
+            scrape_results.append(result)
+            
+    if not scrape_results:
+        yield _sse("error", {
+            "message": "No listings found. Please try a different search."
+        })
+        return
 
     # ── Stage 4: Per-Model Normalisation ─────────────────────────────────
     yield _sse("status", {
@@ -466,9 +480,21 @@ async def run_recommend_pipeline(
                 "targets": fb_objects,
             })
 
-            fb_scrape_results = await asyncio.gather(
-                *[_scrape_one(rec, override_city, override_budget) for rec in fallback_recs]
+            fb_results_raw = await asyncio.gather(
+                *[_scrape_one(rec, override_city, override_budget) for rec in fallback_recs],
+                return_exceptions=True
             )
+            
+            fb_scrape_results = []
+            for result in fb_results_raw:
+                if isinstance(result, Exception):
+                    logger.error(f"Scraper task failed: {result.__class__.__name__}: {result}")
+                else:
+                    fb_scrape_results.append(result)
+                    
+            if not fb_scrape_results:
+                logger.warning("[Recommend] Stage 4.5: fallback scraping yielded zero results")
+                # Do not return/break here; let the rest of the flow continue to Stage 5
 
             for raw_listings, rec in fb_scrape_results:
                 _normalise_one(
@@ -523,23 +549,30 @@ async def run_recommend_pipeline(
 # ROUTE: POST /api/recommend
 # ---------------------------------------------------------------------------
 
+from pydantic import BaseModel, ConfigDict, Field
+from typing import Optional, List, Any
+
+class RecommendRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    prompt: Optional[str] = None
+    city: Optional[str] = None
+    max_budget: Optional[int] = None
+
+class RecommendExtendRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    prompt: Optional[str] = None
+    exclude_models: Optional[List[str]] = Field(default_factory=list)
+    city: Optional[str] = None
+    max_budget: Optional[int] = None
+
 @router.post("/api/recommend")
 @limiter.limit("5/minute")
-async def recommend_cars(request: Request, response: Response):
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
+async def recommend_cars(request: Request, body: RecommendRequest, response: Response):
+    user_prompt   = (body.prompt or "").strip()
+    city_override = (body.city or "").strip() or None
 
-    user_prompt   = (body.get("prompt") or "").strip()
-    city_override = (body.get("city")   or "").strip() or None
-
-    raw_budget = body.get("max_budget")
-    try:
-        budget_override = int(raw_budget) if raw_budget is not None else None
-        if budget_override is not None and budget_override <= 0:
-            budget_override = None
-    except (ValueError, TypeError):
+    budget_override = body.max_budget
+    if budget_override is not None and budget_override <= 0:
         budget_override = None
 
     if not user_prompt:
@@ -562,26 +595,17 @@ async def recommend_cars(request: Request, response: Response):
 
 @router.post("/api/recommend/extend")
 @limiter.limit("5/minute")
-async def recommend_extend(request: Request, response: Response):
+async def recommend_extend(request: Request, body: RecommendExtendRequest, response: Response):
     """
     Generates 1–3 alternative recommendations for the 'Show More Options'
     button. Receives the original prompt plus models already shown.
     """
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
+    user_prompt    = (body.prompt         or "").strip()
+    exclude_models = body.exclude_models  or []
+    city           = (body.city           or "").strip() or None
 
-    user_prompt    = (body.get("prompt")         or "").strip()
-    exclude_models = body.get("exclude_models")  or []
-    city           = (body.get("city")           or "").strip() or None
-
-    raw_budget = body.get("max_budget")
-    try:
-        budget = int(raw_budget) if raw_budget is not None else None
-        if budget is not None and budget <= 0:
-            budget = None
-    except (ValueError, TypeError):
+    budget = body.max_budget
+    if budget is not None and budget <= 0:
         budget = None
 
     if not user_prompt:
@@ -638,9 +662,23 @@ async def recommend_extend(request: Request, response: Response):
         })
 
         # Parallel scrape
-        scrape_results = await asyncio.gather(
-            *[_scrape_one(rec, city, budget) for rec in extended_targets]
+        results_raw = await asyncio.gather(
+            *[_scrape_one(rec, city, budget) for rec in extended_targets],
+            return_exceptions=True
         )
+        
+        scrape_results = []
+        for result in results_raw:
+            if isinstance(result, Exception):
+                logger.error(f"Scraper task failed: {result.__class__.__name__}: {result}")
+            else:
+                scrape_results.append(result)
+                
+        if not scrape_results:
+            yield _sse("error", {
+                "message": "No listings found. Please try a different search."
+            })
+            return
 
         # Normalize
         output:    list[dict] = []

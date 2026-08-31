@@ -10,9 +10,14 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping API Root
+      - name: Ping backend health check
+        # RENDER_BACKEND_URL secret must be set in:
+        # GitHub repo → Settings → Secrets → Actions
+        # Value: https://your-backend-name.onrender.com
         run: |
-          curl -f -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36" -s ${{ secrets.RENDER_BACKEND_URL }}/health > /dev/null || true
+          curl -f -s \
+            ${{ secrets.RENDER_BACKEND_URL }}/health \
+            -w "\nStatus: %{http_code}" || true
         
       - name: Log Success
         run: echo "Successfully pinged the GaariGuru backend!"

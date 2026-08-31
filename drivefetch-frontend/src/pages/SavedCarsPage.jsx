@@ -42,7 +42,8 @@ export default function SavedCarsPage() {
         }
       } catch (error) {
         if (error.name === 'AbortError') return;
-        console.error("Failed to fetch saved cars:", error);
+        if (import.meta.env.DEV) { console.error("Full error details:", error); }
+        console.error("Failed to fetch saved cars:", error instanceof Error ? error.message : "Unknown error");
       } finally {
         if (!controller.signal.aborted) {
           setIsLoading(false);
