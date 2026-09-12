@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import SEO from '../components/SEO';
 import { buildAboutSchema } from '../config/seoSchemas';
+import { useTheme } from '../contexts/ThemeContext';
 
 /**
  * Single source for the FAQ. The accordion below renders from this array AND
@@ -55,6 +56,7 @@ const slideFromRight = {
    ═══════════════════════════════════════════════════════ */
 
 export default function About() {
+  const { theme } = useTheme();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -118,22 +120,22 @@ export default function About() {
                 45deg,
                 transparent,
                 transparent 58px,
-                #D4D4D4 58px,
-                #D4D4D4 59px
+                ${theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#D4D4D4'} 58px,
+                ${theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#D4D4D4'} 59px
               ),
               repeating-linear-gradient(
                 -45deg,
                 transparent,
                 transparent 78px,
-                #D4D4D4 78px,
-                #D4D4D4 79px
+                ${theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#D4D4D4'} 78px,
+                ${theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#D4D4D4'} 79px
               ),
               repeating-linear-gradient(
                 30deg,
                 transparent,
                 transparent 68px,
-                #D4D4D4 68px,
-                #D4D4D4 69px
+                ${theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#D4D4D4'} 68px,
+                ${theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#D4D4D4'} 69px
               )
             `,
           }}
@@ -148,7 +150,7 @@ export default function About() {
         <div
           className="absolute inset-0"
           style={{
-            backgroundImage: `radial-gradient(circle, #C0C0C0 1.5px, transparent 1.5px)`,
+            backgroundImage: `radial-gradient(circle, ${theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#C0C0C0'} 1.5px, transparent 1.5px)`,
             backgroundSize: '40px 40px',
           }}
         />
@@ -163,8 +165,8 @@ export default function About() {
           className="absolute inset-0"
           style={{
             backgroundImage: `
-              linear-gradient(to right,  transparent 39px, #C0C0C0 39px, #C0C0C0 41px, transparent 41px),
-              linear-gradient(to bottom, transparent 39px, #C0C0C0 39px, #C0C0C0 41px, transparent 41px)
+              linear-gradient(to right,  transparent 39px, ${theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#C0C0C0'} 39px, ${theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#C0C0C0'} 41px, transparent 41px),
+              linear-gradient(to bottom, transparent 39px, ${theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#C0C0C0'} 39px, ${theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#C0C0C0'} 41px, transparent 41px)
             `,
             backgroundSize: '80px 80px',
           }}
