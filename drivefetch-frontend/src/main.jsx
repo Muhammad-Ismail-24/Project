@@ -6,6 +6,10 @@ import './index.css'
 import App from './App.jsx'
 import * as Sentry from "@sentry/react";
 
+window.addEventListener('vite:preloadError', (event) => {
+  window.location.reload();
+});
+
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,

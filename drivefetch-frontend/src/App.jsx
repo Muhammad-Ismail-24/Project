@@ -34,13 +34,18 @@ class ChunkErrorBoundary extends React.Component {
 
   static getDerivedStateFromError(error) {
     if (ChunkErrorBoundary.isChunkLoadError(error)) {
-      return { hasChunkError: true };
+      return { hasChunkError: true, errorMsg: error?.message };
     }
     // Re-throw non-chunk errors so they propagate normally
     throw error;
   }
 
   componentDidCatch(error) {
+    if (error?.message?.includes("Failed to fetch dynamically imported module")) {
+      window.location.reload();
+      return;
+    }
+
     if (ChunkErrorBoundary.isChunkLoadError(error)) {
       const reloadKey = 'df-chunk-reload';
 
@@ -69,6 +74,9 @@ class ChunkErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasChunkError) {
+      if (this.state.errorMsg?.includes("Failed to fetch dynamically imported module")) {
+        return null;
+      }
       return (
         <div className="flex h-screen items-center justify-center flex-col gap-6 px-6">
           <div className="font-mono text-xs font-bold tracking-[0.1em] text-df-black/50 dark:text-white/50 uppercase text-center">
