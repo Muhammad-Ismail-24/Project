@@ -235,7 +235,7 @@ export default function About() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-8">
 
               {/* Photo Placeholder */}
-              <img src={profilePic} alt="Muhammad Ismail" className="w-32 h-32 object-cover grayscale border-2 border-transparent dark:border-neutral-700" />
+              <img src={profilePic} alt="Muhammad Ismail" className="w-32 h-32 object-cover border-2 border-transparent dark:border-neutral-700" />
 
               {/* Info */}
               <div>

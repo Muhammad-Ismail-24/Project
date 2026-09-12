@@ -171,7 +171,7 @@ function MainLayoutInner() {
               to="/"
               className="font-mono text-lg sm:text-xl font-bold tracking-tight text-black dark:text-white hover:text-df-red transition-none select-none whitespace-nowrap"
             >
-              <div className="bg-white p-1 rounded-sm flex items-center justify-center"><img src={logo} alt="DriveFetch" className="h-6 w-auto" /></div>
+              <div className="bg-white p-1 rounded-sm flex items-center justify-center"><img src={logo} alt="DriveFetch" className="h-12 w-auto object-contain" /></div>
             </Link>
           </div>
 
