@@ -21,13 +21,13 @@ export default function PrivacyPolicy() {
           <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter text-df-black dark:text-zinc-50 leading-[0.9] mb-6">
             PRIVACY <span className="text-df-red">POLICY</span>
           </h1>
-          <div className="font-mono text-sm sm:text-base font-bold text-df-black/60 dark:text-zinc-50/60 uppercase tracking-widest border-t-4 border-df-black dark:border-white pt-4">
+          <div className="font-mono text-sm sm:text-base font-bold text-df-black/60 dark:text-zinc-50/60 uppercase tracking-widest border-t-4 border-df-black dark:border-neutral-700 pt-4">
             EFFECTIVE DATE: AUGUST 2026
           </div>
         </div>
 
         {/* CONTENT BLOCK */}
-        <div className="bg-df-white dark:bg-black border-2 border-df-black dark:border-white shadow-[8px_8px_0px_#000000] dark:shadow-[8px_8px_0px_#ffffff] p-8 md:p-12 space-y-12">
+        <div className="bg-df-white dark:bg-black border-2 border-df-black dark:border-neutral-700 shadow-[8px_8px_0px_#000000] dark:shadow-[8px_8px_0px_#404040] p-8 md:p-12 space-y-12">
           
           <section>
             <h2 className="text-2xl md:text-3xl font-black uppercase text-df-black dark:text-zinc-50 mb-4 tracking-tight">

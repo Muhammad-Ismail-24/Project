@@ -151,7 +151,7 @@ function MainLayoutInner() {
     <div className="relative min-h-screen flex flex-col bg-white text-black dark:bg-zinc-950 dark:text-zinc-50 font-body selection:bg-df-black selection:text-df-white dark:selection:bg-white dark:selection:text-black transition-colors duration-200">
 
       {/* ═══ HEADER ═══ */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-black border-b-2 border-black dark:border-white transition-colors duration-200">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-black border-b-2 border-black dark:border-neutral-700 transition-colors duration-200">
         <div className="w-full px-5 sm:px-8 lg:px-12 h-16 sm:h-[72px] flex items-center justify-between">
           
           {/* Left side: Hamburger (Mobile) + Logo */}
@@ -179,7 +179,7 @@ function MainLayoutInner() {
             {NAV_LINKS.map((link, i) => (
               <React.Fragment key={link.to}>
                 {i > 0 && (
-                  <span className="text-df-black/25 dark:text-white/25 font-light select-none mx-1">|</span>
+                  <span className="text-df-black/25 dark:text-neutral-600 font-light select-none mx-1">|</span>
                 )}
                 <NavLink
                   to={link.to}
@@ -187,8 +187,8 @@ function MainLayoutInner() {
                   className={({ isActive }) =>
                     `px-3 py-1.5 font-mono text-xs font-bold tracking-[0.08em] transition-none ` +
                     (isActive
-                      ? 'bg-black text-white dark:bg-white dark:text-black'
-                      : 'text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black')
+                      ? 'bg-black text-white dark:bg-neutral-200 dark:text-black'
+                      : 'text-black dark:text-neutral-300 hover:bg-black hover:text-white dark:hover:bg-neutral-700 dark:hover:text-neutral-100')
                   }
                 >
                   {link.label}
@@ -208,7 +208,7 @@ function MainLayoutInner() {
             ) : !isAuthenticated || !user ? (
               <button
                 onClick={() => window.location.href = '/auth/login'}
-                className="hidden sm:flex items-center px-4 py-2 border-brutal text-df-black dark:text-zinc-100 bg-df-white dark:bg-zinc-900 font-mono text-xs font-bold tracking-wide shadow-brutal-sm dark:shadow-[3px_3px_0px_0px_#ffffff] hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black hover:shadow-none transition-none whitespace-nowrap"
+                className="hidden sm:flex items-center px-4 py-2 border-brutal text-df-black dark:text-zinc-100 bg-df-white dark:bg-zinc-900 font-mono text-xs font-bold tracking-wide shadow-brutal-sm dark:shadow-[3px_3px_0px_0px_#404040] hover:bg-df-black hover:text-df-white dark:hover:bg-neutral-200 dark:hover:text-black hover:shadow-none transition-none whitespace-nowrap"
               >
                 Google Sign-In
               </button>
@@ -232,7 +232,7 @@ function MainLayoutInner() {
 
         {/* ── Mobile Menu Dropdown ── */}
         {isMobileMenuOpen && (
-          <div className="md:hidden bg-df-white dark:bg-zinc-900 border-t-2 border-df-black dark:border-white">
+          <div className="md:hidden bg-df-white dark:bg-zinc-900 border-t-2 border-df-black dark:border-neutral-700">
             {NAV_LINKS.map((link) => (
               <NavLink
                 key={link.to}
@@ -241,8 +241,8 @@ function MainLayoutInner() {
                 className={({ isActive }) =>
                   `block px-6 py-4 font-mono text-sm font-bold tracking-[0.08em] border-b border-df-black/10 dark:border-white/10 transition-none ` +
                   (isActive
-                    ? 'bg-black text-white dark:bg-white dark:text-black'
-                    : 'text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black')
+                    ? 'bg-black text-white dark:bg-neutral-200 dark:text-black'
+                    : 'text-black dark:text-neutral-300 hover:bg-black hover:text-white dark:hover:bg-neutral-700 dark:hover:text-neutral-100')
                 }
               >
                 {link.label}
@@ -284,14 +284,14 @@ function MainLayoutInner() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 bottom-0 z-[70] w-full max-w-sm bg-df-white dark:bg-zinc-900 bg-[linear-gradient(to_right,#e5e7eb_1px,transparent_1px),linear-gradient(to_bottom,#e5e7eb_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#3f3f46_1px,transparent_1px),linear-gradient(to_bottom,#3f3f46_1px,transparent_1px)] bg-[size:20px_20px] border-l-4 border-df-black dark:border-white shadow-[-10px_0_0_rgba(0,0,0,0.1)] dark:shadow-[-10px_0_0_rgba(255,255,255,0.05)] flex flex-col"
+              className="fixed top-0 right-0 bottom-0 z-[70] w-full max-w-sm bg-df-white dark:bg-zinc-900 bg-[linear-gradient(to_right,#e5e7eb_1px,transparent_1px),linear-gradient(to_bottom,#e5e7eb_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#3f3f46_1px,transparent_1px),linear-gradient(to_bottom,#3f3f46_1px,transparent_1px)] bg-[size:20px_20px] border-l-4 border-df-black dark:border-neutral-700 shadow-[-10px_0_0_rgba(0,0,0,0.1)] dark:shadow-[-10px_0_0_rgba(255,255,255,0.05)] flex flex-col"
             >
-              <div className="flex items-center justify-between p-6 border-b-4 border-df-black dark:border-white flex-shrink-0">
+              <div className="flex items-center justify-between p-6 border-b-4 border-df-black dark:border-neutral-700 flex-shrink-0">
                 <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-df-black dark:text-zinc-100 mt-1">ACCOUNT</h2>
                 <button
                   onClick={() => setIsPreferencesOpen(false)}
                   aria-label="Close preferences panel"
-                  className="p-2 border-2 border-df-black dark:border-white hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black transition-none"
+                  className="p-2 border-2 border-df-black dark:border-neutral-700 hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black transition-none"
                 >
                   <X aria-hidden="true" className="w-6 h-6" strokeWidth={2.5} />
                 </button>
@@ -311,7 +311,7 @@ function MainLayoutInner() {
                 <Link
                   to="/saved"
                   onClick={() => setIsPreferencesOpen(false)}
-                  className="bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white font-bold uppercase py-3 px-4 w-full flex items-center justify-center gap-2 transition-all hover:bg-red-600 hover:text-white hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]"
+                  className="bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-neutral-700 font-bold uppercase py-3 px-4 w-full flex items-center justify-center gap-2 transition-all hover:bg-red-600 hover:text-white hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[4px_4px_0px_0px_rgba(64,64,64,1)]"
                 >
                   <Bookmark className="w-5 h-5" strokeWidth={2} />
                   Saved Vehicles
@@ -328,7 +328,7 @@ function MainLayoutInner() {
                       placeholder="e.g. JARVIS"
                       value={assistantName}
                       onChange={(e) => setAssistantName(e.target.value)}
-                      className="flex-1 bg-df-white dark:bg-black border-2 border-df-black dark:border-white px-3 py-2 font-mono text-xs font-bold text-df-black dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-df-red"
+                      className="flex-1 bg-df-white dark:bg-black border-2 border-df-black dark:border-neutral-700 px-3 py-2 font-mono text-xs font-bold text-df-black dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-df-red"
                     />
                     <button 
                       onClick={async () => {
@@ -341,7 +341,7 @@ function MainLayoutInner() {
                           });
                         } catch(e) { console.error("Failed to save bot name"); }
                       }}
-                      className="bg-df-red text-df-white border-2 border-l-0 border-df-black dark:border-white px-4 font-mono text-xs font-bold hover:bg-df-black dark:hover:bg-white dark:hover:text-black transition-colors"
+                      className="bg-df-red text-df-white border-2 border-l-0 border-df-black dark:border-neutral-700 px-4 font-mono text-xs font-bold hover:bg-df-black dark:hover:bg-white dark:hover:text-black transition-colors"
                     >
                       [ SAVE ]
                     </button>
@@ -352,10 +352,10 @@ function MainLayoutInner() {
 
               </div>
 
-              <div className="p-6 border-t-2 border-df-black dark:border-white mt-auto bg-df-grey dark:bg-black flex-shrink-0">
+              <div className="p-6 border-t-2 border-df-black dark:border-neutral-700 mt-auto bg-df-grey dark:bg-black flex-shrink-0">
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-center gap-2 p-4 bg-df-white dark:bg-zinc-900 text-df-black dark:text-zinc-100 border-2 border-df-black dark:border-white hover:bg-df-red hover:text-df-white transition-none font-mono font-bold tracking-wide uppercase"
+                  className="w-full flex items-center justify-center gap-2 p-4 bg-df-white dark:bg-zinc-900 text-df-black dark:text-zinc-100 border-2 border-df-black dark:border-neutral-700 hover:bg-df-red hover:text-df-white transition-none font-mono font-bold tracking-wide uppercase"
                 >
                   <LogOut className="w-4 h-4" strokeWidth={2} />
                   Terminate Session
@@ -380,7 +380,7 @@ function MainLayoutInner() {
 
 function BrutalistFooter() {
   return (
-    <footer className="relative z-[50] border-t-2 border-df-black dark:border-white bg-df-white dark:bg-zinc-900 mt-auto transition-colors duration-200">
+    <footer className="relative z-[50] border-t-2 border-df-black dark:border-neutral-700 bg-df-white dark:bg-zinc-900 mt-auto transition-colors duration-200">
       <div className="w-full max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-12 py-6 sm:py-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 md:gap-4">
           <div className="font-mono text-[10px] sm:text-xs font-bold tracking-[0.06em] text-df-black/50 dark:text-white/50">
@@ -436,7 +436,7 @@ function ThemeToggleButton({ className = '' }) {
     <button
       onClick={toggleTheme}
       aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-      className={`border-2 border-black dark:border-white px-2 py-1 font-mono text-xs font-bold uppercase tracking-[0.04em] hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] transition-all ${className}`}
+      className={`border-2 border-black dark:border-neutral-700 px-2 py-1 font-mono text-xs font-bold uppercase tracking-[0.04em] hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[2px_2px_0px_0px_rgba(64,64,64,1)] transition-all ${className}`}
     >
       {theme === 'dark' ? <Sun aria-hidden="true" className="w-4 h-4" /> : <Moon aria-hidden="true" className="w-4 h-4" />}
     </button>

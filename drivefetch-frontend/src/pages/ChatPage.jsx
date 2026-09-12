@@ -214,7 +214,7 @@ export default function ChatPage() {
       {!isGuest && (
         <div className={`
           fixed top-16 sm:top-[72px] bottom-0 left-0 z-40 w-64 flex flex-col flex-shrink-0
-          border-r-2 border-df-black bg-df-grey dark:border-white dark:bg-zinc-900
+          border-r-2 border-df-black bg-df-grey dark:border-neutral-700 dark:bg-zinc-900
           transition-transform duration-200 ease-out
           md:static md:translate-x-0
           ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -223,7 +223,7 @@ export default function ChatPage() {
           <div className="p-3 border-b-2 border-df-black">
             <button
               onClick={startNewChat}
-              className="w-full flex items-center justify-center gap-2 bg-df-black text-df-white font-mono text-xs font-bold tracking-[0.06em] py-2.5 border-2 border-df-black shadow-[3px_3px_0px_#000000] hover:bg-df-white hover:text-df-black active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-none dark:border-white dark:bg-zinc-800 dark:hover:bg-white dark:hover:text-black"
+              className="w-full flex items-center justify-center gap-2 bg-df-black text-df-white font-mono text-xs font-bold tracking-[0.06em] py-2.5 border-2 border-df-black shadow-[3px_3px_0px_#000000] hover:bg-df-white hover:text-df-black active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-none dark:border-neutral-700 dark:bg-zinc-800 dark:hover:bg-neutral-200 dark:hover:text-black"
             >
               <Plus className="w-4 h-4" strokeWidth={2.5} />
               NEW CHAT
@@ -248,7 +248,7 @@ export default function ChatPage() {
                 }}
                 className={`group flex items-center justify-between px-3 py-2.5 cursor-pointer border-2 transition-none
                   ${activeSessionId === session.session_id
-                    ? 'bg-df-red text-df-white border-df-black shadow-[3px_3px_0px_#000000] dark:border-white'
+                    ? 'bg-df-red text-df-white border-df-black shadow-[3px_3px_0px_#000000] dark:border-neutral-700'
                     : 'bg-df-white text-df-black border-df-black/15 hover:border-df-black hover:bg-df-black hover:text-df-white dark:bg-black dark:text-zinc-50 dark:border-zinc-700 dark:hover:border-white dark:hover:bg-zinc-800'
                   }`}
               >
@@ -285,7 +285,7 @@ export default function ChatPage() {
           </div>
 
           {/* Sidebar footer tag */}
-          <div className="border-t-2 border-df-black px-3 py-2.5 bg-df-white/50 dark:border-white dark:bg-black">
+          <div className="border-t-2 border-df-black px-3 py-2.5 bg-df-white/50 dark:border-neutral-700 dark:bg-black">
             <p className="font-mono text-[9px] font-bold text-df-black/20 dark:text-zinc-50/50 tracking-[0.08em] uppercase select-none">
               SYS::CHAT_V2.1_BRUTALIST
             </p>
@@ -297,7 +297,7 @@ export default function ChatPage() {
       <div className="flex-1 flex flex-col min-w-0">
 
         {/* ── Chat Header Bar — with subtle bottom shadow ── */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b-2 border-df-black bg-df-white flex-shrink-0 relative z-10 shadow-[0_2px_0px_rgba(0,0,0,0.04)] dark:border-white dark:bg-black">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b-2 border-df-black bg-df-white flex-shrink-0 relative z-10 shadow-[0_2px_0px_rgba(0,0,0,0.04)] dark:border-neutral-700 dark:bg-black">
           <div className="flex items-center gap-3 min-w-0">
             {/* Mobile sidebar toggle */}
             {!isGuest && (
@@ -305,7 +305,7 @@ export default function ChatPage() {
                 onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
                 aria-label={isMobileSidebarOpen ? 'Close chat history' : 'Open chat history'}
                 aria-expanded={isMobileSidebarOpen}
-                className="md:hidden p-1.5 border-2 border-df-black text-df-black shadow-[2px_2px_0px_#000000] hover:bg-df-black hover:text-df-white active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-none dark:border-white dark:text-zinc-50 dark:hover:bg-white dark:hover:text-black"
+                className="md:hidden p-1.5 border-2 border-df-black text-df-black shadow-[2px_2px_0px_#000000] hover:bg-df-black hover:text-df-white active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-none dark:border-neutral-700 dark:text-zinc-50 dark:hover:bg-neutral-200 dark:hover:text-black"
               >
                 <MessageSquare aria-hidden="true" className="w-4 h-4" strokeWidth={2} />
               </button>
@@ -320,7 +320,7 @@ export default function ChatPage() {
           </div>
 
           {/* Status badge — Signal Red */}
-          <div className="flex items-center gap-2 shrink-0 border-2 border-df-black px-2.5 py-1 bg-df-white shadow-[2px_2px_0px_#000000] dark:border-white dark:bg-black">
+          <div className="flex items-center gap-2 shrink-0 border-2 border-df-black px-2.5 py-1 bg-df-white shadow-[2px_2px_0px_#000000] dark:border-neutral-700 dark:bg-black">
             <span className="w-2 h-2 bg-df-red animate-pulse" />
             <span className="font-mono text-[10px] font-bold text-df-black dark:text-zinc-50 tracking-[0.08em] uppercase">
               LIVE
@@ -347,11 +347,11 @@ export default function ChatPage() {
                 {msg.role === 'assistant' && (
                   <div className="max-w-[88%] md:max-w-[72%] flex gap-3 items-start">
                     {/* AI avatar — black shadow */}
-                    <div className="w-9 h-9 bg-df-black border-2 border-df-black shadow-[3px_3px_0px_#000000] flex items-center justify-center flex-shrink-0 mt-0.5 dark:border-white dark:bg-zinc-800">
+                    <div className="w-9 h-9 bg-df-black border-2 border-df-black shadow-[3px_3px_0px_#000000] flex items-center justify-center flex-shrink-0 mt-0.5 dark:border-neutral-700 dark:bg-zinc-800">
                       <Sparkles className="w-4 h-4 text-df-white" strokeWidth={2} />
                     </div>
                     {/* AI bubble — white + hard offset shadow */}
-                    <div className="bg-df-white border-2 border-df-black shadow-[5px_5px_0px_#000000] px-5 py-4 dark:bg-black dark:border-white">
+                    <div className="bg-df-white border-2 border-df-black shadow-[5px_5px_0px_#000000] px-5 py-4 dark:bg-black dark:border-neutral-700">
                       <span className="font-mono text-[10px] font-bold text-df-red tracking-[0.08em] block mb-2 select-none">
                         [ SYSTEM ]:
                       </span>
@@ -366,11 +366,11 @@ export default function ChatPage() {
                 {msg.role === 'user' && (
                   <div className="max-w-[88%] md:max-w-[72%] flex gap-3 items-start flex-row-reverse">
                     {/* User avatar */}
-                    <div className="w-9 h-9 bg-df-grey border-2 border-df-black shadow-[3px_3px_0px_#000000] flex items-center justify-center flex-shrink-0 mt-0.5 dark:bg-zinc-800 dark:border-white">
+                    <div className="w-9 h-9 bg-df-grey border-2 border-df-black shadow-[3px_3px_0px_#000000] flex items-center justify-center flex-shrink-0 mt-0.5 dark:bg-zinc-800 dark:border-neutral-700">
                       <User className="w-4 h-4 text-df-black dark:text-zinc-50" strokeWidth={2} />
                     </div>
                     {/* User bubble — solid black, black offset shadow */}
-                    <div className="bg-df-black text-df-white border-2 border-df-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] px-5 py-4 dark:bg-zinc-800 dark:border-white">
+                    <div className="bg-df-black text-df-white border-2 border-df-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] px-5 py-4 dark:bg-zinc-800 dark:border-neutral-700">
                       <span className="font-mono text-[10px] font-bold text-df-white/40 tracking-[0.08em] block mb-2 select-none">
                         [ YOU ]:
                       </span>
@@ -388,10 +388,10 @@ export default function ChatPage() {
           {isTyping && (
             <div className="flex gap-3 justify-start">
               <div className="flex gap-3 items-start">
-                <div className="w-9 h-9 bg-df-black border-2 border-df-black shadow-[3px_3px_0px_#000000] flex items-center justify-center flex-shrink-0 mt-0.5 dark:border-white dark:bg-zinc-800">
+                <div className="w-9 h-9 bg-df-black border-2 border-df-black shadow-[3px_3px_0px_#000000] flex items-center justify-center flex-shrink-0 mt-0.5 dark:border-neutral-700 dark:bg-zinc-800">
                   <Sparkles className="w-4 h-4 text-df-white" strokeWidth={2} />
                 </div>
-                <div className="bg-df-white border-2 border-df-black shadow-[5px_5px_0px_#000000] px-5 py-4 dark:bg-black dark:border-white">
+                <div className="bg-df-white border-2 border-df-black shadow-[5px_5px_0px_#000000] px-5 py-4 dark:bg-black dark:border-neutral-700">
                   <span className="font-mono text-[10px] font-bold text-df-red tracking-[0.08em] block mb-2 select-none">
                     [ SYSTEM ]:
                   </span>
@@ -404,7 +404,7 @@ export default function ChatPage() {
         </div>
 
         {/* ═══ INPUT CONSOLE (Pinned Bottom) ═══ */}
-        <div className="flex-shrink-0 border-t-2 border-df-black bg-df-white p-4 sm:p-5 dark:border-white dark:bg-black">
+        <div className="flex-shrink-0 border-t-2 border-df-black bg-df-white p-4 sm:p-5 dark:border-neutral-700 dark:bg-black">
           <div className="max-w-3xl mx-auto">
             {/* Guest notice */}
             {isGuest && !isLoading && (
@@ -414,7 +414,7 @@ export default function ChatPage() {
             )}
             <form onSubmit={handleSend} className="flex items-stretch gap-0">
               {/* Input container — industrial terminal style */}
-              <div className="flex-1 border-2 border-df-black bg-df-grey/50 shadow-[3px_3px_0px_#000000] focus-within:shadow-[3px_3px_0px_#E5202E] focus-within:border-df-red transition-none dark:border-white dark:bg-zinc-900">
+              <div className="flex-1 border-2 border-df-black bg-df-grey/50 shadow-[3px_3px_0px_#000000] focus-within:shadow-[3px_3px_0px_#E5202E] focus-within:border-df-red transition-none dark:border-neutral-700 dark:bg-zinc-900">
                 <input
                   id="chat-input"
                   type="text"
@@ -432,7 +432,7 @@ export default function ChatPage() {
                 id="chat-send-button"
                 type="submit"
                 disabled={isTyping || isLoading || !input.trim()}
-                className="w-14 bg-df-red text-df-white border-2 border-df-black border-l-0 flex items-center justify-center shadow-[3px_3px_0px_#000000] hover:bg-df-black active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-none disabled:opacity-30 disabled:active:translate-x-0 disabled:active:translate-y-0 disabled:active:shadow-[3px_3px_0px_#000000] dark:border-white"
+                className="w-14 bg-df-red text-df-white border-2 border-df-black border-l-0 flex items-center justify-center shadow-[3px_3px_0px_#000000] hover:bg-df-black active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-none disabled:opacity-30 disabled:active:translate-x-0 disabled:active:translate-y-0 disabled:active:shadow-[3px_3px_0px_#000000] dark:border-neutral-700"
                 aria-label="Send message"
               >
                 <Send className="w-4 h-4" strokeWidth={2.5} />

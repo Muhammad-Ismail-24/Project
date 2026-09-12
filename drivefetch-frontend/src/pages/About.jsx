@@ -118,22 +118,22 @@ export default function About() {
                 45deg,
                 transparent,
                 transparent 58px,
-                #B3B3B3 58px,
-                #B3B3B3 59px
+                #D4D4D4 58px,
+                #D4D4D4 59px
               ),
               repeating-linear-gradient(
                 -45deg,
                 transparent,
                 transparent 78px,
-                #C4C4C4 78px,
-                #C4C4C4 79px
+                #D4D4D4 78px,
+                #D4D4D4 79px
               ),
               repeating-linear-gradient(
                 30deg,
                 transparent,
                 transparent 68px,
-                #BEBEBE 68px,
-                #BEBEBE 69px
+                #D4D4D4 68px,
+                #D4D4D4 69px
               )
             `,
           }}
@@ -148,7 +148,7 @@ export default function About() {
         <div
           className="absolute inset-0"
           style={{
-            backgroundImage: `radial-gradient(circle, #A3A3A3 1.5px, transparent 1.5px)`,
+            backgroundImage: `radial-gradient(circle, #C0C0C0 1.5px, transparent 1.5px)`,
             backgroundSize: '40px 40px',
           }}
         />
@@ -196,7 +196,7 @@ export default function About() {
 
           {/* Card 1: The Problem */}
           <motion.div {...slideFromLeft}>
-            <div className="bg-white dark:bg-black border-brutal dark:border-white shadow-[8px_8px_0px_#000000] dark:shadow-[8px_8px_0px_#ffffff] p-6 sm:p-8 md:p-10">
+            <div className="bg-white dark:bg-black border-brutal dark:border-neutral-700 shadow-[8px_8px_0px_#000000] dark:shadow-[8px_8px_0px_#404040] p-6 sm:p-8 md:p-10">
               <span className="font-mono text-xs font-bold tracking-[0.1em] text-df-black/40 dark:text-white/40 uppercase block mb-4">
                 [ STATUS: FRAGMENTED ]
               </span>
@@ -211,7 +211,7 @@ export default function About() {
 
           {/* Card 2: The Engine */}
           <motion.div {...slideFromRight}>
-            <div className="bg-white dark:bg-black border-brutal dark:border-white shadow-[8px_8px_0px_#000000] dark:shadow-[8px_8px_0px_#ffffff] p-6 sm:p-8 md:p-10">
+            <div className="bg-white dark:bg-black border-brutal dark:border-neutral-700 shadow-[8px_8px_0px_#000000] dark:shadow-[8px_8px_0px_#404040] p-6 sm:p-8 md:p-10">
               <span className="font-mono text-xs font-bold tracking-[0.1em] text-df-red uppercase block mb-4">
                 [ STATUS: AUTOMATED ]
               </span>
@@ -228,7 +228,7 @@ export default function About() {
 
         {/* ═══ 3. FOUNDER — The ID Badge ═══ */}
         <motion.div {...slideFromLeft}>
-          <div className="bg-black border-2 border-black dark:border-white shadow-[8px_8px_0px_#E5202E] p-6 sm:p-8 md:p-10">
+          <div className="bg-black border-2 border-black dark:border-neutral-700 shadow-[8px_8px_0px_#E5202E] p-6 sm:p-8 md:p-10">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-8">
 
               {/* Photo Placeholder */}
@@ -263,7 +263,7 @@ export default function About() {
             </h2>
             <div className="grid grid-cols-1 gap-6">
               {FAQS.map((faq, idx) => (
-                <div key={idx} className="bg-white dark:bg-black border-2 border-black dark:border-white shadow-[6px_6px_0px_#000000] dark:shadow-[6px_6px_0px_#ffffff] p-6">
+                <div key={idx} className="bg-white dark:bg-black border-2 border-black dark:border-neutral-700 shadow-[6px_6px_0px_#000000] dark:shadow-[6px_6px_0px_#404040] p-6">
                   <h3 className="font-mono text-sm md:text-base font-bold text-df-black dark:text-zinc-50 mb-3 uppercase tracking-wide">
                     Q: {faq.q}
                   </h3>
@@ -278,7 +278,7 @@ export default function About() {
 
         {/* ═══ 5. CONTACT FORM ═══ */}
         <motion.div {...slideFromLeft}>
-          <div className="bg-df-grey dark:bg-zinc-900 border-2 border-black dark:border-white shadow-[8px_8px_0px_#000000] dark:shadow-[8px_8px_0px_#ffffff] p-8 md:p-12 mt-12 md:mt-20">
+          <div className="bg-df-grey dark:bg-zinc-900 border-2 border-black dark:border-neutral-700 shadow-[8px_8px_0px_#000000] dark:shadow-[8px_8px_0px_#404040] p-8 md:p-12 mt-12 md:mt-20">
             <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-df-black dark:text-zinc-50 mb-8">
               [ TRANSMIT MESSAGE ]
             </h2>
@@ -286,23 +286,23 @@ export default function About() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block font-mono text-xs font-bold text-df-black dark:text-zinc-50 uppercase tracking-widest mb-2">NAME</label>
-                  <input required name="name" type="text" maxLength={200} value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="YOUR NAME" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
+                  <input required name="name" type="text" maxLength={200} value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="YOUR NAME" className="w-full bg-white dark:bg-black border-2 border-black dark:border-neutral-700 p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
                 </div>
                 <div>
                   <label className="block font-mono text-xs font-bold text-df-black dark:text-zinc-50 uppercase tracking-widest mb-2">EMAIL</label>
-                  <input required name="email" type="email" maxLength={200} value={formEmail} onChange={(e) => setFormEmail(e.target.value)} placeholder="YOUR EMAIL" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
+                  <input required name="email" type="email" maxLength={200} value={formEmail} onChange={(e) => setFormEmail(e.target.value)} placeholder="YOUR EMAIL" className="w-full bg-white dark:bg-black border-2 border-black dark:border-neutral-700 p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
                 </div>
               </div>
               <div>
                 <label className="block font-mono text-xs font-bold text-df-black dark:text-zinc-50 uppercase tracking-widest mb-2">MESSAGE</label>
-                <textarea required name="message" rows="4" maxLength={200} value={formMessage} onChange={(e) => setFormMessage(e.target.value)} placeholder="ENTER MESSAGE" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
+                <textarea required name="message" rows="4" maxLength={200} value={formMessage} onChange={(e) => setFormMessage(e.target.value)} placeholder="ENTER MESSAGE" className="w-full bg-white dark:bg-black border-2 border-black dark:border-neutral-700 p-3 text-black dark:text-white font-mono text-sm focus:outline-none focus:ring-4 focus:ring-red-600/50 transition-all placeholder-gray-500" />
               </div>
               {submitError && (
                 <div className="font-mono text-xs font-bold text-red-600 dark:text-red-500 bg-red-100 dark:bg-red-900/30 border-2 border-red-600 dark:border-red-500 p-3">
                   [ ERROR ]: {submitError}
                 </div>
               )}
-              <button disabled={isSubmitting || !formName.trim() || !formEmail.trim() || !formMessage.trim()} type="submit" className="w-full bg-red-600 text-white font-black uppercase py-4 border-2 border-black dark:border-white hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0px_0px_rgba(255,255,255,1)] transition-all disabled:opacity-50 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none">
+              <button disabled={isSubmitting || !formName.trim() || !formEmail.trim() || !formMessage.trim()} type="submit" className="w-full bg-red-600 text-white font-black uppercase py-4 border-2 border-black dark:border-neutral-700 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0px_0px_rgba(64,64,64,1)] transition-all disabled:opacity-50 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none">
                 {isSubmitting ? '[ TRANSMITTING... ]' : 'SUBMIT'}
               </button>
             </form>
@@ -315,7 +315,7 @@ export default function About() {
     {/* ═══ THANK YOU MODAL ═══ */}
     {isSubmitted && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-        <div className="bg-white dark:bg-zinc-900 border-4 border-black dark:border-white p-8 max-w-md w-full shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] dark:shadow-[12px_12px_0px_0px_rgba(255,255,255,1)] text-black dark:text-white transition-all">
+        <div className="bg-white dark:bg-zinc-900 border-4 border-black dark:border-neutral-700 p-8 max-w-md w-full shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] dark:shadow-[12px_12px_0px_0px_rgba(64,64,64,1)] text-black dark:text-white transition-all">
           <div className="text-xs font-mono text-red-600 dark:text-red-500 font-bold mb-2">
             // STATUS: 200 OK
           </div>
@@ -327,7 +327,7 @@ export default function About() {
           </p>
           <button
             onClick={() => setIsSubmitted(false)}
-            className="w-full bg-red-600 text-white font-bold uppercase py-3 px-6 border-2 border-black dark:border-white hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] transition-all"
+            className="w-full bg-red-600 text-white font-bold uppercase py-3 px-6 border-2 border-black dark:border-neutral-700 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[4px_4px_0px_0px_rgba(64,64,64,1)] transition-all"
           >
             [ DISMISS ]
           </button>

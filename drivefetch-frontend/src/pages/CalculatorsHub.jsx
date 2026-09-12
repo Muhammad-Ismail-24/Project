@@ -55,7 +55,7 @@ function BrutalSelect({ id, label, value, onChange, options }) {
         id={id}
         value={value}
         onChange={onChange}
-        className="brutal-select w-full p-3 md:p-4 bg-df-white dark:bg-black border-2 border-df-black dark:border-white rounded-none outline-none font-mono text-sm md:text-base font-medium cursor-pointer appearance-none focus:ring-2 focus:ring-df-red focus:border-df-red transition-none text-df-black dark:text-zinc-50"
+        className="brutal-select w-full p-3 md:p-4 bg-df-white dark:bg-black border-2 border-df-black dark:border-neutral-700 rounded-none outline-none font-mono text-sm md:text-base font-medium cursor-pointer appearance-none focus:ring-2 focus:ring-df-red focus:border-df-red transition-none text-df-black dark:text-zinc-50"
         style={{
           backgroundRepeat: 'no-repeat',
           backgroundPosition: 'right 16px center',
@@ -82,7 +82,7 @@ function BrutalRadioGroup({ name, label, value, onChange, options, disabled = fa
             <label
               key={opt.value}
               className={`
-                flex items-center gap-2.5 cursor-pointer px-4 py-3 border-2 border-df-black dark:border-white font-mono text-xs md:text-sm font-bold tracking-wide select-none transition-none
+                flex items-center gap-2.5 cursor-pointer px-4 py-3 border-2 border-df-black dark:border-neutral-700 font-mono text-xs md:text-sm font-bold tracking-wide select-none transition-none
                 ${isSelected ? 'bg-df-black dark:bg-white text-df-white dark:text-black' : 'bg-df-white dark:bg-black text-df-black dark:text-zinc-50 hover:bg-df-grey dark:hover:bg-zinc-800'}
               `}
             >
@@ -209,9 +209,9 @@ export default function CalculatorsHub() {
             whileInView="float"
             viewport={{ once: false, amount: 0.3 }}
             transition={cardTransition}
-            className="group max-w-3xl mx-auto bg-white dark:bg-black border-2 border-df-black dark:border-white transition-all duration-200 hover:border-[#E5202E] hover:ring-2 hover:ring-[#E5202E] focus-within:border-[#E5202E] focus-within:ring-2 focus-within:ring-[#E5202E]"
+            className="group max-w-3xl mx-auto bg-white dark:bg-black border-2 border-df-black dark:border-neutral-700 transition-all duration-200 hover:border-[#E5202E] hover:ring-2 hover:ring-[#E5202E] focus-within:border-[#E5202E] focus-within:ring-2 focus-within:ring-[#E5202E]"
           >
-              <div className="px-6 md:px-8 py-4 md:py-5 border-b-2 border-df-black dark:border-white transition-all duration-200 group-hover:border-b-[#E5202E] group-hover:border-b-4 group-focus-within:border-b-[#E5202E] group-focus-within:border-b-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
+              <div className="px-6 md:px-8 py-4 md:py-5 border-b-2 border-df-black dark:border-neutral-700 transition-all duration-200 group-hover:border-b-[#E5202E] group-hover:border-b-4 group-focus-within:border-b-[#E5202E] group-focus-within:border-b-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
                 <span className="font-mono text-[10px] md:text-xs font-bold tracking-[0.1em] text-df-black/35 dark:text-zinc-50/35">
                   [ TOOL // 01 ]
                 </span>
@@ -259,9 +259,9 @@ export default function CalculatorsHub() {
             whileInView="float"
             viewport={{ once: false, amount: 0.3 }}
             transition={cardTransition}
-            className="group max-w-3xl mx-auto bg-white dark:bg-black border-2 border-df-black dark:border-white transition-all duration-200 hover:border-[#E5202E] hover:ring-2 hover:ring-[#E5202E] focus-within:border-[#E5202E] focus-within:ring-2 focus-within:ring-[#E5202E]"
+            className="group max-w-3xl mx-auto bg-white dark:bg-black border-2 border-df-black dark:border-neutral-700 transition-all duration-200 hover:border-[#E5202E] hover:ring-2 hover:ring-[#E5202E] focus-within:border-[#E5202E] focus-within:ring-2 focus-within:ring-[#E5202E]"
           >
-              <div className="px-6 md:px-8 py-4 md:py-5 border-b-2 border-df-black dark:border-white transition-all duration-200 group-hover:border-b-[#E5202E] group-hover:border-b-4 group-focus-within:border-b-[#E5202E] group-focus-within:border-b-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
+              <div className="px-6 md:px-8 py-4 md:py-5 border-b-2 border-df-black dark:border-neutral-700 transition-all duration-200 group-hover:border-b-[#E5202E] group-hover:border-b-4 group-focus-within:border-b-[#E5202E] group-focus-within:border-b-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
                 <span className="font-mono text-[10px] md:text-xs font-bold tracking-[0.1em] text-df-black/35 dark:text-zinc-50/35">
                   [ TOOL // 02 ]
                 </span>
@@ -292,7 +292,7 @@ export default function CalculatorsHub() {
                     <label className="block font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 dark:text-zinc-50/50 mb-2">
                       Vehicle Invoice Value (PKR)
                     </label>
-                    <div className="w-full p-3 md:p-4 bg-[#E5202E] border-2 border-df-black dark:border-white font-mono text-sm md:text-base font-bold text-white text-center select-none uppercase tracking-wider shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]">
+                    <div className="w-full p-3 md:p-4 bg-[#E5202E] border-2 border-df-black dark:border-neutral-700 font-mono text-sm md:text-base font-bold text-white text-center select-none uppercase tracking-wider shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(64,64,64,1)]">
                       Lifetime Tax (Rs. 20,000)
                     </div>
                   </div>
@@ -308,7 +308,7 @@ export default function CalculatorsHub() {
                       required
                       value={tokenState.invoiceVal}
                       onChange={(e) => tokenSetters.setInvoiceVal(Number(e.target.value))}
-                      className="w-full p-3 md:p-4 bg-df-white dark:bg-black border-2 border-df-black dark:border-white rounded-none outline-none font-mono text-sm md:text-base font-medium focus:ring-2 focus:ring-df-red focus:border-df-red text-df-black dark:text-zinc-50"
+                      className="w-full p-3 md:p-4 bg-df-white dark:bg-black border-2 border-df-black dark:border-neutral-700 rounded-none outline-none font-mono text-sm md:text-base font-medium focus:ring-2 focus:ring-df-red focus:border-df-red text-df-black dark:text-zinc-50"
                       step="100000"
                     />
                   </div>
@@ -361,9 +361,9 @@ export default function CalculatorsHub() {
             whileInView="float"
             viewport={{ once: false, amount: 0.3 }}
             transition={cardTransition}
-            className="group max-w-3xl mx-auto bg-white dark:bg-black border-2 border-df-black dark:border-white transition-all duration-200 hover:border-[#E5202E] hover:ring-2 hover:ring-[#E5202E] focus-within:border-[#E5202E] focus-within:ring-2 focus-within:ring-[#E5202E]"
+            className="group max-w-3xl mx-auto bg-white dark:bg-black border-2 border-df-black dark:border-neutral-700 transition-all duration-200 hover:border-[#E5202E] hover:ring-2 hover:ring-[#E5202E] focus-within:border-[#E5202E] focus-within:ring-2 focus-within:ring-[#E5202E]"
           >
-              <div className="px-6 md:px-8 py-4 md:py-5 border-b-2 border-df-black dark:border-white transition-all duration-200 group-hover:border-b-[#E5202E] group-hover:border-b-4 group-focus-within:border-b-[#E5202E] group-focus-within:border-b-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
+              <div className="px-6 md:px-8 py-4 md:py-5 border-b-2 border-df-black dark:border-neutral-700 transition-all duration-200 group-hover:border-b-[#E5202E] group-hover:border-b-4 group-focus-within:border-b-[#E5202E] group-focus-within:border-b-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
                 <span className="font-mono text-[10px] md:text-xs font-bold tracking-[0.1em] text-df-black/35 dark:text-zinc-50/35">
                   [ TOOL // 03 ]
                 </span>
@@ -394,7 +394,7 @@ export default function CalculatorsHub() {
                     <label className="block font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 dark:text-zinc-50/50 mb-2">
                       Vehicle Invoice Value (PKR)
                     </label>
-                    <div className="w-full p-3 md:p-4 bg-[#E5202E] border-2 border-df-black dark:border-white font-mono text-sm md:text-base font-bold text-white text-center select-none uppercase tracking-wider shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]">
+                    <div className="w-full p-3 md:p-4 bg-[#E5202E] border-2 border-df-black dark:border-neutral-700 font-mono text-sm md:text-base font-bold text-white text-center select-none uppercase tracking-wider shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(64,64,64,1)]">
                       Not Applicable
                     </div>
                   </div>
@@ -410,7 +410,7 @@ export default function CalculatorsHub() {
                       required
                       value={transferState.invoiceVal}
                       onChange={(e) => transferSetters.setInvoiceVal(Number(e.target.value))}
-                      className="w-full p-3 md:p-4 bg-df-white dark:bg-black border-2 border-df-black dark:border-white rounded-none outline-none font-mono text-sm md:text-base font-medium focus:ring-2 focus:ring-df-red focus:border-df-red text-df-black dark:text-zinc-50"
+                      className="w-full p-3 md:p-4 bg-df-white dark:bg-black border-2 border-df-black dark:border-neutral-700 rounded-none outline-none font-mono text-sm md:text-base font-medium focus:ring-2 focus:ring-df-red focus:border-df-red text-df-black dark:text-zinc-50"
                       step="100000"
                     />
                   </div>
@@ -444,7 +444,7 @@ export default function CalculatorsHub() {
                     <div className="flex items-center gap-2">
                       Universal / Replacement Plates Required
                       {transferState.vehicleAge >= 7 && (
-                        <span className="bg-[#E5202E] text-white text-[8px] md:text-[10px] px-2 py-0.5 font-bold uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]">
+                        <span className="bg-[#E5202E] text-white text-[8px] md:text-[10px] px-2 py-0.5 font-bold uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(64,64,64,1)]">
                           [ MANDATORY RETROFIT (PRE-2020) ]
                         </span>
                       )}
@@ -499,7 +499,7 @@ export default function CalculatorsHub() {
           --brutal-shadow: #000000;
         }
         .dark {
-          --brutal-shadow: #ffffff;
+          --brutal-shadow: #404040;
         }
         
         .brutal-select {

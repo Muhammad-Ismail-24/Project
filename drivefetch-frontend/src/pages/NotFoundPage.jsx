@@ -40,7 +40,7 @@ export default function NotFoundPage() {
       </div>
 
       <div className="min-h-[calc(100vh-140px)] flex flex-col items-center justify-center text-left px-4 md:px-8">
-        <div className="bg-df-white dark:bg-black dark:border-white border-brutal shadow-brutal-lg p-8 sm:p-12 md:p-16 max-w-4xl w-full flex flex-col items-start">
+        <div className="bg-df-white dark:bg-black border-brutal shadow-brutal-lg p-8 sm:p-12 md:p-16 max-w-4xl w-full flex flex-col items-start">
           
           {/* Massive Structural Typography */}
           <h1 className="text-[6rem] sm:text-[8rem] md:text-[10rem] lg:text-[12rem] font-black tracking-tighter text-df-black dark:text-zinc-50 leading-none mb-2">

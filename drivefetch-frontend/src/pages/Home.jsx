@@ -129,8 +129,8 @@ function GatewayCard({ card }) {
 
   return (
     <ScrollHoverCard 
-      className="group bg-df-grey dark:bg-black border-brutal flex flex-col shadow-[4px_4px_0px_#000000] dark:shadow-[4px_4px_0px_#ffffff] transition-all duration-200"
-      hoverClass="hover:-translate-y-2 hover:shadow-[8px_8px_0px_#000000] dark:hover:shadow-[8px_8px_0px_#ffffff]"
+      className="group bg-df-grey dark:bg-black border-brutal flex flex-col shadow-[4px_4px_0px_#000000] dark:shadow-[4px_4px_0px_#404040] transition-all duration-200"
+      hoverClass="hover:-translate-y-2 hover:shadow-[8px_8px_0px_#000000] dark:hover:shadow-[8px_8px_0px_#404040]"
     >
       <div className="px-5 sm:px-6 pt-5 sm:pt-6 pb-3">
         <span className="font-mono text-xs sm:text-sm font-bold tracking-[0.1em] text-df-red">
@@ -200,7 +200,7 @@ export default function Home() {
               e.preventDefault();
               document.getElementById('tools-section')?.scrollIntoView({ behavior: 'smooth' });
             }}
-            className="bg-red-600 text-white font-bold uppercase py-3 px-6 border-2 border-black dark:border-white hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] transition-all inline-block mt-8 font-mono text-sm tracking-[0.06em]"
+            className="bg-red-600 text-white font-bold uppercase py-3 px-6 border-2 border-black dark:border-neutral-700 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[4px_4px_0px_0px_rgba(64,64,64,1)] transition-all inline-block mt-8 font-mono text-sm tracking-[0.06em]"
           >
             [ EXPLORE TOOLS ↓ ]
           </a>
@@ -218,7 +218,7 @@ export default function Home() {
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="w-full max-w-[1400px] mx-auto"
         >
-          <div className="border-t-2 border-df-black dark:border-white pt-6 mb-16 sm:mb-20">
+          <div className="border-t-2 border-df-black dark:border-neutral-700 pt-6 mb-16 sm:mb-20">
             <span className="font-mono text-xs sm:text-sm font-bold tracking-[0.08em] text-df-black/50 dark:text-white/50">
               // SECTION 02: CHOOSE YOUR MISSION
             </span>
@@ -243,7 +243,7 @@ export default function Home() {
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="w-full max-w-[1400px] mx-auto"
         >
-          <div className="border-t-2 border-df-black dark:border-white pt-6 mb-16 sm:mb-20">
+          <div className="border-t-2 border-df-black dark:border-neutral-700 pt-6 mb-16 sm:mb-20">
             <span className="font-mono text-xs sm:text-sm font-bold tracking-[0.08em] text-df-black/50 dark:text-white/50">
               // SECTION 03: INTELLIGENCE ENGINE & COVERAGE
             </span>
@@ -271,7 +271,7 @@ export default function Home() {
                 },
               ].map((card) => (
                 <ScrollHoverCard key={card.id} 
-                  className="bg-df-white dark:bg-zinc-900 border-2 border-df-black dark:border-white p-6 shadow-[4px_4px_0px_#000000] dark:shadow-[4px_4px_0px_#ffffff] rounded-none transition-transform duration-200"
+                  className="bg-df-white dark:bg-zinc-900 border-2 border-df-black dark:border-neutral-700 p-6 shadow-[4px_4px_0px_#000000] dark:shadow-[4px_4px_0px_#404040] rounded-none transition-transform duration-200"
                   hoverClass="hover:-translate-y-1"
                 >
                   <div className="font-mono text-[10px] sm:text-xs font-bold tracking-[0.08em] text-df-red mb-3">
@@ -307,7 +307,7 @@ export default function Home() {
 
               {/* LIVE MARKET PULSE */}
               <div className="border-t border-df-black/15 pt-6">
-                <div className="bg-[#F5F5F5] dark:bg-zinc-800 border border-df-black dark:border-white p-4 sm:p-5 w-full">
+                <div className="bg-[#F5F5F5] dark:bg-zinc-800 border border-df-black dark:border-neutral-700 p-4 sm:p-5 w-full">
                   <div className="font-mono text-xs sm:text-sm text-df-black/80 dark:text-white/80 tracking-[0.05em] space-y-2">
                     <div className="flex items-center gap-2">
                       <span>STATUS: MULTI-AGENT SCRAPER [ONLINE]</span>
@@ -375,14 +375,14 @@ function CommandConsoleSection() {
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         className="w-full max-w-[1400px] mx-auto"
       >
-        <div className="border-t-2 border-df-black dark:border-white pt-6 mb-16 sm:mb-20">
+        <div className="border-t-2 border-df-black dark:border-neutral-700 pt-6 mb-16 sm:mb-20">
           <span className="font-mono text-xs sm:text-sm font-bold tracking-[0.08em] text-df-black/50 dark:text-white/50">
             // SECTION 04: EXECUTE SEARCH
           </span>
         </div>
 
         <div className="mb-10 sm:mb-14">
-          <div className="bg-df-white dark:bg-black border-brutal shadow-[8px_8px_0px_#000000] dark:shadow-[8px_8px_0px_#ffffff] flex flex-col sm:flex-row focus-within:ring-2 focus-within:ring-[#E5202E] focus-within:border-[#E5202E]">
+          <div className="bg-df-white dark:bg-black border-brutal shadow-[8px_8px_0px_#000000] dark:shadow-[8px_8px_0px_#404040] flex flex-col sm:flex-row focus-within:ring-2 focus-within:ring-[#E5202E] focus-within:border-[#E5202E]">
             <div className="flex items-center flex-1 px-4 sm:px-6 py-4 sm:py-5 gap-3 sm:gap-4">
               <svg
                 className="w-5 h-5 sm:w-6 sm:h-6 text-df-black/30 dark:text-white/30 shrink-0"
@@ -416,7 +416,7 @@ function CommandConsoleSection() {
                 });
               }}
               disabled={isLoading || !query.trim()}
-              className="px-6 sm:px-8 py-4 sm:py-5 bg-df-red text-df-white font-mono text-xs sm:text-sm font-bold tracking-[0.08em] border-t sm:border-t-0 sm:border-l border-df-black dark:border-white whitespace-nowrap transition-none hover:bg-[#C41A25] active:translate-x-[1px] active:translate-y-[1px] disabled:opacity-60 disabled:cursor-not-allowed"
+              className="px-6 sm:px-8 py-4 sm:py-5 bg-df-red text-df-white font-mono text-xs sm:text-sm font-bold tracking-[0.08em] border-t sm:border-t-0 sm:border-l border-df-black dark:border-neutral-700 whitespace-nowrap transition-none hover:bg-[#C41A25] active:translate-x-[1px] active:translate-y-[1px] disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isLoading ? '[ SEARCHING... ]' : '[ EXECUTE SEARCH ]'}
             </button>
@@ -475,8 +475,8 @@ function CommandConsoleSection() {
                 as="button"
                 key={tool.label}
                 onClick={() => navigate('/calculators')}
-                className="group bg-df-grey dark:bg-black border-brutal-thin px-5 py-5 sm:py-6 text-left flex flex-col gap-2.5 shadow-[3px_3px_0px_0px_#000000] dark:shadow-[3px_3px_0px_0px_#ffffff] transition-shadow duration-100 hover:bg-df-black dark:hover:bg-white"
-                hoverClass="hover:shadow-[5px_5px_0px_0px_#000000] dark:hover:shadow-[5px_5px_0px_0px_#ffffff]"
+                className="group bg-df-grey dark:bg-black border-brutal-thin px-5 py-5 sm:py-6 text-left flex flex-col gap-2.5 shadow-[3px_3px_0px_0px_#000000] dark:shadow-[3px_3px_0px_0px_#404040] transition-shadow duration-100 hover:bg-df-black dark:hover:bg-neutral-200"
+                hoverClass="hover:shadow-[5px_5px_0px_0px_#000000] dark:hover:shadow-[5px_5px_0px_0px_#404040]"
               >
                 <span className="font-mono text-xs sm:text-sm font-bold tracking-[0.06em] text-df-black dark:text-zinc-100 group-hover:text-df-white dark:group-hover:text-black transition-colors duration-[50ms]">
                   [ {tool.label} ]
