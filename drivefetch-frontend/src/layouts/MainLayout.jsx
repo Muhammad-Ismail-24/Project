@@ -169,9 +169,9 @@ function MainLayoutInner() {
             {/* Logo */}
             <Link
               to="/"
-              className="font-mono text-lg sm:text-xl font-bold tracking-tight text-black dark:text-white hover:text-df-red transition-none select-none whitespace-nowrap"
+              className="flex items-center font-mono text-lg sm:text-xl font-bold tracking-tight text-black dark:text-white hover:text-df-red transition-none select-none whitespace-nowrap"
             >
-              <div className="bg-white p-1 rounded-sm flex items-center justify-center"><img src={logo} alt="DriveFetch" className="h-12 w-auto object-contain" /></div>
+              <img src={logo} alt="DriveFetch" className="h-8 w-auto object-contain drop-shadow-md" />
             </Link>
           </div>
 
