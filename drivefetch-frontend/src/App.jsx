@@ -75,10 +75,7 @@ class ChunkErrorBoundary extends React.Component {
             [SYS_UPDATE_DETECTED] — A new version is available.
           </div>
           <button
-            onClick={() => {
-              sessionStorage.removeItem('df-chunk-reload');
-              window.location.reload();
-            }}
+            onClick={() => window.location.replace(window.location.pathname)}
             className="border-2 border-black dark:border-neutral-700 px-6 py-3 font-mono text-sm font-bold uppercase tracking-[0.06em] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[3px_3px_0px_0px_rgba(64,64,64,1)] transition-all"
           >
             [ RELOAD PAGE ]
