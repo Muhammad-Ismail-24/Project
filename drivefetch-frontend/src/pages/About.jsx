@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import SEO from '../components/SEO';
 import { buildAboutSchema } from '../config/seoSchemas';
+import profilePic from '../assets/profile.jpeg';
 import { useTheme } from '../contexts/ThemeContext';
 
 /**
@@ -234,11 +235,7 @@ export default function About() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-8">
 
               {/* Photo Placeholder */}
-              <div className="w-24 h-24 md:w-32 md:h-32 shrink-0 bg-gray-300 border-brutal flex items-center justify-center grayscale contrast-125 overflow-hidden">
-                <span className="font-mono text-[9px] md:text-[10px] font-bold text-df-black/40 dark:text-white/40 tracking-[0.06em] text-center select-none leading-tight px-1">
-                  [ INSERT<br />B&amp;W PHOTO ]
-                </span>
-              </div>
+              <img src={profilePic} alt="Muhammad Ismail" className="w-32 h-32 object-cover grayscale border-2 border-transparent dark:border-neutral-700" />
 
               {/* Info */}
               <div>

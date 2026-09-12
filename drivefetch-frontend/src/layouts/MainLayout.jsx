@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, NavLink, useLocation } from 'react-router-dom';
 import { Menu, X, Bookmark, Settings, LogOut, Sun, Moon } from 'lucide-react';
+import logo from '../assets/DriveFetch-logo.png';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 
@@ -170,7 +171,7 @@ function MainLayoutInner() {
               to="/"
               className="font-mono text-lg sm:text-xl font-bold tracking-tight text-black dark:text-white hover:text-df-red transition-none select-none whitespace-nowrap"
             >
-              [ DRIVEFETCH ]
+              <div className="bg-white p-1 rounded-sm flex items-center justify-center"><img src={logo} alt="DriveFetch" className="h-6 w-auto" /></div>
             </Link>
           </div>
 
