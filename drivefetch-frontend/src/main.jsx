@@ -7,7 +7,11 @@ import App from './App.jsx'
 import * as Sentry from "@sentry/react";
 
 window.addEventListener('vite:preloadError', (event) => {
-  window.location.reload();
+  const isReloaded = sessionStorage.getItem('vite-chunk-reload');
+  if (!isReloaded) {
+    sessionStorage.setItem('vite-chunk-reload', 'true');
+    window.location.reload(true);
+  }
 });
 
 if (import.meta.env.VITE_SENTRY_DSN) {

@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useOutletContext } from 'react-router-dom';
 
 // Import Layout
@@ -41,18 +41,13 @@ class ChunkErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error) {
-    if (error?.message?.includes("Failed to fetch dynamically imported module")) {
-      window.location.reload();
-      return;
-    }
-
     if (ChunkErrorBoundary.isChunkLoadError(error)) {
-      const reloadKey = 'df-chunk-reload';
+      const reloadKey = 'vite-chunk-reload';
 
       // Guard against infinite reload loops: only reload once per session
       if (!sessionStorage.getItem(reloadKey)) {
-        sessionStorage.setItem(reloadKey, '1');
-        window.location.reload();
+        sessionStorage.setItem(reloadKey, 'true');
+        window.location.reload(true);
       }
     }
   }
@@ -74,9 +69,6 @@ class ChunkErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasChunkError) {
-      if (this.state.errorMsg?.includes("Failed to fetch dynamically imported module")) {
-        return null;
-      }
       return (
         <div className="flex h-screen items-center justify-center flex-col gap-6 px-6">
           <div className="font-mono text-xs font-bold tracking-[0.1em] text-df-black/50 dark:text-white/50 uppercase text-center">
@@ -114,6 +106,12 @@ function ProtectedRoute({ children }) {
 }
 
 export default function App() {
+  // Clear the chunk-reload guard after a successful mount.
+  // This resets the mechanism so it's ready for the next deployment.
+  useEffect(() => {
+    sessionStorage.removeItem('vite-chunk-reload');
+  }, []);
+
   return (
     <ChunkErrorBoundary>
       <BrowserRouter>
