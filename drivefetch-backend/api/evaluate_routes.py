@@ -1,6 +1,6 @@
 from core.logger import get_logger
 logger = get_logger(__name__)
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from agents.evaluator import evaluate_single_listing, DEFAULT_AI_ANALYSIS
@@ -23,7 +23,7 @@ class SingleEvalRequest(BaseModel):
 
 @router.post("/evaluate-single")
 @limiter.limit("10/minute")
-async def evaluate_single(request: Request, body: SingleEvalRequest):
+async def evaluate_single(request: Request, response: Response, body: SingleEvalRequest):
     """Evaluate a single car listing using Gemini AI appraisal."""
     try:
         listing_dict = {
