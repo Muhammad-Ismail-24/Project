@@ -320,7 +320,7 @@ export default function Home() {
                   <div className="font-mono text-xs sm:text-sm text-df-black/80 dark:text-white/80 tracking-[0.05em] space-y-2">
                     <div>STATUS: DATA AGGREGATOR [ACTIVE] <span className="text-green-500">■</span></div>
                     <div>LAST SYNC: TODAY AT {syncTime}</div>
-                    <div>ACTIVE LISTINGS: ~12,500 CURRENT</div>
+                    <div>SOURCES CONNECTED: 4 PLATFORMS</div>
                   </div>
                 </div>
               </div>
