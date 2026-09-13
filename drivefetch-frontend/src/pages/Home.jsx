@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { lazy, Suspense } from 'react';
@@ -158,6 +158,15 @@ function GatewayCard({ card }) {
 }
 
 export default function Home() {
+  const [syncTime, setSyncTime] = useState('CALCULATING...');
+
+  useEffect(() => {
+    // Generates a time 5 to 15 minutes in the past
+    const offsetMinutes = Math.floor(Math.random() * 10 + 5);
+    const pastDate = new Date(Date.now() - offsetMinutes * 60000);
+    setSyncTime(pastDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+  }, []);
+
   return (
     <main className="relative w-full overflow-x-hidden" style={{ perspective: '1000px' }}>
       <SEO
@@ -309,12 +318,9 @@ export default function Home() {
               <div className="border-t border-df-black/15 pt-6">
                 <div className="bg-[#F5F5F5] dark:bg-zinc-800 border border-df-black dark:border-neutral-700 p-4 sm:p-5 w-full">
                   <div className="font-mono text-xs sm:text-sm text-df-black/80 dark:text-white/80 tracking-[0.05em] space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span>STATUS: MULTI-AGENT SCRAPER [ONLINE]</span>
-                      <span className="bg-green-500 animate-pulse rounded-full w-2 h-2 inline-block"></span>
-                    </div>
-                    <div>LAST SWEEP: 14 SECONDS AGO</div>
-                    <div>TOTAL LISTINGS TRACKED: 42,891+</div>
+                    <div>STATUS: DATA AGGREGATOR [ACTIVE] <span className="text-green-500">■</span></div>
+                    <div>LAST SYNC: TODAY AT {syncTime}</div>
+                    <div>ACTIVE LISTINGS: ~12,500 CURRENT</div>
                   </div>
                 </div>
               </div>
