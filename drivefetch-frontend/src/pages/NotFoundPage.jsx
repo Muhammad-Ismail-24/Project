@@ -23,14 +23,14 @@ export default function NotFoundPage() {
   };
 
   return (
-    <div className="w-full flex flex-wrap min-h-[calc(100vh-68px)]">
+    <div className="w-full flex flex-wrap min-h-[calc(100vh-72px)]">
       {/* noindex: a soft-404 that Google indexes competes with real pages. */}
       <SEO title="404 · Wrong turn" description="This DriveFetch page could not be found. Head back to the car search to continue." path="/404" noindex />
 
       <section className="flex-[1_1_560px] min-w-0 bg-df-red text-white px-5 sm:px-10 py-12 flex flex-col justify-between gap-10">
         <div className="flex flex-col gap-5">
           <span className="font-mono text-sm font-semibold break-all">ERROR 404 · {pathname}</span>
-          <h1 className="df-display text-[length:clamp(72px,9.5vw,168px)] leading-[0.8]"><SplitText text="Wrong" className="block" /><SplitText text="turn." className="block text-black" start={1} /></h1>
+          <h1 className="df-display text-[length:clamp(72px,9.5vw,172px)] leading-[0.8]"><SplitText text="Wrong" className="block" /><SplitText text="turn." className="block text-black" start={1} /></h1>
           <p data-reveal style={{ '--rd': '250ms' }} className="max-w-[460px] text-[19px] leading-relaxed">This road doesn’t go anywhere. Search for a car instead, or take one of the exits.</p>
           <form onSubmit={onSearch} role="search" data-reveal style={{ '--rd': '400ms' }} className="flex bg-white max-w-[560px]">
             <label htmlFor="nf-q" className="sr-only">Search used cars</label>

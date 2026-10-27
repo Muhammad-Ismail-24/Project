@@ -214,7 +214,7 @@ export default function ChatPage() {
   const initial = (agentName || 'D').trim().charAt(0).toUpperCase();
 
   return (
-    <div className="flex h-[calc(100dvh-64px)] sm:h-[calc(100dvh-68px)] w-full overflow-hidden">
+    <div className="flex h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] w-full overflow-hidden">
       <SEO
         title="Ask DriveFetch AI | Pakistani Car Buying Expert"
         description="Chat with DriveFetch for mechanic tips, real-world fuel averages, auction sheet checks and Pakistan excise transfer rules."
@@ -230,7 +230,7 @@ export default function ChatPage() {
       {!isGuest && (
         <aside
           aria-label="Chat history"
-          className={`fixed md:static top-16 sm:top-[68px] bottom-0 left-0 z-40 w-[280px] shrink-0 flex flex-col bg-df-grey dark:bg-black border-r border-neutral-200 dark:border-zinc-800 transition-transform duration-200 ${
+          className={`fixed md:static top-16 sm:top-[72px] bottom-0 left-0 z-40 w-[280px] shrink-0 flex flex-col bg-df-grey dark:bg-black border-r border-neutral-200 dark:border-zinc-800 transition-transform duration-200 ${
             isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
           }`}
         >
