@@ -1,20 +1,15 @@
-/* ── Google Fonts ── */
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════
-   DRIVEFETCH — Neo-Brutalist / Swiss Utility Design System
+   DRIVEFETCH — "Number plate" design system
+   Palette: white / #F5F5F5 / black / #E5202E (light)
+            zinc-950 / black / zinc-50 / #E5202E (dark)
+   Type:    Archivo (variable width) + JetBrains Mono
    ═══════════════════════════════════════════════════════ */
 
-/* ── Base Reset ── */
 @layer base {
-  *, *::before, *::after {
-    border-radius: 0px !important;
-  }
-
   html {
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
@@ -26,103 +21,95 @@
     padding: 0;
     background-color: #FFFFFF;
     color: #000000;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
     overflow-x: hidden;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition: background-color .25s ease, color .25s ease;
   }
 
   .dark body {
-    background-color: #18181b;
-    color: #f4f4f5;
+    background-color: #09090B;
+    color: #FAFAFA;
   }
 
-  ::selection {
-    background-color: #000000;
-    color: #FFFFFF;
+  ::selection { background-color: #E5202E; color: #FFFFFF; }
+
+  :focus-visible {
+    outline: 3px solid #E5202E;
+    outline-offset: 2px;
   }
 
-  .dark ::selection {
-    background-color: #FFFFFF;
-    color: #000000;
+  input, textarea, select, button { font-family: inherit; }
+
+  summary { list-style: none; cursor: pointer; }
+  summary::-webkit-details-marker { display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .001ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
-/* ── Neo-Brutalist Utility Classes ── */
 @layer components {
-  /* Hard border standard */
-  .border-brutal {
-    border: 2px solid #000000;
+  /* Condensed display type */
+  .df-display {
+    font-weight: 900;
+    text-transform: uppercase;
+    font-stretch: 66%;
+    line-height: .86;
+    letter-spacing: -0.005em;
+    overflow-wrap: break-word;
   }
-  .dark .border-brutal {
-    border-color: #404040;
+  .df-cond { font-stretch: 70%; }
+
+  .df-label {
+    @apply font-mono text-[13px] font-semibold tracking-wide text-neutral-600 dark:text-zinc-400;
+  }
+  .df-muted { @apply text-neutral-600 dark:text-zinc-400; }
+  .df-panel { @apply bg-df-grey dark:bg-black; }
+  .df-line { @apply border-neutral-200 dark:border-zinc-800; }
+  .df-line-strong { @apply border-black dark:border-zinc-700; }
+
+  /* Buttons */
+  .df-btn {
+    @apply inline-flex items-center justify-center gap-2 h-11 px-4 text-sm font-extrabold tracking-wide transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .df-btn-red { @apply df-btn bg-df-red text-white hover:bg-black dark:hover:bg-white dark:hover:text-black; }
+  .df-btn-ink { @apply df-btn bg-black text-white hover:bg-df-red dark:bg-zinc-50 dark:text-black dark:hover:bg-df-red dark:hover:text-white; }
+  .df-btn-outline { @apply df-btn border border-black text-black hover:bg-black hover:text-white dark:border-zinc-700 dark:text-zinc-50 dark:hover:bg-zinc-50 dark:hover:text-black; }
+  .df-btn-ghost { @apply df-btn text-black hover:text-df-red dark:text-zinc-50; }
+
+  /* Inputs */
+  .df-input {
+    @apply h-12 w-full px-4 border-2 border-black bg-white text-black text-base outline-none placeholder:text-neutral-500 focus:border-df-red dark:border-zinc-50 dark:bg-black dark:text-zinc-50 dark:placeholder:text-zinc-500;
+  }
+  .df-select {
+    @apply h-12 w-full px-3 border-2 border-black bg-white text-black text-base font-semibold outline-none focus:border-df-red dark:border-zinc-50 dark:bg-black dark:text-zinc-50;
   }
 
-  .border-brutal-thin {
-    border: 1px solid #000000;
-  }
-  .dark .border-brutal-thin {
-    border-color: rgba(255, 255, 255, 0.15);
-  }
+  /* Ad flags */
+  .df-flag-risk { @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-[13px] font-bold bg-df-red text-white; }
+  .df-flag-warn { @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-[13px] font-bold bg-neutral-200 text-black dark:bg-zinc-800 dark:text-zinc-50; }
+  .df-flag-good { @apply inline-flex items-center gap-1.5 px-2.5 py-[3px] text-[13px] font-bold border border-black text-black dark:border-zinc-600 dark:text-zinc-50; }
 
-  /* Invert hover — instant, no smoothing */
-  .hover-invert {
-    transition: background-color 0.05s step-end, color 0.05s step-end;
-  }
-  .hover-invert:hover {
-    background-color: #000000;
-    color: #FFFFFF;
-  }
-
-  /* Red accent box (for "SKIP" style elements) */
-  .accent-box {
-    display: inline-block;
-    background-color: #E5202E;
-    color: #FFFFFF;
-    padding: 0.05em 0.15em;
-    line-height: 1;
-    vertical-align: baseline;
-  }
-
-  /* Monospace system tags */
-  .sys-tag {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    font-weight: 500;
-    color: rgba(0, 0, 0, 0.12);
-    letter-spacing: 0.04em;
-    user-select: none;
-    pointer-events: none;
-  }
-  .dark .sys-tag {
-    color: rgba(255, 255, 255, 0.12);
-  }
+  /* Typing dots */
+  .df-dot { @apply inline-block w-2 h-2 bg-current animate-df-dot; }
 }
 
-/* ── Fluid Display Typography ── */
-.text-display-hero {
-  font-family: 'Bebas Neue', sans-serif;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.01em;
-  line-height: 0.92;
-  /* Fluid: 48px at 320px → 180px at 1440px */
-  font-size: clamp(3rem, 2rem + 10vw, 11.25rem);
-}
+@keyframes df-road-kf { from { background-position: 0 0; } to { background-position: -80px 0; } }
 
-.text-display-lg {
-  font-family: 'Bebas Neue', sans-serif;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  line-height: 0.95;
-  font-size: clamp(2rem, 1rem + 5vw, 5rem);
-}
-
-.text-display-md {
-  font-family: 'Bebas Neue', sans-serif;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  line-height: 1;
-  font-size: clamp(1.5rem, 1rem + 3vw, 3.5rem);
+@layer utilities {
+  .df-sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+  .df-road-loader {
+    background-image: repeating-linear-gradient(90deg, #E5202E 0 40px, transparent 40px 80px);
+    animation: df-road-kf .6s linear infinite;
+  }
+  .df-no-scrollbar::-webkit-scrollbar { display: none; }
+  .df-no-scrollbar { scrollbar-width: none; }
 }

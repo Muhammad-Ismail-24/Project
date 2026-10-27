@@ -4,6 +4,8 @@ import { BrowserRouter, Routes, Route, Navigate, useOutletContext } from 'react-
 // Import Layout
 import MainLayout from './layouts/MainLayout';
 import FeatureErrorBoundary from './components/FeatureErrorBoundary';
+import { PageLoader } from './components/ui/Loaders';
+import { dismissSplash } from './components/SplashScreen';
 
 // Import Pages
 const Home = lazy(() => import('./pages/Home'));
@@ -41,6 +43,7 @@ class ChunkErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error) {
+    dismissSplash();
     if (ChunkErrorBoundary.isChunkLoadError(error)) {
       const reloadKey = 'vite-chunk-reload';
 
@@ -70,16 +73,20 @@ class ChunkErrorBoundary extends React.Component {
   render() {
     if (this.state.hasChunkError) {
       return (
-        <div className="flex h-screen items-center justify-center flex-col gap-6 px-6">
-          <div className="font-mono text-xs font-bold tracking-[0.1em] text-df-black/50 dark:text-white/50 uppercase text-center">
-            [SYS_UPDATE_DETECTED] — A new version is available.
+        <div role="alert" className="min-h-screen bg-df-red text-white flex flex-col justify-between p-8 sm:p-12">
+          <span className="font-mono text-xs font-semibold">NEW VERSION</span>
+          <div className="flex flex-col gap-6 max-w-2xl">
+            <h1 className="df-display text-[length:clamp(72px,12vw,160px)]">Fresh<br /><span className="text-black">paint.</span></h1>
+            <p className="text-lg leading-relaxed">DriveFetch was updated while this tab was open. Reload to get the new version. Your saved cars are safe.</p>
+            <button
+              type="button"
+              onClick={() => window.location.replace(window.location.pathname)}
+              className="self-start h-14 px-7 bg-black text-white text-base font-extrabold tracking-wide hover:bg-white hover:text-black transition-colors"
+            >
+              Reload
+            </button>
           </div>
-          <button
-            onClick={() => window.location.replace(window.location.pathname)}
-            className="border-2 border-black dark:border-neutral-700 px-6 py-3 font-mono text-sm font-bold uppercase tracking-[0.06em] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[3px_3px_0px_0px_rgba(64,64,64,1)] transition-all"
-          >
-            [ RELOAD PAGE ]
-          </button>
+          <span className="text-sm">If this keeps happening, clear the cache for this site.</span>
         </div>
       );
     }
@@ -95,7 +102,7 @@ function ProtectedRoute({ children }) {
   const isAuthenticated = context?.isAuthenticated ?? false;
 
   if (isLoading) {
-    return <div className="flex h-screen items-center justify-center font-mono text-xs font-bold tracking-[0.1em] text-df-black/40 uppercase">[LOADING_AUTH]</div>;
+    return <PageLoader label="Checking your sign-in…" />;
   }
   
   if (!isAuthenticated) {
@@ -115,7 +122,7 @@ export default function App() {
   return (
     <ChunkErrorBoundary>
       <BrowserRouter>
-        <Suspense fallback={<div className="flex h-screen items-center justify-center font-mono text-xs font-bold tracking-[0.1em] text-df-black/40 dark:text-white/40 uppercase">[LOADING_SYS]</div>}>
+        <Suspense fallback={<PageLoader label="Loading…" />}>
           <Routes>
             <Route path="/" element={<MainLayout />}>
               {/* Default Route */}

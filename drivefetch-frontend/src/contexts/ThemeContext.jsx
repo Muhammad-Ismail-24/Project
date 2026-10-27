@@ -77,8 +77,16 @@ export function ThemeProvider({ children, user }) {
     });
   }, [syncThemeToDB]);
 
+  const chooseTheme = useCallback((next) => {
+    if (next !== 'dark' && next !== 'light') return;
+    setTheme((prev) => {
+      if (prev !== next) syncThemeToDB(next);
+      return next;
+    });
+  }, [syncThemeToDB]);
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, chooseTheme }}>
       {children}
     </ThemeContext.Provider>
   );
