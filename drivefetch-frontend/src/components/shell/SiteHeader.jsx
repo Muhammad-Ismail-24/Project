@@ -7,18 +7,8 @@ import { useScrollTo } from '../motion/SmoothScroll';
 const logo = '/drivefetch-logo.png';
 const logoWhite = '/drivefetch-logo-white.png';
 
-const PAGES = {
-  '/': ['01', 'Discover'],
-  '/recommend': ['02', 'Matchmaker'],
-  '/chat': ['03', 'Chat'],
-  '/calculators': ['04', 'Calculators'],
-  '/saved': ['05', 'Saved cars'],
-  '/about': ['06', 'About'],
-  '/privacy': ['—', 'Privacy'],
-};
-
 /**
- * Top bar. Left: the menu icon, then the logo. Middle: the current page.
+ * Top bar. Left: the menu icon, then the logo.
  * Right: a Discover button (always one click from the search), a Google
  * sign-in button (only when signed out) and the theme toggle.
  * Every page, the account and settings live in the menu.
@@ -32,7 +22,6 @@ export default function SiteHeader({ isAuthenticated, isLoading, menuOpen, onTog
   const { pathname } = useLocation();
   const [hidden, setHidden] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const page = PAGES[pathname];
   const scrollTo = useScrollTo();
 
   // Already on Discover: take the user back up to the search box instead.
@@ -76,8 +65,8 @@ export default function SiteHeader({ isAuthenticated, isLoading, menuOpen, onTog
 
   return (
     <header className={`df-header sticky top-0 ${menuOpen ? 'z-[85]' : 'z-50'} border-b ${chrome} ${isHidden ? 'is-hidden' : ''}`}>
-      <div className="px-4 sm:px-6 lg:px-10 h-16 sm:h-[72px] grid grid-cols-[1fr_auto] md:grid-cols-[1fr_auto_1fr] items-center gap-4">
-        <div className="justify-self-start flex items-center gap-2.5 sm:gap-5">
+      <div className="px-4 sm:px-6 lg:px-10 h-16 sm:h-[72px] flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5 sm:gap-5">
           <button
             type="button"
             onClick={onToggleMenu}
@@ -114,18 +103,7 @@ export default function SiteHeader({ isAuthenticated, isLoading, menuOpen, onTog
           </Link>
         </div>
 
-        {/* Where you are. Rolls to the new name on every page change. */}
-        <div aria-hidden="true" className={`hidden md:flex items-center gap-3 font-mono text-[13px] font-semibold tracking-[0.1em] uppercase transition-opacity duration-300 ${menuOpen ? 'opacity-0' : ''}`}>
-          {page ? (
-            <span key={pathname} className="flex items-center gap-3 animate-df-fade-up">
-              <span className="text-df-red-dark dark:text-df-red">{page[0]}</span>
-              <span className="w-6 h-px bg-current opacity-40" />
-              <span>{page[1]}</span>
-            </span>
-          ) : null}
-        </div>
-
-        <div className="justify-self-end flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link
             to="/"
             onClick={onDiscover}
