@@ -158,8 +158,8 @@ export default function MainLayout() {
         </a>
         <div className="relative min-h-screen flex flex-col bg-white text-black dark:bg-df-night dark:text-zinc-50 font-body transition-colors duration-200">
           <SiteHeader
-            user={user}
             isAuthenticated={isAuthenticated}
+            isLoading={isLoading}
             menuOpen={isMenuOpen}
             onToggleMenu={toggleMenu}
           />
