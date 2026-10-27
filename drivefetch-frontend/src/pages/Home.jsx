@@ -169,7 +169,7 @@ export default function Home() {
 
       {/* ═══ HERO: one headline, one search box ═══ */}
       <section id="search" className="relative bg-df-red text-white overflow-hidden">
-        <div className="px-5 sm:px-10 pt-12 sm:pt-16 pb-8 sm:pb-10 min-h-[calc(100svh-64px)] sm:min-h-[calc(100svh-68px)] flex flex-col">
+        <div className="px-5 sm:px-10 pt-12 sm:pt-16 pb-8 sm:pb-10 min-h-[calc(100svh-64px)] sm:min-h-[calc(100svh-72px)] flex flex-col">
           <span data-reveal="fade" className="font-mono text-[13px] font-semibold tracking-[0.08em]">USED CARS · PAKISTAN · 7 SITES</span>
           <h1 className="df-display mt-6 sm:mt-8 text-[length:clamp(58px,10.2vw,172px)]" data-parallax="0.08">
             <SplitText text="Find the right car." className="block" />

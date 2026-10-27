@@ -30,6 +30,7 @@ export default {
         'df-road': { from: { backgroundPosition: '0 0' }, to: { backgroundPosition: '-80px 0' } },
         'df-dot': { '0%, 80%, 100%': { opacity: '.25' }, '40%': { opacity: '1' } },
         'df-pulse': { '0%, 100%': { opacity: '.4' }, '50%': { opacity: '1' } },
+        'df-spin-in': { from: { opacity: '0', transform: 'rotate(-90deg) scale(.6)' }, to: { opacity: '1', transform: 'none' } },
       },
       animation: {
         'df-fade-up': 'df-fade-up .3s ease-out both',
@@ -39,6 +40,7 @@ export default {
         'df-road': 'df-road .6s linear infinite',
         'df-dot': 'df-dot 1.2s infinite',
         'df-pulse': 'df-pulse 1.6s infinite',
+        'df-spin-in': 'df-spin-in .5s cubic-bezier(.19,1,.22,1) both',
       },
     },
   },

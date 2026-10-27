@@ -270,7 +270,7 @@ html.df-loading #df-header-logo { opacity: 0; }
   transition-delay: calc(.32s + var(--i, 0) * 60ms);
 }
 .df-menu.is-open .df-mi { transform: none; }
-.df-menu.is-leaving .df-mi { transform: translate3d(0, -110%, 0); transition-duration: .5s; transition-delay: calc(var(--i, 0) * 30ms); }
+.df-menu.is-leaving .df-mi { animation: none; transform: translate3d(0, -110%, 0); transition-duration: .5s; transition-delay: calc(var(--i, 0) * 30ms); }
 
 .df-menu .df-mfade { opacity: 0; transform: translate3d(0, 16px, 0); transition: opacity .6s ease, transform .8s var(--ease-out-expo); transition-delay: .7s; }
 .df-menu.is-open .df-mfade { opacity: 1; transform: none; }
@@ -280,6 +280,27 @@ html.df-loading #df-header-logo { opacity: 0; }
 .df-menu .df-mline { transform: scaleX(0); transform-origin: left; transition: transform 1s var(--ease-io-quart); transition-delay: calc(.3s + var(--i, 0) * 60ms); }
 .df-menu.is-open .df-mline { transform: scaleX(1); }
 .df-menu.is-leaving .df-mline { transform: scaleX(0); transform-origin: right; transition-duration: .5s; transition-delay: 0s; }
+
+/* Settings rows rise in after the layers land */
+.df-menu .df-mrow { opacity: 0; transform: translate3d(0, 24px, 0); transition: opacity .6s ease, transform .9s var(--ease-out-expo); transition-delay: calc(.35s + var(--i, 0) * 70ms); }
+.df-menu.is-open .df-mrow { opacity: 1; transform: none; }
+.df-menu.is-leaving .df-mrow { opacity: 0; transition: none; animation: df-mfade-out .3s ease both; }
+
+/* Swapping between the page list and Settings inside the open menu */
+.df-view { transition: opacity .26s ease, transform .3s var(--ease-io-cubic); }
+.df-view.df-view-exit { opacity: 0; transform: translate3d(0, -18px, 0); }
+.df-view-enter .df-mi { animation: df-mask-in .8s var(--ease-io-cubic) both; animation-delay: calc(var(--i, 0) * 45ms); }
+.df-view-enter .df-mrow { animation: df-row-in .75s var(--ease-out-expo) both; animation-delay: calc(var(--i, 0) * 60ms); }
+.df-view-enter .df-mline { transition-delay: calc(var(--i, 0) * 45ms); }
+@keyframes df-mask-in { from { transform: translate3d(0, 110%, 0); } to { transform: none; } }
+@keyframes df-row-in { from { opacity: 0; transform: translate3d(0, 24px, 0); } to { opacity: 1; transform: none; } }
+
+/* Menu button fills red from the bottom on hover */
+.df-menu-btn { position: relative; isolation: isolate; overflow: hidden; transition: color .35s var(--ease-io-cubic), background-color .3s ease .12s; }
+.df-menu-btn::before { content: ''; position: absolute; inset: 0; z-index: -1; background: #E5202E; transform: translate3d(0, 101%, 0); transition: transform .45s var(--ease-io-cubic); }
+.df-menu-btn:hover::before, .df-menu-btn:focus-visible::before { transform: none; }
+.df-menu-btn:hover, .df-menu-btn:focus-visible { color: #FFF; }
+.df-menu-btn.is-active::before { background: #000; }
 
 /* Dim the other links while one is hovered */
 @media (hover: hover) {

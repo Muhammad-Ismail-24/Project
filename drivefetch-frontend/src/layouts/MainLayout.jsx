@@ -5,14 +5,13 @@ import UIContext from '../contexts/UIContext';
 import SiteHeader from '../components/shell/SiteHeader';
 import SiteFooter from '../components/shell/SiteFooter';
 import SiteMenu from '../components/shell/SiteMenu';
-import AccountPanel from '../components/shell/AccountPanel';
 import SignInSheet from '../components/shell/SignInSheet';
 import SplashScreen from '../components/SplashScreen';
 import { useScrollLock } from '../components/motion/SmoothScroll';
 
 export default function MainLayout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const [menuView, setMenuView] = useState('main'); // which view the menu opens on
   const [signInReason, setSignInReason] = useState(null); // null = closed
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
@@ -24,12 +23,11 @@ export default function MainLayout() {
   // Close overlays on route change
   useEffect(() => {
     setIsMenuOpen(false);
-    setIsAccountOpen(false);
     setSignInReason(null);
   }, [location.pathname]);
 
   // Pause scrolling (Lenis and native) while any overlay is open
-  const overlayOpen = isMenuOpen || isAccountOpen || signInReason !== null;
+  const overlayOpen = isMenuOpen || signInReason !== null;
   useEffect(() => {
     if (overlayOpen) lock('overlay');
     else unlock('overlay');
@@ -133,12 +131,16 @@ export default function MainLayout() {
 
   const openSignIn = useCallback((reason = 'generic') => {
     setIsMenuOpen(false);
-    setIsAccountOpen(false);
     setSignInReason(reason);
   }, []);
+  // Account and settings live inside the menu now.
   const openAccount = useCallback(() => {
-    setIsMenuOpen(false);
-    setIsAccountOpen(true);
+    setMenuView('settings');
+    setIsMenuOpen(true);
+  }, []);
+  const toggleMenu = useCallback(() => {
+    setMenuView('main');
+    setIsMenuOpen((v) => !v);
   }, []);
 
   const uiValue = useMemo(() => ({
@@ -158,11 +160,8 @@ export default function MainLayout() {
           <SiteHeader
             user={user}
             isAuthenticated={isAuthenticated}
-            isLoading={isLoading}
             menuOpen={isMenuOpen}
-            onToggleMenu={() => setIsMenuOpen((v) => !v)}
-            onOpenAccount={openAccount}
-            onOpenSignIn={() => openSignIn('generic')}
+            onToggleMenu={toggleMenu}
           />
 
           <main id="main" className="relative flex-grow flex flex-col">
@@ -174,15 +173,10 @@ export default function MainLayout() {
 
         <SiteMenu
           open={isMenuOpen}
+          initialView={menuView}
           onClose={() => setIsMenuOpen(false)}
+          onNavigateSame={() => setIsMenuOpen(false)}
           isAuthenticated={isAuthenticated}
-          user={user}
-          onOpenSignIn={() => openSignIn('generic')}
-          onOpenAccount={openAccount}
-        />
-        <AccountPanel
-          open={isAccountOpen}
-          onClose={() => setIsAccountOpen(false)}
           user={user}
           assistantName={assistantName}
           onSaveAssistantName={saveAssistantName}
