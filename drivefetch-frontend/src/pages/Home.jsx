@@ -1,502 +1,417 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion, useScroll, useTransform } from 'framer-motion';
-import { lazy, Suspense } from 'react';
-const DynamicBackground = lazy(() => import('../components/DynamicBackground'));
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import SEO from '../components/SEO';
 import { homeSchema } from '../config/seoSchemas';
-import { searchCars } from '../utils/api';
+import { searchCars, searchCarsStream } from '../utils/api';
 import CarResultCard from '../components/CarResultCard';
 import FeatureErrorBoundary from '../components/FeatureErrorBoundary';
+import Plate from '../components/ui/Plate';
+import SplitText from '../components/motion/SplitText';
+import useCountUp from '../components/motion/useCountUp';
+import { useScrollTo } from '../components/motion/SmoothScroll';
+import { HeroSearchInput, CtaCard, AdScanDemo, MatchDemo, ChatDemo } from '../components/home/HomeParts';
+import { formatLac, toRupees, stripEmoji } from '../utils/cityMeta';
+import { VehicleTaxAgent } from '../agents/calculators/VehicleTaxAgent';
+import { FuelCostAgent } from '../agents/calculators/FuelCostAgent';
 
-/**
- * Floating monospace system tags scattered in the background.
- * Matches the reference mockup's "[SYS_INIT]", "[DRIVE_DATA]", "[FETCH_STATUS]" style.
- */
-const SYSTEM_TAGS = [
-  { label: '[DRIVE_DATA]', top: '8%',  left: '30%'  },
-  { label: '[SYS_INIT]',   top: '22%', left: '8%'   },
-  { label: '[SYS_INIT]',   top: '14%', right: '12%' },
-  { label: '[DRIVE_DATA]', top: '16%', right: '4%'  },
-  { label: '[SYS_INIT]',   top: '78%', left: '2%'   },
-  { label: '[SYS_INIT]',   top: '82%', left: '8%'   },
-  { label: '[DRIVE_DATA]', top: '80%', left: '50%'  },
-  { label: '[FETCH_STATUS]', top: '82%', right: '8%' },
-  { label: '[DRIVE_DATA]', top: '76%', left: '2%'   },
+const SOURCES = ['PakWheels', 'OLX', 'Gari.pk', 'Drive.pk', 'FameWheels', 'AutoDeals', 'WiseWheels'];
+const PLATES = [['PUNJAB', 'LHR 2019'], ['ISLAMABAD', 'ISB 2021'], ['SINDH', 'KHI 2018'], ['PUNJAB', 'RWP 2020'], ['PUNJAB', 'FSD 2017'], ['PUNJAB', 'MUX 2022'], ['KPK', 'PEW 2016']];
+
+const SORTS = [
+  { id: 'best', label: 'Best match' },
+  { id: 'price', label: 'Lowest price' },
+  { id: 'year', label: 'Newest' },
 ];
 
-/**
- * ScrollHoverCard — Handles Neo-Brutalist hover physics on mobile scroll.
- */
-function ScrollHoverCard({ as = 'div', className, hoverClass, children, ...props }) {
-  const [inView, setInView] = useState(false);
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  
-  // Combine base classes and active mobile-hover classes (stripping 'hover:' prefix for mobile)
-  const activeHover = hoverClass.split(' ').map(c => c.replace(/^hover:/, '')).join(' ');
-  const finalClass = `${className} ${isMobile && inView ? activeHover : hoverClass}`;
+const FEATURES = [
+  ['Condition scanner', 'If a seller says “genuine” but mentions a “shower”, the ad gets flagged, with the exact words shown.'],
+  ['Fair price check', 'Every car is compared with similar live ads, so you know when an asking price is high.'],
+  ['Risk detection', 'Duplicate files, odd mileage and pressure tactics are caught before you call the seller.'],
+];
 
-  const MotionTag = motion[as];
+/** Worked example for the cost band, calculated with the same engine as /calculators. */
+function useCostExample() {
+  return useMemo(() => {
+    const price = 4750000;
+    const tax = VehicleTaxAgent.calculate({ province: 'PUNJAB', engineCc: 1800, invoiceVal: price, vehicleAge: 6, isFiler: true, isTransfer: true, paymentDate: new Date() });
+    const fuel = FuelCostAgent.calculate({ cc: 1800, dailyKm: 40 });
+    const total = price + tax.totalPayable + fuel.monthlyCost * 12;
+    return { total, priceLac: formatLac(price) };
+  }, []);
+}
 
+/** Endless row of plates. Two copies side by side so the loop is seamless. */
+function Marquee({ items, reverse = false, duration = 40 }) {
   return (
-    <MotionTag
-      onViewportEnter={() => isMobile && setInView(true)}
-      onViewportLeave={() => isMobile && setInView(false)}
-      viewport={{ amount: 0.5, margin: "0px 0px -15% 0px" }}
-      className={finalClass}
-      {...props}
-    >
+    <div className="df-marquee overflow-hidden" aria-hidden="true">
+      <div className="df-marquee-track flex w-max" style={{ '--marquee-dur': `${duration}s`, animationDirection: reverse ? 'reverse' : 'normal' }}>
+        {[0, 1].map((copy) => (
+          <div key={copy} className="flex gap-4 sm:gap-6 pr-4 sm:pr-6 py-2">
+            {items.map(([top, main], i) => <Plate key={`${copy}-${i}`} top={top} main={main} size="lg" />)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SectionLabel({ children, className = '' }) {
+  return (
+    <span data-reveal="fade" className={`flex items-center gap-3 font-mono text-[13px] font-semibold tracking-[0.08em] ${className}`}>
+      <span data-reveal="line" className="w-8 h-[2px] bg-df-red" />
       {children}
-    </MotionTag>
-  );
-}
-
-
-function SystemTags() {
-  return (
-    <>
-      {SYSTEM_TAGS.map((tag, i) => (
-        <span
-          key={i}
-          className="sys-tag absolute"
-          style={{
-            top: tag.top,
-            left: tag.left,
-            right: tag.right,
-          }}
-        >
-          {tag.label}
-        </span>
-      ))}
-    </>
-  );
-}
-
-/**
- * Gateway card data — each card maps to a tool/route.
- * Card 1 scrolls to Section 4. Cards 2 & 3 navigate via router.
- */
-const GATEWAY_CARDS = [
-  {
-    index: '01',
-    tag: 'MANUAL',
-    headline: '[ DIRECT SEARCH ]',
-    body: 'Query the full market yourself. Filter by make, model, price, year — raw access to every listing we track.',
-    action: 'scroll',
-    target: '#console',
-  },
-  {
-    index: '02',
-    tag: 'MATCH',
-    headline: '[ AI MATCHMAKER ]',
-    body: 'Tell our engine what you need. It cross-references specs, flags risk, and ranks the best options for you.',
-    action: 'route',
-    target: '/recommend',
-  },
-  {
-    index: '03',
-    tag: 'CHAT',
-    headline: '[ ASSISTANT CHAT ]',
-    body: 'Talk to DriveFetch like a human. Ask questions, compare trims, get instant verdicts in natural language.',
-    action: 'route',
-    target: '/chat',
-  },
-];
-
-/**
- * Financial tools teaser cards — route to /calculators.
- */
-const FINANCIAL_TOOLS = [
-  { label: 'FUEL COST ESTIMATOR', desc: 'Monthly fuel spend based on your commute and engine.' },
-  { label: 'TOKEN TAX BRACKETS', desc: 'Punjab & Sindh token tax by engine capacity.' },
-  { label: 'TRANSFER FEES CALCULATOR', desc: 'Excise, withholding tax, filer vs non-filer.' },
-];
-
-/**
- * GatewayCard — Neo-Brutalist CTA card.
- */
-function GatewayCard({ card }) {
-  const navigate = useNavigate();
-
-  const handleClick = () => {
-    if (card.action === 'scroll') {
-      const el = document.querySelector(card.target);
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
-    } else {
-      navigate(card.target);
-    }
-  };
-
-  return (
-    <ScrollHoverCard 
-      className="group bg-df-grey dark:bg-black border-brutal flex flex-col shadow-[4px_4px_0px_#000000] dark:shadow-[4px_4px_0px_#404040] transition-all duration-200"
-      hoverClass="hover:-translate-y-2 hover:shadow-[8px_8px_0px_#000000] dark:hover:shadow-[8px_8px_0px_#404040]"
-    >
-      <div className="px-5 sm:px-6 pt-5 sm:pt-6 pb-3">
-        <span className="font-mono text-xs sm:text-sm font-bold tracking-[0.1em] text-df-red">
-          {card.index} / {card.tag}
-        </span>
-      </div>
-      <div className="px-5 sm:px-6 flex-1 flex flex-col">
-        <h3 className="text-xl md:text-2xl font-bold text-df-black dark:text-zinc-100 mb-3 sm:mb-4">
-          {card.headline}
-        </h3>
-        <p className="font-body text-sm sm:text-base text-df-black/60 dark:text-white/60 leading-relaxed mb-6 sm:mb-8">
-          {card.body}
-        </p>
-      </div>
-      <div className="px-5 sm:px-6 pb-5 sm:pb-6 mt-auto">
-        <button
-          onClick={handleClick}
-          className="w-full px-4 py-3 sm:py-3.5 border-brutal-thin bg-df-white dark:bg-zinc-900 text-df-black dark:text-zinc-100 font-mono text-xs sm:text-sm font-bold tracking-[0.06em] transition-all duration-100 hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black hover:shadow-none active:translate-x-[2px] active:translate-y-[2px]"
-        >
-          [ LAUNCH TOOL → ]
-        </button>
-      </div>
-    </ScrollHoverCard>
+    </span>
   );
 }
 
 export default function Home() {
-  const [syncTime, setSyncTime] = useState('CALCULATING...');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialQ = searchParams.get('q') || '';
+  const [query, setQuery] = useState(initialQ);
+  const [phase, setPhase] = useState('idle'); // idle | searching | done | error
+  const [statusLine, setStatusLine] = useState('');
+  const [results, setResults] = useState([]);
+  const [error, setError] = useState('');
+  const [lastQuery, setLastQuery] = useState('');
+  const [sort, setSort] = useState('best');
+  const requestId = useRef(0);
+  const inputRef = useRef(null);
+  const cost = useCostExample();
+  const [costRef, costNow] = useCountUp(cost.total, { duration: 1800 });
+  const scrollTo = useScrollTo();
 
-  useEffect(() => {
-    // Generates a time 5 to 15 minutes in the past
-    const offsetMinutes = Math.floor(Math.random() * 10 + 5);
-    const pastDate = new Date(Date.now() - offsetMinutes * 60000);
-    setSyncTime(pastDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+  const runSearch = useCallback(async (raw) => {
+    const q = String(raw || '').trim();
+    if (!q) {
+      inputRef.current?.focus();
+      return;
+    }
+    const id = ++requestId.current;
+    setPhase('searching');
+    setStatusLine('Reading your search…');
+    setResults([]);
+    setError('');
+    setLastQuery(q);
+    setSort('best');
+
+    let finished = false;
+    try {
+      await searchCarsStream(q, (msg) => {
+        if (id !== requestId.current || !msg || typeof msg !== 'object') return;
+        if (msg.error) {
+          finished = true;
+          setError(String(msg.error));
+          setPhase('error');
+          return;
+        }
+        if (msg.status === 'done') {
+          finished = true;
+          setResults(Array.isArray(msg.results) ? msg.results : []);
+          setPhase('done');
+          return;
+        }
+        if (msg.status) setStatusLine(stripEmoji(msg.status));
+      });
+      if (!finished && id === requestId.current) {
+        // Stream ended without a result (old backend or proxy buffering): fall back to the plain endpoint.
+        const data = await searchCars(q);
+        if (id !== requestId.current) return;
+        setResults(Array.isArray(data) ? data : []);
+        setPhase('done');
+      }
+    } catch (err) {
+      if (id !== requestId.current) return;
+      console.error('Search failed:', err instanceof Error ? err.message : 'Unknown error');
+      setError('Search failed. Check your connection and try again.');
+      setPhase('error');
+    }
   }, []);
 
+  // Run the search in the URL (?q=) on load, so searches can be shared.
+  useEffect(() => {
+    if (initialQ) runSearch(initialQ);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Bring the results into view when a search finishes.
+  useEffect(() => {
+    if (phase !== 'done') return undefined;
+    const t = setTimeout(() => scrollTo('#results', { offset: -72 }), 250);
+    return () => clearTimeout(t);
+  }, [phase, scrollTo]);
+
+  const onSubmit = (e) => {
+    e.preventDefault();
+    const q = query.trim();
+    if (q) setSearchParams({ q }, { replace: false });
+    runSearch(q);
+  };
+
+  const focusSearch = () => {
+    scrollTo(0);
+    setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 700);
+  };
+
+  const sorted = useMemo(() => {
+    const list = [...results];
+    if (sort === 'price') list.sort((a, b) => (toRupees(a.price) ?? Infinity) - (toRupees(b.price) ?? Infinity));
+    if (sort === 'year') list.sort((a, b) => (parseInt(b.year, 10) || 0) - (parseInt(a.year, 10) || 0));
+    return list;
+  }, [results, sort]);
+
   return (
-    <main className="relative w-full overflow-x-hidden" style={{ perspective: '1000px' }}>
+    <div className="w-full">
       <SEO
         path="/"
-        description="Find the perfect used car in Pakistan with DriveFetch. Real-time multi-platform search aggregating PakWheels, OLX & Gari.pk with AI-powered inspection and pricing insights."
+        description="Find the right used car in Pakistan. DriveFetch searches PakWheels, OLX, Gari.pk and four more sites at once, then reads every ad for resprays, duplicate files and overpricing."
         schema={homeSchema}
       />
 
-      {/* Scroll-Linked SVG Background (Framer Motion) */}
-      <Suspense fallback={null}>
-        <DynamicBackground />
-      </Suspense>
-
-      {/* ═══════════════════════════════════════════════
-          SECTION 1 — HERO
-          ═══════════════════════════════════════════════ */}
-      <section
-        id="hero"
-        className="relative z-10 flex items-center justify-center py-16 md:py-24 px-5 sm:px-8 lg:px-12"
-      >
-        <SystemTags />
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9, rotateX: 15, y: 80 }}
-          whileInView={{ opacity: 1, scale: 1, rotateX: 0, y: 0 }}
-          viewport={{ once: false, margin: "-10%" }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full max-w-[1400px] mx-auto origin-center"
-        >
-          <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[5.5rem] leading-[0.95] tracking-tight font-black text-df-black dark:text-zinc-100">
-            <span className="block">FIND THE RIGHT CAR.</span>
-            <span className="block">
-              <span className="text-[#E5202E] font-bold">SKIP</span>
-              {' '}THE WRONG ONES.
-            </span>
+      {/* ═══ HERO: one headline, one search box ═══ */}
+      <section id="search" className="relative bg-df-red text-white overflow-hidden">
+        <div className="px-5 sm:px-10 pt-12 sm:pt-16 pb-8 sm:pb-10 min-h-[calc(100svh-64px)] sm:min-h-[calc(100svh-68px)] flex flex-col">
+          <span data-reveal="fade" className="font-mono text-[13px] font-semibold tracking-[0.08em]">USED CARS · PAKISTAN · 7 SITES</span>
+          <h1 className="df-display mt-6 sm:mt-8 text-[length:clamp(58px,10.2vw,172px)]" data-parallax="0.08">
+            <SplitText text="Find the right car." className="block" />
+            <SplitText text="Skip the wrong ones." className="block text-black" start={4} />
           </h1>
-          <a
-            href="#tools-section"
-            onClick={(e) => {
-              e.preventDefault();
-              document.getElementById('tools-section')?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className="bg-red-600 text-white font-bold uppercase py-3 px-6 border-2 border-black dark:border-neutral-700 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[4px_4px_0px_0px_rgba(64,64,64,1)] transition-all inline-block mt-8 font-mono text-sm tracking-[0.06em]"
-          >
-            [ EXPLORE TOOLS ↓ ]
-          </a>
-        </motion.div>
-      </section>
 
-      {/* ═══════════════════════════════════════════════
-          SECTION 2 — GATEWAY CTAs
-          ═══════════════════════════════════════════════ */}
-      <section id="tools-section" className="relative z-10 py-16 md:py-24 px-5 sm:px-8 lg:px-12">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9, rotateX: 15, y: 80 }}
-          whileInView={{ opacity: 1, scale: 1, rotateX: 0, y: 0 }}
-          viewport={{ once: false, margin: "-10%" }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full max-w-[1400px] mx-auto"
-        >
-          <div className="border-t-2 border-df-black dark:border-neutral-700 pt-6 mb-16 sm:mb-20">
-            <span className="font-mono text-xs sm:text-sm font-bold tracking-[0.08em] text-df-black/50 dark:text-white/50">
-              // SECTION 02: CHOOSE YOUR MISSION
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-            {GATEWAY_CARDS.map((card) => (
-              <GatewayCard key={card.index} card={card} />
-            ))}
-          </div>
-        </motion.div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════
-          SECTION 3 — INTELLIGENCE ENGINE & MARKET COVERAGE
-          ═══════════════════════════════════════════════ */}
-      <section id="engine" className="relative z-10 py-16 md:py-24 px-5 sm:px-8 lg:px-12">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9, rotateX: 15, y: 80 }}
-          whileInView={{ opacity: 1, scale: 1, rotateX: 0, y: 0 }}
-          viewport={{ once: false, margin: "-10%" }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full max-w-[1400px] mx-auto"
-        >
-          <div className="border-t-2 border-df-black dark:border-neutral-700 pt-6 mb-16 sm:mb-20">
-            <span className="font-mono text-xs sm:text-sm font-bold tracking-[0.08em] text-df-black/50 dark:text-white/50">
-              // SECTION 03: INTELLIGENCE ENGINE & COVERAGE
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-
-            {/* ── LEFT COLUMN: Intelligence Engine Punch Cards ── */}
-            <div className="lg:col-span-7 flex flex-col gap-6">
-              {[
-                {
-                  id: '01',
-                  title: 'AI CONDITION SCANNER',
-                  text: 'We read between the lines. If a seller says "genuine" but mentions a "shower", we flag it immediately.',
-                },
-                {
-                  id: '02',
-                  title: 'TRUE FAIR MARKET VALUE',
-                  text: 'No more guessing. We cross-reference thousands of live listings to calculate the exact price a car should sell for.',
-                },
-                {
-                  id: '03',
-                  title: 'HIDDEN RISK DETECTION',
-                  text: 'Duplicate files, suspicious mileage, and sketchy descriptions are instantly caught and graded before you buy.',
-                },
-              ].map((card) => (
-                <ScrollHoverCard key={card.id} 
-                  className="bg-df-white dark:bg-zinc-900 border-2 border-df-black dark:border-neutral-700 p-6 shadow-[4px_4px_0px_#000000] dark:shadow-[4px_4px_0px_#404040] rounded-none transition-transform duration-200"
-                  hoverClass="hover:-translate-y-1"
+          <div className="mt-auto pt-10 flex flex-wrap items-end justify-between gap-8">
+            <form onSubmit={onSubmit} role="search" data-reveal style={{ '--rd': '650ms' }} className="w-full max-w-[920px] flex flex-col gap-4">
+              <div className="flex bg-white shadow-[0_24px_60px_-20px_rgba(0,0,0,.45)]">
+                <label htmlFor="home-q" className="sr-only">Search used cars</label>
+                <HeroSearchInput ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} />
+                <button
+                  type="submit"
+                  disabled={phase === 'searching'}
+                  className="df-btn h-16 sm:h-[72px] px-6 sm:px-9 bg-black text-white text-sm sm:text-base tracking-[0.08em] hover:text-black disabled:opacity-70"
+                  style={{ '--df-fill': '#FFFFFF' }}
                 >
-                  <div className="font-mono text-[10px] sm:text-xs font-bold tracking-[0.08em] text-df-red mb-3">
-                    [ ENGINE // {card.id} ]
-                  </div>
-                  <h3 className="text-xl sm:text-2xl font-black text-df-black dark:text-zinc-100 mb-2 leading-tight">
-                    {card.title}
-                  </h3>
-                  <p className="font-body text-sm sm:text-base text-df-black/70 dark:text-white/70 leading-relaxed">
-                    {card.text}
-                  </p>
-                </ScrollHoverCard>
-              ))}
-            </div>
+                  {phase === 'searching' ? 'SEARCHING…' : 'SEARCH'}
+                </button>
+              </div>
 
-            {/* ── RIGHT COLUMN: Market Coverage & Trust ── */}
-            <div className="lg:col-span-5 flex flex-col gap-8 sm:gap-10">
-              <h2 className="text-display-lg text-df-black dark:text-zinc-100 leading-[0.95]">
-                SCANNING EVERY MAJOR PLATFORM IN PAKISTAN.
-              </h2>
-
-              {/* Platform Coverage Pills */}
-              <div className="flex flex-wrap gap-3">
-                {['PAKWHEELS', 'OLX PAKISTAN', 'GARI.PK', 'DRIVE.PK'].map((platform) => (
-                  <span
-                    key={platform}
-                    className="px-4 sm:px-5 py-2.5 sm:py-3 border-brutal-thin bg-df-white dark:bg-zinc-900 text-df-black dark:text-zinc-100 font-mono text-xs sm:text-sm font-bold tracking-[0.06em] cursor-default select-none transition-all duration-[50ms] hover:bg-df-black hover:text-df-white dark:hover:bg-white dark:hover:text-black"
-                  >
-                    [ {platform} ]
+              <div aria-live="polite" className="min-h-[28px] text-[15px]">
+                {phase === 'idle' && (
+                  <span className="text-white/85">Type it like you’d say it. We search seven sites and read every ad.</span>
+                )}
+                {phase === 'searching' && (
+                  <span className="flex items-center gap-4 animate-df-fade-up">
+                    <span aria-hidden="true" className="w-28 h-1.5 bg-white/25 df-road-white" />
+                    <span className="font-mono text-[13px] font-semibold truncate">{statusLine}</span>
                   </span>
-                ))}
+                )}
+                {phase === 'error' && (
+                  <span role="alert" className="flex flex-wrap items-center gap-3 animate-df-fade-up">
+                    <strong>Search stalled.</strong> <span className="text-white/85">{error}</span>
+                    <button type="button" onClick={() => runSearch(lastQuery)} className="df-btn h-10 px-4 bg-black text-white hover:text-black" style={{ '--df-fill': '#FFF' }}>Try again</button>
+                  </span>
+                )}
+                {phase === 'done' && (
+                  <span className="flex flex-wrap items-center gap-3 animate-df-fade-up">
+                    <strong>{results.length} {results.length === 1 ? 'match' : 'matches'} for “{lastQuery}”</strong>
+                    <button type="button" onClick={() => scrollTo('#results', { offset: -72 })} className="df-link font-bold">See them ↓</button>
+                  </span>
+                )}
               </div>
+            </form>
 
-              {/* LIVE MARKET PULSE */}
-              <div className="border-t border-df-black/15 pt-6">
-                <div className="bg-[#F5F5F5] dark:bg-zinc-800 border border-df-black dark:border-neutral-700 p-4 sm:p-5 w-full">
-                  <div className="font-mono text-xs sm:text-sm text-df-black/80 dark:text-white/80 tracking-[0.05em] space-y-2">
-                    <div>STATUS: DATA AGGREGATOR [ACTIVE] <span className="text-green-500">■</span></div>
-                    <div>LAST SYNC: TODAY AT {syncTime}</div>
-                    <div>SOURCES CONNECTED: 4 PLATFORMS</div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-          </div>
-        </motion.div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════
-          SECTION 4 — COMMAND CONSOLE
-          ═══════════════════════════════════════════════ */}
-      <CommandConsoleSection />
-
-    </main>
-  );
-}
-
-function CommandConsoleSection() {
-  const [query, setQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [results, setResults] = useState(null);
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
-
-  const handleSearch = async (searchQuery) => {
-    const q = (searchQuery || query).trim();
-    if (!q) return;
-    setIsLoading(true);
-    setError(null);
-    setResults(null);
-    try {
-      const data = await searchCars(q);
-      setResults(data);
-    } catch (err) {
-      setError('Search failed. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      handleSearch().catch(error => {
-        console.error('Search failed:', error);
-        setError('Search failed. Please try again.');
-      });
-    }
-  };
-
-  return (
-    <section id="console" className="relative z-10 py-16 md:py-24 px-5 sm:px-8 lg:px-12">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9, rotateX: 15, y: 80 }}
-        whileInView={{ opacity: 1, scale: 1, rotateX: 0, y: 0 }}
-        viewport={{ once: false, margin: "-10%" }}
-        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-[1400px] mx-auto"
-      >
-        <div className="border-t-2 border-df-black dark:border-neutral-700 pt-6 mb-16 sm:mb-20">
-          <span className="font-mono text-xs sm:text-sm font-bold tracking-[0.08em] text-df-black/50 dark:text-white/50">
-            // SECTION 04: EXECUTE SEARCH
-          </span>
-        </div>
-
-        <div className="mb-10 sm:mb-14">
-          <div className="bg-df-white dark:bg-black border-brutal shadow-[8px_8px_0px_#000000] dark:shadow-[8px_8px_0px_#404040] flex flex-col sm:flex-row focus-within:ring-2 focus-within:ring-[#E5202E] focus-within:border-[#E5202E]">
-            <div className="flex items-center flex-1 px-4 sm:px-6 py-4 sm:py-5 gap-3 sm:gap-4">
-              <svg
-                className="w-5 h-5 sm:w-6 sm:h-6 text-df-black/30 dark:text-white/30 shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.3-4.3" />
-              </svg>
-              <input
-                id="console-search-input"
-                type="text"
-                maxLength={200}
-                required
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Honda Civic in Lahore under 50 Lakhs..."
-                className="flex-1 bg-transparent font-mono text-sm sm:text-base text-df-black dark:text-zinc-100 placeholder:text-df-black/25 dark:placeholder:text-white/25 outline-none border-none min-w-0"
-              />
-            </div>
             <button
-              id="console-execute-btn"
-              onClick={() => {
-                handleSearch().catch(error => {
-                  if (import.meta.env.DEV) { console.error("Full error details:", error); }
-                  console.error("Search failed:", error instanceof Error ? error.message : "Unknown error");
-                  setError('Search failed. Please try again.');
-                });
-              }}
-              disabled={isLoading || !query.trim()}
-              className="px-6 sm:px-8 py-4 sm:py-5 bg-df-red text-df-white font-mono text-xs sm:text-sm font-bold tracking-[0.08em] border-t sm:border-t-0 sm:border-l border-df-black dark:border-neutral-700 whitespace-nowrap transition-none hover:bg-[#C41A25] active:translate-x-[1px] active:translate-y-[1px] disabled:opacity-60 disabled:cursor-not-allowed"
+              type="button"
+              onClick={() => scrollTo('#ways', { offset: -40 })}
+              data-reveal="fade"
+              style={{ '--rd': '1100ms' }}
+              className="hidden md:flex flex-col items-center gap-3 font-mono text-xs font-semibold tracking-[0.12em]"
             >
-              {isLoading ? '[ SEARCHING... ]' : '[ EXECUTE SEARCH ]'}
+              SCROLL
+              <span aria-hidden="true" className="relative block w-[2px] h-14 bg-white/25 overflow-hidden">
+                <span className="absolute inset-0 bg-white df-scroll-cue" />
+              </span>
             </button>
           </div>
-          <div className="mt-3 font-mono text-[10px] text-df-black/20 dark:text-white/20 tracking-[0.06em]">
-            [INPUT_MODE: NATURAL_LANGUAGE] — [BACKEND: AI_PARSE + MULTI_SCRAPE]
-          </div>
         </div>
+      </section>
 
-        {(isLoading || error || results) && (
-          <div className="mb-16 sm:mb-20">
-            {isLoading && (
-              <div className="border-brutal-thin bg-df-grey dark:bg-zinc-800 px-6 py-8 flex items-center justify-center gap-3">
-                <span className="inline-block w-3 h-3 bg-df-red animate-pulse" />
-                <span className="font-mono text-xs sm:text-sm text-df-black/50 dark:text-white/50 tracking-[0.06em]">
-                  [FETCHING_RESULTS] — Scanning platforms...
-                </span>
-              </div>
-            )}
-            {error && (
-              <div className="border-brutal-thin bg-df-white dark:bg-zinc-900 px-6 py-5 flex items-center gap-3">
-                <span className="inline-block w-2.5 h-2.5 bg-df-red" />
-                <span className="font-mono text-xs sm:text-sm text-df-black/60 dark:text-white/60">{error}</span>
-              </div>
-            )}
-            {results && results.length === 0 && !isLoading && (
-              <div className="border-brutal-thin bg-df-grey dark:bg-zinc-800 px-6 py-8 text-center">
-                <span className="font-mono text-xs sm:text-sm text-df-black/40 dark:text-white/40 tracking-[0.06em]">
-                  [NO_RESULTS] — Try broadening your search or adjusting your budget.
-                </span>
-              </div>
-            )}
-            {results && results.length > 0 && !isLoading && (
-              <FeatureErrorBoundary featureName="Search Results">
-                <div className="space-y-3">
-                  <div className="font-mono text-[10px] sm:text-xs font-bold tracking-[0.1em] text-df-black/30 dark:text-white/30 mb-4">
-                    [{results.length} RESULT{results.length !== 1 ? 'S' : ''} FOUND]:
+      {/* ═══ RESULTS ═══ */}
+      {phase === 'done' && (
+        <section id="results" className="px-5 sm:px-10 pt-14 pb-20 scroll-mt-20">
+          {results.length > 0 ? (
+            <>
+              <div className="flex flex-wrap items-end justify-between gap-4 pb-4 border-b-4 border-black dark:border-zinc-50">
+                <h2 className="df-display text-[length:clamp(40px,5vw,72px)]"><SplitText text={`${results.length} listings`} /></h2>
+                <div className="flex flex-wrap items-center gap-2" data-reveal="fade">
+                  <div role="group" aria-label="Sort results" className="flex">
+                    {SORTS.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        aria-pressed={sort === s.id}
+                        onClick={() => setSort(s.id)}
+                        className={`h-11 px-4 -ml-px first:ml-0 border border-black dark:border-zinc-700 text-sm font-bold transition-colors duration-300 ${sort === s.id ? 'bg-black text-white dark:bg-zinc-50 dark:text-black' : 'hover:bg-black/5 dark:hover:bg-white/10'}`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
                   </div>
-                  {results.map((car, i) => (
-                    <CarResultCard key={car.id || i} car={car} userQuery={query} />
+                  <button type="button" onClick={focusSearch} className="df-btn-outline">New search</button>
+                </div>
+              </div>
+              <FeatureErrorBoundary featureName="Search results">
+                <div className="flex flex-col">
+                  {sorted.map((car, i) => (
+                    <div key={car.id || i} id={car.id ? `car-${car.id}` : undefined} data-reveal style={{ '--rd': `${Math.min(i, 5) * 80}ms` }} className="scroll-mt-24">
+                      <CarResultCard car={car} userQuery={lastQuery} />
+                    </div>
                   ))}
                 </div>
               </FeatureErrorBoundary>
-            )}
-          </div>
-        )}
+            </>
+          ) : (
+            <div className="flex flex-col gap-4 max-w-[640px]">
+              <h2 className="df-display text-[length:clamp(44px,6vw,88px)]"><SplitText text="Zero matches." /></h2>
+              <p data-reveal className="df-muted text-lg">Nothing live fits “{lastQuery}”. Try a bigger budget or another city, or describe what you need and let the Matchmaker pick models for you.</p>
+              <div data-reveal className="flex flex-wrap gap-2">
+                <Link to="/recommend" className="df-btn-red h-12 px-5">Open the Matchmaker</Link>
+                <button type="button" onClick={focusSearch} className="df-btn-outline h-12 px-5">Edit search</button>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
-        {/* ── FINANCIAL TOOLS TEASER ── */}
-        <div>
-          <div className="font-mono text-[10px] sm:text-xs font-bold tracking-[0.1em] text-df-black/30 dark:text-white/30 mb-4">
-            FINANCIAL TOOLS:
+      {/* ═══ TWO WAYS IN ═══ */}
+      <section id="ways" className="px-5 sm:px-10 py-20 sm:py-28 scroll-mt-10">
+        <div className="flex flex-wrap items-end justify-between gap-6 mb-10 sm:mb-14">
+          <div className="flex flex-col gap-5">
+            <SectionLabel>START HERE</SectionLabel>
+            <h2 className="df-display text-[length:clamp(48px,6.4vw,104px)]"><SplitText text="Two ways to find it." /></h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
-            {FINANCIAL_TOOLS.map((tool) => (
-              <ScrollHoverCard
-                as="button"
-                key={tool.label}
-                onClick={() => navigate('/calculators')}
-                className="group bg-df-grey dark:bg-black border-brutal-thin px-5 py-5 sm:py-6 text-left flex flex-col gap-2.5 shadow-[3px_3px_0px_0px_#000000] dark:shadow-[3px_3px_0px_0px_#404040] transition-shadow duration-100 hover:bg-df-black dark:hover:bg-neutral-200"
-                hoverClass="hover:shadow-[5px_5px_0px_0px_#000000] dark:hover:shadow-[5px_5px_0px_0px_#404040]"
-              >
-                <span className="font-mono text-xs sm:text-sm font-bold tracking-[0.06em] text-df-black dark:text-zinc-100 group-hover:text-df-white dark:group-hover:text-black transition-colors duration-[50ms]">
-                  [ {tool.label} ]
-                </span>
-                <span className="font-body text-xs text-df-black/50 dark:text-white/50 leading-relaxed group-hover:text-df-white/60 dark:group-hover:text-black/60 transition-colors duration-[50ms]">
-                  {tool.desc}
-                </span>
-              </ScrollHoverCard>
-            ))}
+          <p data-reveal className="max-w-[400px] text-lg leading-relaxed df-muted">Know the car you want? Search for it. Not sure yet? Describe your life and let the Matchmaker choose.</p>
+        </div>
+        <div className="grid md:grid-cols-2 gap-4 sm:gap-5" data-stagger>
+          <CtaCard
+            n="01"
+            kicker="I KNOW WHAT I WANT"
+            title="Direct search"
+            desc="Make, model, city, budget. Typed like a sentence, searched across seven sites, every ad checked."
+            action="Start searching"
+            onClick={focusSearch}
+            plate={<Plate top="PUNJAB" main="LHR 2019" size="sm" />}
+          />
+          <CtaCard
+            n="02"
+            kicker="HELP ME CHOOSE"
+            title="AI Matchmaker"
+            desc="Tell us your budget, family and commute. Get three models that fit, each with live ads."
+            action="Open the Matchmaker"
+            to="/recommend"
+            plate={<Plate top="MATCHES" main="3 MODELS" size="sm" />}
+          />
+        </div>
+      </section>
+
+      {/* ═══ DIRECT SEARCH ═══ */}
+      <section className="bg-df-grey dark:bg-black border-y border-neutral-200 dark:border-zinc-800">
+        <div className="px-5 sm:px-10 py-20 sm:py-28 grid gap-14 lg:gap-20 lg:grid-cols-2 items-center">
+          <div className="flex flex-col gap-7">
+            <SectionLabel>01 · DIRECT SEARCH</SectionLabel>
+            <h2 className="df-display text-[length:clamp(48px,6vw,96px)]">
+              <SplitText text="We read the ad." className="block" />
+              <SplitText text="You read the verdict." className="block text-df-red" start={4} />
+            </h2>
+            <div className="flex flex-col" data-stagger>
+              {FEATURES.map(([t, d], i) => (
+                <div key={t} className={`grid grid-cols-[40px_minmax(0,1fr)] gap-4 py-5 border-t border-black dark:border-zinc-700 ${i === FEATURES.length - 1 ? 'border-b' : ''}`}>
+                  <span className="font-mono text-sm font-semibold text-df-red-dark dark:text-df-red pt-1">0{i + 1}</span>
+                  <span className="flex flex-col gap-1.5">
+                    <strong className="text-[22px]">{t}</strong>
+                    <span className="text-[17px] leading-relaxed df-muted">{d}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div data-reveal>
+              <button type="button" onClick={focusSearch} className="df-btn-red h-14 px-7 text-base">Try a search</button>
+            </div>
+          </div>
+          <AdScanDemo />
+        </div>
+      </section>
+
+      {/* ═══ SOURCES ═══ */}
+      <section className="py-20 sm:py-28 flex flex-col gap-12 overflow-hidden">
+        <div className="px-5 sm:px-10 flex flex-wrap justify-between items-end gap-6">
+          <div className="flex flex-col gap-5">
+            <SectionLabel>WHERE WE LOOK</SectionLabel>
+            <h2 className="df-display text-[length:clamp(48px,6vw,96px)]">
+              <SplitText text="Seven sites," className="block" />
+              <SplitText text="one search." className="block text-df-red" start={2} />
+            </h2>
+          </div>
+          <p data-reveal className="max-w-[420px] text-lg df-muted leading-relaxed">Searched live when you press search. We link back to every original ad and never host the seller’s photos or text as our own.</p>
+        </div>
+        <div data-reveal="fade" className="flex flex-col gap-5 -rotate-1">
+          <Marquee items={SOURCES.map((s) => ['SOURCE', s.toUpperCase()])} duration={36} />
+          <Marquee items={PLATES} reverse duration={44} />
+        </div>
+      </section>
+
+      {/* ═══ MATCHMAKER ═══ */}
+      <section className="bg-black text-white dark:border-y dark:border-zinc-800">
+        <div className="px-5 sm:px-10 py-20 sm:py-28 grid gap-14 lg:gap-20 lg:grid-cols-2 items-center">
+          <div className="flex flex-col gap-7">
+            <SectionLabel className="text-white">02 · AI MATCHMAKER</SectionLabel>
+            <h2 className="df-display text-[length:clamp(48px,6vw,96px)]">
+              <SplitText text="Not sure what to buy?" className="block" />
+              <SplitText text="Describe your life." className="block text-df-red" start={5} />
+            </h2>
+            <p data-reveal className="max-w-[480px] text-lg leading-relaxed text-zinc-300">Budget, city, family, commute, fuel. Write it like you’d tell a friend. The Matchmaker picks three models that fit, explains why, and finds live ads for each.</p>
+            <div data-reveal>
+              <Link to="/recommend" className="df-btn-red h-14 px-7 text-base hover:text-black" style={{ '--df-fill': '#FFF' }}>
+                Open the Matchmaker →
+              </Link>
+            </div>
+          </div>
+          <MatchDemo />
+        </div>
+      </section>
+
+      {/* ═══ CHAT ═══ */}
+      <section className="bg-df-grey dark:bg-df-night">
+        <div className="px-5 sm:px-10 py-20 sm:py-28 grid gap-14 lg:gap-20 lg:grid-cols-2 items-center">
+          <div className="lg:order-2 flex flex-col gap-7">
+            <SectionLabel>03 · ASSISTANT CHAT</SectionLabel>
+            <h2 className="df-display text-[length:clamp(48px,6vw,96px)]">
+              <SplitText text="Ask like you’d ask" className="block" />
+              <SplitText text="your ustaad." className="block text-df-red" start={4} />
+            </h2>
+            <p data-reveal className="max-w-[480px] text-lg leading-relaxed df-muted">Fuel averages, auction sheets, transfer rules, which variant to pick. Ask in plain words, any time, without being sold to.</p>
+            <div data-reveal>
+              <Link to="/chat" className="df-btn-ink h-14 px-7 text-base">Start a chat →</Link>
+            </div>
+          </div>
+          <div className="lg:order-1"><ChatDemo /></div>
+        </div>
+      </section>
+
+      {/* ═══ CALCULATORS ═══ */}
+      <section className="bg-df-red text-white overflow-hidden">
+        <div className="px-5 sm:px-10 py-16 sm:py-20 flex flex-wrap items-end justify-between gap-8">
+          <div className="flex flex-col gap-3">
+            <SectionLabel className="text-white [&>span]:bg-white">04 · CALCULATORS</SectionLabel>
+            <span data-reveal className="text-lg font-bold mt-2">A {cost.priceLac} 2019 Civic in Punjab costs about</span>
+            <span ref={costRef} data-reveal="clip" className="df-display text-[length:clamp(56px,9vw,152px)] tabular-nums">
+              {formatLac(costNow)} <span className="text-black">in year one.</span>
+            </span>
+            <span data-reveal className="text-[15px] text-white/85">Transfer, token tax and 40 km of petrol a day, at this year’s rates.</span>
+          </div>
+          <div data-reveal>
+            <Link to="/calculators" className="df-btn h-14 px-7 bg-black text-white text-base hover:text-black" style={{ '--df-fill': '#FFF' }}>
+              Open the calculators →
+            </Link>
           </div>
         </div>
-
-      </motion.div>
-    </section>
+      </section>
+    </div>
   );
 }
-

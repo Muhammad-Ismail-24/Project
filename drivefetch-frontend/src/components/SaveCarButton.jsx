@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useUI } from '../contexts/UIContext';
+import { Spinner } from './ui/Loaders';
 
-export default function SaveCarButton({ listingId, platform, title, savedListingIds = new Set(), onUnsave }) {
+export default function SaveCarButton({ listingId, platform, title, savedListingIds = new Set(), onUnsave, className = '' }) {
   const [isSaved, setIsSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { openSignIn } = useUI();
 
   useEffect(() => {
     if (savedListingIds.has(listingId)) {
@@ -19,7 +22,6 @@ export default function SaveCarButton({ listingId, platform, title, savedListing
 
     try {
       if (isSaved) {
-        // PROXY FIX: Unsave using relative path
         const encodedId = encodeURIComponent(listingId);
         const response = await fetch(`/user/saved-listings/${encodedId}`, {
           method: 'DELETE',
@@ -27,35 +29,24 @@ export default function SaveCarButton({ listingId, platform, title, savedListing
         });
 
         if (response.status === 401) {
-          alert("Sign in to save cars");
-          setIsLoading(false);
+          openSignIn('save');
           return;
         }
 
         if (response.ok) {
           setIsSaved(false);
-          if (onUnsave) {
-            onUnsave();
-          }
+          if (onUnsave) onUnsave();
         }
       } else {
-        // PROXY FIX: Save using relative path
         const response = await fetch('/user/saved-listings', {
           method: 'POST',
           credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            listing_id: listingId,
-            platform,
-            title,
-          }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ listing_id: listingId, platform, title }),
         });
 
         if (response.status === 401) {
-          alert("Sign in to save cars");
-          setIsLoading(false);
+          openSignIn('save');
           return;
         }
 
@@ -73,31 +64,21 @@ export default function SaveCarButton({ listingId, platform, title, savedListing
 
   return (
     <button
+      type="button"
       onClick={handleSaveToggle}
       disabled={isLoading}
-      aria-label={isSaved ? "Remove from saved" : "Save this car to bookmarks"}
-      className="p-2.5 rounded-full bg-white/60 dark:bg-black/60 backdrop-blur-md border border-black/15 dark:border-white/15 shadow-md hover:bg-white dark:hover:bg-black hover:scale-105 transition-all disabled:opacity-50 text-black dark:text-white"
+      aria-pressed={isSaved}
+      aria-label={isSaved ? 'Remove from saved' : 'Save this car'}
+      title={isSaved ? 'Saved' : 'Save'}
+      className={`w-11 h-11 flex items-center justify-center transition-colors disabled:opacity-60 ${
+        isSaved ? 'bg-df-red text-white hover:bg-black' : 'bg-white text-black hover:bg-black hover:text-white'
+      } ${className}`}
     >
       {isLoading ? (
-        <svg aria-hidden="true" className="animate-spin h-5 w-5 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
+        <Spinner className="w-4 h-4" light={isSaved} />
       ) : (
-        <svg
-          aria-hidden="true"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          width="20"
-          height="20"
-          className="transition-colors duration-200"
-        >
-          <path
-            d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-            fill={isSaved ? "currentColor" : "none"}
-            stroke="currentColor"
-            strokeWidth="2"
-          />
+        <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill={isSaved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+          <path d="M6 3h12v18l-6-4-6 4z" />
         </svg>
       )}
     </button>

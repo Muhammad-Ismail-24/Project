@@ -1,580 +1,258 @@
-import React, { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import DynamicBackground from '../components/DynamicBackground';
+import { useMemo, useState } from 'react';
 import SEO from '../components/SEO';
 import { calculatorsSchema } from '../config/seoSchemas';
-import { calculateFuelCost } from '../utils/calculatorEngine';
-import { useVehicleTaxCalculator } from '../hooks/useVehicleTaxCalculator';
-
-/* ═══════════════════════════════════════════════════════
-   DATA CONSTANTS
-   ═══════════════════════════════════════════════════════ */
+import { calculateFuelCost, calculateVehicleCharges } from '../utils/calculatorEngine';
+import SplitText from '../components/motion/SplitText';
+import useTween from '../components/motion/useTween';
 
 const CC_OPTIONS = [
-  { value: 660,  label: '660cc (e.g., Alto, Mira, Dayz)' },
-  { value: 800,  label: '800cc (e.g., Mehran, Old Alto)' },
-  { value: 1000, label: '1000cc (e.g., Cultus, WagonR, Vitz)' },
-  { value: 1200, label: '1200cc (e.g., City 1.2, Stonic, Swift)' },
-  { value: 1300, label: '1300cc (e.g., Yaris 1.3, City 1.3)' },
-  { value: 1500, label: '1500cc (e.g., Civic 1.5T, BR-V)' },
-  { value: 1800, label: '1800cc (e.g., Corolla Grande, Civic 1.8)' },
-  { value: 1801, label: '1.5L-1.8L Hybrids (e.g., Aqua, Vezel, HEV)' },
-  { value: 2500, label: '2.5L+ Diesel (e.g., Fortuner, Revo)' },
+  { value: 660, label: '660cc (Alto, Mira, Dayz)' },
+  { value: 800, label: '800cc (Mehran, old Alto)' },
+  { value: 1000, label: '1000cc (Cultus, Wagon R, Vitz)' },
+  { value: 1200, label: '1200cc (City 1.2, Stonic, Swift)' },
+  { value: 1300, label: '1300cc (Yaris 1.3, City 1.3)' },
+  { value: 1500, label: '1500cc (Civic 1.5T, BR-V)' },
+  { value: 1800, label: '1800cc (Corolla Grande, Civic 1.8)' },
+  { value: 1801, label: '1.5–1.8L hybrid (Aqua, Vezel, HEV)' },
+  { value: 2500, label: '2.5L+ diesel (Fortuner, Revo)' },
 ];
 
-const PROVINCE_OPTIONS = [
-  { value: 'Islamabad', label: 'Islamabad Capital Territory' },
-  { value: 'Punjab',    label: 'Punjab' },
-  { value: 'Sindh',     label: 'Sindh' },
-  { value: 'KPK',       label: 'Khyber Pakhtunkhwa' },
-  { value: 'Balochistan', label: 'Balochistan' },
+const PROVINCES = [
+  { value: 'ISLAMABAD', label: 'Islamabad' },
+  { value: 'PUNJAB', label: 'Punjab' },
+  { value: 'SINDH', label: 'Sindh' },
+  { value: 'KPK', label: 'KPK', soon: true },
+  { value: 'BALOCHISTAN', label: 'Balochistan', soon: true },
 ];
 
-/* ═══════════════════════════════════════════════════════
-   SHARED ANIMATION — "Card Float" (scroll-linked lift)
-   ═══════════════════════════════════════════════════════ */
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-const cardFloat = {
-  rest: { y: 0, boxShadow: '8px 8px 0px 0px var(--brutal-shadow, #000000)' },
-  float: { y: -14, boxShadow: '12px 14px 0px 0px var(--brutal-shadow, #000000)' },
+const pk = (n) => `PKR ${Math.round(n || 0).toLocaleString('en-US')}`;
+const lac = (n) => {
+  const v = (n || 0) / 100000;
+  return `${v >= 100 ? v.toFixed(1) : v.toFixed(2)} lac`;
 };
 
-const cardTransition = { type: 'spring', stiffness: 120, damping: 20, mass: 0.8 };
-
-/* ═══════════════════════════════════════════════════════
-   BRUTALIST UI PRIMITIVES
-   ═══════════════════════════════════════════════════════ */
-
-function BrutalSelect({ id, label, value, onChange, options }) {
+function Slider({ id, label, value, display, min, max, step, onChange }) {
   return (
-    <div>
-      <label htmlFor={id} className="block font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 dark:text-zinc-50/50 mb-2">
-        {label}
-      </label>
-      <select
-        id={id}
-        value={value}
-        onChange={onChange}
-        className="brutal-select w-full p-3 md:p-4 bg-df-white dark:bg-black border-2 border-df-black dark:border-neutral-700 rounded-none outline-none font-mono text-sm md:text-base font-medium cursor-pointer appearance-none focus:ring-2 focus:ring-df-red focus:border-df-red transition-none text-df-black dark:text-zinc-50"
-        style={{
-          backgroundRepeat: 'no-repeat',
-          backgroundPosition: 'right 16px center',
-        }}
-      >
-        {options.map(opt => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
-        ))}
-      </select>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex justify-between gap-4">
+        <label htmlFor={id} className="text-sm font-bold">{label}</label>
+        <span className="font-mono text-[15px] font-semibold">{display}</span>
+      </div>
+      <input id={id} type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} className="w-full h-7 accent-df-red cursor-pointer" />
     </div>
   );
 }
 
-function BrutalRadioGroup({ name, label, value, onChange, options, disabled = false }) {
+function Check({ label, checked, onChange, disabled, note }) {
   return (
-    <div className={disabled ? "opacity-50 pointer-events-none" : ""}>
-      <span className="block font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 dark:text-zinc-50/50 mb-3 flex items-center gap-2">
-        {label}
-      </span>
-      <div className="flex flex-wrap gap-3 md:gap-4">
-        {options.map(opt => {
-          const isSelected = value === opt.value;
-          return (
-            <label
-              key={opt.value}
-              className={`
-                flex items-center gap-2.5 cursor-pointer px-4 py-3 border-2 border-df-black dark:border-neutral-700 font-mono text-xs md:text-sm font-bold tracking-wide select-none transition-none
-                ${isSelected ? 'bg-df-black dark:bg-white text-df-white dark:text-black' : 'bg-df-white dark:bg-black text-df-black dark:text-zinc-50 hover:bg-df-grey dark:hover:bg-zinc-800'}
-              `}
-            >
-              <span className="inline-flex items-center justify-center w-5 h-5 border-2 border-current flex-shrink-0">
-                {isSelected && (
-                  <span className="block w-2.5 h-2.5 bg-current" />
-                )}
-              </span>
-              <input
-                type="radio"
-                name={name}
-                value={opt.value}
-                checked={isSelected}
-                onChange={() => onChange(opt.value)}
-                className="sr-only"
-                disabled={disabled}
-              />
-              {opt.label}
-            </label>
-          );
-        })}
-      </div>
-    </div>
+    <label className={`flex items-center gap-2.5 min-h-[48px] px-3.5 border border-black dark:border-zinc-700 text-sm font-bold cursor-pointer ${disabled ? 'opacity-60 cursor-not-allowed' : 'hover:bg-df-grey dark:hover:bg-zinc-900'}`}>
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} className="w-[18px] h-[18px] accent-df-red" />
+      <span>{label}{note ? <span className="font-medium df-muted"> {note}</span> : null}</span>
+    </label>
   );
 }
 
-function BrutalSlider({ id, label, value, onChange, min, max, unit }) {
-  const pct = ((value - min) / (max - min)) * 100;
-
+function Section({ n, title, children }) {
   return (
-    <div>
-      <div className="flex justify-between items-baseline mb-3">
-        <label htmlFor={id} className="font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 dark:text-zinc-50/50">
-          {label}
-        </label>
-        <span className="font-mono text-sm md:text-base font-bold text-df-black dark:text-zinc-50 tabular-nums">
-          {value} {unit}
-        </span>
-      </div>
-      <div className="relative h-10 flex items-center">
-        <div className="absolute inset-x-0 h-[3px] bg-df-black/15 dark:bg-zinc-50/15" />
-        <div
-          className="absolute left-0 h-[3px] bg-df-black dark:bg-zinc-50"
-          style={{ width: `${pct}%` }}
-        />
-        <input
-          id={id}
-          type="range"
-          min={min}
-          max={max}
-          value={value}
-          onChange={onChange}
-          className="brutal-slider relative z-10 w-full cursor-pointer"
-        />
-      </div>
-    </div>
+    <fieldset data-reveal className="flex flex-col gap-4 border-0 p-0 m-0">
+      <legend className="df-display text-[30px] mb-4 float-left w-full">{n} · {title}</legend>
+      {children}
+    </fieldset>
   );
 }
-
-/* ═══════════════════════════════════════════════════════
-   MAIN COMPONENT
-   ═══════════════════════════════════════════════════════ */
 
 export default function CalculatorsHub() {
-  // ── Section 1: Fuel Cost Estimator State ──
-  const [fuelCc, setFuelCc] = useState(1000);
-  const [fuelKm, setFuelKm] = useState(40);
+  const nowMonth = new Date().getMonth() + 1;
+  const [priceLac, setPriceLac] = useState(47.5);
+  const [cc, setCc] = useState(1800);
+  const [age, setAge] = useState(6);
+  const [isEv, setIsEv] = useState(false);
+  const [province, setProvince] = useState('PUNJAB');
+  const [isFiler, setIsFiler] = useState(true);
+  const [month, setMonth] = useState(nowMonth);
+  const [includeTransfer, setIncludeTransfer] = useState(true);
+  const [sellerKeepsNumber, setSellerKeepsNumber] = useState(false);
+  const [newPlates, setNewPlates] = useState(false);
+  const [interProvincial, setInterProvincial] = useState(false);
+  const [dailyKm, setDailyKm] = useState(40);
+  const [cityPct, setCityPct] = useState(80);
+  const [copied, setCopied] = useState(false);
 
-  const fuelCostResult = useMemo(() => {
-    return calculateFuelCost({ cc: fuelCc, dailyKm: fuelKm });
-  }, [fuelCc, fuelKm]);
+  const year = new Date().getFullYear();
+  const platesForced = includeTransfer && (year - age) < 2020;
 
-  // ── Section 2: Token Tax State ──
-  const tokenCalc = useVehicleTaxCalculator(false);
-  const { state: tokenState, setters: tokenSetters, results: tokenResults } = tokenCalc;
+  const r = useMemo(() => calculateVehicleCharges({
+    province,
+    engineCc: cc,
+    invoiceVal: priceLac * 100000,
+    vehicleAge: age,
+    isFiler,
+    isEv,
+    isTransfer: includeTransfer,
+    sellerRetainingNumber: sellerKeepsNumber,
+    needsNewPlates: newPlates,
+    isInterProvincial: interProvincial,
+    paymentDate: new Date(year, month - 1, 15),
+  }), [province, cc, priceLac, age, isFiler, isEv, includeTransfer, sellerKeepsNumber, newPlates, interProvincial, month, year]);
 
-  // ── Section 3: Transfer Fee State ──
-  const transferCalc = useVehicleTaxCalculator(true);
-  const { state: transferState, setters: transferSetters, results: transferResults } = transferCalc;
+  const fuel = useMemo(() => (isEv ? { monthlyCost: 0, totalLiters: '0', label: '' } : calculateFuelCost({ cc, dailyKm, cityRatio: cityPct / 100 })), [cc, dailyKm, cityPct, isEv]);
+
+  const price = priceLac * 100000;
+  const fuelYear = (fuel.monthlyCost || 0) * 12;
+  // totalTransferCost already includes FBR 231B.
+  const transferCost = includeTransfer ? r.totalTransferCost : 0;
+  const extra = r.totalAnnualToken + transferCost + fuelYear;
+  const total = price + extra;
+  const totalShown = useTween(total);
+  const extraShown = useTween(extra);
+  const rebate = r.provincialTokenBase - r.netProvincialToken;
+
+  const lines = [];
+  const add = (k, v, tone) => lines.push({ k, v, tone });
+  add('Car price', pk(price), 'bold');
+  if (r.isLifetimeToken) add('Token tax', age === 0 ? `${pk(r.netProvincialToken)} (lifetime, paid once)` : 'Lifetime token, already paid');
+  else {
+    add(`Provincial token tax (${PROVINCES.find((p) => p.value === province)?.label})`, pk(r.provincialTokenBase));
+    if (rebate > 0) add('Early-payment rebate (Jul–Aug)', `− ${pk(rebate)}`);
+    if (rebate < 0) add(`Late surcharge (${MONTHS[month - 1]})`, `+ ${pk(-rebate)}`, 'red');
+  }
+  add(`FBR Sec 234 withholding${isFiler ? '' : ' (non-filer ×2)'}`, pk(r.fbrSection234));
+  if (includeTransfer) {
+    add('FBR Sec 231B advance tax', age >= 5 ? 'Exempt (5+ years old)' : pk(r.fbrSection231b), !isFiler && age < 5 ? 'red' : undefined);
+    add('MRA transfer fee', pk(r.mraTransferFee));
+    add('Smart card', pk(r.smartCardFee));
+    add('NADRA biometrics', pk(r.biometricFee));
+    add(`Security number plates${platesForced ? ' (required, pre-2020)' : ''}`, pk(r.numberPlateFee));
+    if (r.additionalRegMarkFee > 0) add('Additional registration mark fee', pk(r.additionalRegMarkFee), 'red');
+  }
+  add(isEv ? 'Fuel (electric, not calculated)' : `Fuel · 12 months (${dailyKm} km/day)`, pk(fuelYear));
+
+  const copyText = () => {
+    const text = [`DriveFetch cost breakdown (${MONTHS[month - 1]} ${year})`, ...lines.map((l) => `${l.k}: ${l.v}`), `TOTAL first year: ${pk(total)}`].join('\n');
+    navigator.clipboard?.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    }).catch(() => {});
+  };
+  const shareUrl = `https://wa.me/?text=${encodeURIComponent(`First-year cost on DriveFetch: ${pk(total)} (car ${pk(price)} + ${pk(extra)} running and paperwork)`)}`;
 
   return (
-    <>
+    <div className="w-full">
       <SEO
-        title="Car Tax, Transfer Fee & Fuel Cost Calculators Pakistan (FY 2026-27)"
-        description="Calculate exact annual token tax (ICT, Punjab, Sindh, KPK), FBR 231B vehicle transfer fees, and monthly fuel costs with latest 2026-2027 statutory rates."
+        title="Car Tax, Transfer Fee & Fuel Cost Calculators Pakistan"
+        description="Token tax (ICT, Punjab, Sindh), FBR 231B and 234, transfer fees and monthly fuel cost in one calculator, with this year's rates."
         path="/calculators"
-        keywords={[
-          'token tax calculator Pakistan 2026',
-          'vehicle transfer fee calculator FBR 231B',
-          'car fuel cost calculator Pakistan',
-          'Section 234 withholding tax vehicle',
-        ]}
+        keywords={['token tax calculator Pakistan', 'vehicle transfer fee calculator FBR 231B', 'car fuel cost calculator Pakistan', 'Section 234 withholding tax vehicle']}
         schema={calculatorsSchema}
       />
 
-      {/* ── Dynamic Background ── */}
-      <DynamicBackground />
+      <section className="px-5 sm:px-10 pt-12 sm:pt-14 pb-8 flex flex-wrap justify-between items-end gap-5">
+        <h1 className="df-display text-[length:clamp(60px,9vw,136px)]"><SplitText text="What it" /> <SplitText text="really" className="text-df-red" start={2} /> <SplitText text="costs." start={3} /></h1>
+        <p data-reveal style={{ '--rd': '250ms' }} className="max-w-[380px] text-[17px] leading-relaxed df-muted">Fuel, token tax, FBR withholding and transfer fees in one form, using the current fiscal year’s Excise and FBR rates.</p>
+      </section>
 
-      <div className="relative z-10 min-h-screen">
-        {/* ── Page Header ── */}
-        <header className="pt-12 md:pt-20 pb-10 md:pb-14 px-4 md:px-6">
-          <div className="max-w-3xl mx-auto">
-            <p className="font-mono text-[10px] md:text-xs font-bold tracking-[0.14em] text-df-black/30 dark:text-zinc-50/30 mb-4 uppercase">
-              [ SYS // FINANCIAL_TOOLS ]
-            </p>
-            <h1 className="text-display-lg text-df-black dark:text-zinc-50 mb-4">
-              Calculators
-            </h1>
-            <p className="font-body text-base md:text-lg text-df-black/55 dark:text-zinc-50/55 font-medium max-w-xl leading-relaxed">
-              Calculate <span className="text-[#E5202E] font-bold">exact</span> running costs, taxes, and transfer fees before you buy. All figures based on latest FBR & Excise data.
-            </p>
+      <div data-reveal="line" aria-hidden="true" className="h-[2px] bg-black dark:bg-zinc-50" />
+      <div className="flex flex-wrap">
+        <form onSubmit={(e) => e.preventDefault()} className="flex-[999_1_560px] min-w-0 px-5 sm:px-10 py-8 sm:py-10 flex flex-col gap-10">
+          <Section n="1" title="The car">
+            <Slider id="ca-price" label="Price / invoice value" value={priceLac} display={`${priceLac} lac`} min={5} max={250} step={0.5} onChange={setPriceLac} />
+            <div className="flex flex-col gap-2">
+              <label htmlFor="ca-cc" className="text-sm font-bold">Engine</label>
+              <select id="ca-cc" value={cc} onChange={(e) => setCc(Number(e.target.value))} className="df-select">
+                {CC_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <Slider id="ca-age" label="Vehicle age" value={age} display={age === 0 ? 'New' : `${age} yr${age === 1 ? '' : 's'} (reg. ${year - age})`} min={0} max={20} step={1} onChange={setAge} />
+            <div className="flex flex-wrap gap-2.5">
+              <Check label="Electric vehicle" checked={isEv} onChange={setIsEv} />
+            </div>
+          </Section>
+
+          <Section n="2" title="You">
+            <span className="text-sm font-bold">Registered in</span>
+            <div role="radiogroup" aria-label="Province" className="flex flex-wrap">
+              {PROVINCES.map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={province === p.value}
+                  disabled={p.soon}
+                  onClick={() => setProvince(p.value)}
+                  className={`min-h-[52px] px-4 -mr-px -mb-px border border-black dark:border-zinc-700 text-sm font-bold flex flex-col justify-center items-start ${
+                    province === p.value ? 'bg-black text-white dark:bg-zinc-50 dark:text-black' : ''
+                  } ${p.soon ? 'opacity-50 cursor-not-allowed' : 'hover:bg-df-grey dark:hover:bg-zinc-900'}`}
+                >
+                  <span>{p.label}</span>
+                  {p.soon ? <span className="text-[11px] font-medium">coming soon</span> : null}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2.5">
+              <Check label="Active tax filer" checked={isFiler} onChange={setIsFiler} />
+              <label className="flex items-center gap-2.5 min-h-[48px] px-3.5 border border-black dark:border-zinc-700 text-sm font-bold">
+                Paying token in
+                <select value={month} onChange={(e) => setMonth(Number(e.target.value))} aria-label="Payment month" className="h-9 bg-transparent font-bold outline-none cursor-pointer dark:bg-df-night">
+                  {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                </select>
+              </label>
+            </div>
+          </Section>
+
+          <Section n="3" title="Transfer">
+            <label className="flex items-center justify-between min-h-[52px] px-4 bg-df-grey dark:bg-zinc-900 text-[15px] font-bold cursor-pointer">
+              Include transfer into my name
+              <input type="checkbox" checked={includeTransfer} onChange={(e) => setIncludeTransfer(e.target.checked)} className="w-5 h-5 accent-df-red" />
+            </label>
+            {includeTransfer && (
+              <div className="flex flex-wrap gap-2.5 animate-df-fade-up">
+                <Check label="Seller keeps the number" note="(CNIC-linked)" checked={sellerKeepsNumber} onChange={setSellerKeepsNumber} />
+                <Check label="New security plates" note={platesForced ? '(required before 2020)' : ''} checked={newPlates || platesForced} disabled={platesForced} onChange={setNewPlates} />
+                <Check label="Coming from another province" checked={interProvincial} onChange={setInterProvincial} />
+              </div>
+            )}
+          </Section>
+
+          <Section n="4" title="Driving">
+            <Slider id="ca-km" label="Daily distance" value={dailyKm} display={`${dailyKm} km`} min={0} max={200} step={5} onChange={setDailyKm} />
+            <Slider id="ca-city" label="Share in city traffic" value={cityPct} display={`${cityPct}%`} min={0} max={100} step={10} onChange={setCityPct} />
+            {!isEv && fuel.label ? <p className="text-sm df-muted">Using averages for {fuel.label}.</p> : null}
+          </Section>
+        </form>
+
+        <aside aria-live="polite" data-reveal="clip" style={{ '--rd': '200ms' }} className="flex-[1_1_420px] min-w-0 bg-df-red text-white px-5 sm:px-9 py-8 sm:py-10 flex flex-col gap-5">
+          <span className="text-[15px] font-extrabold">First year, all in</span>
+          <span className="df-display text-[length:clamp(64px,7vw,104px)] tabular-nums">{lac(totalShown)}</span>
+          <span className="text-[17px] font-bold text-black tabular-nums">{lac(extraShown)} on top of the price</span>
+
+          <div className="bg-white text-black px-5 py-5 flex flex-col font-mono text-[13.5px]">
+            <span className="font-sans text-[13px] font-extrabold tracking-[0.08em] pb-2.5 border-b-2 border-dashed border-black">ITEMISED</span>
+            {lines.map((l) => (
+              <div key={l.k} className={`flex justify-between gap-3 py-2 border-b border-neutral-200 ${l.tone === 'bold' ? 'font-bold' : ''} ${l.tone === 'red' ? 'text-df-red-dark' : ''}`}>
+                <span>{l.k}</span><span className="whitespace-nowrap text-right">{l.v}</span>
+              </div>
+            ))}
+            <div className="flex justify-between pt-3 text-[15px] font-bold"><span>TOTAL</span><span>{pk(total)}</span></div>
           </div>
-        </header>
 
-        {/* ── Calculator Sections ── */}
-        <div className="px-4 md:px-6 pb-16 md:pb-24 space-y-16 md:space-y-24">
+          <div className="flex flex-col gap-1.5 text-[15px]">
+            <span><strong>{pk((fuel.monthlyCost || 0) + r.totalAnnualToken / 12)}</strong> a month to run (fuel + token)</span>
+            {!isEv ? <span>{fuel.totalLiters} L of fuel a month</span> : null}
+          </div>
 
-          {/* ═══════════════════════════════════════════
-             SECTION 1: FUEL COST ESTIMATOR
-             ═══════════════════════════════════════════ */}
-          <motion.section
-            variants={cardFloat}
-            initial="rest"
-            whileInView="float"
-            viewport={{ once: false, amount: 0.3 }}
-            transition={cardTransition}
-            className="group max-w-3xl mx-auto bg-white dark:bg-black border-2 border-df-black dark:border-neutral-700 transition-all duration-200 hover:border-[#E5202E] hover:ring-2 hover:ring-[#E5202E] focus-within:border-[#E5202E] focus-within:ring-2 focus-within:ring-[#E5202E]"
-          >
-              <div className="px-6 md:px-8 py-4 md:py-5 border-b-2 border-df-black dark:border-neutral-700 transition-all duration-200 group-hover:border-b-[#E5202E] group-hover:border-b-4 group-focus-within:border-b-[#E5202E] group-focus-within:border-b-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
-                <span className="font-mono text-[10px] md:text-xs font-bold tracking-[0.1em] text-df-black/35 dark:text-zinc-50/35">
-                  [ TOOL // 01 ]
-                </span>
-                <h2 className="font-display text-2xl md:text-3xl tracking-wide text-df-black dark:text-zinc-50 uppercase">
-                  Fuel Cost Estimator
-                </h2>
-              </div>
-
-              <div className="px-6 md:px-8 py-6 md:py-8 space-y-6 md:space-y-8">
-                <BrutalSelect
-                  id="fuel-cc"
-                  label="Engine Capacity"
-                  value={fuelCc}
-                  onChange={(e) => setFuelCc(Number(e.target.value))}
-                  options={CC_OPTIONS}
-                />
-
-                <BrutalSlider
-                  id="fuel-commute"
-                  label="Daily Commute"
-                  value={fuelKm}
-                  onChange={(e) => setFuelKm(Number(e.target.value))}
-                  min={5}
-                  max={200}
-                  unit="km"
-                />
-              </div>
-
-              <div className="bg-df-black px-6 md:px-8 py-5 md:py-6">
-                <p className="font-mono text-[10px] md:text-xs font-bold tracking-[0.14em] text-white/40 uppercase mb-1.5">
-                  Est. Monthly Cost
-                </p>
-                <p className="font-mono text-2xl md:text-3xl font-bold text-white tracking-tight">
-                  Rs. {fuelCostResult.monthlyCost.toLocaleString()}
-                </p>
-              </div>
-          </motion.section>
-
-          {/* ═══════════════════════════════════════════
-             SECTION 2: TOKEN TAX CALCULATOR
-             ═══════════════════════════════════════════ */}
-          <motion.section
-            variants={cardFloat}
-            initial="rest"
-            whileInView="float"
-            viewport={{ once: false, amount: 0.3 }}
-            transition={cardTransition}
-            className="group max-w-3xl mx-auto bg-white dark:bg-black border-2 border-df-black dark:border-neutral-700 transition-all duration-200 hover:border-[#E5202E] hover:ring-2 hover:ring-[#E5202E] focus-within:border-[#E5202E] focus-within:ring-2 focus-within:ring-[#E5202E]"
-          >
-              <div className="px-6 md:px-8 py-4 md:py-5 border-b-2 border-df-black dark:border-neutral-700 transition-all duration-200 group-hover:border-b-[#E5202E] group-hover:border-b-4 group-focus-within:border-b-[#E5202E] group-focus-within:border-b-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
-                <span className="font-mono text-[10px] md:text-xs font-bold tracking-[0.1em] text-df-black/35 dark:text-zinc-50/35">
-                  [ TOOL // 02 ]
-                </span>
-                <h2 className="font-display text-2xl md:text-3xl tracking-wide text-df-black dark:text-zinc-50 uppercase">
-                  Token Tax Calculator
-                </h2>
-              </div>
-
-              <div className="px-6 md:px-8 py-6 md:py-8 space-y-6 md:space-y-8">
-                <BrutalSelect
-                  id="token-province"
-                  label="Region / Province"
-                  value={tokenState.province}
-                  onChange={(e) => tokenSetters.setProvince(e.target.value)}
-                  options={PROVINCE_OPTIONS}
-                />
-
-                <BrutalSelect
-                  id="token-cc"
-                  label="Engine Capacity"
-                  value={tokenState.engineCc}
-                  onChange={(e) => tokenSetters.setEngineCc(Number(e.target.value))}
-                  options={CC_OPTIONS}
-                />
-
-                {tokenState.engineCc <= 1000 ? (
-                  <div>
-                    <label className="block font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 dark:text-zinc-50/50 mb-2">
-                      Vehicle Invoice Value (PKR)
-                    </label>
-                    <div className="w-full p-3 md:p-4 bg-[#E5202E] border-2 border-df-black dark:border-neutral-700 font-mono text-sm md:text-base font-bold text-white text-center select-none uppercase tracking-wider shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(64,64,64,1)]">
-                      Lifetime Tax (Rs. 20,000)
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 dark:text-zinc-50/50 mb-2">
-                      Vehicle Invoice Value (PKR)
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={999999999}
-                      required
-                      value={tokenState.invoiceVal}
-                      onChange={(e) => tokenSetters.setInvoiceVal(Number(e.target.value))}
-                      className="w-full p-3 md:p-4 bg-df-white dark:bg-black border-2 border-df-black dark:border-neutral-700 rounded-none outline-none font-mono text-sm md:text-base font-medium focus:ring-2 focus:ring-df-red focus:border-df-red text-df-black dark:text-zinc-50"
-                      step="100000"
-                    />
-                  </div>
-                )}
-
-                <BrutalRadioGroup
-                  name="tokenFiler"
-                  label="Owner Filer Status"
-                  value={tokenState.isFiler}
-                  onChange={(val) => tokenSetters.setIsFiler(val)}
-                  options={[
-                    { value: true,  label: 'Active Filer' },
-                    { value: false, label: 'Non-Filer' },
-                  ]}
-                />
-
-                <BrutalSlider
-                  id="token-age"
-                  label="Vehicle Age"
-                  value={tokenState.vehicleAge}
-                  onChange={(e) => tokenSetters.setVehicleAge(Number(e.target.value))}
-                  min={0}
-                  max={15}
-                  unit="yrs"
-                />
-              </div>
-
-              <div className="bg-df-black px-6 md:px-8 py-5 md:py-6">
-                <p className="font-mono text-[10px] md:text-xs font-bold tracking-[0.14em] text-white/40 uppercase mb-3">
-                  Token Tax Breakdown
-                </p>
-                <div className="font-mono text-sm md:text-base text-white/80 space-y-1.5 leading-relaxed">
-                  <p>&gt; PROVINCIAL TOKEN TAX: <span className="text-white font-bold">Rs. {tokenResults.netProvincialToken.toLocaleString()} {tokenResults.isLifetimeToken ? '(LIFETIME)' : ''}</span></p>
-                  
-                  <p>&gt; FBR SEC 234 ADVANCE TAX: <span className="text-[#E5202E] font-bold">{tokenResults.vehicleAge >= 10 ? 'Rs. 0 (Exempt)' : `Rs. ${tokenResults.fbrSection234.toLocaleString()}`}</span></p>
-                  
-                  <div className="border-t border-white/20 my-2 pt-2">
-                    <p className="text-white font-bold text-lg md:text-xl">&gt; NET PAYABLE: Rs. {tokenResults.totalAnnualToken.toLocaleString()}</p>
-                  </div>
-                </div>
-              </div>
-          </motion.section>
-
-          {/* ═══════════════════════════════════════════
-             SECTION 3: TRANSFER FEE CALCULATOR
-             ═══════════════════════════════════════════ */}
-          <motion.section
-            variants={cardFloat}
-            initial="rest"
-            whileInView="float"
-            viewport={{ once: false, amount: 0.3 }}
-            transition={cardTransition}
-            className="group max-w-3xl mx-auto bg-white dark:bg-black border-2 border-df-black dark:border-neutral-700 transition-all duration-200 hover:border-[#E5202E] hover:ring-2 hover:ring-[#E5202E] focus-within:border-[#E5202E] focus-within:ring-2 focus-within:ring-[#E5202E]"
-          >
-              <div className="px-6 md:px-8 py-4 md:py-5 border-b-2 border-df-black dark:border-neutral-700 transition-all duration-200 group-hover:border-b-[#E5202E] group-hover:border-b-4 group-focus-within:border-b-[#E5202E] group-focus-within:border-b-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
-                <span className="font-mono text-[10px] md:text-xs font-bold tracking-[0.1em] text-df-black/35 dark:text-zinc-50/35">
-                  [ TOOL // 03 ]
-                </span>
-                <h2 className="font-display text-2xl md:text-3xl tracking-wide text-df-black dark:text-zinc-50 uppercase">
-                  Transfer Fee Calculator
-                </h2>
-              </div>
-
-              <div className="px-6 md:px-8 py-6 md:py-8 space-y-6 md:space-y-8">
-                <BrutalSelect
-                  id="transfer-province"
-                  label="Region / Province"
-                  value={transferState.province}
-                  onChange={(e) => transferSetters.setProvince(e.target.value)}
-                  options={PROVINCE_OPTIONS}
-                />
-
-                <BrutalSelect
-                  id="transfer-cc"
-                  label="Engine Capacity"
-                  value={transferState.engineCc}
-                  onChange={(e) => transferSetters.setEngineCc(Number(e.target.value))}
-                  options={CC_OPTIONS}
-                />
-
-                {transferState.engineCc <= 1000 ? (
-                  <div>
-                    <label className="block font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 dark:text-zinc-50/50 mb-2">
-                      Vehicle Invoice Value (PKR)
-                    </label>
-                    <div className="w-full p-3 md:p-4 bg-[#E5202E] border-2 border-df-black dark:border-neutral-700 font-mono text-sm md:text-base font-bold text-white text-center select-none uppercase tracking-wider shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(64,64,64,1)]">
-                      Not Applicable
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block font-mono text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-df-black/50 dark:text-zinc-50/50 mb-2">
-                      Vehicle Invoice Value (PKR)
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={999999999}
-                      required
-                      value={transferState.invoiceVal}
-                      onChange={(e) => transferSetters.setInvoiceVal(Number(e.target.value))}
-                      className="w-full p-3 md:p-4 bg-df-white dark:bg-black border-2 border-df-black dark:border-neutral-700 rounded-none outline-none font-mono text-sm md:text-base font-medium focus:ring-2 focus:ring-df-red focus:border-df-red text-df-black dark:text-zinc-50"
-                      step="100000"
-                    />
-                  </div>
-                )}
-
-                <BrutalRadioGroup
-                  name="transferFiler"
-                  label="Buyer Filer Status"
-                  value={transferState.isFiler}
-                  onChange={(val) => transferSetters.setIsFiler(val)}
-                  options={[
-                    { value: true,  label: 'Active Filer' },
-                    { value: false, label: 'Non-Filer' },
-                  ]}
-                />
-
-                <BrutalRadioGroup
-                  name="transferSellerRetention"
-                  label="Seller Retaining Number (CNIC-Linked)"
-                  value={transferState.sellerRetainingNumber}
-                  onChange={(val) => transferSetters.setSellerRetainingNumber(val)}
-                  options={[
-                    { value: true,  label: 'Yes' },
-                    { value: false, label: 'No' },
-                  ]}
-                />
-
-                <BrutalRadioGroup
-                  name="transferNeedsPlates"
-                  label={
-                    <div className="flex items-center gap-2">
-                      Universal / Replacement Plates Required
-                      {transferState.vehicleAge >= 7 && (
-                        <span className="bg-[#E5202E] text-white text-[8px] md:text-[10px] px-2 py-0.5 font-bold uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(64,64,64,1)]">
-                          [ MANDATORY RETROFIT (PRE-2020) ]
-                        </span>
-                      )}
-                    </div>
-                  }
-                  value={transferState.vehicleAge >= 7 || transferState.needsNewPlates}
-                  onChange={(val) => transferSetters.setNeedsNewPlates(val)}
-                  disabled={transferState.vehicleAge >= 7}
-                  options={[
-                    { value: true,  label: 'Yes' },
-                    { value: false, label: 'No' },
-                  ]}
-                />
-
-                <BrutalSlider
-                  id="transfer-age"
-                  label="Vehicle Age"
-                  value={transferState.vehicleAge}
-                  onChange={(e) => transferSetters.setVehicleAge(Number(e.target.value))}
-                  min={0}
-                  max={15}
-                  unit="yrs"
-                />
-              </div>
-
-              <div className="bg-df-black px-6 md:px-8 py-5 md:py-6">
-                <p className="font-mono text-[10px] md:text-xs font-bold tracking-[0.14em] text-white/40 uppercase mb-3">
-                  Transfer Fee Breakdown
-                </p>
-                <div className="font-mono text-sm md:text-base text-white/80 space-y-1.5 leading-relaxed">
-                  <p>&gt; MRA BASE TRANSFER FEE: <span className="text-white font-bold">Rs. {transferResults.mraTransferFee.toLocaleString()}</span></p>
-                  <p>&gt; FBR SEC 231B ADVANCE TAX: <span className="text-[#E5202E] font-bold">{transferResults.vehicleAge >= 5 ? 'Rs. 0 (Exempt)' : `Rs. ${transferResults.fbrSection231b.toLocaleString()}`}</span></p>
-                  <p>&gt; SMART CARD FEE: <span className="text-white font-bold">Rs. {transferResults.smartCardFee.toLocaleString()}</span></p>
-                  <p>&gt; NADRA BIOMETRICS: <span className="text-white font-bold">Rs. {transferResults.biometricFee.toLocaleString()}</span></p>
-                  <p>&gt; UNIVERSAL NUMBER PLATES: <span className="text-white font-bold">Rs. {transferResults.numberPlateFee.toLocaleString()}</span></p>
-                  {transferResults.additionalRegMarkFee > 0 && (
-                    <p>&gt; ADDITIONAL REG MARK FEE: <span className="text-[#E5202E] font-bold">Rs. {transferResults.additionalRegMarkFee.toLocaleString()}</span></p>
-                  )}
-
-                  <div className="border-t border-white/20 my-2 pt-2">
-                    <p className="text-white font-bold text-lg md:text-xl">&gt; TOTAL TRANSFER COST: Rs. {transferResults.totalTransferCost.toLocaleString()}</p>
-                  </div>
-                </div>
-              </div>
-          </motion.section>
-
-        </div>
+          <div className="flex flex-wrap gap-2 mt-auto">
+            <button type="button" onClick={copyText} className="h-12 px-4 bg-black text-white text-sm font-extrabold hover:bg-white hover:text-black">
+              {copied ? 'Copied ✓' : 'Copy breakdown'}
+            </button>
+            <a href={shareUrl} target="_blank" rel="noopener noreferrer" className="h-12 px-4 inline-flex items-center border-2 border-white text-sm font-extrabold hover:bg-white hover:text-df-red">
+              Share on WhatsApp
+            </a>
+          </div>
+          <p className="text-[12.5px] leading-relaxed">Estimates from DriveFetch’s calculator. Check with your Excise office before paying.</p>
+        </aside>
       </div>
-
-      <style>{`
-        :root {
-          --brutal-shadow: #000000;
-        }
-        .dark {
-          --brutal-shadow: #404040;
-        }
-        
-        .brutal-select {
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23000' stroke-width='2'/%3E%3C/svg%3E");
-        }
-        .dark .brutal-select {
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E");
-        }
-
-        .brutal-slider {
-          -webkit-appearance: none;
-          appearance: none;
-          background: transparent;
-          height: 40px;
-          margin: 0;
-        }
-
-        .brutal-slider::-webkit-slider-runnable-track {
-          height: 3px;
-          background: transparent;
-          border: none;
-        }
-
-        .brutal-slider::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 20px;
-          height: 20px;
-          background: #E5202E;
-          border: 2px solid var(--brutal-shadow);
-          border-radius: 0;
-          cursor: pointer;
-          margin-top: -9px;
-          box-shadow: 2px 2px 0px 0px var(--brutal-shadow);
-          transition: box-shadow 0.1s;
-        }
-        .brutal-slider::-webkit-slider-thumb:hover {
-          box-shadow: 3px 3px 0px 0px var(--brutal-shadow);
-        }
-        .brutal-slider::-webkit-slider-thumb:active {
-          box-shadow: 1px 1px 0px 0px var(--brutal-shadow);
-          transform: translate(1px, 1px);
-        }
-
-        .brutal-slider::-moz-range-track {
-          height: 3px;
-          background: transparent;
-          border: none;
-        }
-
-        .brutal-slider::-moz-range-thumb {
-          width: 20px;
-          height: 20px;
-          background: #E5202E;
-          border: 2px solid var(--brutal-shadow);
-          border-radius: 0;
-          cursor: pointer;
-          box-shadow: 2px 2px 0px 0px var(--brutal-shadow);
-        }
-        .brutal-slider::-moz-range-thumb:hover {
-          box-shadow: 3px 3px 0px 0px var(--brutal-shadow);
-        }
-
-        .brutal-slider:focus {
-          outline: none;
-        }
-        .brutal-slider:focus-visible::-webkit-slider-thumb {
-          outline: 2px solid #E5202E;
-          outline-offset: 2px;
-        }
-        .brutal-slider:focus-visible::-moz-range-thumb {
-          outline: 2px solid #E5202E;
-          outline-offset: 2px;
-        }
-      `}</style>
-    </>
+    </div>
   );
 }

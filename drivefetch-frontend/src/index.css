@@ -1,128 +1,362 @@
-/* ── Google Fonts ── */
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════
-   DRIVEFETCH — Neo-Brutalist / Swiss Utility Design System
+   DRIVEFETCH — "Number plate" design system
+   Palette: white / #F5F5F5 / black / #E5202E (light)
+            zinc-950 / black / zinc-50 / #E5202E (dark)
+   Type:    Archivo (variable width) + JetBrains Mono
+   Motion:  Lenis smooth scroll + CSS reveals (see src/components/motion)
    ═══════════════════════════════════════════════════════ */
 
-/* ── Base Reset ── */
-@layer base {
-  *, *::before, *::after {
-    border-radius: 0px !important;
-  }
+:root {
+  /* Easing curves. io-circ / io-cubic match the reference site's feel. */
+  --ease-out-expo: cubic-bezier(.19, 1, .22, 1);
+  --ease-io-circ: cubic-bezier(.785, .135, .15, .86);
+  --ease-io-cubic: cubic-bezier(.645, .045, .355, 1);
+  --ease-io-quart: cubic-bezier(.76, 0, .24, 1);
+  --df-progress: 0;
+}
 
+@layer base {
   html {
-    scroll-behavior: smooth;
+    scrollbar-gutter: stable;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Hold the page still while the intro plays */
+  html.df-loading, html.df-loading body { overflow: hidden; }
 
   body {
     margin: 0;
     padding: 0;
     background-color: #FFFFFF;
     color: #000000;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
     overflow-x: hidden;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition: background-color .25s ease, color .25s ease;
   }
 
   .dark body {
-    background-color: #18181b;
-    color: #f4f4f5;
+    background-color: #09090B;
+    color: #FAFAFA;
   }
 
-  ::selection {
-    background-color: #000000;
-    color: #FFFFFF;
+  ::selection { background-color: #E5202E; color: #FFFFFF; }
+
+  :focus-visible {
+    outline: 3px solid #E5202E;
+    outline-offset: 2px;
   }
 
-  .dark ::selection {
-    background-color: #FFFFFF;
-    color: #000000;
+  input, textarea, select, button { font-family: inherit; }
+
+  summary { list-style: none; cursor: pointer; }
+  summary::-webkit-details-marker { display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .001ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
-/* ── Neo-Brutalist Utility Classes ── */
+/* ── Lenis (smooth scroll) ───────────────────────────── */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
+.lenis.lenis-smooth iframe { pointer-events: none; }
+
 @layer components {
-  /* Hard border standard */
-  .border-brutal {
-    border: 2px solid #000000;
+  /* Condensed display type */
+  .df-display {
+    font-weight: 900;
+    text-transform: uppercase;
+    font-stretch: 66%;
+    line-height: .86;
+    letter-spacing: -0.005em;
+    overflow-wrap: break-word;
   }
-  .dark .border-brutal {
-    border-color: #404040;
+  .df-cond { font-stretch: 70%; }
+
+  .df-label {
+    @apply font-mono text-[13px] font-semibold tracking-wide text-neutral-600 dark:text-zinc-400;
+  }
+  .df-muted { @apply text-neutral-600 dark:text-zinc-400; }
+  .df-panel { @apply bg-df-grey dark:bg-black; }
+  .df-line { @apply border-neutral-200 dark:border-zinc-800; }
+  .df-line-strong { @apply border-black dark:border-zinc-700; }
+
+  /* Buttons. Hover fills from the bottom (a panel slides up behind the label). */
+  .df-btn, .df-btn-red, .df-btn-ink, .df-btn-outline, .df-btn-ghost {
+    @apply relative isolate overflow-hidden inline-flex items-center justify-center gap-2 h-11 px-4 text-sm font-extrabold tracking-wide disabled:opacity-50 disabled:cursor-not-allowed;
+    transition: color .35s var(--ease-io-cubic), border-color .35s var(--ease-io-cubic);
+  }
+  .df-btn::before, .df-btn-red::before, .df-btn-ink::before, .df-btn-outline::before {
+    content: '';
+    position: absolute; inset: 0; z-index: -1;
+    background: var(--df-fill, #000);
+    transform: translate3d(0, 101%, 0);
+    transition: transform .45s var(--ease-io-cubic);
+  }
+  .df-btn:not(:disabled):hover::before, .df-btn:not(:disabled):focus-visible::before,
+  .df-btn-red:not(:disabled):hover::before, .df-btn-red:not(:disabled):focus-visible::before,
+  .df-btn-ink:not(:disabled):hover::before, .df-btn-ink:not(:disabled):focus-visible::before,
+  .df-btn-outline:not(:disabled):hover::before, .df-btn-outline:not(:disabled):focus-visible::before { transform: translate3d(0, 0, 0); }
+
+  .df-btn-red { @apply bg-df-red text-white; --df-fill: #000; }
+  .dark .df-btn-red { --df-fill: #FAFAFA; }
+  .dark .df-btn-red:not(:disabled):hover { color: #000; }
+
+  .df-btn-ink { @apply bg-black text-white dark:bg-zinc-50 dark:text-black; --df-fill: #E5202E; }
+  .dark .df-btn-ink:not(:disabled):hover { color: #FFF; }
+
+  .df-btn-outline { @apply border border-black text-black dark:border-zinc-700 dark:text-zinc-50; --df-fill: #000; }
+  .df-btn-outline:not(:disabled):hover { color: #FFF; }
+  .dark .df-btn-outline { --df-fill: #FAFAFA; }
+  .dark .df-btn-outline:not(:disabled):hover { color: #000; }
+
+  .df-btn-ghost { @apply text-black hover:text-df-red dark:text-zinc-50; }
+  
+  /* Underline that draws in from the left on hover */
+  .df-link {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 0% 2px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    transition: background-size .45s var(--ease-io-circ);
+  }
+  .df-link:hover, .df-link:focus-visible, .df-link[aria-current="page"] { background-size: 100% 2px; }
+
+  /* Inputs */
+  .df-input {
+    @apply h-12 w-full px-4 border-2 border-black bg-white text-black text-base outline-none placeholder:text-neutral-500 focus:border-df-red dark:border-zinc-50 dark:bg-black dark:text-zinc-50 dark:placeholder:text-zinc-500;
+  }
+  .df-select {
+    @apply h-12 w-full px-3 border-2 border-black bg-white text-black text-base font-semibold outline-none focus:border-df-red dark:border-zinc-50 dark:bg-black dark:text-zinc-50;
   }
 
-  .border-brutal-thin {
-    border: 1px solid #000000;
-  }
-  .dark .border-brutal-thin {
-    border-color: rgba(255, 255, 255, 0.15);
-  }
+  /* Ad flags */
+  .df-flag-risk { @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-[13px] font-bold bg-df-red text-white; }
+  .df-flag-warn { @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-[13px] font-bold bg-neutral-200 text-black dark:bg-zinc-800 dark:text-zinc-50; }
+  .df-flag-good { @apply inline-flex items-center gap-1.5 px-2.5 py-[3px] text-[13px] font-bold border border-black text-black dark:border-zinc-600 dark:text-zinc-50; }
 
-  /* Invert hover — instant, no smoothing */
-  .hover-invert {
-    transition: background-color 0.05s step-end, color 0.05s step-end;
-  }
-  .hover-invert:hover {
-    background-color: #000000;
-    color: #FFFFFF;
-  }
-
-  /* Red accent box (for "SKIP" style elements) */
-  .accent-box {
-    display: inline-block;
-    background-color: #E5202E;
-    color: #FFFFFF;
-    padding: 0.05em 0.15em;
-    line-height: 1;
-    vertical-align: baseline;
-  }
-
-  /* Monospace system tags */
-  .sys-tag {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    font-weight: 500;
-    color: rgba(0, 0, 0, 0.12);
-    letter-spacing: 0.04em;
-    user-select: none;
-    pointer-events: none;
-  }
-  .dark .sys-tag {
-    color: rgba(255, 255, 255, 0.12);
-  }
+  /* Typing dots */
+  .df-dot { @apply inline-block w-2 h-2 bg-current animate-df-dot; }
 }
 
-/* ── Fluid Display Typography ── */
-.text-display-hero {
-  font-family: 'Bebas Neue', sans-serif;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.01em;
-  line-height: 0.92;
-  /* Fluid: 48px at 320px → 180px at 1440px */
-  font-size: clamp(3rem, 2rem + 10vw, 11.25rem);
+/* ── Scroll reveals ──────────────────────────────────────
+   Elements with [data-reveal] start hidden only when JS has switched motion on
+   (html.df-motion). They animate in once html.df-ready is set (after the intro)
+   and they have scrolled into view (.is-in). While html.df-hold is set (a page
+   transition curtain is covering the screen) new elements are not marked .is-in,
+   so the incoming page animates once the curtain lifts. */
+.df-motion [data-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 36px, 0);
+  transition:
+    opacity .9s var(--ease-out-expo) var(--rd, 0ms),
+    transform 1.2s var(--ease-out-expo) var(--rd, 0ms),
+    clip-path 1.1s var(--ease-io-quart) var(--rd, 0ms);
+}
+.df-motion [data-reveal="split"] { transition: none; }
+.df-motion [data-reveal="fade"] { transform: none; }
+.df-motion [data-reveal="scale"] { transform: scale(.94); }
+.df-motion [data-reveal="left"] { transform: translate3d(-48px, 0, 0); }
+.df-motion [data-reveal="right"] { transform: translate3d(48px, 0, 0); }
+.df-motion [data-reveal="clip"] { opacity: 1; transform: none; clip-path: inset(0 0 100% 0); }
+.df-motion [data-reveal="wipe"] { opacity: 1; transform: none; clip-path: inset(0 100% 0 0); }
+.df-motion [data-reveal="line"] { opacity: 1; transform: scaleX(0); transform-origin: left center; }
+.df-motion [data-reveal="split"] { opacity: 1; transform: none; }
+
+.df-motion.df-ready [data-reveal].is-in {
+  opacity: 1;
+  transform: none;
+}
+/* Only clip variants touch clip-path: on inline text spanning lines it would cut lines off. */
+.df-motion.df-ready [data-reveal="clip"].is-in,
+.df-motion.df-ready [data-reveal="wipe"].is-in { clip-path: inset(0 0 0 0); }
+
+/* Split text: every word slides up out of its own mask, 48ms apart */
+.df-split .df-w {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding-bottom: .1em;
+  margin-bottom: -.1em;
+}
+.df-split .df-wi { display: inline-block; }
+.df-motion .df-split .df-wi {
+  transform: translate3d(0, 108%, 0);
+  transition: transform 1.05s var(--ease-io-cubic) calc(var(--rd, 0ms) + var(--i, 0) * 48ms);
+}
+.df-motion.df-ready [data-reveal].is-in .df-wi,
+.df-motion.df-ready .df-split.is-in .df-wi { transform: none; }
+
+/* Children that stagger after their parent is revealed */
+.df-motion [data-stagger] > * {
+  opacity: 0;
+  transform: translate3d(0, 24px, 0);
+  transition:
+    opacity .8s var(--ease-out-expo) calc(var(--rd, 0ms) + var(--si, 0) * 70ms),
+    transform 1s var(--ease-out-expo) calc(var(--rd, 0ms) + var(--si, 0) * 70ms);
+}
+.df-motion.df-ready [data-stagger].is-in > * { opacity: 1; transform: none; }
+
+@keyframes df-road-kf { from { background-position: 0 0; } to { background-position: -80px 0; } }
+@keyframes df-marquee { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-50%, 0, 0); } }
+@keyframes df-scroll-cue { 0% { transform: scaleY(0); transform-origin: top; } 45% { transform: scaleY(1); transform-origin: top; } 55% { transform: scaleY(1); transform-origin: bottom; } 100% { transform: scaleY(0); transform-origin: bottom; } }
+@keyframes df-caret { 50% { opacity: 0; } }
+@keyframes df-scan { from { transform: translate3d(0, -100%, 0); } to { transform: translate3d(0, 100%, 0); } }
+
+@layer utilities {
+  .df-sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+  .df-road-loader {
+    background-image: repeating-linear-gradient(90deg, #E5202E 0 40px, transparent 40px 80px);
+    animation: df-road-kf .6s linear infinite;
+  }
+  .df-road-white {
+    background-image: repeating-linear-gradient(90deg, #FFFFFF 0 20px, transparent 20px 40px);
+    animation: df-road-kf .6s linear infinite;
+  }
+  .df-no-scrollbar::-webkit-scrollbar { display: none; }
+  .df-no-scrollbar { scrollbar-width: none; }
+
+  .df-marquee-track { animation: df-marquee var(--marquee-dur, 38s) linear infinite; }
+  .df-marquee:hover .df-marquee-track { animation-play-state: paused; }
+  .df-scroll-cue { animation: df-scroll-cue 2.2s var(--ease-io-cubic) infinite; }
+  .df-caret { animation: df-caret 1s steps(1) infinite; }
 }
 
-.text-display-lg {
-  font-family: 'Bebas Neue', sans-serif;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  line-height: 0.95;
-  font-size: clamp(2rem, 1rem + 5vw, 5rem);
+/* ── Header: progress bar + hide on scroll down ───────── */
+.df-header { transition: transform .6s var(--ease-io-quart), background-color .3s ease .12s, border-color .3s ease .12s, color .3s ease .12s; }
+.df-header.is-hidden { transform: translate3d(0, -100%, 0); }
+.df-progress { transform: scaleX(var(--df-progress)); transform-origin: left center; }
+
+/* Header logo stays invisible while the intro logo flies into its place */
+html.df-loading #df-header-logo { opacity: 0; }
+
+/* ── Menu overlay ───────────────────────────────────────
+   Two layers drop in (black, then red). Links rise out of masks one by one.
+   Leaving plays it backwards. */
+.df-menu { visibility: hidden; pointer-events: none; }
+.df-menu.is-open, .df-menu.is-leaving { visibility: visible; }
+.df-menu.is-open { pointer-events: auto; }
+.df-menu .df-menu-layer {
+  position: absolute; inset: 0;
+  clip-path: inset(0 0 100% 0);
+  transition: clip-path .8s var(--ease-io-quart);
+}
+.df-menu .df-menu-layer.l1 { transition-delay: .08s; }
+.df-menu.is-open .df-menu-layer { clip-path: inset(0 0 0 0); }
+.df-menu.is-open .df-menu-layer.l0 { transition-delay: 0s; }
+.df-menu.is-open .df-menu-layer.l1 { transition-delay: .1s; }
+.df-menu.is-leaving .df-menu-layer.l0 { transition-delay: .18s; clip-path: inset(0 0 100% 0); }
+.df-menu.is-leaving .df-menu-layer.l1 { transition-delay: .1s; clip-path: inset(0 0 100% 0); }
+
+.df-menu .df-mi {
+  display: inline-block;
+  transform: translate3d(0, 110%, 0);
+  transition: transform .9s var(--ease-io-cubic);
+  transition-delay: calc(.32s + var(--i, 0) * 60ms);
+}
+.df-menu.is-open .df-mi { transform: none; }
+.df-menu.is-leaving .df-mi { transform: translate3d(0, -110%, 0); transition-duration: .5s; transition-delay: calc(var(--i, 0) * 30ms); }
+
+.df-menu .df-mfade { opacity: 0; transform: translate3d(0, 16px, 0); transition: opacity .6s ease, transform .8s var(--ease-out-expo); transition-delay: .7s; }
+.df-menu.is-open .df-mfade { opacity: 1; transform: none; }
+.df-menu.is-leaving .df-mfade { opacity: 0; transition: none; animation: df-mfade-out .3s ease both; }
+@keyframes df-mfade-out { from { opacity: 1; } to { opacity: 0; } }
+
+.df-menu .df-mline { transform: scaleX(0); transform-origin: left; transition: transform 1s var(--ease-io-quart); transition-delay: calc(.3s + var(--i, 0) * 60ms); }
+.df-menu.is-open .df-mline { transform: scaleX(1); }
+.df-menu.is-leaving .df-mline { transform: scaleX(0); transform-origin: right; transition-duration: .5s; transition-delay: 0s; }
+
+/* Dim the other links while one is hovered */
+@media (hover: hover) {
+  .df-menu-list:hover .df-menu-link { opacity: .38; }
+  .df-menu-list .df-menu-link:hover { opacity: 1; }
+}
+.df-menu-link { transition: opacity .4s ease; }
+.df-menu-link .df-menu-arrow { transform: translate3d(-24px, 0, 0); opacity: 0; transition: transform .5s var(--ease-out-expo), opacity .3s ease; }
+.df-menu-link:hover .df-menu-arrow, .df-menu-link:focus-visible .df-menu-arrow { transform: none; opacity: 1; }
+.df-menu-link .df-menu-word { transition: transform .6s var(--ease-out-expo); }
+.df-menu-link:hover .df-menu-word { transform: translate3d(14px, 0, 0); }
+
+/* Menu button: label rolls between "Menu" and "Close" */
+.df-roll { display: inline-grid; overflow: hidden; height: 1.15em; line-height: 1.15em; }
+.df-roll > span { grid-area: 1 / 1; transition: transform .6s var(--ease-io-cubic); }
+.df-roll > span:last-child { transform: translate3d(0, 110%, 0); }
+.is-active .df-roll > span:first-child { transform: translate3d(0, -110%, 0); }
+.is-active .df-roll > span:last-child { transform: none; }
+.df-burger span { transition: transform .5s var(--ease-io-cubic), opacity .3s ease; transform-origin: center; }
+.is-active .df-burger span:nth-child(1) { transform: translate3d(0, 4px, 0) rotate(45deg); }
+.is-active .df-burger span:nth-child(2) { transform: translate3d(0, -4px, 0) rotate(-45deg); }
+
+/* ── Page transition curtain ──────────────────────────── */
+.df-curtain { clip-path: inset(100% 0 0 0); pointer-events: none; }
+.df-curtain.is-covering { clip-path: inset(0 0 0 0); transition: clip-path .5s var(--ease-io-quart); pointer-events: auto; }
+.df-curtain.is-revealing { clip-path: inset(0 0 100% 0); transition: clip-path .65s var(--ease-io-quart); }
+.df-curtain .df-ci { display: inline-block; transform: translate3d(0, 110%, 0); }
+.df-curtain.is-covering .df-ci { transform: none; transition: transform .6s var(--ease-io-cubic) .12s; }
+.df-curtain.is-revealing .df-ci { transform: translate3d(0, -110%, 0); transition: transform .45s var(--ease-io-cubic); }
+
+@media (prefers-reduced-motion: reduce) {
+  .df-curtain { display: none; }
+  .df-marquee-track { animation: none; }
 }
 
-.text-display-md {
-  font-family: 'Bebas Neue', sans-serif;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  line-height: 1;
-  font-size: clamp(1.5rem, 1rem + 3vw, 3.5rem);
+/* ── Home: CTA cards fill red from the bottom on hover ─── */
+.df-fill-card { position: relative; isolation: isolate; overflow: hidden; transition: color .45s var(--ease-io-cubic); }
+.df-fill-card::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; background: #E5202E;
+  transform: translate3d(0, 101%, 0); transition: transform .7s var(--ease-io-quart);
+}
+.df-fill-card:hover, .df-fill-card:focus-visible { color: #FFF; }
+.df-fill-card:hover::before, .df-fill-card:focus-visible::before { transform: none; }
+.df-fill-card .df-fill-muted { transition: color .45s var(--ease-io-cubic); }
+.df-fill-card:hover .df-fill-muted, .df-fill-card:focus-visible .df-fill-muted { color: rgba(255, 255, 255, .85); }
+.df-fill-card .df-fill-arrow { transition: transform .6s var(--ease-out-expo), background-color .45s ease, color .45s ease; }
+.df-fill-card:hover .df-fill-arrow { transform: translate3d(8px, 0, 0); background: #FFF; color: #000; }
+
+/* ── Demos that play once they scroll into view ─────────
+   [data-late] children wait for their own --d delay after the parent is in. */
+.df-motion [data-late] {
+  opacity: 0; transform: translate3d(0, 14px, 0);
+  transition: opacity .6s ease var(--d, 0s), transform .9s var(--ease-out-expo) var(--d, 0s);
+}
+.df-motion.df-ready .is-in [data-late] { opacity: 1; transform: none; }
+
+.df-motion [data-blip] { opacity: 0; }
+.df-motion.df-ready .is-in [data-blip] { animation: df-blip 1.15s ease var(--d, 0s) both; }
+html:not(.df-motion) [data-blip] { display: none; }
+@keyframes df-blip { 0% { opacity: 0; transform: translateY(10px); } 18%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+
+.df-hl {
+  background: linear-gradient(#E5202E, #E5202E) no-repeat 0 100% / 0% 100%;
+  transition: background-size .7s var(--ease-io-circ) var(--d, 0s), color .3s ease var(--d, 0s);
+  color: inherit; padding: 0 .12em; margin: 0 -.06em;
+}
+html:not(.df-motion) .df-hl, .df-motion.df-ready .is-in .df-motion [data-blip] { opacity: 0; }
+.df-motion.df-ready .is-in [data-blip] { animation: df-blip 1.15s ease var(--d, 0s) both; }
+html:not(.df-motion) [data-blip] { display: none; }
+@keyframes df-blip { 0% { opacity: 0; transform: translateY(10px); } 18%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+
+.df-hl { background-size: 100% 100%; color: #FFF; }
+
+.df-scanbar { position: absolute; left: 0; right: 0; height: 2px; top: 0; opacity: 0; background: #E5202E; box-shadow: 0 0 24px 6px rgba(229, 32, 46, .35); }
+.df-motion.df-ready .is-in .df-scanbar { animation: df-scan-y 1.6s var(--ease-io-cubic) .35s 1 both; }
+@keyframes df-scan-y { 0% { top: 0; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .df-scanbar { display: none; }
 }

@@ -1,102 +1,171 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <!-- Fonts: Bebas Neue (display), Inter (body), JetBrains Mono (data) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
-    <!--
-      STATIC FALLBACK METADATA
-      ========================
-      Everything below is overwritten at runtime by <SEO /> (react-helmet-async)
-      with per-route, domain-aware values from src/config/siteConfig.js.
-
-      It exists for crawlers and link unfurlers that do NOT execute JavaScript —
-      notably WhatsApp, Slack and most social preview bots. Without it they would
-      read an empty <head> and render a bare link with no title or image.
-
-      These are the only hardcoded URLs left in the codebase. They cannot read
-      VITE_SITE_URL because index.html is not processed by the bundler's env
-      substitution, so on a domain switch update the four og:/twitter: URLs here
-      to match. The React app follows the env var on its own.
-    -->
-    <title>DriveFetch - AI-Powered Used Car Search in Pakistan</title>
-    <meta name="description" content="Find your perfect used car in Pakistan with AI-powered matching. Search thousands of listings by budget, family size, and fuel preference.">
-    <meta name="keywords" content="DriveFetch, Drive Fetch, DriveFetch Pakistan, AI Car Matchmaker, Used Cars Pakistan, PakWheels Alternative, Car Token Tax Calculator Pakistan, Car Transfer Fee Calculator 2026, Used Car Search Islamabad Lahore Karachi" />
-    <meta name="author" content="Muhammad Ismail" />
-    <meta name="creator" content="Muhammad Ismail" />
-    <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="#E5202E" />
-    <link rel="canonical" href="https://drivefetch.vercel.app/" />
-
-    <!-- Open Graph / Facebook / LinkedIn / WhatsApp -->
-    <meta property="og:site_name" content="DriveFetch" />
-    <meta property="og:type" content="website" />
-    <meta property="og:locale" content="en_PK" />
-    <meta property="og:url" content="https://drivefetch.vercel.app/" />
-    <meta property="og:title" content="DriveFetch - AI Car Matchmaker Pakistan">
-    <meta property="og:description" content="AI-powered used car search for Pakistan.">
-    <meta property="og:image" content="https://drivefetch.vercel.app/og-preview.jpg" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="DriveFetch — AI used car matchmaker and search engine for Pakistan" />
-
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@DriveFetch" />
-    <meta name="twitter:url" content="https://drivefetch.vercel.app/" />
-    <meta name="twitter:title" content="DriveFetch — AI Car Matchmaker & Used Car Search Pakistan" />
-    <meta name="twitter:description" content="AI-driven used car matchmaker and search engine for Pakistan. Aggregating verified listings from PakWheels, OLX, and Gari.pk with instant valuation, tax, and fuel calculators." />
-    <meta name="twitter:image" content="https://drivefetch.vercel.app/og-preview.jpg" />
-
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      "@id": "https://drivefetch.vercel.app/#organization",
-      "name": "DriveFetch",
-      "alternateName": "Drive Fetch",
-      "legalName": "DriveFetch Pakistan",
-      "url": "https://drivefetch.vercel.app/",
-      "logo": "https://drivefetch.vercel.app/favicon.svg",
-      "image": "https://drivefetch.vercel.app/og-preview.jpg",
-      "description": "AI-driven used car matchmaker and search engine for Pakistan.",
-      "areaServed": { "@type": "Country", "name": "Pakistan" }
-    }
-    </script>
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "DriveFetch",
-      "url": "https://drivefetch.vercel.app",
-      "description": "AI-driven used car matchmaker and search engine for Pakistan.",
-      "applicationCategory": "AutomotiveApplication",
-      "operatingSystem": "All",
-      "author": {
-        "@type": "Person",
-        "name": "Muhammad Ismail",
-        "jobTitle": "Lead Architect",
-        "worksFor": {
-          "@type": "Organization",
-          "name": "FAST NUCES Islamabad"
-        }
-      },
-      "creator": {
-        "@type": "Person",
-        "name": "Muhammad Ismail"
-      }
-    }
-    </script>
-    <meta name="google-site-verification" content="yLZD_3g_fT6G4e-eMs4zx6qhKrlCyhTkS1gk5nqfpuc" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
-</html>
-
+<!doctype html>
+<html lang="en" class="df-loading">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Fonts: Archivo (variable width, display + body), JetBrains Mono (data) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="preload" as="image" href="/drivefetch-logo-white.png" />
+    <link rel="preload" as="image" href="/drivefetch-logo.png" />
+
+    <!-- Intro loader styles. Inline so the red screen paints before any JS loads.
+         The counter and logo fill run on CSS alone at first (registered --p);
+         React (src/components/SplashScreen.jsx) finishes the count, flies the
+         logo into the header and lifts the red panel away. -->
+    <style>
+      @property --p { syntax: '<integer>'; inherits: true; initial-value: 0; }
+      html.df-loading, html.df-loading body { overflow: hidden; animation: df-unlock 0s linear 10s forwards; }
+      #df-splash {
+        --p: 0;
+        position: fixed; inset: 0; z-index: 9999;
+        animation: df-load 2.8s cubic-bezier(.2, .7, .3, 1) forwards, df-splash-failsafe 0s linear 10s forwards;
+      }
+      #df-splash .df-s-bg {
+        position: absolute; inset: 0; background: #E5202E;
+        clip-path: inset(0 0 0 0);
+        transition: clip-path 1s cubic-bezier(.76, 0, .24, 1) .12s;
+      }
+      #df-splash .df-s-logo {
+        position: absolute; left: 50%; top: 50%;
+        width: min(380px, 66vw);
+        transform: translate(-50%, -50%);
+        transform-origin: 0 0;
+        display: grid;
+      }
+      #df-splash .df-s-logo img { grid-area: 1 / 1; width: 100%; height: auto; display: block; }
+      #df-splash .df-s-ghost { opacity: .22; }
+      #df-splash .df-s-fill { clip-path: inset(0 calc(100% - var(--p) * 1%) 0 0); }
+      #df-splash .df-s-red { opacity: 0; transition: opacity .3s ease .64s; }
+      #df-splash .df-s-logo { animation: df-s-in .9s cubic-bezier(.19, 1, .22, 1) both; }
+      #df-splash .df-s-meta {
+        position: absolute; left: 0; right: 0; bottom: 0;
+        display: flex; justify-content: space-between; align-items: flex-end; gap: 16px;
+        padding: 0 clamp(20px, 3vw, 40px) clamp(20px, 3vw, 36px);
+        color: #FFFFFF; font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600;
+        transition: opacity .35s ease, transform .6s cubic-bezier(.76, 0, .24, 1);
+      }
+      #df-splash .df-s-count { font-size: clamp(56px, 11vw, 148px); line-height: .8; letter-spacing: -.04em; font-weight: 500; }
+      #df-splash .df-s-count::before { counter-reset: p var(--p); content: counter(p); }
+      #df-splash .df-s-count::after { content: '%'; font-size: .35em; vertical-align: top; margin-left: .08em; }
+      #df-splash .df-s-tag { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; text-align: right; }
+      #df-splash.df-out .df-s-bg { clip-path: inset(0 0 100% 0); }
+      #df-splash.df-out .df-s-meta { opacity: 0; transform: translateY(-40px); }
+      #df-splash.df-out .df-s-red { opacity: 1; }
+      #df-splash.df-out .df-s-white { opacity: 0; transition: opacity .3s ease .64s; }
+      @keyframes df-load { to { --p: 86; } }
+      @keyframes df-s-in { from { opacity: 0; transform: translate(-50%, -38%); } to { opacity: 1; transform: translate(-50%, -50%); } }
+      @keyframes df-splash-failsafe { to { visibility: hidden; } }
+      @keyframes df-unlock { to { overflow: visible; } }
+      @media (prefers-reduced-motion: reduce) {
+        #df-splash, #df-splash * { animation: none !important; transition: opacity .2s ease !important; }
+        #df-splash { --p: 100; }
+        #df-splash.df-out { opacity: 0; transition: opacity .25s ease; }
+      }
+    </style>
+    <!--
+      STATIC FALLBACK METADATA
+      ========================
+      Everything below is overwritten at runtime by <SEO /> (react-helmet-async)
+      with per-route, domain-aware values from src/config/siteConfig.js.
+
+      It exists for crawlers and link unfurlers that do NOT execute JavaScript —
+      notably WhatsApp, Slack and most social preview bots. Without it they would
+      read an empty <head> and render a bare link with no title or image.
+
+      These are the only hardcoded URLs left in the codebase. They cannot read
+      VITE_SITE_URL because index.html is not processed by the bundler's env
+      substitution, so on a domain switch update the four og:/twitter: URLs here
+      to match. The React app follows the env var on its own.
+    -->
+    <title>DriveFetch - AI-Powered Used Car Search in Pakistan</title>
+    <meta name="description" content="Find your perfect used car in Pakistan with AI-powered matching. Search thousands of listings by budget, family size, and fuel preference.">
+    <meta name="keywords" content="DriveFetch, Drive Fetch, DriveFetch Pakistan, AI Car Matchmaker, Used Cars Pakistan, PakWheels Alternative, Car Token Tax Calculator Pakistan, Car Transfer Fee Calculator 2026, Used Car Search Islamabad Lahore Karachi" />
+    <meta name="author" content="Muhammad Ismail" />
+    <meta name="creator" content="Muhammad Ismail" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#E5202E" />
+    <link rel="canonical" href="https://drivefetch.vercel.app/" />
+
+    <!-- Open Graph / Facebook / LinkedIn / WhatsApp -->
+    <meta property="og:site_name" content="DriveFetch" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="en_PK" />
+    <meta property="og:url" content="https://drivefetch.vercel.app/" />
+    <meta property="og:title" content="DriveFetch - AI Car Matchmaker Pakistan">
+    <meta property="og:description" content="AI-powered used car search for Pakistan.">
+    <meta property="og:image" content="https://drivefetch.vercel.app/og-preview.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="DriveFetch — AI used car matchmaker and search engine for Pakistan" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@DriveFetch" />
+    <meta name="twitter:url" content="https://drivefetch.vercel.app/" />
+    <meta name="twitter:title" content="DriveFetch — AI Car Matchmaker & Used Car Search Pakistan" />
+    <meta name="twitter:description" content="AI-driven used car matchmaker and search engine for Pakistan. Aggregating verified listings from PakWheels, OLX, and Gari.pk with instant valuation, tax, and fuel calculators." />
+    <meta name="twitter:image" content="https://drivefetch.vercel.app/og-preview.jpg" />
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "@id": "https://drivefetch.vercel.app/#organization",
+      "name": "DriveFetch",
+      "alternateName": "Drive Fetch",
+      "legalName": "DriveFetch Pakistan",
+      "url": "https://drivefetch.vercel.app/",
+      "logo": "https://drivefetch.vercel.app/favicon.svg",
+      "image": "https://drivefetch.vercel.app/og-preview.jpg",
+      "description": "AI-driven used car matchmaker and search engine for Pakistan.",
+      "areaServed": { "@type": "Country", "name": "Pakistan" }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "DriveFetch",
+      "url": "https://drivefetch.vercel.app",
+      "description": "AI-driven used car matchmaker and search engine for Pakistan.",
+      "applicationCategory": "AutomotiveApplication",
+      "operatingSystem": "All",
+      "author": {
+        "@type": "Person",
+        "name": "Muhammad Ismail",
+        "jobTitle": "Lead Architect",
+        "worksFor": {
+          "@type": "Organization",
+          "name": "FAST NUCES Islamabad"
+        }
+      },
+      "creator": {
+        "@type": "Person",
+        "name": "Muhammad Ismail"
+      }
+    }
+    </script>
+    <meta name="google-site-verification" content="yLZD_3g_fT6G4e-eMs4zx6qhKrlCyhTkS1gk5nqfpuc" />
+  </head>
+  <body>
+    <div id="df-splash" role="status" aria-label="Loading DriveFetch">
+      <div class="df-s-bg"></div>
+      <div class="df-s-meta" aria-hidden="true">
+        <span class="df-s-count"></span>
+        <span class="df-s-tag">Used cars<br />Pakistan · 7 sites</span>
+      </div>
+      <div class="df-s-logo">
+        <img class="df-s-ghost df-s-white" src="/drivefetch-logo-white.png" alt="" width="481" height="156" />
+        <img class="df-s-fill df-s-white" src="/drivefetch-logo-white.png" alt="DriveFetch" width="481" height="156" />
+        <img class="df-s-red" src="/drivefetch-logo.png" alt="" width="481" height="156" />
+      </div>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+
