@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import SEO from '../components/SEO';
 import { calculatorsSchema } from '../config/seoSchemas';
 import { calculateFuelCost, calculateVehicleCharges } from '../utils/calculatorEngine';
+import SplitText from '../components/motion/SplitText';
+import useTween from '../components/motion/useTween';
 
 const CC_OPTIONS = [
   { value: 660, label: '660cc (Alto, Mira, Dayz)' },
@@ -54,7 +56,7 @@ function Check({ label, checked, onChange, disabled, note }) {
 
 function Section({ n, title, children }) {
   return (
-    <fieldset className="flex flex-col gap-4 border-0 p-0 m-0">
+    <fieldset data-reveal className="flex flex-col gap-4 border-0 p-0 m-0">
       <legend className="df-display text-[30px] mb-4 float-left w-full">{n} · {title}</legend>
       {children}
     </fieldset>
@@ -103,6 +105,8 @@ export default function CalculatorsHub() {
   const transferCost = includeTransfer ? r.totalTransferCost : 0;
   const extra = r.totalAnnualToken + transferCost + fuelYear;
   const total = price + extra;
+  const totalShown = useTween(total);
+  const extraShown = useTween(extra);
   const rebate = r.provincialTokenBase - r.netProvincialToken;
 
   const lines = [];
@@ -145,11 +149,12 @@ export default function CalculatorsHub() {
       />
 
       <section className="px-5 sm:px-10 pt-12 sm:pt-14 pb-8 flex flex-wrap justify-between items-end gap-5">
-        <h1 className="df-display text-[length:clamp(60px,9vw,136px)]">What it <span className="text-df-red">really</span> costs.</h1>
-        <p className="max-w-[380px] text-[17px] leading-relaxed df-muted">Fuel, token tax, FBR withholding and transfer fees in one form, using the current fiscal year’s Excise and FBR rates.</p>
+        <h1 className="df-display text-[length:clamp(60px,9vw,136px)]"><SplitText text="What it" /> <SplitText text="really" className="text-df-red" start={2} /> <SplitText text="costs." start={3} /></h1>
+        <p data-reveal style={{ '--rd': '250ms' }} className="max-w-[380px] text-[17px] leading-relaxed df-muted">Fuel, token tax, FBR withholding and transfer fees in one form, using the current fiscal year’s Excise and FBR rates.</p>
       </section>
 
-      <div className="flex flex-wrap border-t-2 border-black dark:border-zinc-50">
+      <div data-reveal="line" aria-hidden="true" className="h-[2px] bg-black dark:bg-zinc-50" />
+      <div className="flex flex-wrap">
         <form onSubmit={(e) => e.preventDefault()} className="flex-[999_1_560px] min-w-0 px-5 sm:px-10 py-8 sm:py-10 flex flex-col gap-10">
           <Section n="1" title="The car">
             <Slider id="ca-price" label="Price / invoice value" value={priceLac} display={`${priceLac} lac`} min={5} max={250} step={0.5} onChange={setPriceLac} />
@@ -217,10 +222,10 @@ export default function CalculatorsHub() {
           </Section>
         </form>
 
-        <aside aria-live="polite" className="flex-[1_1_420px] min-w-0 bg-df-red text-white px-5 sm:px-9 py-8 sm:py-10 flex flex-col gap-5">
+        <aside aria-live="polite" data-reveal="clip" style={{ '--rd': '200ms' }} className="flex-[1_1_420px] min-w-0 bg-df-red text-white px-5 sm:px-9 py-8 sm:py-10 flex flex-col gap-5">
           <span className="text-[15px] font-extrabold">First year, all in</span>
-          <span className="df-display text-[length:clamp(64px,7vw,104px)]">{lac(total)}</span>
-          <span className="text-[17px] font-bold text-black">{lac(extra)} on top of the price</span>
+          <span className="df-display text-[length:clamp(64px,7vw,104px)] tabular-nums">{lac(totalShown)}</span>
+          <span className="text-[17px] font-bold text-black tabular-nums">{lac(extraShown)} on top of the price</span>
 
           <div className="bg-white text-black px-5 py-5 flex flex-col font-mono text-[13.5px]">
             <span className="font-sans text-[13px] font-extrabold tracking-[0.08em] pb-2.5 border-b-2 border-dashed border-black">ITEMISED</span>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import SEO from '../components/SEO';
+import SplitText from '../components/motion/SplitText';
 
 const EXITS = [
   { to: '/', name: 'Discover', d: 'Search 7 sites at once', rot: -90 },
@@ -29,9 +30,9 @@ export default function NotFoundPage() {
       <section className="flex-[1_1_560px] min-w-0 bg-df-red text-white px-5 sm:px-10 py-12 flex flex-col justify-between gap-10">
         <div className="flex flex-col gap-5">
           <span className="font-mono text-sm font-semibold break-all">ERROR 404 · {pathname}</span>
-          <h1 className="df-display text-[length:clamp(72px,13vw,200px)] leading-[0.8]">Wrong<br /><span className="text-black">turn.</span></h1>
-          <p className="max-w-[460px] text-[19px] leading-relaxed">This road doesn’t go anywhere. Search for a car instead, or take one of the exits.</p>
-          <form onSubmit={onSearch} role="search" className="flex bg-white max-w-[560px]">
+          <h1 className="df-display text-[length:clamp(72px,9.5vw,168px)] leading-[0.8]"><SplitText text="Wrong" className="block" /><SplitText text="turn." className="block text-black" start={1} /></h1>
+          <p data-reveal style={{ '--rd': '250ms' }} className="max-w-[460px] text-[19px] leading-relaxed">This road doesn’t go anywhere. Search for a car instead, or take one of the exits.</p>
+          <form onSubmit={onSearch} role="search" data-reveal style={{ '--rd': '400ms' }} className="flex bg-white max-w-[560px]">
             <label htmlFor="nf-q" className="sr-only">Search used cars</label>
             <input id="nf-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="e.g. Civic Lahore" className="flex-1 min-w-0 h-14 px-4 text-black text-lg outline-none placeholder:text-neutral-500" />
             <button type="submit" className="px-6 bg-black text-white text-sm font-extrabold tracking-[0.06em] hover:bg-white hover:text-black hover:outline hover:outline-2 hover:outline-black">SEARCH</button>
@@ -40,7 +41,7 @@ export default function NotFoundPage() {
         <span className="text-sm">Followed a broken link? <Link to="/about#contact" className="font-extrabold underline underline-offset-2">Tell us</Link></span>
       </section>
 
-      <nav aria-label="Exits" className="flex-[1_1_480px] min-w-0 flex flex-col justify-center py-10">
+      <nav aria-label="Exits" data-stagger className="flex-[1_1_480px] min-w-0 flex flex-col justify-center py-10">
         {EXITS.map((x, i) => (
           <Link
             key={x.to}

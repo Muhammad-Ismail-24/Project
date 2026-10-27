@@ -4,13 +4,14 @@ import { ThemeProvider } from '../contexts/ThemeContext';
 import UIContext from '../contexts/UIContext';
 import SiteHeader from '../components/shell/SiteHeader';
 import SiteFooter from '../components/shell/SiteFooter';
-import MobileMenu from '../components/shell/MobileMenu';
+import SiteMenu from '../components/shell/SiteMenu';
 import AccountPanel from '../components/shell/AccountPanel';
 import SignInSheet from '../components/shell/SignInSheet';
 import SplashScreen from '../components/SplashScreen';
+import { useScrollLock } from '../components/motion/SmoothScroll';
 
 export default function MainLayout() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [signInReason, setSignInReason] = useState(null); // null = closed
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -18,20 +19,22 @@ export default function MainLayout() {
   const [isLoading, setIsLoading] = useState(true);
   const [assistantName, setAssistantName] = useState('DriveFetch AI');
   const location = useLocation();
+  const { lock, unlock } = useScrollLock();
 
   // Close overlays on route change
   useEffect(() => {
-    setIsMobileMenuOpen(false);
+    setIsMenuOpen(false);
     setIsAccountOpen(false);
     setSignInReason(null);
   }, [location.pathname]);
 
-  // Lock body scroll while any overlay is open
-  const overlayOpen = isMobileMenuOpen || isAccountOpen || signInReason !== null;
+  // Pause scrolling (Lenis and native) while any overlay is open
+  const overlayOpen = isMenuOpen || isAccountOpen || signInReason !== null;
   useEffect(() => {
-    document.body.style.overflow = overlayOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [overlayOpen]);
+    if (overlayOpen) lock('overlay');
+    else unlock('overlay');
+    return () => unlock('overlay');
+  }, [overlayOpen, lock, unlock]);
 
   useEffect(() => {
     if (user?.bot_name) setAssistantName(user.bot_name);
@@ -129,12 +132,12 @@ export default function MainLayout() {
   }, []);
 
   const openSignIn = useCallback((reason = 'generic') => {
-    setIsMobileMenuOpen(false);
+    setIsMenuOpen(false);
     setIsAccountOpen(false);
     setSignInReason(reason);
   }, []);
   const openAccount = useCallback(() => {
-    setIsMobileMenuOpen(false);
+    setIsMenuOpen(false);
     setIsAccountOpen(true);
   }, []);
 
@@ -156,7 +159,8 @@ export default function MainLayout() {
             user={user}
             isAuthenticated={isAuthenticated}
             isLoading={isLoading}
-            onOpenMenu={() => setIsMobileMenuOpen(true)}
+            menuOpen={isMenuOpen}
+            onToggleMenu={() => setIsMenuOpen((v) => !v)}
             onOpenAccount={openAccount}
             onOpenSignIn={() => openSignIn('generic')}
           />
@@ -168,9 +172,9 @@ export default function MainLayout() {
           {!isChat && <SiteFooter />}
         </div>
 
-        <MobileMenu
-          open={isMobileMenuOpen}
-          onClose={() => setIsMobileMenuOpen(false)}
+        <SiteMenu
+          open={isMenuOpen}
+          onClose={() => setIsMenuOpen(false)}
           isAuthenticated={isAuthenticated}
           user={user}
           onOpenSignIn={() => openSignIn('generic')}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO';
+import SplitText from '../components/motion/SplitText';
 import { privacySchema } from '../config/seoSchemas';
 
 const SECTIONS = [
@@ -63,7 +64,7 @@ export default function PrivacyPolicy() {
       <section className="px-5 sm:px-10 pt-12 sm:pt-14 pb-10 flex flex-wrap justify-between items-end gap-6 border-b-2 border-black dark:border-zinc-50">
         <div className="flex flex-col gap-3.5">
           <span className="df-label">EFFECTIVE AUGUST 2026</span>
-          <h1 className="df-display text-[length:clamp(60px,9vw,136px)]">Privacy <span className="text-df-red">policy.</span></h1>
+          <h1 className="df-display text-[length:clamp(60px,9vw,136px)]"><SplitText text="Privacy" /> <SplitText text="policy." className="text-df-red" start={1} /></h1>
         </div>
         <button type="button" onClick={() => window.print()} className="df-btn-outline h-12 px-5">Print</button>
       </section>
@@ -85,22 +86,22 @@ export default function PrivacyPolicy() {
         </nav>
 
         <article className="flex-[999_1_560px] min-w-0 max-w-[920px] px-5 sm:px-10 py-8 sm:py-10 pb-24 flex flex-col gap-12">
-          <div className="p-6 bg-black text-white flex flex-col gap-2.5">
+          <div data-reveal className="p-6 bg-black text-white flex flex-col gap-2.5">
             <strong className="text-[15px] tracking-[0.06em]">THE SHORT VERSION</strong>
             <span className="text-lg leading-relaxed">We use Google to sign you in, never see a password, keep only what makes your saved cars and chats work, and don’t run tracking scripts. Listings belong to the sites we link to.</span>
           </div>
 
           {SECTIONS.map((s, i) => (
-            <section key={s.id} id={s.id} className="flex flex-col gap-3.5 scroll-mt-24">
+            <section key={s.id} id={s.id} data-reveal className="flex flex-col gap-3.5 scroll-mt-24">
               <h2 className="df-display text-[34px] leading-none"><span className="text-df-red">0{i + 1}</span> {s.t}</h2>
               <p className="pl-4 border-l-4 border-black dark:border-zinc-50 text-base font-bold leading-relaxed">In short: {s.short}</p>
               <p className="text-[17px] leading-[1.7] text-neutral-700 dark:text-zinc-300">{s.body}</p>
             </section>
           ))}
 
-          <section id="store" className="flex flex-col gap-3.5 scroll-mt-24">
+          <section id="store" data-reveal className="flex flex-col gap-3.5 scroll-mt-24">
             <h2 className="df-display text-[34px] leading-none"><span className="text-df-red">06</span> What we store</h2>
-            <div className="overflow-x-auto border-t-2 border-black dark:border-zinc-50">
+            <div data-lenis-prevent className="overflow-x-auto border-t-2 border-black dark:border-zinc-50">
               <table className="w-full min-w-[560px] border-collapse text-[15px] leading-snug">
                 <thead>
                   <tr>
@@ -122,7 +123,7 @@ export default function PrivacyPolicy() {
             </div>
           </section>
 
-          <section id="requests" className="flex flex-col gap-3 scroll-mt-24">
+          <section id="requests" data-reveal className="flex flex-col gap-3 scroll-mt-24">
             <h2 className="df-display text-[34px] leading-none"><span className="text-df-red">07</span> Questions or requests</h2>
             <p className="text-[17px] leading-[1.7] text-neutral-700 dark:text-zinc-300">
               To ask what we hold about you, or to have it deleted, use the <Link to="/about#contact" className="font-bold underline underline-offset-2 text-black dark:text-zinc-50">contact form</Link>. Signed-in users can remove saved cars and chats themselves at any time.

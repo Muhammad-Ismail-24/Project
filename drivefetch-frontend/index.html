@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="df-loading">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -10,40 +10,60 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="preload" as="image" href="/drivefetch-logo-white.png" />
+    <link rel="preload" as="image" href="/drivefetch-logo.png" />
 
-    <!-- Splash screen styles. Inline so the red screen paints before any JS loads.
-         React (src/components/SplashScreen.jsx) plays the exit and removes it. -->
+    <!-- Intro loader styles. Inline so the red screen paints before any JS loads.
+         The counter and logo fill run on CSS alone at first (registered --p);
+         React (src/components/SplashScreen.jsx) finishes the count, flies the
+         logo into the header and lifts the red panel away. -->
     <style>
+      @property --p { syntax: '<integer>'; inherits: true; initial-value: 0; }
+      html.df-loading, html.df-loading body { overflow: hidden; animation: df-unlock 0s linear 10s forwards; }
       #df-splash {
+        --p: 0;
         position: fixed; inset: 0; z-index: 9999;
-        background: #E5202E;
-        display: flex; align-items: center; justify-content: center;
+        animation: df-load 2.8s cubic-bezier(.2, .7, .3, 1) forwards, df-splash-failsafe 0s linear 10s forwards;
+      }
+      #df-splash .df-s-bg {
+        position: absolute; inset: 0; background: #E5202E;
         clip-path: inset(0 0 0 0);
-        transition: clip-path .75s cubic-bezier(.76, 0, .24, 1);
-        animation: df-splash-failsafe 0s linear 10s forwards;
+        transition: clip-path 1s cubic-bezier(.76, 0, .24, 1) .12s;
       }
-      #df-splash .df-splash-inner {
-        display: flex; flex-direction: column; align-items: center; gap: 28px;
-        transition: transform .45s cubic-bezier(.76, 0, .24, 1), opacity .35s ease;
+      #df-splash .df-s-logo {
+        position: absolute; left: 50%; top: 50%;
+        width: min(380px, 66vw);
+        transform: translate(-50%, -50%);
+        transform-origin: 0 0;
+        display: grid;
       }
-      #df-splash img {
-        width: min(340px, 64vw); height: auto; display: block;
-        animation: df-splash-logo .7s cubic-bezier(.2, .8, .2, 1) both;
+      #df-splash .df-s-logo img { grid-area: 1 / 1; width: 100%; height: auto; display: block; }
+      #df-splash .df-s-ghost { opacity: .22; }
+      #df-splash .df-s-fill { clip-path: inset(0 calc(100% - var(--p) * 1%) 0 0); }
+      #df-splash .df-s-red { opacity: 0; transition: opacity .3s ease .64s; }
+      #df-splash .df-s-logo { animation: df-s-in .9s cubic-bezier(.19, 1, .22, 1) both; }
+      #df-splash .df-s-meta {
+        position: absolute; left: 0; right: 0; bottom: 0;
+        display: flex; justify-content: space-between; align-items: flex-end; gap: 16px;
+        padding: 0 clamp(20px, 3vw, 40px) clamp(20px, 3vw, 36px);
+        color: #FFFFFF; font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600;
+        transition: opacity .35s ease, transform .6s cubic-bezier(.76, 0, .24, 1);
       }
-      #df-splash .df-splash-road {
-        width: min(220px, 44vw); height: 6px;
-        background-color: rgba(255, 255, 255, .25);
-        background-image: repeating-linear-gradient(90deg, #FFFFFF 0 32px, transparent 32px 64px);
-        animation: df-splash-road .55s linear infinite;
-      }
-      #df-splash.df-out { clip-path: inset(0 0 100% 0); }
-      #df-splash.df-out .df-splash-inner { transform: translateY(-48px); opacity: 0; }
-      @keyframes df-splash-logo { from { opacity: 0; transform: scale(.92) translateY(10px); } to { opacity: 1; transform: none; } }
-      @keyframes df-splash-road { from { background-position: 0 0; } to { background-position: -64px 0; } }
+      #df-splash .df-s-count { font-size: clamp(56px, 11vw, 148px); line-height: .8; letter-spacing: -.04em; font-weight: 500; }
+      #df-splash .df-s-count::before { counter-reset: p var(--p); content: counter(p); }
+      #df-splash .df-s-count::after { content: '%'; font-size: .35em; vertical-align: top; margin-left: .08em; }
+      #df-splash .df-s-tag { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; text-align: right; }
+      #df-splash.df-out .df-s-bg { clip-path: inset(0 0 100% 0); }
+      #df-splash.df-out .df-s-meta { opacity: 0; transform: translateY(-40px); }
+      #df-splash.df-out .df-s-red { opacity: 1; }
+      #df-splash.df-out .df-s-white { opacity: 0; transition: opacity .3s ease .64s; }
+      @keyframes df-load { to { --p: 86; } }
+      @keyframes df-s-in { from { opacity: 0; transform: translate(-50%, -38%); } to { opacity: 1; transform: translate(-50%, -50%); } }
       @keyframes df-splash-failsafe { to { visibility: hidden; } }
+      @keyframes df-unlock { to { overflow: visible; } }
       @media (prefers-reduced-motion: reduce) {
-        #df-splash, #df-splash .df-splash-inner, #df-splash img { transition: opacity .2s ease; animation: none; }
-        #df-splash.df-out { clip-path: inset(0 0 0 0); opacity: 0; }
+        #df-splash, #df-splash * { animation: none !important; transition: opacity .2s ease !important; }
+        #df-splash { --p: 100; }
+        #df-splash.df-out { opacity: 0; transition: opacity .25s ease; }
       }
     </style>
     <!--
@@ -133,9 +153,15 @@
   </head>
   <body>
     <div id="df-splash" role="status" aria-label="Loading DriveFetch">
-      <div class="df-splash-inner">
-        <img src="/drivefetch-logo-white.png" alt="DriveFetch" width="481" height="156" />
-        <div class="df-splash-road" aria-hidden="true"></div>
+      <div class="df-s-bg"></div>
+      <div class="df-s-meta" aria-hidden="true">
+        <span class="df-s-count"></span>
+        <span class="df-s-tag">Used cars<br />Pakistan · 7 sites</span>
+      </div>
+      <div class="df-s-logo">
+        <img class="df-s-ghost df-s-white" src="/drivefetch-logo-white.png" alt="" width="481" height="156" />
+        <img class="df-s-fill df-s-white" src="/drivefetch-logo-white.png" alt="DriveFetch" width="481" height="156" />
+        <img class="df-s-red" src="/drivefetch-logo.png" alt="" width="481" height="156" />
       </div>
     </div>
     <div id="root"></div>

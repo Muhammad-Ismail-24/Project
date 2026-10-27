@@ -56,7 +56,7 @@ export default function AccountPanel({ open, onClose, user, assistantName, onSav
           <button type="button" onClick={onClose} aria-label="Close" data-autofocus className="w-11 h-11 border border-black dark:border-zinc-700 text-2xl leading-none hover:bg-black hover:text-white dark:hover:bg-zinc-50 dark:hover:text-black">×</button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 sm:px-7 py-6 flex flex-col gap-7">
+        <div data-lenis-prevent className="flex-1 overflow-y-auto px-6 sm:px-7 py-6 flex flex-col gap-7">
           <div className="flex items-center gap-4">
             {user.picture ? (
               <img src={user.picture} alt="" className="w-16 h-16 object-cover" referrerPolicy="no-referrer" />

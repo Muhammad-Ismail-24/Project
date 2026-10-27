@@ -6,26 +6,27 @@ import { searchCars, searchCarsStream } from '../utils/api';
 import CarResultCard from '../components/CarResultCard';
 import FeatureErrorBoundary from '../components/FeatureErrorBoundary';
 import Plate from '../components/ui/Plate';
-import { RoadLoader } from '../components/ui/Loaders';
-import { cityMeta, formatLac, toRupees, stripEmoji } from '../utils/cityMeta';
+import SplitText from '../components/motion/SplitText';
+import useCountUp from '../components/motion/useCountUp';
+import { useScrollTo } from '../components/motion/SmoothScroll';
+import { HeroSearchInput, CtaCard, AdScanDemo, MatchDemo, ChatDemo } from '../components/home/HomeParts';
+import { formatLac, toRupees, stripEmoji } from '../utils/cityMeta';
 import { VehicleTaxAgent } from '../agents/calculators/VehicleTaxAgent';
 import { FuelCostAgent } from '../agents/calculators/FuelCostAgent';
 
 const SOURCES = ['PakWheels', 'OLX', 'Gari.pk', 'Drive.pk', 'FameWheels', 'AutoDeals', 'WiseWheels'];
-
-const TOOLS = [
-  { n: '01', name: 'Direct search', desc: 'Make, model, city, budget. Typed like a sentence.', to: '#search' },
-  { n: '02', name: 'AI Matchmaker', desc: 'Describe your family and commute. Get three models and live ads for each.', to: '/recommend' },
-  { n: '03', name: 'Assistant chat', desc: 'Fuel averages, auction sheets, transfer rules.', to: '/chat' },
-  { n: '04', name: 'Calculators', desc: 'Token tax, transfer fees and fuel, together.', to: '/calculators' },
-];
-
-const EXAMPLES = ['Civic 2018+ in Lahore under 50 lac', 'Corolla Karachi under 40 lac', 'Aqua 2016+ Islamabad'];
+const PLATES = [['PUNJAB', 'LHR 2019'], ['ISLAMABAD', 'ISB 2021'], ['SINDH', 'KHI 2018'], ['PUNJAB', 'RWP 2020'], ['PUNJAB', 'FSD 2017'], ['PUNJAB', 'MUX 2022'], ['KPK', 'PEW 2016']];
 
 const SORTS = [
   { id: 'best', label: 'Best match' },
   { id: 'price', label: 'Lowest price' },
   { id: 'year', label: 'Newest' },
+];
+
+const FEATURES = [
+  ['Condition scanner', 'If a seller says “genuine” but mentions a “shower”, the ad gets flagged, with the exact words shown.'],
+  ['Fair price check', 'Every car is compared with similar live ads, so you know when an asking price is high.'],
+  ['Risk detection', 'Duplicate files, odd mileage and pressure tactics are caught before you call the seller.'],
 ];
 
 /** Worked example for the cost band, calculated with the same engine as /calculators. */
@@ -39,12 +40,36 @@ function useCostExample() {
   }, []);
 }
 
+/** Endless row of plates. Two copies side by side so the loop is seamless. */
+function Marquee({ items, reverse = false, duration = 40 }) {
+  return (
+    <div className="df-marquee overflow-hidden" aria-hidden="true">
+      <div className="df-marquee-track flex w-max" style={{ '--marquee-dur': `${duration}s`, animationDirection: reverse ? 'reverse' : 'normal' }}>
+        {[0, 1].map((copy) => (
+          <div key={copy} className="flex gap-4 sm:gap-6 pr-4 sm:pr-6 py-2">
+            {items.map(([top, main], i) => <Plate key={`${copy}-${i}`} top={top} main={main} size="lg" />)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SectionLabel({ children, className = '' }) {
+  return (
+    <span data-reveal="fade" className={`flex items-center gap-3 font-mono text-[13px] font-semibold tracking-[0.08em] ${className}`}>
+      <span data-reveal="line" className="w-8 h-[2px] bg-df-red" />
+      {children}
+    </span>
+  );
+}
+
 export default function Home() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialQ = searchParams.get('q') || '';
   const [query, setQuery] = useState(initialQ);
   const [phase, setPhase] = useState('idle'); // idle | searching | done | error
-  const [statusLines, setStatusLines] = useState([]);
+  const [statusLine, setStatusLine] = useState('');
   const [results, setResults] = useState([]);
   const [error, setError] = useState('');
   const [lastQuery, setLastQuery] = useState('');
@@ -52,6 +77,8 @@ export default function Home() {
   const requestId = useRef(0);
   const inputRef = useRef(null);
   const cost = useCostExample();
+  const [costRef, costNow] = useCountUp(cost.total, { duration: 1800 });
+  const scrollTo = useScrollTo();
 
   const runSearch = useCallback(async (raw) => {
     const q = String(raw || '').trim();
@@ -61,7 +88,7 @@ export default function Home() {
     }
     const id = ++requestId.current;
     setPhase('searching');
-    setStatusLines(['Reading your search…']);
+    setStatusLine('Reading your search…');
     setResults([]);
     setError('');
     setLastQuery(q);
@@ -83,7 +110,7 @@ export default function Home() {
           setPhase('done');
           return;
         }
-        if (msg.status) setStatusLines((prev) => [...prev.slice(-4), stripEmoji(msg.status)]);
+        if (msg.status) setStatusLine(stripEmoji(msg.status));
       });
       if (!finished && id === requestId.current) {
         // Stream ended without a result (old backend or proxy buffering): fall back to the plain endpoint.
@@ -106,11 +133,23 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Bring the results into view when a search finishes.
+  useEffect(() => {
+    if (phase !== 'done') return undefined;
+    const t = setTimeout(() => scrollTo('#results', { offset: -72 }), 250);
+    return () => clearTimeout(t);
+  }, [phase, scrollTo]);
+
   const onSubmit = (e) => {
     e.preventDefault();
     const q = query.trim();
     if (q) setSearchParams({ q }, { replace: false });
     runSearch(q);
+  };
+
+  const focusSearch = () => {
+    scrollTo(0);
+    setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 700);
   };
 
   const sorted = useMemo(() => {
@@ -120,11 +159,6 @@ export default function Home() {
     return list;
   }, [results, sort]);
 
-  const scrollToResults = (id) => {
-    const el = document.getElementById(id ? `car-${id}` : 'results');
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
   return (
     <div className="w-full">
       <SEO
@@ -133,230 +167,249 @@ export default function Home() {
         schema={homeSchema}
       />
 
-      {/* ═══ HERO ═══ */}
-      <section className="flex flex-wrap">
-        <div id="search" className="flex-[7_1_560px] min-w-0 bg-df-red text-white px-5 sm:px-10 pt-12 sm:pt-14 pb-10 flex flex-col gap-7 min-h-[560px] lg:min-h-[680px]">
-          <div className="font-mono text-[13px] font-semibold tracking-[0.06em]">USED CARS · PAKISTAN · 7 SITES</div>
-          <h1 className="df-display text-[length:clamp(60px,9vw,132px)]">
-            <span className="block">Find the right car.</span>
-            <span className="block text-black">Skip the wrong ones.</span>
+      {/* ═══ HERO: one headline, one search box ═══ */}
+      <section id="search" className="relative bg-df-red text-white overflow-hidden">
+        <div className="px-5 sm:px-10 pt-12 sm:pt-16 pb-8 sm:pb-10 min-h-[calc(100svh-64px)] sm:min-h-[calc(100svh-68px)] flex flex-col">
+          <span data-reveal="fade" className="font-mono text-[13px] font-semibold tracking-[0.08em]">USED CARS · PAKISTAN · 7 SITES</span>
+          <h1 className="df-display mt-6 sm:mt-8 text-[length:clamp(58px,10.2vw,172px)]" data-parallax="0.08">
+            <SplitText text="Find the right car." className="block" />
+            <SplitText text="Skip the wrong ones." className="block text-black" start={4} />
           </h1>
-          <form onSubmit={onSubmit} className="mt-auto flex flex-col gap-3" role="search">
-            <div className="flex bg-white">
-              <label htmlFor="home-q" className="sr-only">Search used cars</label>
-              <input
-                id="home-q"
-                ref={inputRef}
-                type="search"
-                maxLength={200}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Civic, Lahore, under 50 lac"
-                autoComplete="off"
-                className="flex-1 min-w-0 h-16 sm:h-[68px] px-5 sm:px-6 bg-transparent text-black text-lg sm:text-[22px] font-medium outline-none placeholder:text-neutral-500"
-              />
-              <button
-                type="submit"
-                disabled={phase === 'searching'}
-                className="h-16 sm:h-[68px] px-6 sm:px-8 bg-black text-white text-sm sm:text-base font-extrabold tracking-[0.06em] hover:bg-white hover:text-black hover:outline hover:outline-2 hover:outline-black disabled:opacity-70 transition-colors"
-              >
-                {phase === 'searching' ? 'SEARCHING…' : 'SEARCH'}
-              </button>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="font-semibold">Try</span>
-              {EXAMPLES.map((ex) => (
+
+          <div className="mt-auto pt-10 flex flex-wrap items-end justify-between gap-8">
+            <form onSubmit={onSubmit} role="search" data-reveal style={{ '--rd': '650ms' }} className="w-full max-w-[920px] flex flex-col gap-4">
+              <div className="flex bg-white shadow-[0_24px_60px_-20px_rgba(0,0,0,.45)]">
+                <label htmlFor="home-q" className="sr-only">Search used cars</label>
+                <HeroSearchInput ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} />
                 <button
-                  key={ex}
-                  type="button"
-                  onClick={() => { setQuery(ex); setSearchParams({ q: ex }); runSearch(ex); }}
-                  className="h-9 px-3 border border-white/70 hover:bg-white hover:text-df-red font-semibold transition-colors"
+                  type="submit"
+                  disabled={phase === 'searching'}
+                  className="df-btn h-16 sm:h-[72px] px-6 sm:px-9 bg-black text-white text-sm sm:text-base tracking-[0.08em] hover:text-black disabled:opacity-70"
+                  style={{ '--df-fill': '#FFFFFF' }}
                 >
-                  {ex}
+                  {phase === 'searching' ? 'SEARCHING…' : 'SEARCH'}
                 </button>
-              ))}
-            </div>
-          </form>
-          <div className="flex flex-wrap gap-x-7 gap-y-2 text-base font-semibold">
-            <Link to="/recommend" className="underline underline-offset-4 hover:text-black">Not sure what to buy? Matchmaker →</Link>
-            <Link to="/chat" className="underline underline-offset-4 hover:text-black">Got a question? Chat →</Link>
+              </div>
+
+              <div aria-live="polite" className="min-h-[28px] text-[15px]">
+                {phase === 'idle' && (
+                  <span className="text-white/85">Type it like you’d say it. We search seven sites and read every ad.</span>
+                )}
+                {phase === 'searching' && (
+                  <span className="flex items-center gap-4 animate-df-fade-up">
+                    <span aria-hidden="true" className="w-28 h-1.5 bg-white/25 df-road-white" />
+                    <span className="font-mono text-[13px] font-semibold truncate">{statusLine}</span>
+                  </span>
+                )}
+                {phase === 'error' && (
+                  <span role="alert" className="flex flex-wrap items-center gap-3 animate-df-fade-up">
+                    <strong>Search stalled.</strong> <span className="text-white/85">{error}</span>
+                    <button type="button" onClick={() => runSearch(lastQuery)} className="df-btn h-10 px-4 bg-black text-white hover:text-black" style={{ '--df-fill': '#FFF' }}>Try again</button>
+                  </span>
+                )}
+                {phase === 'done' && (
+                  <span className="flex flex-wrap items-center gap-3 animate-df-fade-up">
+                    <strong>{results.length} {results.length === 1 ? 'match' : 'matches'} for “{lastQuery}”</strong>
+                    <button type="button" onClick={() => scrollTo('#results', { offset: -72 })} className="df-link font-bold">See them ↓</button>
+                  </span>
+                )}
+              </div>
+            </form>
+
+            <button
+              type="button"
+              onClick={() => scrollTo('#ways', { offset: -40 })}
+              data-reveal="fade"
+              style={{ '--rd': '1100ms' }}
+              className="hidden md:flex flex-col items-center gap-3 font-mono text-xs font-semibold tracking-[0.12em]"
+            >
+              SCROLL
+              <span aria-hidden="true" className="relative block w-[2px] h-14 bg-white/25 overflow-hidden">
+                <span className="absolute inset-0 bg-white df-scroll-cue" />
+              </span>
+            </button>
           </div>
-        </div>
-
-        <div className="flex-[5_1_420px] bg-df-grey dark:bg-black px-5 sm:px-10 py-10 flex flex-col min-w-0" aria-live="polite">
-          {phase === 'idle' && (
-            <>
-              <div className="flex justify-between items-baseline pb-3.5 border-b border-neutral-300 dark:border-zinc-800">
-                <span className="text-[15px] font-bold">Three ways in, plus the maths</span>
-                <span className="font-mono text-xs df-muted">04 tools</span>
-              </div>
-              {TOOLS.map((tool, i) => {
-                const inner = (
-                  <>
-                    <Plate top="TOOL" main={tool.n} size="md" />
-                    <span className="flex flex-col gap-1 min-w-0">
-                      <span className="text-lg font-extrabold">{tool.name}</span>
-                      <span className="text-sm df-muted leading-snug">{tool.desc}</span>
-                    </span>
-                    <span aria-hidden="true" className="text-2xl transition-transform group-hover:translate-x-1">→</span>
-                  </>
-                );
-                const cls = 'group grid grid-cols-[88px_minmax(0,1fr)_auto] gap-4 items-center py-4 border-b border-neutral-300 dark:border-zinc-800 hover:text-df-red animate-df-fade-up';
-                return tool.to.startsWith('#') ? (
-                  <button key={tool.n} type="button" style={{ animationDelay: `${i * 60}ms` }} onClick={() => inputRef.current?.focus()} className={`${cls} text-left`}>{inner}</button>
-                ) : (
-                  <Link key={tool.n} to={tool.to} style={{ animationDelay: `${i * 60}ms` }} className={cls}>{inner}</Link>
-                );
-              })}
-            </>
-          )}
-
-          {phase === 'searching' && (
-            <div className="flex flex-col gap-6 py-4">
-              <span className="text-[15px] font-bold">Searching 7 sites for “{lastQuery}”</span>
-              <RoadLoader className="w-full" />
-              <ol className="flex flex-col gap-2 font-mono text-[13px]">
-                {statusLines.map((line, i) => (
-                  <li key={`${line}-${i}`} className={`animate-df-fade-up ${i === statusLines.length - 1 ? 'font-semibold' : 'df-muted'}`}>
-                    {i === statusLines.length - 1 ? '› ' : '✓ '}{line}
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
-
-          {phase === 'error' && (
-            <div role="alert" className="flex flex-col gap-4 py-4">
-              <span className="df-display text-5xl">Search stalled.</span>
-              <p className="df-muted">{error}</p>
-              <button type="button" onClick={() => runSearch(lastQuery)} className="df-btn-red self-start h-12 px-5">Try again</button>
-            </div>
-          )}
-
-          {phase === 'done' && (
-            <>
-              <div className="flex justify-between items-baseline gap-4 pb-3.5 border-b border-neutral-300 dark:border-zinc-800">
-                <span className="text-[15px] font-bold truncate">Matches for “{lastQuery}”</span>
-                <span className="font-mono text-xs df-muted whitespace-nowrap">{results.length} found</span>
-              </div>
-              {results.length === 0 ? (
-                <div className="flex flex-col gap-3 py-6">
-                  <span className="df-display text-5xl">Zero matches.</span>
-                  <p className="df-muted">Try a bigger budget, another city, or describe your needs to the Matchmaker.</p>
-                  <Link to="/recommend" className="df-btn-ink self-start h-12 px-5">Open the Matchmaker</Link>
-                </div>
-              ) : (
-                <>
-                  {results.slice(0, 5).map((car, i) => {
-                    const { region, code } = cityMeta(car.city);
-                    return (
-                      <button
-                        key={car.id || i}
-                        type="button"
-                        onClick={() => scrollToResults(car.id)}
-                        style={{ animationDelay: `${i * 60}ms` }}
-                        className="grid grid-cols-[130px_minmax(0,1fr)_auto] gap-4 items-center py-4 border-b border-neutral-300 dark:border-zinc-800 text-left hover:text-df-red animate-df-fade-up"
-                      >
-                        <Plate top={region} main={`${code} ${car.year ?? ''}`.trim()} size="md" />
-                        <span className="flex flex-col gap-1 min-w-0">
-                          <span className="text-[16px] font-bold leading-snug line-clamp-2">{car.title}</span>
-                          <span className="font-mono text-xs df-muted truncate">
-                            {[car.mileage ? `${typeof car.mileage === 'number' ? car.mileage.toLocaleString('en-US') : car.mileage} km` : null, car.platform].filter(Boolean).join(' · ')}
-                          </span>
-                        </span>
-                        <span className="text-2xl font-extrabold whitespace-nowrap">{formatLac(car.price)}</span>
-                      </button>
-                    );
-                  })}
-                  <button type="button" onClick={() => scrollToResults()} className="mt-4 self-start text-[15px] font-bold underline underline-offset-4 hover:text-df-red">
-                    See all {results.length} below ↓
-                  </button>
-                </>
-              )}
-            </>
-          )}
         </div>
       </section>
 
       {/* ═══ RESULTS ═══ */}
-      {phase === 'done' && results.length > 0 && (
+      {phase === 'done' && (
         <section id="results" className="px-5 sm:px-10 pt-14 pb-20 scroll-mt-20">
-          <div className="flex flex-wrap items-end justify-between gap-4 pb-4 border-b-4 border-black dark:border-zinc-50">
-            <h2 className="df-display text-[length:clamp(40px,5vw,72px)]">{results.length} listings</h2>
-            <div className="flex flex-wrap items-center gap-2">
-              <div role="group" aria-label="Sort results" className="flex">
-                {SORTS.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    aria-pressed={sort === s.id}
-                    onClick={() => setSort(s.id)}
-                    className={`h-11 px-4 -ml-px first:ml-0 border border-black dark:border-zinc-700 text-sm font-bold ${sort === s.id ? 'bg-black text-white dark:bg-zinc-50 dark:text-black' : ''}`}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-              <button type="button" onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); inputRef.current?.focus(); }} className="df-btn-outline">
-                New search
-              </button>
-            </div>
-          </div>
-          <FeatureErrorBoundary featureName="Search results">
-            <div className="flex flex-col">
-              {sorted.map((car, i) => (
-                <div key={car.id || i} id={car.id ? `car-${car.id}` : undefined} className="scroll-mt-24">
-                  <CarResultCard car={car} userQuery={lastQuery} />
+          {results.length > 0 ? (
+            <>
+              <div className="flex flex-wrap items-end justify-between gap-4 pb-4 border-b-4 border-black dark:border-zinc-50">
+                <h2 className="df-display text-[length:clamp(40px,5vw,72px)]"><SplitText text={`${results.length} listings`} /></h2>
+                <div className="flex flex-wrap items-center gap-2" data-reveal="fade">
+                  <div role="group" aria-label="Sort results" className="flex">
+                    {SORTS.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        aria-pressed={sort === s.id}
+                        onClick={() => setSort(s.id)}
+                        className={`h-11 px-4 -ml-px first:ml-0 border border-black dark:border-zinc-700 text-sm font-bold transition-colors duration-300 ${sort === s.id ? 'bg-black text-white dark:bg-zinc-50 dark:text-black' : 'hover:bg-black/5 dark:hover:bg-white/10'}`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                  <button type="button" onClick={focusSearch} className="df-btn-outline">New search</button>
                 </div>
-              ))}
+              </div>
+              <FeatureErrorBoundary featureName="Search results">
+                <div className="flex flex-col">
+                  {sorted.map((car, i) => (
+                    <div key={car.id || i} id={car.id ? `car-${car.id}` : undefined} data-reveal style={{ '--rd': `${Math.min(i, 5) * 80}ms` }} className="scroll-mt-24">
+                      <CarResultCard car={car} userQuery={lastQuery} />
+                    </div>
+                  ))}
+                </div>
+              </FeatureErrorBoundary>
+            </>
+          ) : (
+            <div className="flex flex-col gap-4 max-w-[640px]">
+              <h2 className="df-display text-[length:clamp(44px,6vw,88px)]"><SplitText text="Zero matches." /></h2>
+              <p data-reveal className="df-muted text-lg">Nothing live fits “{lastQuery}”. Try a bigger budget or another city, or describe what you need and let the Matchmaker pick models for you.</p>
+              <div data-reveal className="flex flex-wrap gap-2">
+                <Link to="/recommend" className="df-btn-red h-12 px-5">Open the Matchmaker</Link>
+                <button type="button" onClick={focusSearch} className="df-btn-outline h-12 px-5">Edit search</button>
+              </div>
             </div>
-          </FeatureErrorBoundary>
+          )}
         </section>
       )}
 
-      {/* ═══ ENGINE ═══ */}
-      <section className="bg-df-grey dark:bg-black border-y border-neutral-200 dark:border-zinc-800">
-        <div className="px-5 sm:px-10 py-20 sm:py-24 grid gap-12 lg:gap-16 lg:grid-cols-2 items-start">
-          <h2 className="df-display text-[length:clamp(48px,6vw,96px)]">
-            We read<br />the ad.<br /><span className="text-df-red">You read<br />the verdict.</span>
-          </h2>
-          <div className="flex flex-col">
-            {[
-              ['Condition scanner', 'If a seller says “genuine” but mentions a “shower”, the ad gets flagged, with the exact words shown.'],
-              ['Fair price check', 'Every car is compared with similar live ads so you know when an asking price is high.'],
-              ['Risk detection', 'Duplicate files, odd mileage and pressure tactics are caught before you call the seller.'],
-            ].map(([t, d], i) => (
-              <div key={t} className={`py-6 border-t border-black dark:border-zinc-700 flex flex-col gap-1.5 ${i === 2 ? 'border-b' : ''}`}>
-                <strong className="text-[22px]">{t}</strong>
-                <span className="text-[17px] leading-relaxed df-muted">{d}</span>
-              </div>
-            ))}
+      {/* ═══ TWO WAYS IN ═══ */}
+      <section id="ways" className="px-5 sm:px-10 py-20 sm:py-28 scroll-mt-10">
+        <div className="flex flex-wrap items-end justify-between gap-6 mb-10 sm:mb-14">
+          <div className="flex flex-col gap-5">
+            <SectionLabel>START HERE</SectionLabel>
+            <h2 className="df-display text-[length:clamp(48px,6.4vw,104px)]"><SplitText text="Two ways to find it." /></h2>
           </div>
+          <p data-reveal className="max-w-[400px] text-lg leading-relaxed df-muted">Know the car you want? Search for it. Not sure yet? Describe your life and let the Matchmaker choose.</p>
+        </div>
+        <div className="grid md:grid-cols-2 gap-4 sm:gap-5" data-stagger>
+          <CtaCard
+            n="01"
+            kicker="I KNOW WHAT I WANT"
+            title="Direct search"
+            desc="Make, model, city, budget. Typed like a sentence, searched across seven sites, every ad checked."
+            action="Start searching"
+            onClick={focusSearch}
+            plate={<Plate top="PUNJAB" main="LHR 2019" size="sm" />}
+          />
+          <CtaCard
+            n="02"
+            kicker="HELP ME CHOOSE"
+            title="AI Matchmaker"
+            desc="Tell us your budget, family and commute. Get three models that fit, each with live ads."
+            action="Open the Matchmaker"
+            to="/recommend"
+            plate={<Plate top="MATCHES" main="3 MODELS" size="sm" />}
+          />
+        </div>
+      </section>
+
+      {/* ═══ DIRECT SEARCH ═══ */}
+      <section className="bg-df-grey dark:bg-black border-y border-neutral-200 dark:border-zinc-800">
+        <div className="px-5 sm:px-10 py-20 sm:py-28 grid gap-14 lg:gap-20 lg:grid-cols-2 items-center">
+          <div className="flex flex-col gap-7">
+            <SectionLabel>01 · DIRECT SEARCH</SectionLabel>
+            <h2 className="df-display text-[length:clamp(48px,6vw,96px)]">
+              <SplitText text="We read the ad." className="block" />
+              <SplitText text="You read the verdict." className="block text-df-red" start={4} />
+            </h2>
+            <div className="flex flex-col" data-stagger>
+              {FEATURES.map(([t, d], i) => (
+                <div key={t} className={`grid grid-cols-[40px_minmax(0,1fr)] gap-4 py-5 border-t border-black dark:border-zinc-700 ${i === FEATURES.length - 1 ? 'border-b' : ''}`}>
+                  <span className="font-mono text-sm font-semibold text-df-red-dark dark:text-df-red pt-1">0{i + 1}</span>
+                  <span className="flex flex-col gap-1.5">
+                    <strong className="text-[22px]">{t}</strong>
+                    <span className="text-[17px] leading-relaxed df-muted">{d}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div data-reveal>
+              <button type="button" onClick={focusSearch} className="df-btn-red h-14 px-7 text-base">Try a search</button>
+            </div>
+          </div>
+          <AdScanDemo />
         </div>
       </section>
 
       {/* ═══ SOURCES ═══ */}
-      <section className="px-5 sm:px-10 py-20 flex flex-col gap-8">
-        <div className="flex flex-wrap justify-between items-end gap-4">
-          <h2 className="df-display text-[length:clamp(44px,5.5vw,84px)]">Seven sites, <span className="text-df-red">one search.</span></h2>
-          <p className="max-w-[420px] df-muted leading-relaxed">Searched live when you press search. We link back to every original ad and never host the seller’s photos or text as our own.</p>
+      <section className="py-20 sm:py-28 flex flex-col gap-12 overflow-hidden">
+        <div className="px-5 sm:px-10 flex flex-wrap justify-between items-end gap-6">
+          <div className="flex flex-col gap-5">
+            <SectionLabel>WHERE WE LOOK</SectionLabel>
+            <h2 className="df-display text-[length:clamp(48px,6vw,96px)]">
+              <SplitText text="Seven sites," className="block" />
+              <SplitText text="one search." className="block text-df-red" start={2} />
+            </h2>
+          </div>
+          <p data-reveal className="max-w-[420px] text-lg df-muted leading-relaxed">Searched live when you press search. We link back to every original ad and never host the seller’s photos or text as our own.</p>
         </div>
-        <div className="flex flex-wrap gap-4">
-          {SOURCES.map((s) => <Plate key={s} top="SOURCE" main={s.toUpperCase()} size="md" />)}
+        <div data-reveal="fade" className="flex flex-col gap-5 -rotate-1">
+          <Marquee items={SOURCES.map((s) => ['SOURCE', s.toUpperCase()])} duration={36} />
+          <Marquee items={PLATES} reverse duration={44} />
         </div>
       </section>
 
-      {/* ═══ COST BAND ═══ */}
-      <section className="bg-df-red text-white">
-        <div className="px-5 sm:px-10 py-14 flex flex-wrap items-center justify-between gap-6">
-          <div className="flex flex-col gap-2">
-            <span className="text-[15px] font-bold">A {cost.priceLac} 2019 Civic in Punjab costs about</span>
-            <span className="df-display text-[length:clamp(48px,7vw,104px)]">{formatLac(cost.total)} <span className="text-black">in year one.</span></span>
-            <span className="text-sm">Transfer, token tax and 40 km of petrol a day, at this year’s rates.</span>
+      {/* ═══ MATCHMAKER ═══ */}
+      <section className="bg-black text-white dark:border-y dark:border-zinc-800">
+        <div className="px-5 sm:px-10 py-20 sm:py-28 grid gap-14 lg:gap-20 lg:grid-cols-2 items-center">
+          <div className="flex flex-col gap-7">
+            <SectionLabel className="text-white">02 · AI MATCHMAKER</SectionLabel>
+            <h2 className="df-display text-[length:clamp(48px,6vw,96px)]">
+              <SplitText text="Not sure what to buy?" className="block" />
+              <SplitText text="Describe your life." className="block text-df-red" start={5} />
+            </h2>
+            <p data-reveal className="max-w-[480px] text-lg leading-relaxed text-zinc-300">Budget, city, family, commute, fuel. Write it like you’d tell a friend. The Matchmaker picks three models that fit, explains why, and finds live ads for each.</p>
+            <div data-reveal>
+              <Link to="/recommend" className="df-btn-red h-14 px-7 text-base hover:text-black" style={{ '--df-fill': '#FFF' }}>
+                Open the Matchmaker →
+              </Link>
+            </div>
           </div>
-          <Link to="/calculators" className="h-14 px-6 inline-flex items-center bg-black text-white text-base font-extrabold hover:bg-white hover:text-black transition-colors">
-            Open the calculators →
-          </Link>
+          <MatchDemo />
+        </div>
+      </section>
+
+      {/* ═══ CHAT ═══ */}
+      <section className="bg-df-grey dark:bg-df-night">
+        <div className="px-5 sm:px-10 py-20 sm:py-28 grid gap-14 lg:gap-20 lg:grid-cols-2 items-center">
+          <div className="lg:order-2 flex flex-col gap-7">
+            <SectionLabel>03 · ASSISTANT CHAT</SectionLabel>
+            <h2 className="df-display text-[length:clamp(48px,6vw,96px)]">
+              <SplitText text="Ask like you’d ask" className="block" />
+              <SplitText text="your ustaad." className="block text-df-red" start={4} />
+            </h2>
+            <p data-reveal className="max-w-[480px] text-lg leading-relaxed df-muted">Fuel averages, auction sheets, transfer rules, which variant to pick. Ask in plain words, any time, without being sold to.</p>
+            <div data-reveal>
+              <Link to="/chat" className="df-btn-ink h-14 px-7 text-base">Start a chat →</Link>
+            </div>
+          </div>
+          <div className="lg:order-1"><ChatDemo /></div>
+        </div>
+      </section>
+
+      {/* ═══ CALCULATORS ═══ */}
+      <section className="bg-df-red text-white overflow-hidden">
+        <div className="px-5 sm:px-10 py-16 sm:py-20 flex flex-wrap items-end justify-between gap-8">
+          <div className="flex flex-col gap-3">
+            <SectionLabel className="text-white [&>span]:bg-white">04 · CALCULATORS</SectionLabel>
+            <span data-reveal className="text-lg font-bold mt-2">A {cost.priceLac} 2019 Civic in Punjab costs about</span>
+            <span ref={costRef} data-reveal="clip" className="df-display text-[length:clamp(56px,9vw,152px)] tabular-nums">
+              {formatLac(costNow)} <span className="text-black">in year one.</span>
+            </span>
+            <span data-reveal className="text-[15px] text-white/85">Transfer, token tax and 40 km of petrol a day, at this year’s rates.</span>
+          </div>
+          <div data-reveal>
+            <Link to="/calculators" className="df-btn h-14 px-7 bg-black text-white text-base hover:text-black" style={{ '--df-fill': '#FFF' }}>
+              Open the calculators →
+            </Link>
+          </div>
         </div>
       </section>
     </div>

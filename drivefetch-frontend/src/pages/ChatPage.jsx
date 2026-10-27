@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import SEO from '../components/SEO';
+import SplitText from '../components/motion/SplitText';
 import { chatSchema } from '../config/seoSchemas';
 import { Spinner, TypingDots } from '../components/ui/Loaders';
 
@@ -239,7 +240,7 @@ export default function ChatPage() {
             </button>
           </div>
           <span className="px-4 pb-2 font-mono text-[11.5px] font-semibold df-muted">HISTORY</span>
-          <div className="flex-1 overflow-y-auto flex flex-col">
+          <div data-lenis-prevent className="flex-1 overflow-y-auto flex flex-col">
             {sessionsList.length === 0 ? (
               <p className="px-4 py-3 text-sm df-muted">Your chats will show up here.</p>
             ) : sessionsList.map((session) => {
@@ -321,7 +322,7 @@ export default function ChatPage() {
           </span>
         </div>
 
-        <div aria-live="polite" className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+        <div aria-live="polite" data-lenis-prevent className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
           <div className="w-full max-w-[880px] mx-auto px-4 sm:px-8 py-6 sm:py-8 flex flex-col gap-5">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center gap-3 py-24 df-muted">
@@ -331,10 +332,10 @@ export default function ChatPage() {
             ) : (
               <>
                 {showStarters && (
-                  <div className="flex flex-col gap-6 pt-2 pb-4 animate-df-fade-up">
-                    <h1 className="df-display text-[length:clamp(52px,7vw,112px)]">Ask<br /><span className="text-df-red">{isGuest ? 'DriveFetch.' : `${agentName.split(' ')[0]}.`}</span></h1>
-                    <p className="text-lg leading-relaxed df-muted max-w-[560px]">Mechanic tips, real fuel averages, auction sheets, excise and transfer rules. Ask it like you’d ask your ustaad.</p>
-                    <div className="flex flex-col border-t-2 border-black dark:border-zinc-50">
+                  <div className="flex flex-col gap-6 pt-2 pb-4">
+                    <h1 className="df-display text-[length:clamp(52px,7vw,112px)]"><SplitText text="Ask" className="block" /><SplitText text={isGuest ? 'DriveFetch.' : `${agentName.split(' ')[0]}.`} className="block text-df-red" start={1} /></h1>
+                    <p data-reveal style={{ '--rd': '200ms' }} className="text-lg leading-relaxed df-muted max-w-[560px]">Mechanic tips, real fuel averages, auction sheets, excise and transfer rules. Ask it like you’d ask your ustaad.</p>
+                    <div data-stagger style={{ '--rd': '300ms' }} className="flex flex-col border-t-2 border-black dark:border-zinc-50">
                       {STARTERS.map((s, i) => (
                         <button key={s} type="button" onClick={() => send(s)} className="grid grid-cols-[44px_minmax(0,1fr)_28px] items-center gap-3 min-h-[64px] border-b border-neutral-200 dark:border-zinc-800 text-left hover:text-df-red">
                           <span className="font-mono text-sm font-semibold text-df-red-dark dark:text-zinc-400">0{i + 1}</span>

@@ -120,7 +120,7 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
 
   return (
     <article
-      className={`flex flex-wrap gap-5 sm:gap-7 py-6 border-b border-neutral-200 dark:border-zinc-800 animate-df-fade-up ${
+      className={`group flex flex-wrap gap-5 sm:gap-7 py-6 border-b border-neutral-200 dark:border-zinc-800 ${
         isHighlighted ? 'border-l-8 border-l-df-red pl-4' : ''
       }`}
     >
@@ -133,7 +133,7 @@ export default function CarResultCard({ car, isHighlighted = false, savedListing
             loading="lazy"
             decoding="async"
             onError={() => setImgFailed(true)}
-            className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+            className="w-full h-full object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(.19,1,.22,1)] group-hover:scale-[1.05]"
           />
         ) : (
           <span className="text-sm df-muted">No photo in the ad</span>

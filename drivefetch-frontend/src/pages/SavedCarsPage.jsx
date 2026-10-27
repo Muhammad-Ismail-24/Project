@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import SEO from '../components/SEO';
+import SplitText from '../components/motion/SplitText';
 import Plate from '../components/ui/Plate';
 import { Spinner } from '../components/ui/Loaders';
 import { cityMeta, formatLac, formatPKR, toRupees } from '../utils/cityMeta';
@@ -49,7 +50,7 @@ function CompareDialog({ cars, onClose }) {
 
   return (
     <div className="fixed inset-0 z-[95] bg-black/60 flex items-end sm:items-center justify-center sm:p-6" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div ref={ref} role="dialog" aria-modal="true" aria-labelledby="cmp-title" className="w-full max-w-5xl max-h-[90vh] overflow-auto bg-white text-black dark:bg-df-night dark:text-zinc-50 animate-df-fade-up">
+      <div ref={ref} data-lenis-prevent role="dialog" aria-modal="true" aria-labelledby="cmp-title" className="w-full max-w-5xl max-h-[90vh] overflow-auto bg-white text-black dark:bg-df-night dark:text-zinc-50 animate-df-fade-up">
         <div className="flex items-center justify-between px-6 py-5 border-b-2 border-black dark:border-zinc-50 sticky top-0 bg-inherit">
           <h2 id="cmp-title" className="df-display text-[44px]">Side by side</h2>
           <button type="button" onClick={onClose} aria-label="Close" className="w-11 h-11 border border-black dark:border-zinc-700 text-2xl leading-none">×</button>
@@ -211,8 +212,8 @@ export default function SavedCarsPage() {
 
       <section className="px-5 sm:px-10 pt-12 sm:pt-14 pb-7 flex flex-wrap justify-between items-end gap-5">
         <div className="flex flex-col gap-2">
-          <span className="df-label">YOUR GARAGE</span>
-          <h1 className="df-display text-[length:clamp(60px,9vw,136px)]">Saved <span className="text-df-red">cars.</span></h1>
+          <span data-reveal="fade" className="df-label">YOUR GARAGE</span>
+          <h1 className="df-display text-[length:clamp(60px,9vw,136px)]"><SplitText text="Saved" /> <SplitText text="cars." className="text-df-red" start={1} /></h1>
         </div>
         {isAuthenticated && savedCars.length > 0 && (
           <div className="flex flex-wrap items-center gap-2.5">
@@ -254,10 +255,10 @@ export default function SavedCarsPage() {
       {signedOut && (
         <section className="px-5 sm:px-10 pt-6 pb-24 flex flex-wrap gap-10 lg:gap-16 border-t-2 border-black dark:border-zinc-50">
           <div className="flex-[1_1_420px] min-w-0 flex flex-col gap-5 pt-6">
-            <p className="df-display text-[length:clamp(40px,5vw,72px)]">Sign in to see your garage.</p>
-            <button type="button" onClick={() => openSignIn('saved')} className="df-btn-ink self-start h-14 px-6 text-base">Continue with Google</button>
+            <p className="df-display text-[length:clamp(40px,5vw,72px)]"><SplitText text="Sign in to see your garage." /></p>
+            <button type="button" data-reveal onClick={() => openSignIn('saved')} className="df-btn-ink self-start h-14 px-6 text-base">Continue with Google</button>
           </div>
-          <ul className="flex-[1_1_360px] min-w-0 mt-6 flex flex-col text-[17px] leading-snug">
+          <ul data-stagger className="flex-[1_1_360px] min-w-0 mt-6 flex flex-col text-[17px] leading-snug">
             {['Keep cars across devices', 'Track each car from saved to decided, with your own notes', 'Keep your chat history and your assistant’s name'].map((t) => (
               <li key={t} className="py-3.5 border-t border-black dark:border-zinc-700 last:border-b">{t}</li>
             ))}
@@ -267,8 +268,8 @@ export default function SavedCarsPage() {
 
       {empty && (
         <section className="px-5 sm:px-10 pt-6 pb-24 flex flex-col gap-6 border-t-2 border-black dark:border-zinc-50">
-          <p className="df-display text-[length:clamp(40px,5vw,72px)] mt-6">Nothing saved yet.</p>
-          <p className="max-w-[560px] text-lg leading-relaxed df-muted">Tap the bookmark on any car to keep it here. You can track each one from first call to final decision and keep notes as you go.</p>
+          <p className="df-display text-[length:clamp(40px,5vw,72px)] mt-6"><SplitText text="Nothing saved yet." /></p>
+          <p data-reveal className="max-w-[560px] text-lg leading-relaxed df-muted">Tap the bookmark on any car to keep it here. You can track each one from first call to final decision and keep notes as you go.</p>
           <div className="flex flex-wrap gap-2.5">
             <Link to="/" className="df-btn-red h-14 px-6 text-base">Search cars</Link>
             <Link to="/recommend" className="df-btn-outline h-14 px-6 text-base">Try the Matchmaker</Link>
@@ -305,7 +306,7 @@ export default function SavedCarsPage() {
               const inCompare = compareIds.includes(id);
               const imageSrc = car.image_url;
               return (
-                <article key={id} className="flex flex-wrap gap-6 lg:gap-7 py-6 border-b border-neutral-200 dark:border-zinc-800 animate-df-fade-up">
+                <article key={id} data-reveal className="flex flex-wrap gap-6 lg:gap-7 py-6 border-b border-neutral-200 dark:border-zinc-800">
                   <div className="relative w-full sm:w-[220px] h-[150px] shrink-0 bg-neutral-200 dark:bg-zinc-800 overflow-hidden">
                     {imageSrc ? <img src={imageSrc} alt={car.title || 'Saved car'} loading="lazy" className="w-full h-full object-cover" /> : null}
                     <Plate top={region} main={`${code} ${car.year ?? ''}`.trim()} size="sm" ring={false} className="absolute bottom-2.5 left-2.5" />

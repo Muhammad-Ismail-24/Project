@@ -1,26 +1,39 @@
 import { Link } from 'react-router-dom';
-import { REPO_URL } from './navLinks';
+import { useScrollTo } from '../motion/SmoothScroll';
+
+const LINKS = [
+  { to: '/', label: 'Discover' },
+  { to: '/recommend', label: 'Matchmaker' },
+  { to: '/chat', label: 'Chat' },
+  { to: '/calculators', label: 'Calculators' },
+  { to: '/about', label: 'About' },
+  { to: '/about#contact', label: 'Contact' },
+  { to: '/privacy', label: 'Privacy' },
+];
 
 export default function SiteFooter() {
+  const scrollTo = useScrollTo();
   return (
-    <footer className="bg-black text-white border-t border-zinc-800">
-      <div className="px-4 sm:px-6 lg:px-10 py-10 flex flex-col gap-8">
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <span className="df-display text-[length:clamp(44px,6vw,80px)]">DriveFetch<span className="text-df-red">.</span></span>
-          <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold">
-            <Link to="/" className="hover:text-df-red">Discover</Link>
-            <Link to="/recommend" className="hover:text-df-red">Matchmaker</Link>
-            <Link to="/chat" className="hover:text-df-red">Chat</Link>
-            <Link to="/calculators" className="hover:text-df-red">Calculators</Link>
-            <Link to="/about" className="hover:text-df-red">About</Link>
-            <Link to="/privacy" className="hover:text-df-red">Privacy</Link>
-            <Link to="/about#contact" className="hover:text-df-red">Contact</Link>
-            <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className="hover:text-df-red">GitHub ↗</a>
+    <footer className="border-t border-neutral-200 dark:border-zinc-800 bg-white dark:bg-df-night">
+      <div className="px-4 sm:px-6 lg:px-10 py-8 flex flex-col gap-6">
+        <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
+          <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2 text-[15px] font-semibold">
+            {LINKS.map((l) => (
+              <Link key={l.to} to={l.to} className="df-link py-1">{l.label}</Link>
+            ))}
           </nav>
+          <button
+            type="button"
+            onClick={() => scrollTo(0)}
+            className="group flex items-center gap-2 text-[15px] font-semibold"
+          >
+            Back to top
+            <span aria-hidden="true" className="inline-block transition-transform duration-500 group-hover:-translate-y-1">↑</span>
+          </button>
         </div>
-        <div className="flex flex-wrap justify-between gap-3 pt-5 border-t border-zinc-800 text-[13px] text-zinc-400">
+        <div className="flex flex-wrap justify-between gap-3 text-[13px] df-muted">
           <span>© {new Date().getFullYear()} DriveFetch · Built by Muhammad Ismail</span>
-          <span>Listings belong to their original sites. DriveFetch links back to every ad.</span>
+          <span>Listings belong to their original sites. We link back to every ad.</span>
         </div>
       </div>
     </footer>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import SEO from '../components/SEO';
+import SplitText from '../components/motion/SplitText';
 import { buildAboutSchema } from '../config/seoSchemas';
 import profilePic from '../assets/profile.jpeg';
 import { Spinner } from '../components/ui/Loaders';
@@ -111,21 +112,21 @@ export default function About() {
       {/* Problem / fix */}
       <section className="flex flex-wrap">
         <div className="flex-[1_1_520px] min-w-0 bg-black text-white px-5 sm:px-10 py-16 sm:py-20 flex flex-col gap-5">
-          <span className="font-mono text-[13px] font-semibold text-zinc-400">THE PROBLEM</span>
-          <h1 className="df-display text-[length:clamp(56px,7.5vw,116px)]">The market<br />is broken.</h1>
-          <p className="max-w-[520px] text-[19px] leading-relaxed text-zinc-300">Buyers spend hours cross-checking listings, only to hit duplicate ads, fake pricing and hidden faults. Deciding well takes market knowledge most people don’t have.</p>
+          <span data-reveal="fade" className="font-mono text-[13px] font-semibold text-zinc-400">THE PROBLEM</span>
+          <h1 className="df-display text-[length:clamp(56px,7.5vw,116px)]"><SplitText text="The market" className="block" /><SplitText text="is broken." className="block" start={2} /></h1>
+          <p data-reveal style={{ '--rd': '300ms' }} className="max-w-[520px] text-[19px] leading-relaxed text-zinc-300">Buyers spend hours cross-checking listings, only to hit duplicate ads, fake pricing and hidden faults. Deciding well takes market knowledge most people don’t have.</p>
         </div>
         <div className="flex-[1_1_520px] min-w-0 bg-df-red text-white px-5 sm:px-10 py-16 sm:py-20 flex flex-col gap-5">
-          <span className="font-mono text-[13px] font-semibold">THE FIX</span>
-          <h2 className="df-display text-[length:clamp(56px,7.5vw,116px)]">Let the machine<br /><span className="text-black">do the legwork.</span></h2>
-          <p className="max-w-[520px] text-[19px] leading-relaxed">DriveFetch searches the sites live, cleans and de-duplicates the ads, and has AI agents read each one for risk and price, so you start with a shortlist instead of a hundred tabs.</p>
+          <span data-reveal="fade" className="font-mono text-[13px] font-semibold">THE FIX</span>
+          <h2 className="df-display text-[length:clamp(56px,7.5vw,116px)]"><SplitText text="Let the machine" className="block" delay={250} /><SplitText text="do the legwork." className="block text-black" start={3} delay={250} /></h2>
+          <p data-reveal style={{ '--rd': '550ms' }} className="max-w-[520px] text-[19px] leading-relaxed">DriveFetch searches the sites live, cleans and de-duplicates the ads, and has AI agents read each one for risk and price, so you start with a shortlist instead of a hundred tabs.</p>
         </div>
       </section>
 
       {/* Pipeline */}
       <section className="px-5 sm:px-10 py-20 sm:py-24 flex flex-col gap-8">
-        <h2 className="df-display text-[length:clamp(44px,5.5vw,84px)]">What happens when you <span className="text-df-red">press search.</span></h2>
-        <ol className="grid sm:grid-cols-2 lg:grid-cols-5 border-t-4 border-black dark:border-zinc-50">
+        <h2 className="df-display text-[length:clamp(44px,5.5vw,84px)]"><SplitText text="What happens when you" /> <SplitText text="press search." className="text-df-red" start={4} /></h2>
+        <ol data-stagger className="grid sm:grid-cols-2 lg:grid-cols-5 border-t-4 border-black dark:border-zinc-50">
           {STEPS.map((s, i) => (
             <li key={s.n} className="flex flex-col gap-2.5 py-6 pr-6 lg:mr-6 border-b lg:border-b-0 lg:border-r border-neutral-200 dark:border-zinc-800 last:border-r-0">
               <span className={`df-display text-[64px] ${i === 0 ? 'text-df-red' : ''}`}>{s.n}</span>
@@ -141,8 +142,8 @@ export default function About() {
       <section className="bg-df-grey dark:bg-black border-y border-neutral-200 dark:border-zinc-800">
         <div className="px-5 sm:px-10 py-20 sm:py-24 grid gap-14 lg:gap-20 lg:grid-cols-2 items-start">
           <div className="flex flex-col gap-4">
-            <span className="df-label">BUILT BY</span>
-            <div className="flex flex-wrap bg-white text-black border-[5px] border-black max-w-[540px]">
+            <span data-reveal="fade" className="df-label">BUILT BY</span>
+            <div data-reveal="scale" className="flex flex-wrap bg-white text-black border-[5px] border-black max-w-[540px]">
               <img src={profilePic} alt="Muhammad Ismail" className="w-[150px] h-[190px] object-cover border-r-[5px] border-black" />
               <div className="flex-1 min-w-[220px] p-4 sm:p-5 flex flex-col gap-1.5">
                 <span className="text-[10px] font-extrabold tracking-[0.2em]">ISLAMABAD · ICT</span>
@@ -157,9 +158,9 @@ export default function About() {
             </div>
           </div>
           <div className="flex flex-col">
-            <h2 className="df-display text-[length:clamp(40px,4.5vw,64px)] mb-4">Questions</h2>
+            <h2 className="df-display text-[length:clamp(40px,4.5vw,64px)] mb-4"><SplitText text="Questions" /></h2>
             {FAQS.map((f, i) => (
-              <details key={f.q} open={i === 0} className="group border-t-2 border-black dark:border-zinc-50 last:border-b-2">
+              <details key={f.q} open={i === 0} data-reveal style={{ '--rd': `${i * 70}ms` }} className="group border-t-2 border-black dark:border-zinc-50 last:border-b-2">
                 <summary className="flex justify-between items-center gap-4 min-h-[64px] text-[18px] font-extrabold">
                   {f.q}
                   <span aria-hidden="true" className="text-3xl font-light text-df-red transition-transform group-open:rotate-45">+</span>
@@ -174,8 +175,8 @@ export default function About() {
       {/* Contact */}
       <section id="contact" className="px-5 sm:px-10 py-20 sm:py-24 flex flex-wrap gap-10 lg:gap-16 scroll-mt-20">
         <div className="flex-[1_1_380px] min-w-0 flex flex-col gap-4">
-          <h2 className="df-display text-[length:clamp(48px,6vw,96px)]">Say <span className="text-df-red">salaam.</span></h2>
-          <p className="max-w-[420px] text-lg leading-relaxed df-muted">Found a bug, a wrong price or a site we should add? Send a note.</p>
+          <h2 className="df-display text-[length:clamp(48px,6vw,96px)]"><SplitText text="Say" /> <SplitText text="salaam." className="text-df-red" start={1} /></h2>
+          <p data-reveal className="max-w-[420px] text-lg leading-relaxed df-muted">Found a bug, a wrong price or a site we should add? Send a note.</p>
         </div>
         <div className="flex-[1_1_520px] min-w-0">
           {isSubmitted ? (
@@ -185,7 +186,7 @@ export default function About() {
               <button type="button" onClick={reset} className="self-start h-11 px-4 bg-black text-white text-sm font-extrabold">Send another</button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+            <form onSubmit={handleSubmit} noValidate data-reveal className="flex flex-col gap-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="ab-name" className="text-sm font-extrabold">Name</label>
@@ -207,7 +208,7 @@ export default function About() {
                 {msgBad ? <span id="ab-msg-err" className="text-[13px] font-bold text-df-red-dark dark:text-zinc-50">Write a short message</span> : null}
               </div>
               {submitError ? <div role="alert" className="p-4 border-2 border-df-red font-bold">{submitError}</div> : null}
-              <button type="submit" disabled={isSubmitting} className="h-[60px] bg-df-red text-white text-base font-extrabold tracking-[0.06em] flex items-center justify-center gap-2.5 hover:bg-black dark:hover:bg-zinc-50 dark:hover:text-black disabled:opacity-70">
+              <button type="submit" disabled={isSubmitting} className="df-btn-red h-[60px] text-base tracking-[0.06em] gap-2.5">
                 {isSubmitting ? <Spinner className="w-4 h-4" light /> : null}
                 {isSubmitting ? 'SENDING…' : 'SEND MESSAGE'}
               </button>
